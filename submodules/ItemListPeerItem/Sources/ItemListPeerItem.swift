@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -1328,8 +1327,12 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
-        return self.layoutParams?.0.header
+    override public func headers() -> [ListViewItemHeader]? {
+        if let item = self.layoutParams?.0 {
+            return item.header.flatMap { [$0] }
+        } else {
+            return nil
+        }
     }
     
     override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
@@ -1350,10 +1353,11 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
 }
 
 public final class ItemListPeerItemHeader: ListViewItemHeader {
-    public let id: Int64
+    public let id: ListViewItemNode.HeaderId
     public let text: String
     public let additionalText: String
     public let stickDirection: ListViewItemHeaderStickDirection = .topEdge
+    public let stickOverInsets: Bool = true
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let actionTitle: String?
@@ -1364,14 +1368,22 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
     public init(theme: PresentationTheme, strings: PresentationStrings, text: String, additionalText: String, actionTitle: String? = nil, id: Int64, action: (() -> Void)? = nil) {
         self.text = text
         self.additionalText = additionalText
-        self.id = id
+        self.id = ListViewItemNode.HeaderId(space: 0, id: id)
         self.theme = theme
         self.strings = strings
         self.actionTitle = actionTitle
         self.action = action
     }
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ItemListPeerItemHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
-    public func node() -> ListViewItemHeaderNode {
+    public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ItemListPeerItemHeaderNode(theme: self.theme, strings: self.strings, text: self.text, additionalText: self.additionalText, actionTitle: self.actionTitle, action: self.action)
     }
     

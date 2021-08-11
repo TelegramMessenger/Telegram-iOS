@@ -1,5 +1,4 @@
 import Postbox
-import SyncCore
 
 public enum AddSynchronizeInstalledStickerPacksOperationContent {
     case sync

@@ -1414,7 +1414,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (CGFloat)_brushWeightForSize:(CGFloat)size
 {
-    return [self _brushBaseWeightForCurrentPainting] + [self _brushWeightRangeForCurrentPainting] * size;
+    return ([self _brushBaseWeightForCurrentPainting] + [self _brushWeightRangeForCurrentPainting] * size) / _scrollView.zoomScale;
 }
 
 + (CGSize)maximumPaintingSize
@@ -1738,6 +1738,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (void)scrollViewDidEndZooming:(UIScrollView *)__unused scrollView withView:(UIView *)__unused view atScale:(CGFloat)__unused scale
 {
     [self adjustZoom];
+    
+    TGPaintSwatch *currentSwatch = _portraitSettingsView.swatch;
+    [_canvasView setBrushWeight:[self _brushWeightForSize:currentSwatch.brushWeight]];
     
     if (_scrollView.zoomScale < _scrollView.normalZoomScale - FLT_EPSILON)
     {

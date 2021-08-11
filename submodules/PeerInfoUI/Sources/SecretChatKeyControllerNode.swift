@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import TextFormat
@@ -119,14 +118,14 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         
         let (keyTextLayout, keyTextApply) = makeKeyTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.semiboldMonospace(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: layout.size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         
-        let (infoRaw, infoRanges) = self.presentationData.strings.EncryptionKey_Description(self.peer.compactDisplayTitle, self.peer.compactDisplayTitle)
-        let infoText = NSMutableAttributedString(string: infoRaw, attributes: [.font: Font.regular(14.0), .foregroundColor: self.presentationData.theme.list.itemPrimaryTextColor])
+        let infoString = self.presentationData.strings.EncryptionKey_Description(self.peer.compactDisplayTitle, self.peer.compactDisplayTitle)
+        let infoText = NSMutableAttributedString(string: infoString.string, attributes: [.font: Font.regular(14.0), .foregroundColor: self.presentationData.theme.list.itemPrimaryTextColor])
         
-        for (_, range) in infoRanges {
-            infoText.addAttributes([.font: Font.semibold(14.0)], range: range)
+        for range in infoString.ranges {
+            infoText.addAttributes([.font: Font.semibold(14.0)], range: range.range)
         }
         
-        let linkRange = (infoRaw as NSString).range(of: "telegram.org")
+        let linkRange = (infoString.string as NSString).range(of: "telegram.org")
         if linkRange.location != NSNotFound {
             infoText.addAttributes([.foregroundColor: self.presentationData.theme.list.itemAccentColor, NSAttributedString.Key(rawValue: TelegramTextAttributes.URL): "https://telegram.org/faq#secret-chats"], range: linkRange)
         }

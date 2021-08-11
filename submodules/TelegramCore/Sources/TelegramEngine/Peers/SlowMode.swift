@@ -2,7 +2,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 public enum UpdateChannelSlowModeError {
     case generic

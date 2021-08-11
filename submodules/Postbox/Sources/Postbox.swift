@@ -1603,6 +1603,12 @@ public final class Postbox {
                 for id in self.messageHistoryUnsentTable.get() {
                     transaction.updateMessage(id, update: { message in
                         if !message.flags.contains(.Failed) {
+                            for media in message.media {
+                                if media.preventsAutomaticMessageSendingFailure() {
+                                    return .skip
+                                }
+                            }
+
                             if message.timestamp + 60 * 10 > timestampForAbsoluteTimeBasedOperations {
                                 return .skip
                             }

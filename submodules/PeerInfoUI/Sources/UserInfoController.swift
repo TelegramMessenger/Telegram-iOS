@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
@@ -62,7 +61,7 @@ public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, pu
                 }
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
+                present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).string, true)), nil)
             }
         }), completed: nil, cancelled: nil))
     })

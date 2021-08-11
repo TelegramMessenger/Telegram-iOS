@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import MergeLists
 import HorizontalPeerItem
@@ -141,7 +140,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         self.listView = ListView()
         self.listView.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         self.listView.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).0
+            return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()

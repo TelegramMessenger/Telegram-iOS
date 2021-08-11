@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import WebKit
 import TelegramCore
-import SyncCore
 import UniversalMediaPlayer
 
 protocol WebEmbedImplementation {
@@ -14,6 +13,7 @@ protocol WebEmbedImplementation {
     func pause()
     func togglePlayPause()
     func seek(timestamp: Double)
+    func setBaseRate(_ baseRate: Double)
     
     func pageReady()
     func callback(url: URL)
@@ -168,6 +168,10 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
     
     func seek(timestamp: Double) {
         self.impl.seek(timestamp: timestamp)
+    }
+    
+    func setBaseRate(_ baseRate: Double) {
+        self.impl.setBaseRate(baseRate)
     }
     
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 
 public let defaultDarkPresentationTheme = makeDefaultDarkPresentationTheme(preview: false)
@@ -391,18 +390,18 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         ),
         controlSecondaryColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         freeInputField: PresentationInputFieldTheme(
-            backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.5),
-            strokeColor: UIColor(rgb: 0xffffff, alpha: 0.5),
-            placeholderColor: UIColor(rgb: 0x4d4d4d),
+            backgroundColor: UIColor(rgb: 0x272728),
+            strokeColor: UIColor(rgb: 0x272728),
+            placeholderColor: UIColor(rgb: 0x98989e),
             primaryColor: UIColor(rgb: 0xffffff),
-            controlColor: UIColor(rgb: 0x4d4d4d)
+            controlColor: UIColor(rgb: 0x98989e)
         ),
         freePlainInputField: PresentationInputFieldTheme(
-            backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.5),
-            strokeColor: UIColor(rgb: 0xffffff, alpha: 0.5),
-            placeholderColor: UIColor(rgb: 0x4d4d4d),
+            backgroundColor: UIColor(rgb: 0x272728),
+            strokeColor: UIColor(rgb: 0x272728),
+            placeholderColor: UIColor(rgb: 0x98989e),
             primaryColor: UIColor(rgb: 0xffffff),
-            controlColor: UIColor(rgb: 0x4d4d4d)
+            controlColor: UIColor(rgb: 0x98989e)
         ),
         mediaPlaceholderColor: UIColor(rgb: 0xffffff).mixedWith(UIColor(rgb: 0x1c1c1d), alpha: 0.9),
         scrollIndicatorColor: UIColor(rgb: 0xffffff, alpha: 0.3),

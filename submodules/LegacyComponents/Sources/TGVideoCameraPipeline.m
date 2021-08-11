@@ -894,6 +894,20 @@ static CGFloat angleOffsetFromPortraitOrientationToOrientation(AVCaptureVideoOri
     }];
 }
 
+- (void)cancelZoom {
+    __weak TGVideoCameraPipeline *weakSelf = self;
+    [[TGVideoCameraPipeline cameraQueue] dispatch:^
+    {
+        __strong TGVideoCameraPipeline *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        [self _reconfigureDevice:_videoDevice withBlock:^(AVCaptureDevice *device) {
+            [device rampToVideoZoomFactor:1.0 withRate:8.0];
+        }];
+    }];
+}
+
 - (bool)isZoomAvailable
 {
     return [TGVideoCameraPipeline _isZoomAvailableForDevice:_videoDevice];

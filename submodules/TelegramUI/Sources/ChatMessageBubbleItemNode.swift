@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
@@ -710,20 +709,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     func animateFromMicInput(micInputNode: UIView, transition: CombinedTransition) -> ContextExtractedContentContainingNode? {
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageFileBubbleContentNode {
-                if let statusContainerNode = contentNode.interactiveFileNode.statusContainerNode {
-                    let scale = statusContainerNode.contentRect.height / 100.0
-                    micInputNode.transform = CGAffineTransform(scaleX: scale, y: scale)
-                    micInputNode.center = CGPoint(x: statusContainerNode.contentRect.midX, y: statusContainerNode.contentRect.midY)
-                    statusContainerNode.contentNode.view.addSubview(micInputNode)
+                let statusContainerNode = contentNode.interactiveFileNode.statusContainerNode
+                let scale = statusContainerNode.contentRect.height / 100.0
+                micInputNode.transform = CGAffineTransform(scaleX: scale, y: scale)
+                micInputNode.center = CGPoint(x: statusContainerNode.contentRect.midX, y: statusContainerNode.contentRect.midY)
+                statusContainerNode.contentNode.view.addSubview(micInputNode)
 
-                    transition.horizontal.updateAlpha(layer: micInputNode.layer, alpha: 0.0, completion: { [weak micInputNode] _ in
-                        micInputNode?.removeFromSuperview()
-                    })
+                transition.horizontal.updateAlpha(layer: micInputNode.layer, alpha: 0.0, completion: { [weak micInputNode] _ in
+                    micInputNode?.removeFromSuperview()
+                })
 
-                    transition.horizontal.animateTransformScale(node: statusContainerNode.contentNode, from: 1.0 / scale)
+                transition.horizontal.animateTransformScale(node: statusContainerNode.contentNode, from: 1.0 / scale)
 
-                    return statusContainerNode
-                }
+                return statusContainerNode
             }
         }
         return nil
@@ -1562,8 +1560,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 } else {
                     authorNameColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                 }
-                
-                var isScam = effectiveAuthor.isScam
+
                 if case let .peer(peerId) = item.chatLocation, let authorPeerId = item.message.author?.id, authorPeerId == peerId {
                     
                 } else if effectiveAuthor.isScam {
@@ -1736,7 +1733,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     let mutableString = NSMutableAttributedString(string: "\(authorNameString) ", attributes: [NSAttributedString.Key.font: nameFont, NSAttributedString.Key.foregroundColor: authorNameColor])
                     let bodyAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
                     let boldAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
-                    let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)"), body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)")._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     mutableString.append(botString)
                     attributedString = mutableString
                 } else if let authorNameString = authorNameString, let authorNameColor = authorNameColor {
@@ -1744,7 +1741,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 } else if let inlineBotNameString = inlineBotNameString {
                     let bodyAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
                     let boldAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
-                    attributedString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)"), body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    attributedString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)")._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 } else {
                     attributedString = NSAttributedString(string: "", font: nameFont, textColor: inlineBotNameColor)
                 }
@@ -1862,7 +1859,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         for i in 0 ..< contentPropertiesAndLayouts.count {
-            let (_, contentNodeProperties, preparePosition, attributes, contentNodeLayout, contentGroupId, itemSelection) = contentPropertiesAndLayouts[i]
+            let (_, contentNodeProperties, preparePosition, _, contentNodeLayout, contentGroupId, itemSelection) = contentPropertiesAndLayouts[i]
             
             if let mosaicRange = mosaicRange, mosaicRange.contains(i), let (framesAndPositions, size) = calculatedGroupFramesAndSize {
                 let mosaicIndex = i - mosaicRange.lowerBound
@@ -2518,19 +2515,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 contextSourceNode.updateAbsoluteRect = { [weak strongSelf, weak container, weak contextSourceNode] rect, size in
-                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
+                    guard let _ = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
                         return
                     }
                     container?.updateAbsoluteRect(relativeFrame.offsetBy(dx: rect.minX, dy: rect.minY), within: size)
                 }
                 contextSourceNode.applyAbsoluteOffset = { [weak strongSelf, weak container, weak contextSourceNode] value, animationCurve, duration in
-                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
+                    guard let _ = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
                         return
                     }
                     container?.applyAbsoluteOffset(value: value, animationCurve: animationCurve, duration: duration)
                 }
                 contextSourceNode.applyAbsoluteOffsetSpring = { [weak strongSelf, weak container, weak contextSourceNode] value, duration, damping in
-                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
+                    guard let _ = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
                         return
                     }
                     container?.applyAbsoluteOffsetSpring(value: value, duration: duration, damping: damping)
@@ -3660,6 +3657,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 var shadowBounds = self.shadowNode.bounds
                 shadowBounds.origin.x = -translation.x
                 self.shadowNode.bounds = shadowBounds
+
+                self.updateAttachedAvatarNodeOffset(offset: translation.x, transition: .immediate)
             
                 if let swipeToReplyNode = self.swipeToReplyNode {
                     swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
@@ -3699,6 +3698,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 shadowBounds.origin.x = 0.0
                 self.shadowNode.bounds = shadowBounds
                 self.layer.animateBounds(from: previousBounds, to: bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+
+                self.updateAttachedAvatarNodeOffset(offset: 0.0, transition: .animated(duration: 0.3, curve: .spring))
+
                 self.shadowNode.layer.animateBounds(from: previousShadowBounds, to: shadowBounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 if let swipeToReplyNode = self.swipeToReplyNode {
                     self.swipeToReplyNode = nil

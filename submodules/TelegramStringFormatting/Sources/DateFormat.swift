@@ -64,7 +64,7 @@ public func stringForMediumDate(timestamp: Int32, strings: PresentationStrings, 
     
     let timeString = stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)
     
-    return strings.Time_MediumDate(dateString, timeString).0
+    return strings.Time_MediumDate(dateString, timeString).string
 }
 
 public func stringForFullDate(timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> String {
@@ -76,7 +76,7 @@ public func stringForFullDate(timestamp: Int32, strings: PresentationStrings, da
     let yearString = "\(2000 + timeinfo.tm_year - 100)"
     let timeString = stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)
     
-    let monthFormat: (String, String, String) -> (String, [(Int, NSRange)])
+    let monthFormat: (String, String, String) -> PresentationStrings.FormattedString
     switch timeinfo.tm_mon + 1 {
     case 1:
         monthFormat = strings.Time_PreciseDate_m1
@@ -106,7 +106,7 @@ public func stringForFullDate(timestamp: Int32, strings: PresentationStrings, da
         return ""
     }
 
-    return monthFormat(dayString, yearString, timeString).0
+    return monthFormat(dayString, yearString, timeString).string
 }
 
 public func stringForDate(timestamp: Int32, strings: PresentationStrings) -> String {

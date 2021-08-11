@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
@@ -449,7 +448,7 @@ public final class CallListController: TelegramBaseController {
                 if let cachedUserData = view.cachedData as? CachedUserData, cachedUserData.callsPrivate {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     
-                    strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     return
                 }
                 

@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 private struct PeerParticipants: Equatable {
     let peers: [Peer]

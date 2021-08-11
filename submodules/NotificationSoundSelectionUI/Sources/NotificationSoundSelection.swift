@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import AVFoundation
 import TelegramPresentationData
 import ItemListUI
@@ -234,7 +233,7 @@ public func playSound(context: AccountContext, sound: PeerMessageSound, defaultS
                         currentPlayer?.play()
                     }
                 }
-            }, deactivate: {
+            }, deactivate: { _ in
                 return Signal { subscriber in
                     Queue.mainQueue().async {
                         currentPlayer?.stop()

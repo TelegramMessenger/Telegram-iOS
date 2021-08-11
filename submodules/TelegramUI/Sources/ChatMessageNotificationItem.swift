@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -154,14 +153,12 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: avatarPeer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }
         
-        var titleIcon: UIImage?
         var updatedMedia: Media?
         var imageDimensions: CGSize?
         var isRound = false
         var messageText: String
         if item.messages.first?.id.peerId.namespace == Namespaces.Peer.SecretChat {
-            titleIcon = PresentationResourcesRootController.inAppNotificationSecretChatIcon(presentationData.theme)
-            messageText = item.strings.PUSH_ENCRYPTED_MESSAGE("").0
+            messageText = item.strings.PUSH_ENCRYPTED_MESSAGE("").string
         } else if item.messages.count == 1 {
             let message = item.messages[0]
             for media in message.media {
@@ -199,25 +196,13 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             
             if item.messages[0].forwardInfo != nil && item.messages[0].sourceReference == nil {
                 if let author = item.messages[0].author, displayAuthor {
-                    let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_FWDS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), author.compactDisplayTitle, Int32(item.messages.count))
-                    if let index = rawText.firstIndex(of: "|") {
-                        if !isReminder {
-                            title = String(rawText[rawText.startIndex ..< index])
-                        }
-                        messageText = String(rawText[rawText.index(after: index)...])
-                    } else {
-                        title = nil
-                        messageText = rawText
+                    if !isReminder {
+                        title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     }
+                    messageText = presentationData.strings.PUSH_CHAT_MESSAGE_FWDS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: author.compactDisplayTitle)
                 } else {
-                    let rawText = presentationData.strings.PUSH_MESSAGE_FWDS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                    if let index = rawText.firstIndex(of: "|") {
-                        title = String(rawText[rawText.startIndex ..< index])
-                        messageText = String(rawText[rawText.index(after: index)...])
-                    } else {
-                        title = nil
-                        messageText = rawText
-                    }
+                    title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                    messageText = presentationData.strings.PUSH_MESSAGE_FWDS_TEXT(Int32(item.messages.count))
                 }
             } else if item.messages[0].groupingKey != nil {
                 var kind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.messages[0], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: item.context.account.peerId).key
@@ -242,41 +227,17 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 if isChannel {
                     switch kind {
                         case .image:
-                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGE_PHOTOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHANNEL_MESSAGE_PHOTOS_TEXT(Int32(item.messages.count))
                         case .video:
-                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGE_VIDEOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHANNEL_MESSAGE_VIDEOS_TEXT(Int32(item.messages.count))
                         case .file:
-                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGE_DOCS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHANNEL_MESSAGE_DOCS_TEXT(Int32(item.messages.count))
                         default:
-                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGES(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHANNEL_MESSAGES_TEXT(Int32(item.messages.count))
                     }
                 } else if isGroup, var author = item.messages[0].author {
                     if let sourceReference = item.messages[0].sourceReference, let sourcePeer = item.messages[0].peers[sourceReference.messageId.peerId] {
@@ -284,80 +245,32 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                     }
                     switch kind {
                         case .image:
-                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_PHOTOS(Int32(item.messages.count), author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHAT_MESSAGE_PHOTOS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: author.compactDisplayTitle)
                         case .video:
-                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_VIDEOS(Int32(item.messages.count), author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHAT_MESSAGE_VIDEOS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: author.compactDisplayTitle)
                         case .file:
-                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_DOCS_FIX1(Int32(item.messages.count), author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHAT_MESSAGE_DOCS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: author.compactDisplayTitle)
                         default:
-                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGES(Int32(item.messages.count), author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHAT_MESSAGES_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: author.compactDisplayTitle)
                     }
                 } else {
                     switch kind {
                         case .image:
-                            let rawText = presentationData.strings.PUSH_MESSAGE_PHOTOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_MESSAGE_PHOTOS_TEXT(Int32(item.messages.count))
                         case .video:
-                            let rawText = presentationData.strings.PUSH_MESSAGE_VIDEOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_MESSAGE_VIDEOS_TEXT(Int32(item.messages.count))
                         case .file:
-                            let rawText = presentationData.strings.PUSH_MESSAGE_FILES(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_MESSAGE_FILES_TEXT(Int32(item.messages.count))
                         default:
-                            let rawText = presentationData.strings.PUSH_MESSAGES(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
-                            if let index = rawText.firstIndex(of: "|") {
-                                title = String(rawText[rawText.startIndex ..< index])
-                                messageText = String(rawText[rawText.index(after: index)...])
-                            } else {
-                                title = nil
-                                messageText = rawText
-                            }
+                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_MESSAGES_TEXT(Int32(item.messages.count))
                     }
                 }
             } else {

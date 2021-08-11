@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import LegacyComponents
@@ -95,29 +94,15 @@ private final class ChatTextInputMediaRecordingButtonPresenterControllerNode: Vi
 }
 
 private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGModernConversationInputMicButtonPresentation {
-    private let context: AccountContext
     private let account: Account?
     private let presentController: (ViewController) -> Void
     let container: ChatTextInputMediaRecordingButtonPresenterContainer
     private var presentationController: ChatTextInputMediaRecordingButtonPresenterController?
-    private var applicationInForegroundDisposable: Disposable?
     
-    init(context: AccountContext, presentController: @escaping (ViewController) -> Void) {
-        self.context = context
-        self.account = context.account
+    init(account: Account, presentController: @escaping (ViewController) -> Void) {
+        self.account = account
         self.presentController = presentController
         self.container = ChatTextInputMediaRecordingButtonPresenterContainer()
-        
-        super.init()
-        
-        self.applicationInForegroundDisposable = (self.context.sharedContext.applicationBindings.applicationInForeground
-            |> filter({ !$0 })
-            |> deliverOnMainQueue)
-            .start(next: { [weak self] _ in
-                guard let strongSelf = self, strongSelf.context.account.isHidden else { return }
-                
-                strongSelf.dismiss()
-            })
     }
     
     deinit {
@@ -126,7 +111,6 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
             presentationController.presentingViewController?.dismiss(animated: false, completion: {})
             self.presentationController = nil
         }
-        self.applicationInForegroundDisposable?.dispose()
     }
     
     func view() -> UIView! {
@@ -170,7 +154,6 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     private let strings: PresentationStrings
     
     var mode: ChatTextInputMediaRecordingButtonMode = .audio
-    var context: AccountContext?
     var account: Account?
     let presentController: (ViewController) -> Void
     var recordingDisabled: () -> Void = { }
@@ -436,10 +419,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     func micButtonPresenter() -> TGModernConversationInputMicButtonPresentation! {
-        let presenter = ChatTextInputMediaRecordingButtonPresenter(
-            context: self.context!,
-            presentController: self.presentController
-        )
+        let presenter = ChatTextInputMediaRecordingButtonPresenter(account: self.account!, presentController: self.presentController)
         self.currentPresenter = presenter.view()
         return presenter
     }

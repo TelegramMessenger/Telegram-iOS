@@ -5,7 +5,6 @@ import Postbox
 import Display
 import ImageIO
 import TelegramCore
-import SyncCore
 import TinyThumbnail
 import FastBlur
 

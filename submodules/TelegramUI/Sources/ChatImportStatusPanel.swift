@@ -35,7 +35,7 @@ final class ChatImportStatusPanel: ASDisplayNode {
         
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
         
-        let text = presentationData.strings.Conversation_ImportProgress("\(Int(progress * 100.0))").0
+        let text = presentationData.strings.Conversation_ImportProgress("\(Int(progress * 100.0))").string
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         

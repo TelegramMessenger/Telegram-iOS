@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMediaAction? {
     switch action {

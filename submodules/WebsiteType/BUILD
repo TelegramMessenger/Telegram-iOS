@@ -7,7 +7,7 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/SyncCore:SyncCore",
+        "//submodules/TelegramCore:TelegramCore",
     ],
     visibility = [
         "//visibility:public",

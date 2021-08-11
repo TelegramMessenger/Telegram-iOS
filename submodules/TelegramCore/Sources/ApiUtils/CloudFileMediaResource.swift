@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 protocol TelegramCloudMediaResource: TelegramMediaResource {
     func apiInputLocation(fileReference: Data?) -> Api.InputFileLocation?

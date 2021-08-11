@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import Postbox
 
@@ -184,12 +183,12 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
             ),
             controlSecondaryColor: mainSecondaryTextColor?.withAlphaComponent(0.5),
             freeInputField: list.freeInputField.withUpdated(
-                backgroundColor: mainSecondaryTextColor?.withAlphaComponent(0.5),
-                strokeColor: mainSecondaryTextColor?.withAlphaComponent(0.5)
+                backgroundColor: accentColor?.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12),
+                strokeColor: accentColor?.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12)
             ),
             freePlainInputField: list.freePlainInputField.withUpdated(
-                backgroundColor: mainSecondaryTextColor?.withAlphaComponent(0.5),
-                strokeColor: mainSecondaryTextColor?.withAlphaComponent(0.5)
+                backgroundColor: accentColor?.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12),
+                strokeColor: accentColor?.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12)
             ),
             mediaPlaceholderColor: UIColor(rgb: 0xffffff).mixedWith(mainBackgroundColor ?? list.itemBlocksBackgroundColor, alpha: 0.9),
             pageIndicatorInactiveColor: mainSecondaryTextColor?.withAlphaComponent(0.4),
@@ -634,18 +633,18 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         ),
         controlSecondaryColor: mainSecondaryTextColor.withAlphaComponent(0.5),
         freeInputField: PresentationInputFieldTheme(
-            backgroundColor: mainSecondaryTextColor.withAlphaComponent(0.5),
-            strokeColor: mainSecondaryTextColor.withAlphaComponent(0.5),
-            placeholderColor: UIColor(rgb: 0x4d4d4d),
+            backgroundColor: accentColor.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12),
+            strokeColor: accentColor.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12),
+            placeholderColor: mainSecondaryTextColor.withAlphaComponent(0.5),
             primaryColor: .white,
-            controlColor: UIColor(rgb: 0x4d4d4d)
+            controlColor: mainSecondaryTextColor.withAlphaComponent(0.5)
         ),
         freePlainInputField: PresentationInputFieldTheme(
-            backgroundColor: mainSecondaryTextColor.withAlphaComponent(0.5),
-            strokeColor: mainSecondaryTextColor.withAlphaComponent(0.5),
-            placeholderColor: UIColor(rgb: 0x4d4d4d),
+            backgroundColor: accentColor.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12),
+            strokeColor: accentColor.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12),
+            placeholderColor: mainSecondaryTextColor.withAlphaComponent(0.5),
             primaryColor: .white,
-            controlColor: UIColor(rgb: 0x4d4d4d)
+            controlColor: mainSecondaryTextColor.withAlphaComponent(0.5)
         ),
         mediaPlaceholderColor: UIColor(rgb: 0xffffff).mixedWith(mainBackgroundColor, alpha: 0.9),
         scrollIndicatorColor: UIColor(white: 1.0, alpha: 0.3),
@@ -685,7 +684,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         unreadBadgeInactiveBackgroundColor: mainSecondaryTextColor.withAlphaComponent(0.4),
         unreadBadgeInactiveTextColor: additionalBackgroundColor,
         pinnedBadgeColor: mainSecondaryTextColor.withAlphaComponent(0.5),
-        pinnedSearchBarColor: mainInputColor,
+        pinnedSearchBarColor: accentColor.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12),
         regularSearchBarColor: accentColor.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12),
         sectionHeaderFillColor: mainBackgroundColor,
         sectionHeaderTextColor: mainSecondaryTextColor.withAlphaComponent(0.5),

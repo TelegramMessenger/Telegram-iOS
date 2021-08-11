@@ -3,7 +3,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 
 public final class ReactionSelectionParentNode: ASDisplayNode {

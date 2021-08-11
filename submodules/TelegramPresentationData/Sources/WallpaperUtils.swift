@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 
 public extension TelegramWallpaper {
     var isEmpty: Bool {

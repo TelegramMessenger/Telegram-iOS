@@ -3,6 +3,7 @@
 #import <LegacyComponents/PGCamera.h>
 
 @class PGCameraMovieWriter;
+@class PGRectangleDetector;
 
 @interface PGCameraCaptureSession : AVCaptureSession
 
@@ -12,6 +13,7 @@
 @property (nonatomic, readonly) AVCaptureAudioDataOutput *audioOutput;
 @property (nonatomic, readonly) AVCaptureMetadataOutput *metadataOutput;
 @property (nonatomic, readonly) PGCameraMovieWriter *movieWriter;
+@property (nonatomic, readonly) PGRectangleDetector *rectangleDetector;
 
 @property (nonatomic, assign) bool alwaysSetFlash;
 @property (nonatomic, assign) PGCameraMode currentMode;
@@ -22,13 +24,21 @@
 
 @property (nonatomic, readonly) bool isZoomAvailable;
 @property (nonatomic, assign) CGFloat zoomLevel;
+@property (nonatomic, readonly) CGFloat minZoomLevel;
+@property (nonatomic, readonly) CGFloat maxZoomLevel;
+
+- (void)setZoomLevel:(CGFloat)zoomLevel animated:(bool)animated;
+
+@property (nonatomic, readonly) bool hasUltrawideCamera;
+@property (nonatomic, readonly) bool hasTelephotoCamera;
 
 @property (nonatomic, readonly) CGPoint focusPoint;
 
 @property (nonatomic, copy) void(^outputSampleBuffer)(CMSampleBufferRef sampleBuffer, AVCaptureConnection *connection);
 
-@property (nonatomic, copy) void(^changingPosition)(void);
 @property (nonatomic, copy) bool(^requestPreviewIsMirrored)(void);
+
+@property (nonatomic, copy) void(^crossfadeNeeded)(void);
 
 @property (nonatomic, copy) void(^recognizedQRCode)(NSString *value, AVMetadataMachineReadableCodeObject *object);
 

@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 public struct WebAuthorization : Equatable {
     public let hash: Int64

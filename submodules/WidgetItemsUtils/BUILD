@@ -9,7 +9,6 @@ swift_library(
     deps = [
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     	"//submodules/Postbox:Postbox",
-    	"//submodules/SyncCore:SyncCore",
         "//submodules/TelegramCore:TelegramCore",
     	"//submodules/WidgetItems:WidgetItems",
     ],

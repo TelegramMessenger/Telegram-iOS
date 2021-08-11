@@ -10,11 +10,17 @@
 @class TGCameraFlipButton;
 @class TGCameraTimeCodeView;
 @class TGCameraZoomView;
-@class TGCameraSegmentsView;
+@class TGCameraZoomModeView;
+@class TGCameraZoomWheelView;
+@class TGCameraToastView;
 @class TGMediaPickerPhotoCounterButton;
 @class TGMediaPickerPhotoStripView;
 @class TGMediaPickerGallerySelectedItemsModel;
 @class TGMediaEditingContext;
+
+@interface TGCameraCornersView : UIImageView
+
+@end
 
 @interface TGCameraMainView : UIView
 {
@@ -26,10 +32,14 @@
     TGCameraFlipButton *_flipButton;
     TGCameraTimeCodeView *_timecodeView;
     
+    TGCameraToastView *_toastView;
+    
     TGMediaPickerPhotoCounterButton *_photoCounterButton;
     TGMediaPickerPhotoStripView *_selectedPhotosView;
     
     TGCameraZoomView *_zoomView;
+    TGCameraZoomModeView *_zoomModeView;
+    TGCameraZoomWheelView *_zoomWheelView;
     
 @public
     TGModernButton *_cancelButton;
@@ -43,26 +53,28 @@
 
 @property (nonatomic, copy) void(^focusPointChanged)(CGPoint point);
 @property (nonatomic, copy) void(^expositionChanged)(CGFloat value);
+@property (nonatomic, copy) void(^zoomChanged)(CGFloat level, bool animated);
 
 @property (nonatomic, copy) void(^shutterPressed)(bool fromHardwareButton);
 @property (nonatomic, copy) void(^shutterReleased)(bool fromHardwareButton);
+@property (nonatomic, copy) void(^shutterPanGesture)(UIPanGestureRecognizer *gesture);
 @property (nonatomic, copy) void(^cancelPressed)(void);
 @property (nonatomic, copy) void(^donePressed)(void);
 @property (nonatomic, copy) void(^resultPressed)(NSInteger index);
 @property (nonatomic, copy) void(^itemRemoved)(NSInteger index);
 
-@property (nonatomic, copy) void (^deleteSegmentButtonPressed)(void);
-
 @property (nonatomic, copy) NSTimeInterval(^requestedVideoRecordingDuration)(void);
 
 @property (nonatomic, assign) CGRect previewViewFrame;
 
-- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar;
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera;
 
 - (void)setDocumentFrameHidden:(bool)hidden;
 - (void)setCameraMode:(PGCameraMode)mode;
 - (void)updateForCameraModeChangeWithPreviousMode:(PGCameraMode)previousMode;
 - (void)updateForCameraModeChangeAfterResize;
+
+- (void)setToastMessage:(NSString *)message animated:(bool)animated;
 
 - (void)setFlashMode:(PGCameraFlashMode)mode;
 - (void)setFlashActive:(bool)active;
@@ -82,6 +94,7 @@
 
 - (void)shutterButtonPressed;
 - (void)shutterButtonReleased;
+- (void)shutterButtonPanGesture:(UIPanGestureRecognizer *)gestureRecognizer;
 - (void)flipButtonPressed;
 - (void)cancelButtonPressed;
 - (void)doneButtonPressed;
@@ -99,8 +112,6 @@
 
 - (UIInterfaceOrientation)interfaceOrientation;
 - (void)setInterfaceOrientation:(UIInterfaceOrientation)orientation animated:(bool)animated;
-
-- (void)layoutPreviewRelativeViews;
 
 - (void)photoCounterButtonPressed;
 

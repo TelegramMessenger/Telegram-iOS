@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -205,7 +204,7 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                 switch configuration {
                     case let .notSet(pendingEmail):
                         if let pendingEmail = pendingEmail {
-                            entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPendingEmail(pendingEmail.email.pattern).0))
+                            entries.append(.pendingEmailConfirmInfo(presentationData.theme, presentationData.strings.TwoStepAuth_SetupPendingEmail(pendingEmail.email.pattern).string))
                             entries.append(.pendingEmailConfirmCode(presentationData.theme, presentationData.strings, presentationData.strings.TwoStepAuth_RecoveryCode, state.emailCode))
                              entries.append(.pendingEmailInfo(presentationData.theme, "[" + presentationData.strings.TwoStepAuth_ConfirmationAbort + "]()"))
                             
@@ -218,7 +217,7 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                         entries.append(.passwordEntry(presentationData.theme, presentationData.strings, presentationData.strings.TwoStepAuth_EnterPasswordPassword, state.passwordText))
                         var text: String = ""
                         if !hint.isEmpty {
-                            text += presentationData.strings.TwoStepAuth_EnterPasswordHint(escapedPlaintextForMarkdown(hint)).0
+                            text += presentationData.strings.TwoStepAuth_EnterPasswordHint(escapedPlaintextForMarkdown(hint)).string
                         }
 
                         if let pendingResetTimestamp = pendingResetTimestamp {
@@ -227,7 +226,7 @@ private func twoStepVerificationUnlockSettingsControllerEntries(presentationData
                             if remainingSeconds <= 0 {
                                 text += "[" + presentationData.strings.TwoStepAuth_ResetAction + "](reset)"
                             } else {
-                                text.append(presentationData.strings.TwoStepAuth_ResetPendingText(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0)
+                                text.append(presentationData.strings.TwoStepAuth_ResetPendingText(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).string)
                                 text.append("\n[\(presentationData.strings.TwoStepAuth_CancelResetTitle)](declineReset)")
                             }
                         } else {
@@ -557,7 +556,7 @@ public func twoStepVerificationUnlockSettingsController(context: AccountContext,
                                                     case let .limitExceeded(retryAtTimestamp):
                                                         if let retryAtTimestamp = retryAtTimestamp {
                                                             let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
-                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).string
                                                         } else {
                                                             text = presentationData.strings.TwoStepAuth_FloodError
                                                         }
@@ -585,7 +584,7 @@ public func twoStepVerificationUnlockSettingsController(context: AccountContext,
                                                     case let .limitExceeded(retryAtTimestamp):
                                                         if let retryAtTimestamp = retryAtTimestamp {
                                                             let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
-                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                                                            text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).string
                                                         } else {
                                                             text = presentationData.strings.TwoStepAuth_FloodError
                                                         }
@@ -888,7 +887,7 @@ public func twoStepVerificationUnlockSettingsController(context: AccountContext,
                 case let .limitExceeded(retryAtTimestamp):
                     if let retryAtTimestamp = retryAtTimestamp {
                         let remainingSeconds = retryAtTimestamp - Int32(Date().timeIntervalSince1970)
-                        text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).0
+                        text = presentationData.strings.TwoFactorSetup_ResetFloodWait(timeIntervalString(strings: presentationData.strings, value: remainingSeconds)).string
                     } else {
                         text = presentationData.strings.TwoStepAuth_FloodError
                     }

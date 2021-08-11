@@ -5,7 +5,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 
 final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleContentNode {

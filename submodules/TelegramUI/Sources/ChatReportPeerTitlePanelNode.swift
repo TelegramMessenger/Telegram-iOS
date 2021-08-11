@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import LocalizedPeerData
 import TelegramStringFormatting
@@ -25,7 +24,7 @@ private enum ChatReportPeerTitleButton: Equatable {
                 return strings.Conversation_BlockUser
             case let .addContact(name):
                 if let name = name {
-                    return strings.Conversation_AddNameToContacts(name).0
+                    return strings.Conversation_AddNameToContacts(name).string
                 } else {
                     return strings.Conversation_AddToContacts
                 }
@@ -151,18 +150,18 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
         let bottomInset: CGFloat = 6.0
         let sideInset: CGFloat = 16.0
         
-        let stringAndRanges: (String, [(Int, NSRange)])
+        let stringAndRanges: PresentationStrings.FormattedString
         if let channel = chatPeer as? TelegramChannel, case .broadcast = channel.info {
             stringAndRanges = strings.Conversation_NoticeInvitedByInChannel(invitedBy.compactDisplayTitle)
         } else {
             stringAndRanges = strings.Conversation_NoticeInvitedByInGroup(invitedBy.compactDisplayTitle)
         }
         
-        let attributedString = NSMutableAttributedString(string: stringAndRanges.0, font: Font.regular(13.0), textColor: primaryTextColor)
+        let attributedString = NSMutableAttributedString(string: stringAndRanges.string, font: Font.regular(13.0), textColor: primaryTextColor)
         
         let boldAttributes = [NSAttributedString.Key.font: Font.semibold(13.0), NSAttributedString.Key(rawValue: "_Link"): true as NSNumber]
-        for (_, range) in stringAndRanges.1 {
-            attributedString.addAttributes(boldAttributes, range: range)
+        for range in stringAndRanges.ranges {
+            attributedString.addAttributes(boldAttributes, range: range.range)
         }
         
         self.labelNode.attributedText = attributedString
@@ -252,11 +251,11 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
         
         let stringAndRanges = strings.Conversation_PeerNearbyDistance(chatPeer.compactDisplayTitle, shortStringForDistance(strings: strings, distance: distance))
         
-        let attributedString = NSMutableAttributedString(string: stringAndRanges.0, font: Font.regular(13.0), textColor: primaryTextColor)
+        let attributedString = NSMutableAttributedString(string: stringAndRanges.string, font: Font.regular(13.0), textColor: primaryTextColor)
         
         let boldAttributes = [NSAttributedString.Key.font: Font.semibold(13.0), NSAttributedString.Key(rawValue: "_Link"): true as NSNumber]
-        for (_, range) in stringAndRanges.1.prefix(1) {
-            attributedString.addAttributes(boldAttributes, range: range)
+        for range in stringAndRanges.ranges.prefix(1) {
+            attributedString.addAttributes(boldAttributes, range: range.range)
         }
         
         self.labelNode.attributedText = attributedString

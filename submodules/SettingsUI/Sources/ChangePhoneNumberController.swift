@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ProgressNavigationButtonNode
@@ -144,7 +143,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
                             text = presentationData.strings.Login_InvalidPhoneError
                             actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneNumberOccupied:
-                            text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(phoneNumber)).0
+                            text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(phoneNumber)).string
                             actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneBanned:
                             text = presentationData.strings.Login_PhoneBannedError
@@ -160,7 +159,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
                                 let carrier = CTCarrier()
                                 let mnc = carrier.mobileNetworkCode ?? "none"
                                 
-                                strongSelf.presentEmailComposeController(address: "login@stel.com", subject: presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).0, body: presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0)
+                                strongSelf.presentEmailComposeController(address: "login@stel.com", subject: presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).string, body: presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string)
                             }))
                         case .generic:
                             text = presentationData.strings.Login_UnknownError

@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 private enum ChannelParticipantValue: Int32 {
     case member = 0

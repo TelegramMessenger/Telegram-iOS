@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import MtProtoKit
 import MessageUI
@@ -204,7 +203,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         let carrier = CTCarrier()
                                         let mnc = carrier.mobileNetworkCode ?? "none"
                                         
-                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_InvalidPhoneEmailSubject(formattedNumber).0, body: strongSelf.presentationData.strings.Login_InvalidPhoneEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0, from: controller)
+                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_InvalidPhoneEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_InvalidPhoneEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string, from: controller)
                                     }))
                                 case .phoneLimitExceeded:
                                     text = strongSelf.presentationData.strings.Login_PhoneFloodError
@@ -223,7 +222,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         let carrier = CTCarrier()
                                         let mnc = carrier.mobileNetworkCode ?? "none"
                                         
-                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).0, body: strongSelf.presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0, from: controller)
+                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string, from: controller)
                                     }))
                                 case let .generic(info):
                                     text = strongSelf.presentationData.strings.Login_UnknownError
@@ -245,7 +244,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                             errorString = "unknown"
                                         }
                                         
-                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneGenericEmailSubject(formattedNumber).0, body: strongSelf.presentationData.strings.Login_PhoneGenericEmailBody(formattedNumber, errorString, appVersion, systemVersion, locale, mnc).0, from: controller)
+                                        strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneGenericEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_PhoneGenericEmailBody(formattedNumber, errorString, appVersion, systemVersion, locale, mnc).string, from: controller)
                                     }))
                                 case .timeout:
                                     text = strongSelf.presentationData.strings.Login_NetworkError
@@ -394,7 +393,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 if nextType == nil {
                     if MFMailComposeViewController.canSendMail(), let controller = controller {
                         let formattedNumber = formatPhoneNumber(number)
-                        strongSelf.presentEmailComposeController(address: "sms@stel.com", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).0, body: strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).0, from: controller)
+                        strongSelf.presentEmailComposeController(address: "sms@stel.com", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).string, from: controller)
                     } else {
                         controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
@@ -712,7 +711,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }
                         |> mapToSignal { resource -> Signal<UploadedPeerPhotoData?, NoError> in
                             if let resource = resource {
-                                return uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: nil, resource: resource) |> map(Optional.init)
+                                return TelegramEngineUnauthorized(account: account).auth.uploadedPeerVideo(resource: resource) |> map(Optional.init)
                             } else {
                                 return .single(nil)
                             }

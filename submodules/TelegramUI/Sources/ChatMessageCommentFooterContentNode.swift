@@ -5,7 +5,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import RadialStatusNode
 import AnimatedCountLabelNode
@@ -160,24 +159,25 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                     
                     var segments: [AnimatedCountLabelNode.Segment] = []
                     
-                    let (rawText, ranges) = item.presentationData.strings.Conversation_MessageViewCommentsFormat("\(dateReplies)", commentsPart)
+                    let textAndRanges = item.presentationData.strings.Conversation_MessageViewCommentsFormat("\(dateReplies)", commentsPart)
+                    let rawText = textAndRanges.string
                     var textIndex = 0
                     var latestIndex = 0
-                    for (index, range) in ranges {
-                        var lowerSegmentIndex = range.lowerBound
-                        if index != 0 {
+                    for indexAndRange in textAndRanges.ranges {
+                        var lowerSegmentIndex = indexAndRange.range.lowerBound
+                        if indexAndRange.index != 0 {
                             lowerSegmentIndex = min(lowerSegmentIndex, latestIndex)
                         } else {
-                            if latestIndex < range.lowerBound {
-                                let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: latestIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.lowerBound)])
+                            if latestIndex < indexAndRange.range.lowerBound {
+                                let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: latestIndex) ..< rawText.index(rawText.startIndex, offsetBy: indexAndRange.range.lowerBound)])
                                 segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: messageTheme.accentTextColor)))
                                 textIndex += 1
                             }
                         }
-                        latestIndex = range.upperBound
+                        latestIndex = indexAndRange.range.upperBound
                         
-                        let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: min(rawText.count, range.upperBound))])
-                        if index == 0 {
+                        let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: min(rawText.count, indexAndRange.range.upperBound))])
+                        if indexAndRange.index == 0 {
                             segments.append(.number(dateReplies, NSAttributedString(string: part, font: textFont, textColor: messageTheme.accentTextColor)))
                         } else {
                             segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: messageTheme.accentTextColor)))

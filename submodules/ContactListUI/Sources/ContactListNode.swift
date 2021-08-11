@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
@@ -889,7 +888,7 @@ public final class ContactListNode: ASDisplayNode {
         self.listNode = ListView()
         self.listNode.dynamicBounceEnabled = false
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.indexNode = CollectionIndexNode()

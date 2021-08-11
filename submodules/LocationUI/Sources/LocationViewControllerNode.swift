@@ -3,7 +3,6 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import MergeLists
@@ -122,7 +121,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 }
                 let distanceString: String?
                 if let distance = distance {
-                    distanceString = distance < 10 ? presentationData.strings.Map_YouAreHere : presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: distance)).0
+                    distanceString = distance < 10 ? presentationData.strings.Map_YouAreHere : presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: distance)).string
                 } else {
                     distanceString = nil
                 }
@@ -235,7 +234,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         var setupProximityNotificationImpl: ((Bool) -> Void)?
@@ -279,7 +278,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             }
         }
         
-        let liveLocations = topPeerActiveLiveLocationMessages(viewTracker: context.account.viewTracker, accountPeerId: context.account.peerId, peerId: subject.id.peerId)
+        let liveLocations = context.engine.messages.topPeerActiveLiveLocationMessages(peerId: subject.id.peerId)
         |> map { _, messages -> [Message] in
             return messages
         }
@@ -721,7 +720,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
           
             var text: String = strongSelf.presentationData.strings.Location_ProximityGroupTip
             if peer.id.namespace == Namespaces.Peer.CloudUser {
-                text = strongSelf.presentationData.strings.Location_ProximityTip(peer.compactDisplayTitle).0
+                text = strongSelf.presentationData.strings.Location_ProximityTip(peer.compactDisplayTitle).string
             }
             
             strongSelf.interaction.present(TooltipScreen(text: text, icon: nil, location: .point(location.offsetBy(dx: -9.0, dy: 0.0), .right), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in

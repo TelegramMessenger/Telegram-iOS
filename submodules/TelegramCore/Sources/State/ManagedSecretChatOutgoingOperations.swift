@@ -4,7 +4,6 @@ import TelegramApi
 import SwiftSignalKit
 import MtProtoKit
 
-import SyncCore
 
 func addSecretChatOutgoingOperation(transaction: Transaction, peerId: PeerId, operation: SecretChatOutgoingOperationContents, state: SecretChatState) -> SecretChatState {
     var updatedState = state

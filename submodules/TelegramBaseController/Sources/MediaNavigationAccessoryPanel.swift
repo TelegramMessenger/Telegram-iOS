@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import AccountContext
 
 public final class MediaNavigationAccessoryPanel: ASDisplayNode {

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import Postbox
 import AccountContext
 
@@ -50,5 +49,4 @@ func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState:
         case .none, .text:
             return nil
     }
-    return nil
 }

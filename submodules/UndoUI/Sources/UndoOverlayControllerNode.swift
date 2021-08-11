@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import Postbox
-import SyncCore
 import TelegramCore
 import TelegramPresentationData
 import TextFormat
@@ -242,11 +241,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
                 
-                let (rawString, attributes) = presentationData.strings.ChatList_AddedToFolderTooltip(chatTitle, folderTitle)
+                let formattedString = presentationData.strings.ChatList_AddedToFolderTooltip(chatTitle, folderTitle)
                 
-                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: rawString, font: Font.regular(14.0), textColor: .white))
-                for (_, range) in attributes {
-                    string.addAttribute(.font, value: Font.regular(14.0), range: range)
+                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: formattedString.string, font: Font.regular(14.0), textColor: .white))
+                for range in formattedString.ranges {
+                    string.addAttribute(.font, value: Font.regular(14.0), range: range.range)
                 }
                 
                 self.textNode.attributedText = string
@@ -259,11 +258,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
                 
-                let (rawString, attributes) = presentationData.strings.ChatList_RemovedFromFolderTooltip(chatTitle, folderTitle)
+                let formattedString = presentationData.strings.ChatList_RemovedFromFolderTooltip(chatTitle, folderTitle)
                 
-                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: rawString, font: Font.regular(14.0), textColor: .white))
-                for (_, range) in attributes {
-                    string.addAttribute(.font, value: Font.regular(14.0), range: range)
+                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: formattedString.string, font: Font.regular(14.0), textColor: .white))
+                for range in formattedString.ranges {
+                    string.addAttribute(.font, value: Font.regular(14.0), range: range.range)
                 }
                 
                 self.textNode.attributedText = string
@@ -276,11 +275,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.animationNode = AnimationNode(animation: "anim_payment", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
 
-                let (rawString, attributes) = presentationData.strings.Checkout_SuccessfulTooltip(currencyValue, itemTitle)
+                let formattedString = presentationData.strings.Checkout_SuccessfulTooltip(currencyValue, itemTitle)
 
-                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: rawString, font: Font.regular(14.0), textColor: .white))
-                for (_, range) in attributes {
-                    string.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: formattedString.string, font: Font.regular(14.0), textColor: .white))
+                for range in formattedString.ranges {
+                    string.addAttribute(.font, value: Font.semibold(14.0), range: range.range)
                 }
 
                 self.textNode.attributedText = string

@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
-import SyncCore
 
 extension PeerStatusSettings {
     init(apiSettings: Api.PeerSettings) {

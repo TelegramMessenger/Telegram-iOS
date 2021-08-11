@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import TelegramUIPreferences
@@ -60,7 +59,7 @@ private struct LocationSearchEntry: Identifiable, Comparable {
             subtitle = nil
         } else {
             header = ChatListSearchItemHeader(type: .mapAddress, theme: presentationData.theme, strings: presentationData.strings)
-            subtitle = presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: self.distance)).0
+            subtitle = presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: self.distance)).string
         }
         return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: self.location, title: self.title, subtitle: subtitle, style: .plain, action: {
             sendVenue(venue)
@@ -124,7 +123,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
         self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.listNode.isHidden = true
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.emptyResultsTitleNode = ImmediateTextNode()
@@ -313,7 +312,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
                 strongSelf.listNode.isHidden = !transition.isSearching
                 strongSelf.dimNode.isHidden = transition.isSearching
                 
-                strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.Map_SearchNoResultsDescription(transition.query).0, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
+                strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.Map_SearchNoResultsDescription(transition.query).string, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
                 
                 let emptyResults = transition.isSearching && transition.isEmpty
                 strongSelf.emptyResultsTitleNode.isHidden = !emptyResults

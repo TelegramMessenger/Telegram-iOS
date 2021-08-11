@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
-import SyncCore
 
 func _internal_updateChannelMemberBannedRights(account: Account, peerId: PeerId, memberId: PeerId, rights: TelegramChatBannedRights?) -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> {
     return _internal_fetchChannelParticipant(account: account, peerId: peerId, participantId: memberId)

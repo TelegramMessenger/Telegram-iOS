@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
@@ -239,7 +238,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.listNode.isHidden = true
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()

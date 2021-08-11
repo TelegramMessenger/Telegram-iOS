@@ -1266,7 +1266,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return (CGSize){ 1920.0f, 1920.0f };
             
         case TGMediaVideoConversionPresetVideoMessage:
-            return (CGSize){ 240.0f, 240.0f };
+            return (CGSize){ 384.0f, 384.0f };
         
         case TGMediaVideoConversionPresetProfileLow:
             return (CGSize){ 720.0f, 720.0f };
@@ -1375,7 +1375,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 4000;
             
         case TGMediaVideoConversionPresetVideoMessage:
-            return 300;
+            return 1000;
             
         case TGMediaVideoConversionPresetProfile:
             return 1500;
@@ -1414,7 +1414,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 64;
             
         case TGMediaVideoConversionPresetVideoMessage:
-            return 32;
+            return 64;
             
         case TGMediaVideoConversionPresetAnimation:
         case TGMediaVideoConversionPresetProfile:

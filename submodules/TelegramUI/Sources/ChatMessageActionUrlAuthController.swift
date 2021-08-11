@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import CheckNode
@@ -162,9 +161,9 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
     override func updateTheme(_ theme: AlertControllerTheme) {
         self.titleNode.attributedText = NSAttributedString(string: strings.Conversation_OpenBotLinkTitle, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         
-        self.textNode.attributedText = formattedText(strings.Conversation_OpenBotLinkText(self.defaultUrl).0, color: theme.primaryColor, textAlignment: .center)
-        self.authorizeLabelNode.attributedText = formattedText(strings.Conversation_OpenBotLinkLogin(self.domain, self.displayName).0, color: theme.primaryColor)
-        self.allowWriteLabelNode.attributedText = formattedText(strings.Conversation_OpenBotLinkAllowMessages(self.bot.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)).0, color: theme.primaryColor)
+        self.textNode.attributedText = formattedText(strings.Conversation_OpenBotLinkText(self.defaultUrl).string, color: theme.primaryColor, textAlignment: .center)
+        self.authorizeLabelNode.attributedText = formattedText(strings.Conversation_OpenBotLinkLogin(self.domain, self.displayName).string, color: theme.primaryColor)
+        self.allowWriteLabelNode.attributedText = formattedText(strings.Conversation_OpenBotLinkAllowMessages(self.bot.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)).string, color: theme.primaryColor)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {

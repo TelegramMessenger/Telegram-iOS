@@ -1,7 +1,6 @@
 import Foundation
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import Display
 import DeviceAccess
 import AccountContext

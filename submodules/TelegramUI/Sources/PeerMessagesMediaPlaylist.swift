@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import AccountContext
 import MusicAlbumArtResources
@@ -59,7 +58,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
     let message: Message
     
     init(message: Message) {
-        self.id = PeerMessagesMediaPlaylistItemId(messageId: message.id)
+        self.id = PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index)
         self.message = message
     }
     

@@ -11,7 +11,6 @@ import TelegramAudio
 import AccountContext
 import Postbox
 import TelegramCore
-import SyncCore
 import AppBundle
 import PresentationDataUtils
 import AvatarNode
@@ -162,10 +161,18 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         if let image = generateImage(CGSize(width: fadeHeight, height: fadeHeight), rotatedContext: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
             context.clear(bounds)
-            
-            let colorsArray = [fadeColor.cgColor, fadeColor.withAlphaComponent(0.0).cgColor] as CFArray
-            var locations: [CGFloat] = [1.0, 0.0]
-            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+
+            let stepCount = 10
+            var colors: [CGColor] = []
+            var locations: [CGFloat] = []
+
+            for i in 0 ... stepCount {
+                let t = CGFloat(i) / CGFloat(stepCount)
+                colors.append(fadeColor.withAlphaComponent(t * t).cgColor)
+                locations.append(t)
+            }
+
+            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colors as CFArray, locations: &locations)!
             context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
         }) {
             self.topFadeNode.backgroundColor = UIColor(patternImage: image)
@@ -182,6 +189,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
             let colorsArray = [fadeColor.withAlphaComponent(0.0).cgColor, fadeColor.cgColor] as CFArray
             var locations: [CGFloat] = [1.0, 0.0]
             let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+
             context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
         }) {
             self.bottomGradientNode.backgroundColor = UIColor(patternImage: image)
@@ -633,7 +641,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 
                 let bodyAttributes = MarkdownAttributeSet(font: Font.regular(15.0), textColor: .white, additionalAttributes: [:])
                 let boldAttributes = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: .white, additionalAttributes: [:])
-                let attributedText = addAttributesToStringWithRanges(presentationData.strings.VoiceChat_ParticipantIsSpeaking(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)), body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                let attributedText = addAttributesToStringWithRanges(presentationData.strings.VoiceChat_ParticipantIsSpeaking(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 strongSelf.speakingTitleNode.attributedText = attributedText
 
                 strongSelf.speakingContainerNode.alpha = 0.0
@@ -1090,7 +1098,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         
         let initialBottomInset = bottomInset
         var bottomInset = bottomInset        
-        let layoutMode: GroupVideoNode.LayoutMode
+        let layoutMode: VideoNodeLayoutMode
         if case .immediate = transition, self.animatingIn {
             layoutMode = .fillOrFitToSquare
             bottomInset = 0.0

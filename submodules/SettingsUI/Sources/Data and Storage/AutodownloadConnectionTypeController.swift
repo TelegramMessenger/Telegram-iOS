@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -202,7 +201,7 @@ private func stringForAutomaticDownloadPeers(strings: PresentationStrings, decim
     
     if peers.contacts && peers.otherPrivate && peers.groups && peers.channels {
         if let size = size {
-            return strings.AutoDownloadSettings_UpToForAll(size).0
+            return strings.AutoDownloadSettings_UpToForAll(size).string
         } else {
             return strings.AutoDownloadSettings_OnForAll
         }
@@ -238,9 +237,9 @@ private func stringForAutomaticDownloadPeers(strings: PresentationStrings, decim
         }
         
         if let size = size {
-            return strings.AutoDownloadSettings_UpToFor(size, string).0
+            return strings.AutoDownloadSettings_UpToFor(size, string).string
         } else {
-            return strings.AutoDownloadSettings_OnFor(string).0
+            return strings.AutoDownloadSettings_OnFor(string).string
         }
     }
 }

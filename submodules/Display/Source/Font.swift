@@ -7,6 +7,7 @@ public struct Font {
         case serif
         case monospace
         case round
+        case camera
     }
     
     public struct Traits: OptionSet {
@@ -57,7 +58,7 @@ public struct Font {
     }
     
     public static func with(size: CGFloat, design: Design = .regular, weight: Weight = .regular, traits: Traits = []) -> UIFont {
-        if #available(iOS 13.0, *) {
+        if #available(iOS 13.0, *), design != .camera {
             let descriptor: UIFontDescriptor
             if #available(iOS 14.0, *) {
                 descriptor = UIFont.systemFont(ofSize: size).fontDescriptor
@@ -136,6 +137,22 @@ public struct Font {
                     }
                 case .round:
                     return UIFont(name: ".SFCompactRounded-Semibold", size: size) ?? UIFont.systemFont(ofSize: size)
+                case .camera:
+                    func encodeText(string: String, key: Int16) -> String {
+                        let nsString = string as NSString
+                        let result = NSMutableString()
+                        for i in 0 ..< nsString.length {
+                            var c: unichar = nsString.character(at: i)
+                            c = unichar(Int16(c) + key)
+                            result.append(NSString(characters: &c, length: 1) as String)
+                        }
+                        return result as String
+                    }
+                    if case .semibold = weight {
+                        return UIFont(name: encodeText(string: "TGDbnfsb.Tfnjcpme", key: -1), size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.weight)
+                    } else {
+                        return UIFont(name: encodeText(string: "TGDbnfsb.Sfhvmbs", key: -1), size: size) ?? UIFont.systemFont(ofSize: size, weight: weight.weight)
+                    }
             }
         }
     }

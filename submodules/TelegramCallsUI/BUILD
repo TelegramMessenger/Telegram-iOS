@@ -1,4 +1,44 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load(
+    "@build_bazel_rules_apple//apple:resources.bzl",
+    "apple_resource_bundle",
+    "apple_resource_group",
+)
+load("//build-system/bazel-utils:plist_fragment.bzl",
+    "plist_fragment",
+)
+
+filegroup(
+    name = "TelegramCallsUIMetalResources",
+    srcs = glob([
+        "Resources/**/*.metal",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
+plist_fragment(
+    name = "TelegramCallsUIBundleInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>org.telegram.TelegramCallsUI</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>TelegramCallsUI</string>
+    """
+)
+
+apple_resource_bundle(
+    name = "TelegramCallsUIBundle",
+    infoplists = [
+        ":TelegramCallsUIBundleInfoPlist",
+    ],
+    resources = [
+        ":TelegramCallsUIMetalResources",
+    ],
+)
 
 swift_library(
     name = "TelegramCallsUI",
@@ -6,6 +46,9 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    data = [
+        ":TelegramCallsUIBundle",
+    ],
     deps = [
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Display:Display",
@@ -48,6 +91,7 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/Markdown:Markdown",
         "//submodules/ChatTitleActivityNode:ChatTitleActivityNode",
+        "//third-party/libyuv:LibYuvBinding",
     ],
     visibility = [
         "//visibility:public",

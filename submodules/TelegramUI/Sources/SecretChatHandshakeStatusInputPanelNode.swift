@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import LocalizedPeerData
@@ -54,7 +53,7 @@ final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
                         let text: String
                         switch peer.role {
                             case .creator:
-                                text = interfaceState.strings.DialogList_AwaitingEncryption(userPeer.compactDisplayTitle).0
+                                text = interfaceState.strings.DialogList_AwaitingEncryption(userPeer.compactDisplayTitle).string
                             case .participant:
                                 text = interfaceState.strings.Conversation_EncryptionProcessing
                         }

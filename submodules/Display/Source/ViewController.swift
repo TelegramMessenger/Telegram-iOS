@@ -381,6 +381,8 @@ public enum TabBarItemContextActionType {
         }
         
         self.navigationBarOrigin = navigationBarFrame.origin.y
+
+        let isLandscape = layout.size.width > layout.size.height
         
         if let navigationBar = self.navigationBar {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
@@ -392,7 +394,7 @@ public enum TabBarItemContextActionType {
                 navigationBarFrame.size.height += NavigationBar.defaultSecondaryContentHeight
                 //navigationBarFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
             }
-            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: statusBarHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, transition: transition)
+            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: navigationLayout.defaultContentHeight, additionalTopHeight: statusBarHeight, additionalContentHeight: self.additionalNavigationBarHeight, additionalBackgroundHeight: additionalBackgroundHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, appearsHidden: !self.displayNavigationBar, isLandscape: isLandscape, transition: transition)
             if !transition.isAnimated {
                 navigationBar.layer.cancelAnimationsRecursive(key: "bounds")
                 navigationBar.layer.cancelAnimationsRecursive(key: "position")

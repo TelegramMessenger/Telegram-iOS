@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 
 public func encodePresentationTheme(_ theme: PresentationTheme) -> String? {

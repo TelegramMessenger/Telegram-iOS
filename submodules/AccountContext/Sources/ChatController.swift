@@ -1,31 +1,31 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
-import SyncCore
 import TextFormat
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import Postbox
 
 public final class ChatMessageItemAssociatedData: Equatable {
     public enum ChannelDiscussionGroupStatus: Equatable {
         case unknown
-        case known(PeerId?)
+        case known(EnginePeer.Id?)
     }
     
     public let automaticDownloadPeerType: MediaAutoDownloadPeerType
     public let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     public let isRecentActions: Bool
     public let subject: ChatControllerSubject?
-    public let contactsPeerIds: Set<PeerId>
+    public let contactsPeerIds: Set<EnginePeer.Id>
     public let channelDiscussionGroup: ChannelDiscussionGroupStatus
     public let animatedEmojiStickers: [String: [StickerPackItem]]
     public let forcedResourceStatus: FileMediaResourceStatus?
+    public let currentlyPlayingMessageId: EngineMessage.Index?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<PeerId> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
@@ -34,6 +34,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.channelDiscussionGroup = channelDiscussionGroup
         self.animatedEmojiStickers = animatedEmojiStickers
         self.forcedResourceStatus = forcedResourceStatus
+        self.currentlyPlayingMessageId = currentlyPlayingMessageId
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -78,7 +79,7 @@ public extension ChatMessageItemAssociatedData {
 public enum ChatControllerInteractionLongTapAction {
     case url(String)
     case mention(String)
-    case peerMention(PeerId, String)
+    case peerMention(EnginePeer.Id, String)
     case command(String)
     case hashtag(String)
     case timecode(Double, String)
@@ -109,7 +110,7 @@ public enum ChatHistoryMessageSelection: Equatable {
 
 public enum ChatControllerInitialBotStartBehavior {
     case interactive
-    case automatic(returnToPeerId: PeerId, scheduled: Bool)
+    case automatic(returnToPeerId: EnginePeer.Id, scheduled: Bool)
 }
 
 public struct ChatControllerInitialBotStart {
@@ -170,7 +171,7 @@ public enum ChatTextInputStateTextAttributeType: PostboxCoding, Equatable {
     case bold
     case italic
     case monospace
-    case textMention(PeerId)
+    case textMention(EnginePeer.Id)
     case textUrl(String)
     
     public init(decoder: PostboxDecoder) {
@@ -182,7 +183,7 @@ public enum ChatTextInputStateTextAttributeType: PostboxCoding, Equatable {
         case 2:
             self = .monospace
         case 3:
-            self = .textMention(PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0)))
+            self = .textMention(EnginePeer.Id(decoder.decodeInt64ForKey("peerId", orElse: 0)))
         case 4:
             self = .textUrl(decoder.decodeStringForKey("url", orElse: ""))
         default:
@@ -339,9 +340,9 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
 }
 
 public enum ChatControllerSubject: Equatable {
-    case message(id: MessageId, highlight: Bool, timecode: Double?)
+    case message(id: EngineMessage.Id, highlight: Bool, timecode: Double?)
     case scheduledMessages
-    case pinnedMessages(id: MessageId?)
+    case pinnedMessages(id: EngineMessage.Id?)
 }
 
 public enum ChatControllerPresentationMode: Equatable {
@@ -381,10 +382,10 @@ public final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceStat
 public enum ChatPresentationInputQueryResult: Equatable {
     case stickers([FoundStickerItem])
     case hashtags([String])
-    case mentions([Peer])
+    case mentions([EnginePeer])
     case commands([PeerCommand])
     case emojis([(String, String)], NSRange)
-    case contextRequestResult(Peer?, ChatContextResultCollection?)
+    case contextRequestResult(EnginePeer?, ChatContextResultCollection?)
     
     public static func ==(lhs: ChatPresentationInputQueryResult, rhs: ChatPresentationInputQueryResult) -> Bool {
         switch lhs {
@@ -402,16 +403,10 @@ public enum ChatPresentationInputQueryResult: Equatable {
             }
         case let .mentions(lhsPeers):
             if case let .mentions(rhsPeers) = rhs {
-                if lhsPeers.count != rhsPeers.count {
+                if lhsPeers != rhsPeers {
                     return false
-                } else {
-                    for i in 0 ..< lhsPeers.count {
-                        if !lhsPeers[i].isEqual(rhsPeers[i]) {
-                            return false
-                        }
-                    }
-                    return true
                 }
+                return true
             } else {
                 return false
             }
@@ -443,14 +438,9 @@ public enum ChatPresentationInputQueryResult: Equatable {
             }
         case let .contextRequestResult(lhsPeer, lhsCollection):
             if case let .contextRequestResult(rhsPeer, rhsCollection) = rhs {
-                if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
-                    if !lhsPeer.isEqual(rhsPeer) {
-                        return false
-                    }
-                } else if (lhsPeer != nil) != (rhsPeer != nil) {
+                if lhsPeer != rhsPeer {
                     return false
                 }
-                
                 if lhsCollection != rhsCollection {
                     return false
                 }
@@ -482,7 +472,7 @@ public protocol ChatController: ViewController {
     var isSendButtonVisible: Bool { get }
 }
 
-public protocol ChatMessagePreviewItemNode: class {
+public protocol ChatMessagePreviewItemNode: AnyObject {
     var forwardInfoReferenceNode: ASDisplayNode? { get }
 }
 

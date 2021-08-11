@@ -1,7 +1,6 @@
 import Foundation
 import TelegramApi
 
-import SyncCore
 
 public struct SecureIdPersonName: Equatable {
     public let firstName: String

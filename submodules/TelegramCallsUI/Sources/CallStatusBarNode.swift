@@ -396,12 +396,12 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                 let elapsedTime = scheduleTime - currentTime
                 let timerText: String
                 if elapsedTime >= 86400 {
-                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(scheduledTimeIntervalString(strings: presentationData.strings, value: elapsedTime)).0
+                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(scheduledTimeIntervalString(strings: presentationData.strings, value: elapsedTime)).string
                 } else if elapsedTime < 0 {
                     isLate = true
-                    timerText = presentationData.strings.VoiceChat_StatusLateBy(textForTimeout(value: abs(elapsedTime))).0
+                    timerText = presentationData.strings.VoiceChat_StatusLateBy(textForTimeout(value: abs(elapsedTime))).string
                 } else {
-                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(textForTimeout(value: elapsedTime)).0
+                    timerText = presentationData.strings.VoiceChat_StatusStartsIn(textForTimeout(value: elapsedTime)).string
                 }
                 segments.append(.text(0, NSAttributedString(string: timerText, font: textFont, textColor: textColor)))
             } else if let membersCount = membersCount {
@@ -415,24 +415,25 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                 }
                 
                 let rawTextAndRanges = presentationData.strings.VoiceChat_Status_MembersFormat("\(membersCount)", membersPart)
-                
-                let (rawText, ranges) = rawTextAndRanges
+
                 var textIndex = 0
                 var latestIndex = 0
-                for (index, range) in ranges {
+                for rangeItem in rawTextAndRanges.ranges {
+                    let index = rangeItem.index
+                    let range = rangeItem.range
                     var lowerSegmentIndex = range.lowerBound
                     if index != 0 {
                         lowerSegmentIndex = min(lowerSegmentIndex, latestIndex)
                     } else {
                         if latestIndex < range.lowerBound {
-                            let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: latestIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.lowerBound)])
+                            let part = String(rawTextAndRanges.string[rawTextAndRanges.string.index(rawTextAndRanges.string.startIndex, offsetBy: latestIndex) ..< rawTextAndRanges.string.index(rawTextAndRanges.string.startIndex, offsetBy: range.lowerBound)])
                             segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: textColor)))
                             textIndex += 1
                         }
                     }
                     latestIndex = range.upperBound
                     
-                    let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.upperBound)])
+                    let part = String(rawTextAndRanges.string[rawTextAndRanges.string.index(rawTextAndRanges.string.startIndex, offsetBy: lowerSegmentIndex) ..< rawTextAndRanges.string.index(rawTextAndRanges.string.startIndex, offsetBy: range.upperBound)])
                     if index == 0 {
                         segments.append(.number(Int(membersCount), NSAttributedString(string: part, font: textFont, textColor: textColor)))
                     } else {
@@ -440,8 +441,8 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                         textIndex += 1
                     }
                 }
-                if latestIndex < rawText.count {
-                    let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: latestIndex)...])
+                if latestIndex < rawTextAndRanges.string.count {
+                    let part = String(rawTextAndRanges.string[rawTextAndRanges.string.index(rawTextAndRanges.string.startIndex, offsetBy: latestIndex)...])
                     segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: textColor)))
                     textIndex += 1
                 }

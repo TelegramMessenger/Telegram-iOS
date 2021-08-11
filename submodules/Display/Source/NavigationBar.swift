@@ -239,7 +239,7 @@ open class NavigationBar: ASDisplayNode {
     
     var presentationData: NavigationBarPresentationData
     
-    private var validLayout: (size: CGSize, defaultHeight: CGFloat, additionalTopHeight: CGFloat, additionalContentHeight: CGFloat, additionalBackgroundHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool)?
+    private var validLayout: (size: CGSize, defaultHeight: CGFloat, additionalTopHeight: CGFloat, additionalContentHeight: CGFloat, additionalBackgroundHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool, isLandscape: Bool)?
     private var requestedLayout: Bool = false
     var requestContainerLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     
@@ -940,16 +940,16 @@ open class NavigationBar: ASDisplayNode {
         
         if let validLayout = self.validLayout, self.requestedLayout {
             self.requestedLayout = false
-            self.updateLayout(size: validLayout.size, defaultHeight: validLayout.defaultHeight, additionalTopHeight: validLayout.additionalTopHeight, additionalContentHeight: validLayout.additionalContentHeight, additionalBackgroundHeight: validLayout.additionalBackgroundHeight, leftInset: validLayout.leftInset, rightInset: validLayout.rightInset, appearsHidden: validLayout.appearsHidden, transition: .immediate)
+            self.updateLayout(size: validLayout.size, defaultHeight: validLayout.defaultHeight, additionalTopHeight: validLayout.additionalTopHeight, additionalContentHeight: validLayout.additionalContentHeight, additionalBackgroundHeight: validLayout.additionalBackgroundHeight, leftInset: validLayout.leftInset, rightInset: validLayout.rightInset, appearsHidden: validLayout.appearsHidden, isLandscape: validLayout.isLandscape, transition: .immediate)
         }
     }
     
-    func updateLayout(size: CGSize, defaultHeight: CGFloat, additionalTopHeight: CGFloat, additionalContentHeight: CGFloat, additionalBackgroundHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, defaultHeight: CGFloat, additionalTopHeight: CGFloat, additionalContentHeight: CGFloat, additionalBackgroundHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, appearsHidden: Bool, isLandscape: Bool, transition: ContainedViewLayoutTransition) {
         if self.layoutSuspended {
             return
         }
         
-        self.validLayout = (size, defaultHeight, additionalTopHeight, additionalContentHeight, additionalBackgroundHeight, leftInset, rightInset, appearsHidden)
+        self.validLayout = (size, defaultHeight, additionalTopHeight, additionalContentHeight, additionalBackgroundHeight, leftInset, rightInset, appearsHidden, isLandscape)
 
         let backgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + additionalBackgroundHeight))
         if self.backgroundNode.frame != backgroundFrame {
@@ -995,7 +995,7 @@ open class NavigationBar: ASDisplayNode {
         var leftTitleInset: CGFloat = leftInset + 1.0
         var rightTitleInset: CGFloat = rightInset + 1.0
         if self.backButtonNode.supernode != nil {
-            let backButtonSize = self.backButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight))
+            let backButtonSize = self.backButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight), isLandscape: isLandscape)
             leftTitleInset += backButtonSize.width + backButtonInset + 1.0
             
             let topHitTestSlop = (nominalHeight - backButtonSize.height) * 0.5
@@ -1047,7 +1047,7 @@ open class NavigationBar: ASDisplayNode {
                 self.badgeNode.alpha = 1.0
             }
         } else if self.leftButtonNode.supernode != nil {
-            let leftButtonSize = self.leftButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight))
+            let leftButtonSize = self.leftButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight), isLandscape: isLandscape)
             leftTitleInset += leftButtonSize.width + leftButtonInset + 1.0
             
             self.leftButtonNode.alpha = 1.0
@@ -1059,7 +1059,7 @@ open class NavigationBar: ASDisplayNode {
         transition.updateFrame(node: self.badgeNode, frame: CGRect(origin: backButtonArrowFrame.origin.offsetBy(dx: 7.0, dy: -9.0), size: badgeSize))
         
         if self.rightButtonNode.supernode != nil {
-            let rightButtonSize = self.rightButtonNode.updateLayout(constrainedSize: (CGSize(width: size.width, height: nominalHeight)))
+            let rightButtonSize = self.rightButtonNode.updateLayout(constrainedSize: (CGSize(width: size.width, height: nominalHeight)), isLandscape: isLandscape)
             rightTitleInset += rightButtonSize.width + leftButtonInset + 1.0
             self.rightButtonNode.alpha = 1.0
             transition.updateFrame(node: self.rightButtonNode, frame: CGRect(origin: CGPoint(x: size.width - leftButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize))
@@ -1073,7 +1073,7 @@ open class NavigationBar: ASDisplayNode {
                     break
                 case .bottom:
                     if let transitionBackButtonNode = self.transitionBackButtonNode {
-                        let transitionBackButtonSize = transitionBackButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight))
+                        let transitionBackButtonSize = transitionBackButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight), isLandscape: isLandscape)
                         let initialX: CGFloat = backButtonInset + size.width * 0.3
                         let finalX: CGFloat = floor((size.width - transitionBackButtonSize.width) / 2.0)
                         
@@ -1204,7 +1204,7 @@ open class NavigationBar: ASDisplayNode {
             node.updateManualText(self.backButtonNode.manualText)
             node.color = accentColor
             if let validLayout = self.validLayout {
-                let _ = node.updateLayout(constrainedSize: CGSize(width: validLayout.size.width, height: validLayout.defaultHeight))
+                let _ = node.updateLayout(constrainedSize: CGSize(width: validLayout.size.width, height: validLayout.defaultHeight), isLandscape: validLayout.isLandscape)
                 node.frame = self.backButtonNode.frame
             }
             return node
@@ -1227,7 +1227,7 @@ open class NavigationBar: ASDisplayNode {
             node.updateItems(items)
             node.color = accentColor
             if let validLayout = self.validLayout {
-                let _ = node.updateLayout(constrainedSize: CGSize(width: validLayout.size.width, height: validLayout.defaultHeight))
+                let _ = node.updateLayout(constrainedSize: CGSize(width: validLayout.size.width, height: validLayout.defaultHeight), isLandscape: validLayout.isLandscape)
                 node.frame = self.backButtonNode.frame
             }
             return node

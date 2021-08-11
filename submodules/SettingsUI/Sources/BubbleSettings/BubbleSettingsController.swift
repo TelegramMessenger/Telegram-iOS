@@ -5,7 +5,6 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
@@ -247,7 +246,7 @@ private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDel
             dateHeaderNode = currentDateHeaderNode
             headerItem.updateNode(dateHeaderNode, previous: nil, next: headerItem)
         } else {
-            dateHeaderNode = headerItem.node()
+            dateHeaderNode = headerItem.node(synchronousLoad: true)
             dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
             self.messagesContainerNode.addSubnode(dateHeaderNode)
             self.dateHeaderNode = dateHeaderNode

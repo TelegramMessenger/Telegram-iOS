@@ -1,4 +1,5 @@
 #import "TGCameraShutterButton.h"
+#import "TGImageUtils.h"
 
 #import <LegacyComponents/JNWSpringAnimation.h>
 
@@ -36,7 +37,7 @@
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(frame.size.width, frame.size.height), false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
             
-            CGFloat thickness = (padding < 8.0f) ? 5.0f : 6.0f;
+            CGFloat thickness = 4.0 - TGScreenPixel;
             
             CGContextSetStrokeColorWithColor(context, [TGCameraInterfaceAssets normalColor].CGColor);
             CGContextSetLineWidth(context, thickness);
@@ -70,17 +71,17 @@
 - (CGFloat)innerPadding
 {
     if (self.frame.size.width == 50.0f)
-        return 7.0f;
+        return 6.0f;
     
-    return 8.0f;
+    return 6.0f;
 }
 
 - (CGFloat)squarePadding
 {
     if (self.frame.size.width == 50.0f)
-        return 15.0f;
+        return 19.0f;
     
-    return 19.0f;
+    return 23.0f;
 }
 
 - (void)setButtonMode:(TGCameraShutterButtonMode)mode animated:(bool)animated

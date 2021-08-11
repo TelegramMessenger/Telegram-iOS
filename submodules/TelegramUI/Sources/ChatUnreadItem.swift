@@ -147,9 +147,9 @@ class ChatUnreadItemNode: ListViewItemNode {
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let item = self.item {
-            return item.header
+            return [item.header]
         } else {
             return nil
         }

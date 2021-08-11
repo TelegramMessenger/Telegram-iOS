@@ -6,7 +6,6 @@ import UIKit
 import Display
 import SwiftSignalKit
 import Postbox
-import SyncCore
 import PasscodeUI
 import AccountContext
 import TelegramUIPreferences

@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 private typealias SignalKitTimer = SwiftSignalKit.Timer
 

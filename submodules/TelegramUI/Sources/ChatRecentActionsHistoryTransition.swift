@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import MergeLists
@@ -28,10 +27,6 @@ struct ChatRecentActionsEntryId: Hashable, Comparable {
             return lhs.contentIndex.rawValue < rhs.contentIndex.rawValue
         }
     }
-    
-    var hashValue: Int {
-        return self.eventId.hashValue &+ 31 &* self.contentIndex.rawValue.hashValue
-    }
 }
 
 private func eventNeedsHeader(_ event: AdminLogEvent) -> Bool {
@@ -49,13 +44,13 @@ private func eventNeedsHeader(_ event: AdminLogEvent) -> Bool {
     }
 }
 
-private func appendAttributedText(text: (String, [(Int, NSRange)]), generateEntities: (Int) -> [MessageTextEntityType], to string: inout String, entities: inout [MessageTextEntity]) {
-    for (index, range) in text.1 {
-        for type in generateEntities(index) {
-            entities.append(MessageTextEntity(range: (string.count + range.lowerBound) ..< (string.count + range.upperBound), type: type))
+private func appendAttributedText(text: PresentationStrings.FormattedString, generateEntities: (Int) -> [MessageTextEntityType], to string: inout String, entities: inout [MessageTextEntity]) {
+    for rangeItem in text.ranges {
+        for type in generateEntities(rangeItem.index) {
+            entities.append(MessageTextEntity(range: (string.count + rangeItem.range.lowerBound) ..< (string.count + rangeItem.range.upperBound), type: type))
         }
     }
-    string.append(text.0)
+    string.append(text.string)
 }
 
 private func appendAttributedText(text: String, withEntities: [MessageTextEntityType], to string: inout String, entities: inout [MessageTextEntity]) {
@@ -372,7 +367,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                             mediaUpdated = true
                         }
                         
-                        let titleText: (String, [(Int, NSRange)])
+                        let titleText: PresentationStrings.FormattedString
                         if mediaUpdated || message.media.isEmpty {
                             titleText = self.presentationData.strings.Channel_AdminLog_MessageEdited(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
                         } else {
@@ -569,16 +564,16 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 let dateString = formatter.string(from: Date(timeIntervalSince1970: Double(newBanInfo.rights.untilDate)))
                                 
                                 if prevBanInfo?.rights.flags != newBanInfo.rights.flags {
-                                    text += self.presentationData.strings.Channel_AdminLog_MessageRestrictedUntil(dateString).0
+                                    text += self.presentationData.strings.Channel_AdminLog_MessageRestrictedUntil(dateString).string
                                 } else {
-                                    text += self.presentationData.strings.Channel_AdminLog_MessageRestrictedNewSetting(dateString).0
+                                    text += self.presentationData.strings.Channel_AdminLog_MessageRestrictedNewSetting(dateString).string
                                 }
                                 text += "\n"
                             } else {
                                 if prevBanInfo?.rights.flags != newBanInfo?.rights.flags {
                                     text += self.presentationData.strings.Channel_AdminLog_MessageRestrictedForever
                                 } else {
-                                    text += self.presentationData.strings.Channel_AdminLog_MessageRestrictedNewSetting(self.presentationData.strings.Channel_AdminLog_MessageRestrictedForever).0
+                                    text += self.presentationData.strings.Channel_AdminLog_MessageRestrictedNewSetting(self.presentationData.strings.Channel_AdminLog_MessageRestrictedForever).string
                                 }
                                 text += "\n"
                             }
@@ -968,7 +963,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         var text: String = ""
                         var entities: [MessageTextEntity] = []
                         
-                        let titleText: (String, [(Int, NSRange)])
+                        let titleText: PresentationStrings.FormattedString
                         
                         titleText = self.presentationData.strings.Channel_AdminLog_PollStopped(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
                         
@@ -1125,7 +1120,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)])
+                let rawText: PresentationStrings.FormattedString
                 if case .startGroupCall = self.entry.event.action {
                     rawText = self.presentationData.strings.Channel_AdminLog_StartedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
                 } else {
@@ -1159,7 +1154,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)])
+                let rawText: PresentationStrings.FormattedString
                 if isMuted {
                     rawText = self.presentationData.strings.Channel_AdminLog_MutedParticipant(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", participant?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
                 } else {
@@ -1188,7 +1183,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)])
+                let rawText: PresentationStrings.FormattedString
                 if joinMuted {
                     rawText = self.presentationData.strings.Channel_AdminLog_MutedNewMembers(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
                 } else {
@@ -1222,7 +1217,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_UpdatedParticipantVolume(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", participant?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", "\(volume / 100)%")
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_UpdatedParticipantVolume(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", participant?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", "\(volume / 100)%")
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1248,7 +1243,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_DeletedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_DeletedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1274,7 +1269,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_RevokedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_RevokedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1289,7 +1284,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 
                 let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                 return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
-            case let .editExportedInvitation(previousInvite, updatedInvite):
+            case let .editExportedInvitation(_, updatedInvite):
                 var peers = SimpleDictionary<PeerId, Peer>()
                 var author: Peer?
                 if let peer = self.entry.peers[self.entry.event.peerId] {
@@ -1300,7 +1295,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_EditedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", updatedInvite.link.replacingOccurrences(of: "https://", with: ""))
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_EditedInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", updatedInvite.link.replacingOccurrences(of: "https://", with: ""))
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1326,7 +1321,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)]) = self.presentationData.strings.Channel_AdminLog_JoinedViaInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_JoinedViaInviteLink(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1352,7 +1347,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: (String, [(Int, NSRange)])
+                let rawText: PresentationStrings.FormattedString
                 if let updatedValue = updatedValue {
                     rawText = self.presentationData.strings.Channel_AdminLog_MessageChangedAutoremoveTimeoutSet(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", timeIntervalString(strings: self.presentationData.strings, value: updatedValue))
                 } else {

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import TelegramStringFormatting
@@ -83,7 +82,7 @@ public func notificationMuteSettingsController(presentationData: PresentationDat
         items.append(item)
     }
     if let soundSettings = soundSettings {
-        items.append(ActionSheetButtonItem(title: soundSettings.value.flatMap({ presentationData.strings.Notification_Exceptions_Sound(localizedPeerNotificationSoundString(strings: presentationData.strings, sound: $0)).0 }) ?? presentationData.strings.GroupInfo_SetSound, action: {
+        items.append(ActionSheetButtonItem(title: soundSettings.value.flatMap({ presentationData.strings.Notification_Exceptions_Sound(localizedPeerNotificationSoundString(strings: presentationData.strings, sound: $0)).string }) ?? presentationData.strings.GroupInfo_SetSound, action: {
             dismissAction()
             openSoundSettings()
         }))

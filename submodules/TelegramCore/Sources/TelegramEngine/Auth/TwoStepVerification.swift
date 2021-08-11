@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
 public enum TwoStepVerificationConfiguration {
     case notSet(pendingEmail: TwoStepVerificationPendingEmail?)

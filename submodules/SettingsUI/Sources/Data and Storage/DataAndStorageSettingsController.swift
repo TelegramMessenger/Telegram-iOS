@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -439,10 +438,10 @@ private func stringForAutoDownloadTypes(strings: PresentationStrings, decimalSep
         types.append(strings.ChatSettings_AutoDownloadSettings_TypePhoto)
     }
     if let videoSize = videoSize {
-        types.append(strings.ChatSettings_AutoDownloadSettings_TypeVideo(autodownloadDataSizeString(Int64(videoSize), decimalSeparator: decimalSeparator)).0)
+        types.append(strings.ChatSettings_AutoDownloadSettings_TypeVideo(autodownloadDataSizeString(Int64(videoSize), decimalSeparator: decimalSeparator)).string)
     }
     if let fileSize = fileSize {
-        types.append(strings.ChatSettings_AutoDownloadSettings_TypeFile(autodownloadDataSizeString(Int64(fileSize), decimalSeparator: decimalSeparator)).0)
+        types.append(strings.ChatSettings_AutoDownloadSettings_TypeFile(autodownloadDataSizeString(Int64(fileSize), decimalSeparator: decimalSeparator)).string)
     }
 
     if types.isEmpty {

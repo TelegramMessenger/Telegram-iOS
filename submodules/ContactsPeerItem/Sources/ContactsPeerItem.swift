@@ -5,7 +5,6 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -1182,9 +1181,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let (item, _, _, _, _, _) = self.layoutParams {
-            return item.header
+            return item.header.flatMap { [$0] }
         } else {
             return nil
         }

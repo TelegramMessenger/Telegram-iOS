@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -215,7 +214,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         var currentBackgroundNode = self.backgroundNode
         var currentImpressionIcon = self.impressionIcon
         var currentRepliesIcon = self.repliesIcon
-        var currentSelfExpiringIcon = self.selfExpiringIcon
         
         let currentType = self.type
         let currentTheme = self.theme

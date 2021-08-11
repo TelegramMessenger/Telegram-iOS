@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -1809,9 +1808,9 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
             case .scanYourPassportInfo:
                 return FormControllerTextItem(text: strings.Passport_ScanPassportHelp)
             case .scansHeader:
-                return FormControllerHeaderItem(text: strings.Passport_Scans)
+                return FormControllerHeaderItem(text: strings.Passport_ScansHeader)
             case let .scan(index, document, error):
-                return SecureIdValueFormFileItem(account: params.account, context: params.context, document: document, placeholder: nil, title: strings.Passport_Scans_ScanIndex("\(index + 1)").0, label: error.flatMap(SecureIdValueFormFileItemLabel.error) ?? .timestamp, activated: {
+                return SecureIdValueFormFileItem(account: params.account, context: params.context, document: document, placeholder: nil, title: strings.Passport_Scans_ScanIndex("\(index + 1)").string, label: error.flatMap(SecureIdValueFormFileItemLabel.error) ?? .timestamp, activated: {
                     params.openDocument(document)
                 }, deleted: {
                     params.deleteDocument(document)
@@ -1876,7 +1875,7 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                 }
                 
                 if let value = value {
-                    title = strings.Passport_Identity_NativeNameTitle(value).0.uppercased()
+                    title = strings.Passport_Identity_NativeNameTitle(value).string.uppercased()
                 } else {
                     title = strings.Passport_Identity_NativeNameGenericTitle
                 }
@@ -1916,7 +1915,7 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
                     text = strings.Passport_Identity_NativeNameHelp
                 } else {
                     let countryName = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryCode.uppercased(), strings: strings) ?? ""
-                    text = strings.Passport_Identity_NativeNameGenericHelp(countryName).0
+                    text = strings.Passport_Identity_NativeNameGenericHelp(countryName).string
                 }
                 return FormControllerTextItem(text: text)
             case let .gender(value, error):
@@ -2115,7 +2114,7 @@ enum SecureIdDocumentFormEntry: FormControllerEntry {
             case .translationsHeader:
                 return FormControllerHeaderItem(text: strings.Passport_Identity_Translations)
             case let .translation(index, document, error):
-                return SecureIdValueFormFileItem(account: params.account, context: params.context, document: document, placeholder: nil, title: strings.Passport_Scans_ScanIndex("\(index + 1)").0, label: error.flatMap(SecureIdValueFormFileItemLabel.error) ?? .timestamp, activated: {
+                return SecureIdValueFormFileItem(account: params.account, context: params.context, document: document, placeholder: nil, title: strings.Passport_Scans_ScanIndex("\(index + 1)").string, label: error.flatMap(SecureIdValueFormFileItemLabel.error) ?? .timestamp, activated: {
                     params.openDocument(document)
                 }, deleted: {
                     params.deleteDocument(document)

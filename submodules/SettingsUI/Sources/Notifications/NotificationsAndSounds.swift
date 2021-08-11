@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
@@ -1008,7 +1007,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     let sharedData = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
     let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
     
-    let exceptionsSignal = Signal<NotificationExceptionsList?, NoError>.single(exceptionsList) |> then(notificationExceptionsList(postbox: context.account.postbox, network: context.account.network) |> map(Optional.init))
+    let exceptionsSignal = Signal<NotificationExceptionsList?, NoError>.single(exceptionsList) |> then(context.engine.peers.notificationExceptionsList() |> map(Optional.init))
     
     notificationExceptions.set(exceptionsSignal |> map { list -> (NotificationExceptionMode, NotificationExceptionMode, NotificationExceptionMode) in
         var users:[PeerId : NotificationExceptionWrapper] = [:]
@@ -1068,9 +1067,9 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             }))
     }
     
-    let hasMoreThanOneAccount = context.sharedContext.activeAccounts
+    let hasMoreThanOneAccount = context.sharedContext.activeAccountContexts
     |> map { _, accounts, _ -> Bool in
-        return accounts.filter { !$0.1.isHidden }.count > 1
+        return accounts.filter { !$0.1.account.isHidden }.count > 1
     }
     |> distinctUntilChanged
     

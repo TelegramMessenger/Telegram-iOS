@@ -4,7 +4,6 @@ import MtProtoKit
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 public struct BotPaymentInvoiceFields: OptionSet {
     public var rawValue: Int32

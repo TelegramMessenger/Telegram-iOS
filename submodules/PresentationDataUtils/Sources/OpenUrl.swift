@@ -55,7 +55,7 @@ public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: 
         }
         var displayUrl = rawDisplayUrl
         displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
-        present(textAlertController(context: context, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+        present(textAlertController(context: context, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
             openImpl()
         })]))
     } else {

@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 
 private let minimalStreamableSize: Int = 384 * 1024
 

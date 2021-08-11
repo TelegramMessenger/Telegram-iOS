@@ -856,7 +856,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                         strongSelf.isSetUpForPlayback = false
                         strongSelf.isPlaying = true
                     }
-                    let fromIndex = strongSelf.playFromIndex
+                    var fromIndex = strongSelf.playFromIndex
                     strongSelf.playFromIndex = nil
                     strongSelf.play(fromIndex: fromIndex)
                 } else if strongSelf.canDisplayFirstFrame {

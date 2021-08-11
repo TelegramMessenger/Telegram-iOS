@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 func currentWebDocumentsHostDatacenterId(postbox: Postbox, isTestingEnvironment: Bool) -> Signal<Int32, NoError> {
     return postbox.transaction { transaction -> Int32 in

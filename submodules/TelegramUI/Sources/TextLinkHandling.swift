@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import Postbox
 import Display
 import SwiftSignalKit
@@ -91,8 +90,8 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
     }
     
     let openPeerMentionImpl: (String) -> Void = { mention in
-        navigateDisposable.set((context.engine.peers.resolvePeerByName(name: mention, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
-            openResolvedPeerImpl(peerId, .default)
+        navigateDisposable.set((context.engine.peers.resolvePeerByName(name: mention, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+            openResolvedPeerImpl(peer?.id, .default)
         }))
     }
     
@@ -114,7 +113,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         }
                         var displayUrl = rawDisplayUrl
                         displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
-                        controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).0, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                        controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
                             openLinkImpl(url)
                         })]), in: .window(.root))
                     } else {

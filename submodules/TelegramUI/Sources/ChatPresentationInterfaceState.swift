@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
@@ -17,7 +16,7 @@ enum ChatPresentationInputQueryKind: Int32 {
     case emojiSearch
 }
 
-struct ChatInputQueryMentionTypes: OptionSet {
+struct ChatInputQueryMentionTypes: OptionSet, Hashable {
     var rawValue: Int32
     
     init(rawValue: Int32) {
@@ -51,26 +50,6 @@ enum ChatPresentationInputQuery: Hashable, Equatable {
                 return .contextRequest
             case .emojiSearch:
                 return .emojiSearch
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case let .emoji(value):
-                return 1 &+ value.hashValue
-            case let .hashtag(value):
-                return 2 &+ value.hashValue
-            case let .mention(text, types):
-                return 3 &+ text.hashValue &* 31 &+ types.rawValue.hashValue
-            case let .command(value):
-                return 4 &+ value.hashValue
-            case let .contextRequest(addressName, query):
-                return 5 &+ addressName.hashValue &* 31 &+ query.hashValue
-            case let .emojiSearch(value, languageCode, range):
-                var hash = value.hashValue
-                hash = hash &* 31 &+ languageCode.hashValue
-                hash = hash &* 31 &+ range.hashValue
-                return 6 &+ hash
         }
     }
 }

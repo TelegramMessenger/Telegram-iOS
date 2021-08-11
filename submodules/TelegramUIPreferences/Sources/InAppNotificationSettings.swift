@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import SyncCore
+import TelegramCore
 
 public enum TotalUnreadCountDisplayStyle: Int32 {
     case filtered = 0

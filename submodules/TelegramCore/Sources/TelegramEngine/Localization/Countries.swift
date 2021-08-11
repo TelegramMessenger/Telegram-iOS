@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 public struct Country: PostboxCoding, Equatable {
     public static func == (lhs: Country, rhs: Country) -> Bool {

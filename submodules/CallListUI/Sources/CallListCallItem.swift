@@ -5,7 +5,6 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -438,8 +437,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                     statusAccessibilityString = isVideo ? (item.presentationData.strings.Call_VoiceOver_VideoCallOutgoing + ", " + item.presentationData.strings.Call_VoiceOver_VideoCallIncoming) : (item.presentationData.strings.Call_VoiceOver_VoiceCallOutgoing + ", " + item.presentationData.strings.Call_VoiceOver_VoiceCallIncoming)
                 } else if hasIncoming {
                     if let callDuration = callDuration, callDuration != 0 {
-                        statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallTimeFormat(item.presentationData.strings.Notification_CallIncomingShort, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-                        statusAccessibilityString = item.presentationData.strings.Notification_CallTimeFormat(isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallIncoming : item.presentationData.strings.Call_VoiceOver_VoiceCallIncoming, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0
+                        statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallTimeFormat(item.presentationData.strings.Notification_CallIncomingShort, callDurationString(strings: item.presentationData.strings, duration: callDuration)).string, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusAccessibilityString = item.presentationData.strings.Notification_CallTimeFormat(isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallIncoming : item.presentationData.strings.Call_VoiceOver_VoiceCallIncoming, callDurationString(strings: item.presentationData.strings, duration: callDuration)).string
                         
                     } else {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallIncomingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
@@ -447,8 +446,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                     }
                 } else {
                     if let callDuration = callDuration, callDuration != 0 {
-                        statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallTimeFormat(item.presentationData.strings.Notification_CallOutgoingShort, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-                        statusAccessibilityString = item.presentationData.strings.Notification_CallTimeFormat(isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallOutgoing : item.presentationData.strings.Call_VoiceOver_VoiceCallOutgoing, callDurationString(strings: item.presentationData.strings, duration: callDuration)).0
+                        statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallTimeFormat(item.presentationData.strings.Notification_CallOutgoingShort, callDurationString(strings: item.presentationData.strings, duration: callDuration)).string, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusAccessibilityString = item.presentationData.strings.Notification_CallTimeFormat(isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallOutgoing : item.presentationData.strings.Call_VoiceOver_VoiceCallOutgoing, callDurationString(strings: item.presentationData.strings, duration: callDuration)).string
                     } else {
                         statusAttributedString = NSAttributedString(string: item.presentationData.strings.Notification_CallOutgoingShort, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                         statusAccessibilityString = isVideo ? item.presentationData.strings.Call_VoiceOver_VideoCallOutgoing : item.presentationData.strings.Call_VoiceOver_VoiceCallOutgoing
@@ -650,9 +649,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.3, removeOnCompletion: false)
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let (item, _, _, _, _) = self.layoutParams {
-            return item.header
+            return item.header.flatMap { [$0] }
         } else {
             return nil
         }

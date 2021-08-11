@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -118,7 +117,8 @@ private func peerAutoremoveSetupEntries(peer: Peer?, presentationData: Presentat
     var availableValues: [Int32] = [
         Int32.max,
         24 * 60 * 60,
-        24 * 60 * 60 * 7
+        24 * 60 * 60 * 7,
+        24 * 60 * 60 * 31,
     ]
     if isDebug {
         availableValues[1] = 5

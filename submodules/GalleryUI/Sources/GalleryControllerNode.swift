@@ -22,6 +22,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     public var beginCustomDismiss: () -> Void = { }
     public var completeCustomDismiss: () -> Void = { }
     public var baseNavigationController: () -> NavigationController? = { return nil }
+    public var galleryController: () -> ViewController? = { return nil }
     
     private var presentationState = GalleryControllerPresentationState()
     
@@ -119,6 +120,9 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         
         self.pager.baseNavigationController = { [weak self] in
             return self?.baseNavigationController()
+        }
+        self.pager.galleryController = { [weak self] in
+            return self?.galleryController()
         }
         
         self.addSubnode(self.backgroundNode)

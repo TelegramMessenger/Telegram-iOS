@@ -2,7 +2,6 @@ import LegacyComponents
 import Display
 import Postbox
 import SwiftSignalKit
-import SyncCore
 import TelegramCore
 import AccountContext
 import AnimatedStickerNode

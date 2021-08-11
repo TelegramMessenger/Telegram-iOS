@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ActivityIndicator
@@ -380,7 +379,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                             case let .confirm(_, _, pattern, _):
                                 emailPattern = pattern
                         }
-                        subtitle = self.presentationData.strings.TwoStepAuth_ConfirmEmailDescription(emailPattern).0
+                        subtitle = self.presentationData.strings.TwoStepAuth_ConfirmEmailDescription(emailPattern).string
                         inputType = .code
                         inputPlaceholder = self.presentationData.strings.TwoStepAuth_ConfirmEmailCodePlaceholder
                         inputText = code

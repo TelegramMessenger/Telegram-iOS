@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -297,7 +296,7 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
                     
                     entries.append(.timeBasedAutomaticLocationValue(theme, strings.AutoNightTheme_UpdateLocation, localizedName))
                     if sunset != 0 || sunrise != 0 {
-                        entries.append(.settingInfo(theme, strings.AutoNightTheme_LocationHelp(stringForMessageTimestamp(timestamp: sunset, dateTimeFormat: dateTimeFormat, local: false), stringForMessageTimestamp(timestamp: sunrise, dateTimeFormat: dateTimeFormat, local: false)).0))
+                        entries.append(.settingInfo(theme, strings.AutoNightTheme_LocationHelp(stringForMessageTimestamp(timestamp: sunset, dateTimeFormat: dateTimeFormat, local: false), stringForMessageTimestamp(timestamp: sunrise, dateTimeFormat: dateTimeFormat, local: false)).string))
                     }
                 case let .manual(fromSeconds, toSeconds):
                     entries.append(.timeBasedManualFrom(theme, strings.AutoNightTheme_ScheduledFrom, stringForMessageTimestamp(timestamp: fromSeconds, dateTimeFormat: dateTimeFormat, local: false)))
@@ -306,7 +305,7 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
         case let .brightness(threshold):
             entries.append(.settingsHeader(theme, strings.AutoNightTheme_AutomaticSection))
             entries.append(.brightnessValue(theme, threshold))
-            entries.append(.settingInfo(theme, strings.AutoNightTheme_AutomaticHelp("\(Int(threshold * 100.0))").0.replacingOccurrences(of: "%%", with: "%")))
+            entries.append(.settingInfo(theme, strings.AutoNightTheme_AutomaticHelp("\(Int(threshold * 100.0))").string.replacingOccurrences(of: "%%", with: "%")))
     }
     
     switch switchSetting.trigger {

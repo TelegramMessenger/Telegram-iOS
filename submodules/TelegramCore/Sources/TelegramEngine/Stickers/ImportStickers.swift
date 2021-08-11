@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 public enum UploadStickerStatus {
     case progress(Float)

@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -451,7 +450,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         if channel.flags.contains(.isCreator) && !channel.flags.contains(.isGigagroup), let memberCount = cachedData.participantsSummary.memberCount, memberCount > participantsLimit - 1000 {
             entries.append(.conversionHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastTitle.uppercased()))
             entries.append(.conversion(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvert))
-            entries.append(.conversionInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvertInfo(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.groupingSeparator)).0))
+            entries.append(.conversionInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvertInfo(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.groupingSeparator)).string))
         }
         
         entries.append(.slowmodeHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SlowmodeHeader))
@@ -753,7 +752,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 let _ = (convertGroupToGigagroup(account: context.account, peerId: originalPeerId)
                 |> deliverOnMainQueue).start(completed: {
                     let participantsLimit = context.currentLimitsConfiguration.with { $0 }.maxSupergroupMemberCount
-                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .gigagroupConversion(text: presentationData.strings.BroadcastGroups_Success(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.decimalSeparator)).0), elevatedLayout: true, action: { _ in return false }), nil)
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .gigagroupConversion(text: presentationData.strings.BroadcastGroups_Success(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.decimalSeparator)).string), elevatedLayout: true, action: { _ in return false }), nil)
                     
                     dismissToChatController?()
                 })
@@ -762,9 +761,9 @@ public func channelPermissionsController(context: AccountContext, peerId origina
         }
         pushControllerImpl?(controller)
     }, openChannelExample: {
-        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "durov") |> deliverOnMainQueue).start(next: { peerId in
-            if let peerId = peerId {
-                navigateToChatControllerImpl?(peerId)
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "durov") |> deliverOnMainQueue).start(next: { peer in
+            if let peer = peer {
+                navigateToChatControllerImpl?(peer.id)
             }
         }))
     }, updateSlowmode: { value in

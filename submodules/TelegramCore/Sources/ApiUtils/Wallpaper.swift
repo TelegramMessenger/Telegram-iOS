@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 extension WallpaperSettings {
     init(apiWallpaperSettings: Api.WallPaperSettings) {

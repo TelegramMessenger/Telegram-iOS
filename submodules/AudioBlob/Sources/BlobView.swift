@@ -1,12 +1,44 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Display
 import LegacyComponents
 
+public final class VoiceBlobNode: ASDisplayNode {
+    public init(
+        maxLevel: CGFloat,
+        smallBlobRange: VoiceBlobView.BlobRange,
+        mediumBlobRange: VoiceBlobView.BlobRange,
+        bigBlobRange: VoiceBlobView.BlobRange
+    ) {
+        super.init()
+        
+        self.setViewBlock({
+            return VoiceBlobView(frame: CGRect(), maxLevel: maxLevel, smallBlobRange: smallBlobRange, mediumBlobRange: mediumBlobRange, bigBlobRange: bigBlobRange)
+        })
+    }
+    
+    public func startAnimating(immediately: Bool = false) {
+        (self.view as? VoiceBlobView)?.startAnimating(immediately: immediately)
+    }
+    
+    public func stopAnimating(duration: Double = 0.15) {
+        (self.view as? VoiceBlobView)?.stopAnimating(duration: duration)
+    }
+    
+    public func setColor(_ color: UIColor, animated: Bool = false) {
+        (self.view as? VoiceBlobView)?.setColor(color, animated: animated)
+    }
+    
+    public func updateLevel(_ level: CGFloat, immediately: Bool = false) {
+        (self.view as? VoiceBlobView)?.updateLevel(level, immediately: immediately)
+    }
+}
+
 public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration {
-    private let smallBlob: BlobView
-    private let mediumBlob: BlobView
-    private let bigBlob: BlobView
+    private let smallBlob: BlobNode
+    private let mediumBlob: BlobNode
+    private let bigBlob: BlobNode
     
     private let maxLevel: CGFloat
     
@@ -28,7 +60,7 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     ) {
         self.maxLevel = maxLevel
         
-        self.smallBlob = BlobView(
+        self.smallBlob = BlobNode(
             pointsCount: 8,
             minRandomness: 0.1,
             maxRandomness: 0.5,
@@ -39,23 +71,23 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
             scaleSpeed: 0.2,
             isCircle: true
         )
-        self.mediumBlob = BlobView(
+        self.mediumBlob = BlobNode(
             pointsCount: 8,
             minRandomness: 1,
             maxRandomness: 1,
-            minSpeed: 1.5,
-            maxSpeed: 7,
+            minSpeed: 0.9,
+            maxSpeed: 4,
             minScale: mediumBlobRange.min,
             maxScale: mediumBlobRange.max,
             scaleSpeed: 0.2,
             isCircle: false
         )
-        self.bigBlob = BlobView(
+        self.bigBlob = BlobNode(
             pointsCount: 8,
             minRandomness: 1,
             maxRandomness: 1,
-            minSpeed: 1.5,
-            maxSpeed: 7,
+            minSpeed: 0.9,
+            maxSpeed: 4,
             minScale: bigBlobRange.min,
             maxScale: bigBlobRange.max,
             scaleSpeed: 0.2,
@@ -64,9 +96,9 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
         
         super.init(frame: frame)
         
-        addSubview(bigBlob)
-        addSubview(mediumBlob)
-        addSubview(smallBlob)
+        self.addSubnode(self.bigBlob)
+        self.addSubnode(self.mediumBlob)
+        self.addSubnode(self.smallBlob)
         
         displayLinkAnimator = ConstantDisplayLinkAnimator() { [weak self] in
             guard let strongSelf = self else { return }
@@ -148,8 +180,8 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     }
     
     private func updateBlobsState() {
-        if isAnimating {
-            if smallBlob.frame.size != .zero {
+        if self.isAnimating {
+            if self.smallBlob.frame.size != .zero {
                 smallBlob.startAnimating()
                 mediumBlob.startAnimating()
                 bigBlob.startAnimating()
@@ -164,15 +196,15 @@ public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDeco
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        smallBlob.frame = bounds
-        mediumBlob.frame = bounds
-        bigBlob.frame = bounds
+        self.smallBlob.frame = bounds
+        self.mediumBlob.frame = bounds
+        self.bigBlob.frame = bounds
         
-        updateBlobsState()
+        self.updateBlobsState()
     }
 }
 
-final class BlobView: UIView {
+final class BlobNode: ASDisplayNode {
     let pointsCount: Int
     let smoothness: CGFloat
     
@@ -185,8 +217,6 @@ final class BlobView: UIView {
     let minScale: CGFloat
     let maxScale: CGFloat
     let scaleSpeed: CGFloat
-    
-    var scaleLevelsToBalance = [CGFloat]()
     
     let isCircle: Bool
     
@@ -261,9 +291,9 @@ final class BlobView: UIView {
         let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
         self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
         
-        super.init(frame: .zero)
+        super.init()
         
-        layer.addSublayer(shapeLayer)
+        self.layer.addSublayer(self.shapeLayer)
         
         self.shapeLayer.transform = CATransform3DMakeScale(minScale, minScale, 1)
     }
@@ -282,10 +312,6 @@ final class BlobView: UIView {
     
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
         self.speedLevel = max(self.speedLevel, newSpeedLevel)
-        
-//        if abs(lastSpeedLevel - newSpeedLevel) > 0.5 {
-//            animateToNewShape()
-//        }
     }
     
     func startAnimating() {
@@ -368,16 +394,16 @@ final class BlobView: UIView {
         return points
     }
     
-    override func layoutSubviews() {
-        super.layoutSubviews()
+    override func layout() {
+        super.layout()
         
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
-        if isCircle {
-            let halfWidth = bounds.width * 0.5
-            shapeLayer.path = UIBezierPath(
-                roundedRect: bounds.offsetBy(dx: -halfWidth, dy: -halfWidth),
+        self.shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        if self.isCircle {
+            let halfWidth = self.bounds.width * 0.5
+            self.shapeLayer.path = UIBezierPath(
+                roundedRect: self.bounds.offsetBy(dx: -halfWidth, dy: -halfWidth),
                 cornerRadius: halfWidth
             ).cgPath
         }
@@ -386,7 +412,6 @@ final class BlobView: UIView {
 }
 
 private extension UIBezierPath {
-    
     static func smoothCurve(
         through points: [CGPoint],
         length: CGFloat,
@@ -439,7 +464,6 @@ private extension UIBezierPath {
     }
     
     struct SmoothPoint {
-        
         let point: CGPoint
         
         let inAngle: CGFloat
@@ -464,4 +488,3 @@ private extension UIBezierPath {
         }
     }
 }
-

@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 
-import SyncCore
 
 func addSynchronizeChatInputStateOperation(transaction: Transaction, peerId: PeerId) {
     var updateLocalIndex: Int32?

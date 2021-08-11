@@ -6,14 +6,12 @@
 @property (nonatomic, assign) PGCameraFlashMode mode;
 @property (nonatomic, assign) UIInterfaceOrientation interfaceOrientation;
 
-@property (nonatomic, copy) void(^becameActive)(void);
 @property (nonatomic, copy) void(^modeChanged)(PGCameraFlashMode mode);
 
 - (void)setFlashUnavailable:(bool)unavailable;
+- (void)setFlashActive:(bool)active;
 
 - (void)setHidden:(bool)hidden animated:(bool)animated;
-
-- (void)dismissAnimated:(bool)animated;
 
 @end
 

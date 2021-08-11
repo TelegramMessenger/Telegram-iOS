@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -249,12 +248,12 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     
     let arguments = ChatListFilterPresetListControllerArguments(context: context,
     addSuggestedPresed: { title, data in
-        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+        let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
             var filters = filters
-            let id = generateNewChatListFilterId(filters: filters)
+            let id = context.engine.peers.generateNewChatListFilterId(filters: filters)
             filters.insert(ChatListFilter(id: id, title: title, emoticon: nil, data: data), at: 0)
             return filters
-        })
+        }
         |> deliverOnMainQueue).start(next: { _ in
         })
     }, openPreset: { preset in
@@ -279,13 +278,13 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 ActionSheetButtonItem(title: presentationData.strings.ChatList_RemoveFolderAction, color: .destructive, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     
-                    let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+                    let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
                         var filters = filters
                         if let index = filters.firstIndex(where: { $0.id == id }) {
                             filters.remove(at: index)
                         }
                         return filters
-                    })
+                    }
                     |> deliverOnMainQueue).start()
                 })
             ]),
@@ -300,30 +299,12 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     
     let chatCountCache = Atomic<[ChatListFilterData: Int]>(value: [:])
     
-    let filtersWithCountsSignal = updatedChatListFilters(postbox: context.account.postbox)
+    let filtersWithCountsSignal = context.engine.peers.updatedChatListFilters()
     |> distinctUntilChanged
     |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
         return .single(filters.map { filter -> (ChatListFilter, Int) in
             return (filter, 0)
         })
-        /*return context.account.postbox.transaction { transaction -> [(ChatListFilter, Int)] in
-            return filters.map { filter -> (ChatListFilter, Int) in
-                let count: Int
-                if let cachedValue = chatCountCache.with({ dict -> Int? in
-                    return dict[filter.data]
-                }) {
-                    count = cachedValue
-                } else {
-                    count = transaction.getChatCountMatchingPredicate(chatListFilterPredicate(filter: filter.data))
-                    let _ = chatCountCache.modify { dict in
-                        var dict = dict
-                        dict[filter.data] = count
-                        return dict
-                    }
-                }
-                return (filter, count)
-            }
-        }*/
     }
     
     let featuredFilters = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFiltersFeaturedState])
@@ -368,7 +349,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak updatedFilterOrder] updatedFilterOrderValue in
                     if let updatedFilterOrderValue = updatedFilterOrderValue {
-                        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+                        let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
                             var updatedFilters: [ChatListFilter] = []
                             for id in updatedFilterOrderValue {
                                 if let index = filters.firstIndex(where: { $0.id == id }) {
@@ -382,7 +363,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                             }
                             
                             return updatedFilters
-                        })
+                        }
                         |> deliverOnMainQueue).start(next: { _ in
                             filtersWithCounts.set(filtersWithCountsSignal)
                             let _ = (filtersWithCounts.get()

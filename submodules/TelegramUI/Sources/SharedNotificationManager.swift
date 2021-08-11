@@ -4,7 +4,6 @@ import UserNotifications
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramCallsUI
@@ -430,7 +429,7 @@ public final class SharedNotificationManager {
         self.currentNotificationCall = call
         
         if let notificationCall = call {
-            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle(strings: strings, displayOrder: nameOrder) ?? "").0
+            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle(strings: strings, displayOrder: nameOrder) ?? "").string
             let title: String?
             let body: String
             if let index = rawText.firstIndex(of: "|") {

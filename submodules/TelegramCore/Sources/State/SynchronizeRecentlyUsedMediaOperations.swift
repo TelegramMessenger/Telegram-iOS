@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 enum RecentlyUsedMediaCategory {
     case stickers

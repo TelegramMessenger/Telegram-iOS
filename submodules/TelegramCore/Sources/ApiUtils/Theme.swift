@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 extension TelegramTheme {
     convenience init?(apiTheme: Api.Theme) {

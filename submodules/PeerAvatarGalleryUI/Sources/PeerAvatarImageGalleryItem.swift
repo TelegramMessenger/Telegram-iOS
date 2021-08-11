@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
@@ -71,7 +70,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
         let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer, sourceCorners: self.sourceCorners)
         
         if let indexData = self.entry.indexData {
-            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").string))
         }
         
         node.setEntry(self.entry, synchronous: synchronous)
@@ -85,7 +84,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? PeerAvatarImageGalleryItemNode {
             if let indexData = self.entry.indexData {
-                node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
+                node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").string))
             }
             let previousContentAnimations = node.imageNode.contentAnimations
             if synchronous {

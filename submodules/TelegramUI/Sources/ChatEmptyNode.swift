@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AppBundle
 import LocalizedPeerData
@@ -308,7 +307,7 @@ final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerC
                 }
             }
 
-            let titleString = interfaceState.strings.Conversation_PeerNearbyTitle(displayName, shortStringForDistance(strings: interfaceState.strings, distance: distance)).0
+            let titleString = interfaceState.strings.Conversation_PeerNearbyTitle(displayName, shortStringForDistance(strings: interfaceState.strings, distance: distance)).string
             let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
             
             self.titleNode.attributedText = NSAttributedString(string: titleString, font: titleFont, textColor: serviceColor.primaryText)
@@ -443,9 +442,9 @@ private final class ChatEmptyNodeSecretChatContent: ASDisplayNode, ChatEmptyNode
             
             let titleString: String
             if incoming {
-                titleString = interfaceState.strings.Conversation_EncryptedPlaceholderTitleIncoming(title).0
+                titleString = interfaceState.strings.Conversation_EncryptedPlaceholderTitleIncoming(title).string
             } else {
-                titleString = interfaceState.strings.Conversation_EncryptedPlaceholderTitleOutgoing(title).0
+                titleString = interfaceState.strings.Conversation_EncryptedPlaceholderTitleOutgoing(title).string
             }
             
             let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
@@ -571,7 +570,7 @@ private final class ChatEmptyNodeGroupChatContent: ASDisplayNode, ChatEmptyNodeC
             self.subtitleNode.attributedText = NSAttributedString(string: interfaceState.strings.EmptyGroupInfo_Subtitle, font: messageFont, textColor: serviceColor.primaryText)
             
             let strings: [String] = [
-                interfaceState.strings.EmptyGroupInfo_Line1("\(interfaceState.limitsConfiguration.maxSupergroupMemberCount)").0,
+                interfaceState.strings.EmptyGroupInfo_Line1("\(interfaceState.limitsConfiguration.maxSupergroupMemberCount)").string,
                 interfaceState.strings.EmptyGroupInfo_Line2,
                 interfaceState.strings.EmptyGroupInfo_Line3,
                 interfaceState.strings.EmptyGroupInfo_Line4

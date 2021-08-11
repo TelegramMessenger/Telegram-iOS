@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -576,7 +575,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                             case let .availability(availability):
                                 switch availability {
                                     case .available:
-                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).0
+                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).string
                                     case .invalid:
                                         text = presentationData.strings.Channel_Username_InvalidCharacters
                                     case .taken:
@@ -708,7 +707,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                 case let .availability(availability):
                                     switch availability {
                                     case .available:
-                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).0
+                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).string
                                     case .invalid:
                                         text = presentationData.strings.Channel_Username_InvalidCharacters
                                     case .taken:
@@ -1027,7 +1026,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                         }
                                     }
                                     if revoke {
-                                        revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: link) |> deliverOnMainQueue).start(completed: {
+                                        revokeLinkDisposable.set((context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: link) |> deliverOnMainQueue).start(completed: {
                                             updateState {
                                                 $0.withUpdatedRevokingPrivateLink(false)
                                             }

@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-import SyncCore
 
 private struct SearchStickersConfiguration {
     static var defaultValue: SearchStickersConfiguration {
@@ -346,7 +345,7 @@ func _internal_searchGifs(account: Account, query: String, nextOffset: String = 
         return account.postbox.loadedPeerWithId(peerId)
     }
     |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
-        return requestChatContextResults(account: account, botId: peer.id, peerId: account.peerId, query: query, offset: nextOffset)
+        return _internal_requestChatContextResults(account: account, botId: peer.id, peerId: account.peerId, query: query, offset: nextOffset)
         |> map { results -> ChatContextResultCollection? in
             return results?.results
         }

@@ -5,7 +5,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import TextFormat
 import AccountContext
@@ -13,6 +12,7 @@ import WebsiteType
 import InstantPageUI
 import UrlHandling
 import GalleryData
+import TelegramPresentationData
 
 private let titleFont: UIFont = Font.semibold(15.0)
 
@@ -208,7 +208,6 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 } else if let type = webpage.type {
                     if type == "telegram_background" {
                         var colors: [UInt32] = []
-                        var bottomColor: UIColor?
                         var rotation: Int32?
                         if let wallpaper = parseWallpaperUrl(webpage.url) {
                             if case let .color(color) = wallpaper {

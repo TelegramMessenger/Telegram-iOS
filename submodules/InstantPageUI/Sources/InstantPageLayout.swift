@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import Postbox
 import Display
 import TelegramPresentationData
@@ -124,7 +123,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
             } else {
                 if date != 0 {
                     let dateText = RichText.plain(stringForDate(date))
-                    let formatString = strings.InstantPage_AuthorAndDateTitle("%1$@", "%2$@").0
+                    let formatString = strings.InstantPage_AuthorAndDateTitle("%1$@", "%2$@").string
                     let authorRange = formatString.range(of: "%1$@")!
                     let dateRange = formatString.range(of: "%2$@")!
                     
@@ -780,7 +779,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
                 if article.author != nil || article.date != nil {
                     if let author = article.author {
                         if let date = article.date {
-                            subtext = strings.InstantPage_RelatedArticleAuthorAndDateTitle(author, stringForDate(date)).0
+                            subtext = strings.InstantPage_RelatedArticleAuthorAndDateTitle(author, stringForDate(date)).string
                         } else {
                             subtext = author
                         }

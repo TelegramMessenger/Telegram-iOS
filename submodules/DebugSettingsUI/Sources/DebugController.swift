@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import MtProtoKit
 import MessageUI
 import TelegramPresentationData
@@ -574,10 +573,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 if let context = arguments.context {
                     let _ = (context.account.postbox.transaction { transaction -> Void in
                         transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedPollResults)
-                        unmarkChatListFeaturedFiltersAsSeen(transaction: transaction)
                         
                         transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks)
                     }).start()
+
+                    let _ = context.engine.peers.unmarkChatListFeaturedFiltersAsSeen()
                 }
             })
         case .crash:

@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
-import SyncCore
 
 public enum ChannelOwnershipTransferError {
     case generic

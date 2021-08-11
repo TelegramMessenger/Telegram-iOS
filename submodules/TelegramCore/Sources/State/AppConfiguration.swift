@@ -1,5 +1,4 @@
 import Postbox
-import SyncCore
 
 private func currentAppConfiguration(transaction: Transaction) -> AppConfiguration {
     if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration {

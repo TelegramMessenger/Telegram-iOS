@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 
 public func effectiveDataSaving(for settings: VoiceCallSettings?, autodownloadSettings: AutodownloadSettings) -> VoiceCallDataSaving {

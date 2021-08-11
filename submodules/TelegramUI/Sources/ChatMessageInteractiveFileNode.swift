@@ -5,7 +5,6 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import UniversalMediaPlayer
 import TelegramPresentationData
 import AccountContext
@@ -39,9 +38,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let consumableContentNode: ASImageNode
     
     private var iconNode: TransformImageNode?
-    private(set) var statusContainerNode: ContextExtractedContentContainingNode?
+    let statusContainerNode: ContextExtractedContentContainingNode
     private var statusNode: SemanticStatusNode?
-    private var playbackAudioLevelView: VoiceBlobView?
+    private var playbackAudioLevelNode: VoiceBlobNode?
     private var streamingStatusNode: SemanticStatusNode?
     private var tapRecognizer: UITapGestureRecognizer?
     
@@ -73,7 +72,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             guard self.visibility != oldValue else { return }
             
             if !self.visibility {
-                self.playbackAudioLevelView?.stopAnimating()
+                self.playbackAudioLevelNode?.stopAnimating()
             }
         }
     }
@@ -140,9 +139,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.addSubnode(self.descriptionNode)
         self.addSubnode(self.fetchingTextNode)
         self.addSubnode(self.fetchingCompactTextNode)
-        if let statusContainerNode = self.statusContainerNode {
-            self.addSubnode(statusContainerNode)
-        }
+        self.addSubnode(self.statusContainerNode)
     }
     
     deinit {
@@ -673,7 +670,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         return
                                     }
                                     strongSelf.inputAudioLevel = CGFloat(value)
-                                    strongSelf.playbackAudioLevelView?.updateLevel(CGFloat(value))
+                                    strongSelf.playbackAudioLevelNode?.updateLevel(CGFloat(value))
                                 }))
                             }
                             
@@ -692,19 +689,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.statusNode?.displaysAsynchronously = !presentationData.isPreview
                             strongSelf.statusNode?.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
 
-                            strongSelf.statusContainerNode?.frame = progressFrame
-                            strongSelf.statusContainerNode?.contentRect = CGRect(origin: CGPoint(), size: progressFrame.size)
-                            strongSelf.statusContainerNode?.contentNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
+                            strongSelf.statusContainerNode.frame = progressFrame
+                            strongSelf.statusContainerNode.contentRect = CGRect(origin: CGPoint(), size: progressFrame.size)
+                            strongSelf.statusContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
 
-                            strongSelf.playbackAudioLevelView?.frame = progressFrame.insetBy(dx: -12.0, dy: -12.0)
+                            strongSelf.playbackAudioLevelNode?.frame = progressFrame.insetBy(dx: -12.0, dy: -12.0)
                             strongSelf.progressFrame = progressFrame
                             strongSelf.streamingCacheStatusFrame = streamingCacheStatusFrame
                             strongSelf.fileIconImage = fileIconImage
 
-                            strongSelf.statusContainerNode?.frame = progressFrame
-                            strongSelf.statusContainerNode?.contentRect = CGRect(origin: CGPoint(), size: progressFrame.size)
-                            strongSelf.statusContainerNode?.contentNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
-                            
                             if let updatedFetchControls = updatedFetchControls {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
                                 if automaticDownload {
@@ -954,26 +947,27 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor, image: image, overlayForegroundNodeColor:  presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor)
             self.statusNode = statusNode
 
-            self.statusContainerNode?.contentNode.insertSubnode(statusNode, at: 0)
-            self.statusContainerNode?.frame = progressFrame
-            self.statusContainerNode?.contentRect = CGRect(origin: CGPoint(), size: progressFrame.size)
-            self.statusContainerNode?.contentNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
+            self.statusContainerNode.contentNode.insertSubnode(statusNode, at: 0)
+            self.statusContainerNode.frame = progressFrame
+            self.statusContainerNode.contentRect = CGRect(origin: CGPoint(), size: progressFrame.size)
+            self.statusContainerNode.contentNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
             statusNode.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
         } else if let statusNode = self.statusNode {
             statusNode.backgroundNodeColor = backgroundNodeColor
         }
         
-        if state != .none && isVoice && self.playbackAudioLevelView == nil && false {
+        if state != .none && isVoice && self.playbackAudioLevelNode == nil {
             let blobFrame = progressFrame.insetBy(dx: -12.0, dy: -12.0)
-            let playbackAudioLevelView = VoiceBlobView(
-                frame: blobFrame,
+            let playbackAudioLevelNode = VoiceBlobNode(
                 maxLevel: 0.3,
                 smallBlobRange: (0, 0),
                 mediumBlobRange: (0.7, 0.8),
                 bigBlobRange: (0.8, 0.9)
             )
-            self.playbackAudioLevelView = playbackAudioLevelView
-            self.view.addSubview(playbackAudioLevelView)
+            playbackAudioLevelNode.isUserInteractionEnabled = false
+            playbackAudioLevelNode.frame = blobFrame
+            self.playbackAudioLevelNode = playbackAudioLevelNode
+            self.insertSubnode(playbackAudioLevelNode, belowSubnode: self.statusContainerNode)
             
             let maskRect = CGRect(origin: .zero, size: blobFrame.size)
             let playbackMaskLayer = CAShapeLayer()
@@ -983,9 +977,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             maskPath.append(UIBezierPath(roundedRect: maskRect.insetBy(dx: 12, dy: 12), cornerRadius: 22))
             maskPath.append(UIBezierPath(rect: maskRect))
             playbackMaskLayer.path = maskPath.cgPath
-            playbackAudioLevelView.layer.mask = playbackMaskLayer
+            playbackAudioLevelNode.layer.mask = playbackMaskLayer
         }
-        self.playbackAudioLevelView?.setColor(presentationData.theme.theme.chat.inputPanel.actionControlFillColor)
+        self.playbackAudioLevelNode?.setColor(messageTheme.mediaActiveControlColor)
         
         if streamingState != .none && self.streamingStatusNode == nil {
             let streamingStatusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor)
@@ -1012,9 +1006,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             
             switch state {
             case .pause:
-                self.playbackAudioLevelView?.startAnimating()
+                self.playbackAudioLevelNode?.startAnimating()
             default:
-                self.playbackAudioLevelView?.stopAnimating()
+                self.playbackAudioLevelNode?.stopAnimating()
             }
         }
         

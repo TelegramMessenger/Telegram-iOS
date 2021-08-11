@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import LocalizedPeerData
 
@@ -119,7 +118,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             }
             
             let titleColor: UIColor
-            let completeSourceString: (String, [(Int, NSRange)])
+            let completeSourceString: PresentationStrings.FormattedString
             
             switch type {
                 case let .bubble(incoming):
@@ -140,9 +139,9 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                                 let rightPart = String(customFormat[range.upperBound...])
                                 
                                 let formattedText = leftPart + peerString + rightPart
-                                completeSourceString = (formattedText, [(0, NSRange(location: leftPart.count, length: peerString.count))])
+                                completeSourceString = PresentationStrings.FormattedString(string: formattedText, ranges: [PresentationStrings.FormattedString.Range(index: 0, range: NSRange(location: leftPart.count, length: peerString.count))])
                             } else {
-                                completeSourceString = (customFormat, [])
+                                completeSourceString = PresentationStrings.FormattedString(string: customFormat, ranges: [])
                             }
                         } else {
                             completeSourceString = strings.Message_GenericForwardedPsa(peerString)
@@ -170,9 +169,9 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                                 let rightPart = String(customFormat[range.upperBound...])
                                 
                                 let formattedText = leftPart + peerString + rightPart
-                                completeSourceString = (formattedText, [(0, NSRange(location: leftPart.count, length: peerString.count))])
+                                completeSourceString = PresentationStrings.FormattedString(string: formattedText, ranges: [PresentationStrings.FormattedString.Range(index: 0, range: NSRange(location: leftPart.count, length: peerString.count))])
                             } else {
-                                completeSourceString = (customFormat, [])
+                                completeSourceString = PresentationStrings.FormattedString(string: customFormat, ranges: [])
                             }
                         } else {
                             completeSourceString = strings.Message_GenericForwardedPsa(peerString)
@@ -214,9 +213,9 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                 highlight = false
             }
             
-            let completeString: NSString = completeSourceString.0 as NSString
+            let completeString: NSString = completeSourceString.string as NSString
             let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedString.Key.foregroundColor: titleColor, NSAttributedString.Key.font: prefixFont])
-            if highlight, let range = completeSourceString.1.first?.1 {
+            if highlight, let range = completeSourceString.ranges.first?.range {
                 string.addAttributes([NSAttributedString.Key.font: peerFont], range: range)
             }
             

@@ -2,12 +2,11 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import MergeLists
 import AccountContext
 
-func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?, flashIndicators: Bool, updatedMessageSelection: Bool, messageTransitionNode: ChatMessageTransitionNode?) -> ChatHistoryViewTransition {
+func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, scrollAnimationCurve: ListViewAnimationCurve?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?, flashIndicators: Bool, updatedMessageSelection: Bool, messageTransitionNode: ChatMessageTransitionNode?) -> ChatHistoryViewTransition {
     var mergeResult: (deleteIndices: [Int], indicesAndItems: [(Int, ChatHistoryEntry, Int?)], updateIndices: [(Int, ChatHistoryEntry, Int)])
     let allUpdated = fromView?.associatedData != toView.associatedData
     if reverse {
@@ -137,13 +136,15 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
     var scrolledToIndex: MessageHistoryAnchorIndex?
     var scrolledToSomeIndex = false
     
+    let curve: ListViewAnimationCurve = scrollAnimationCurve ?? .Default(duration: nil)
+    
     if let scrollPosition = scrollPosition {
         switch scrollPosition {
             case let .unread(unreadIndex):
                 var index = toView.filteredEntries.count - 1
                 for entry in toView.filteredEntries {
                     if case .UnreadEntry = entry {
-                        scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down)
+                        scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: curve, directionHint: .Down)
                         break
                     }
                     index -= 1
@@ -153,7 +154,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     var index = toView.filteredEntries.count - 1
                     for entry in toView.filteredEntries {
                         if entry.index >= unreadIndex {
-                            scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: .Default(duration: nil),  directionHint: .Down)
+                            scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: curve,  directionHint: .Down)
                             break
                         }
                         index -= 1
@@ -164,7 +165,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     var index = 0
                     for entry in toView.filteredEntries.reversed() {
                         if entry.index < unreadIndex {
-                            scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down)
+                            scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: curve, directionHint: .Down)
                             break
                         }
                         index += 1
@@ -174,7 +175,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                 var index = toView.filteredEntries.count - 1
                 for entry in toView.filteredEntries {
                     if entry.index >= scrollIndex {
-                        scrollToItem = ListViewScrollToItem(index: index, position: .top(relativeOffset), animated: false, curve: .Default(duration: nil),  directionHint: .Down)
+                        scrollToItem = ListViewScrollToItem(index: index, position: .top(relativeOffset), animated: false, curve: curve,  directionHint: .Down)
                         break
                     }
                     index -= 1
@@ -184,7 +185,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     var index = 0
                     for entry in toView.filteredEntries.reversed() {
                         if entry.index < scrollIndex {
-                            scrollToItem = ListViewScrollToItem(index: index, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down)
+                            scrollToItem = ListViewScrollToItem(index: index, position: .top(0.0), animated: false, curve: curve, directionHint: .Down)
                             break
                         }
                         index += 1
@@ -197,7 +198,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                 var index = toView.filteredEntries.count - 1
                 for entry in toView.filteredEntries {
                     if scrollIndex.isLessOrEqual(to: entry.index) {
-                        scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default(duration: nil), directionHint: directionHint)
+                        scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: curve, directionHint: directionHint)
                         break
                     }
                     index -= 1
@@ -208,7 +209,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     for entry in toView.filteredEntries.reversed() {
                         if !scrollIndex.isLess(than: entry.index) {
                             scrolledToSomeIndex = true
-                            scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default(duration: nil), directionHint: directionHint)
+                            scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: curve, directionHint: directionHint)
                             break
                         }
                         index += 1

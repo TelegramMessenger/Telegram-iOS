@@ -32,6 +32,10 @@
 
 #import "VideoCaptureInterfaceImpl.h"
 
+#include "sdk/objc/native/src/objc_frame_buffer.h"
+#import "components/video_frame_buffer/RTCCVPixelBuffer.h"
+#import "platform/darwin/TGRTCCVPixelBuffer.h"
+
 @implementation OngoingCallConnectionDescriptionWebrtc
 
 - (instancetype _Nonnull)initWithConnectionId:(int64_t)connectionId hasStun:(bool)hasStun hasTurn:(bool)hasTurn ip:(NSString * _Nonnull)ip port:(int32_t)port username:(NSString * _Nonnull)username password:(NSString * _Nonnull)password {
@@ -221,10 +225,238 @@
 
 @end
 
+@interface GroupCallDisposable () {
+    dispatch_block_t _block;
+}
+
+@end
+
+@implementation GroupCallDisposable
+
+- (instancetype)initWithBlock:(dispatch_block_t _Nonnull)block {
+    self = [super init];
+    if (self != nil) {
+        _block = [block copy];
+    }
+    return self;
+}
+
+- (void)dispose {
+    if (_block) {
+        _block();
+    }
+}
+
+@end
+
+@implementation CallVideoFrameNativePixelBuffer
+
+- (instancetype)initWithPixelBuffer:(CVPixelBufferRef)pixelBuffer {
+    self = [super init];
+    if (self != nil) {
+        assert(pixelBuffer != nil);
+
+        _pixelBuffer = CVPixelBufferRetain(pixelBuffer);
+    }
+    return self;
+}
+
+- (void)dealloc {
+    CVPixelBufferRelease(_pixelBuffer);
+}
+
+@end
+
+@implementation CallVideoFrameNV12Buffer
+
+- (instancetype)initWithBuffer:(rtc::scoped_refptr<webrtc::NV12BufferInterface>)nv12Buffer {
+    self = [super init];
+    if (self != nil) {
+        _width = nv12Buffer->width();
+        _height = nv12Buffer->height();
+
+        _strideY = nv12Buffer->StrideY();
+        _strideUV = nv12Buffer->StrideUV();
+
+        _y = [[NSData alloc] initWithBytesNoCopy:(void *)nv12Buffer->DataY() length:nv12Buffer->StrideY() * _height deallocator:^(__unused void * _Nonnull bytes, __unused NSUInteger length) {
+            nv12Buffer.get();
+        }];
+
+        _uv = [[NSData alloc] initWithBytesNoCopy:(void *)nv12Buffer->DataUV() length:nv12Buffer->StrideUV() * _height deallocator:^(__unused void * _Nonnull bytes, __unused NSUInteger length) {
+            nv12Buffer.get();
+        }];
+    }
+    return self;
+}
+
+@end
+
+@implementation CallVideoFrameI420Buffer
+
+- (instancetype)initWithBuffer:(rtc::scoped_refptr<webrtc::I420BufferInterface>)i420Buffer {
+    self = [super init];
+    if (self != nil) {
+        _width = i420Buffer->width();
+        _height = i420Buffer->height();
+
+        _strideY = i420Buffer->StrideY();
+        _strideU = i420Buffer->StrideU();
+        _strideV = i420Buffer->StrideV();
+
+        _y = [[NSData alloc] initWithBytesNoCopy:(void *)i420Buffer->DataY() length:i420Buffer->StrideY() * _height deallocator:^(__unused void * _Nonnull bytes, __unused NSUInteger length) {
+            i420Buffer.get();
+        }];
+
+        _u = [[NSData alloc] initWithBytesNoCopy:(void *)i420Buffer->DataU() length:i420Buffer->StrideU() * _height deallocator:^(__unused void * _Nonnull bytes, __unused NSUInteger length) {
+            i420Buffer.get();
+        }];
+
+        _v = [[NSData alloc] initWithBytesNoCopy:(void *)i420Buffer->DataV() length:i420Buffer->StrideV() * _height deallocator:^(__unused void * _Nonnull bytes, __unused NSUInteger length) {
+            i420Buffer.get();
+        }];
+    }
+    return self;
+}
+
+@end
+
+@interface CallVideoFrameData () {
+}
+
+@end
+
+@implementation CallVideoFrameData
+
+- (instancetype)initWithBuffer:(id<CallVideoFrameBuffer>)buffer frame:(webrtc::VideoFrame const &)frame mirrorHorizontally:(bool)mirrorHorizontally mirrorVertically:(bool)mirrorVertically {
+    self = [super init];
+    if (self != nil) {
+        _buffer = buffer;
+
+        _width = frame.width();
+        _height = frame.height();
+
+        switch (frame.rotation()) {
+            case webrtc::kVideoRotation_0: {
+                _orientation = OngoingCallVideoOrientation0;
+                break;
+            }
+            case webrtc::kVideoRotation_90: {
+                _orientation = OngoingCallVideoOrientation90;
+                break;
+            }
+            case webrtc::kVideoRotation_180: {
+                _orientation = OngoingCallVideoOrientation180;
+                break;
+            }
+            case webrtc::kVideoRotation_270: {
+                _orientation = OngoingCallVideoOrientation270;
+                break;
+            }
+            default: {
+                _orientation = OngoingCallVideoOrientation0;
+                break;
+            }
+        }
+
+        _mirrorHorizontally = mirrorHorizontally;
+        _mirrorVertically = mirrorVertically;
+    }
+    return self;
+}
+
+@end
+
+namespace {
+
+class GroupCallVideoSinkAdapter : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
+public:
+    GroupCallVideoSinkAdapter(void (^frameReceived)(webrtc::VideoFrame const &)) {
+        _frameReceived = [frameReceived copy];
+    }
+
+    void OnFrame(const webrtc::VideoFrame& nativeVideoFrame) override {
+        @autoreleasepool {
+            if (_frameReceived) {
+                _frameReceived(nativeVideoFrame);
+            }
+        }
+    }
+
+private:
+    void (^_frameReceived)(webrtc::VideoFrame const &);
+};
+
+}
+
+@interface GroupCallVideoSink : NSObject {
+    std::shared_ptr<GroupCallVideoSinkAdapter> _adapter;
+}
+
+@end
+
+@implementation GroupCallVideoSink
+
+- (instancetype)initWithSink:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink {
+    self = [super init];
+    if (self != nil) {
+        void (^storedSink)(CallVideoFrameData * _Nonnull) = [sink copy];
+
+        _adapter.reset(new GroupCallVideoSinkAdapter(^(webrtc::VideoFrame const &videoFrame) {
+            id<CallVideoFrameBuffer> mappedBuffer = nil;
+
+            bool mirrorHorizontally = false;
+            bool mirrorVertically = false;
+
+            if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kNative) {
+                id<RTC_OBJC_TYPE(RTCVideoFrameBuffer)> nativeBuffer = static_cast<webrtc::ObjCFrameBuffer *>(videoFrame.video_frame_buffer().get())->wrapped_frame_buffer();
+                if ([nativeBuffer isKindOfClass:[RTC_OBJC_TYPE(RTCCVPixelBuffer) class]]) {
+                    RTCCVPixelBuffer *pixelBuffer = (RTCCVPixelBuffer *)nativeBuffer;
+                    mappedBuffer = [[CallVideoFrameNativePixelBuffer alloc] initWithPixelBuffer:pixelBuffer.pixelBuffer];
+                }
+                if ([nativeBuffer isKindOfClass:[TGRTCCVPixelBuffer class]]) {
+                    if (((TGRTCCVPixelBuffer *)nativeBuffer).shouldBeMirrored) {
+                        switch (videoFrame.rotation()) {
+                            case webrtc::kVideoRotation_0:
+                            case webrtc::kVideoRotation_180:
+                                mirrorHorizontally = true;
+                                break;
+                            case webrtc::kVideoRotation_90:
+                            case webrtc::kVideoRotation_270:
+                                mirrorVertically = true;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            } else if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kNV12) {
+                rtc::scoped_refptr<webrtc::NV12BufferInterface> nv12Buffer = (webrtc::NV12BufferInterface *)videoFrame.video_frame_buffer().get();
+                mappedBuffer = [[CallVideoFrameNV12Buffer alloc] initWithBuffer:nv12Buffer];
+            } else if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kI420) {
+                rtc::scoped_refptr<webrtc::I420BufferInterface> i420Buffer = (webrtc::I420BufferInterface *)videoFrame.video_frame_buffer().get();
+                mappedBuffer = [[CallVideoFrameI420Buffer alloc] initWithBuffer:i420Buffer];
+            }
+
+            if (storedSink && mappedBuffer) {
+                storedSink([[CallVideoFrameData alloc] initWithBuffer:mappedBuffer frame:videoFrame mirrorHorizontally:mirrorHorizontally mirrorVertically:mirrorVertically]);
+            }
+        }));
+    }
+    return self;
+}
+
+- (std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>>)sink {
+    return _adapter;
+}
+
+@end
 
 @interface OngoingCallThreadLocalContextVideoCapturer () {
     bool _keepLandscape;
     std::shared_ptr<std::vector<uint8_t>> _croppingBuffer;
+
+    int _nextSinkId;
+    NSMutableDictionary<NSNumber *, GroupCallVideoSink *> *_sinks;
 }
 
 @end
@@ -237,6 +469,7 @@
         _interface = interface;
         _isProcessingCustomSampleBuffer = [[IsProcessingCustomSampleBufferFlag alloc] init];
         _croppingBuffer = std::make_shared<std::vector<uint8_t>>();
+        _sinks = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -251,6 +484,7 @@
             resolvedId += std::string(":landscape");
         }
         _interface = tgcalls::VideoCaptureInterface::Create(tgcalls::StaticThreads::getThreads(), resolvedId);
+        _sinks = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -264,7 +498,7 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 }
 
 + (instancetype _Nonnull)capturerWithExternalSampleBufferProvider {
-    std::shared_ptr<tgcalls::VideoCaptureInterface> interface = tgcalls::VideoCaptureInterface::Create(tgcalls::StaticThreads::getThreads(), ":ios_custom");
+    std::shared_ptr<tgcalls::VideoCaptureInterface> interface = tgcalls::VideoCaptureInterface::Create(tgcalls::StaticThreads::getThreads(), ":ios_custom", true);
     return [[OngoingCallThreadLocalContextVideoCapturer alloc] initWithInterface:interface];
 }
 #endif
@@ -311,6 +545,32 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 }
 
 #endif
+
+- (GroupCallDisposable * _Nonnull)addVideoOutput:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink {
+    int sinkId = _nextSinkId;
+    _nextSinkId += 1;
+
+    GroupCallVideoSink *storedSink = [[GroupCallVideoSink alloc] initWithSink:sink];
+    _sinks[@(sinkId)] = storedSink;
+
+    auto sinkReference = [storedSink sink];
+
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, sinkReference]() {
+        interface->setOutput(sinkReference);
+    });
+
+    __weak OngoingCallThreadLocalContextVideoCapturer *weakSelf = self;
+    return [[GroupCallDisposable alloc] initWithBlock:^{
+        dispatch_async(dispatch_get_main_queue(), ^{
+            __strong OngoingCallThreadLocalContextVideoCapturer *strongSelf = weakSelf;
+            if (!strongSelf) {
+                return;
+            }
+
+            [strongSelf->_sinks removeObjectForKey:@(sinkId)];
+        });
+    }];
+}
 
 - (void)switchVideoInput:(NSString * _Nonnull)deviceId {
     std::string resolvedId = deviceId.UTF8String;
@@ -1029,6 +1289,15 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     _tgVoip->setAudioInputDevice(deviceId.UTF8String);
 }
 
+- (void)addExternalAudioData:(NSData * _Nonnull)data {
+    if (_tgVoip) {
+        std::vector<uint8_t> samples;
+        samples.resize(data.length);
+        [data getBytes:samples.data() length:data.length];
+        _tgVoip->addExternalAudioSamples(std::move(samples));
+    }
+}
+
 @end
 
 namespace {
@@ -1071,11 +1340,14 @@ private:
 
 @interface GroupCallThreadLocalContext () {
     id<OngoingCallThreadLocalContextQueueWebrtc> _queue;
-    
+
     std::unique_ptr<tgcalls::GroupInstanceInterface> _instance;
     OngoingCallThreadLocalContextVideoCapturer *_videoCapturer;
-    
+
     void (^_networkStateUpdated)(GroupCallNetworkState);
+
+    int _nextSinkId;
+    NSMutableDictionary<NSNumber *, GroupCallVideoSink *> *_sinks;
 }
 
 @end
@@ -1096,6 +1368,8 @@ private:
     self = [super init];
     if (self != nil) {
         _queue = queue;
+
+        _sinks = [[NSMutableDictionary alloc] init];
         
         _networkStateUpdated = [networkStateUpdated copy];
         _videoCapturer = videoCapturer;
@@ -1475,6 +1749,31 @@ private:
             }
         });
     }
+}
+
+- (GroupCallDisposable * _Nonnull)addVideoOutputWithEndpointId:(NSString * _Nonnull)endpointId sink:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink {
+    int sinkId = _nextSinkId;
+    _nextSinkId += 1;
+
+    GroupCallVideoSink *storedSink = [[GroupCallVideoSink alloc] initWithSink:sink];
+    _sinks[@(sinkId)] = storedSink;
+
+    if (_instance) {
+        _instance->addIncomingVideoOutput(endpointId.UTF8String, [storedSink sink]);
+    }
+
+    __weak GroupCallThreadLocalContext *weakSelf = self;
+    id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
+    return [[GroupCallDisposable alloc] initWithBlock:^{
+        [queue dispatch:^{
+            __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
+            if (!strongSelf) {
+                return;
+            }
+
+            [strongSelf->_sinks removeObjectForKey:@(sinkId)];
+        }];
+    }];
 }
 
 - (void)addExternalAudioData:(NSData * _Nonnull)data {

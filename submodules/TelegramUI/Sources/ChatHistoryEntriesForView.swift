@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 import TemporaryCachedPeerDataManager
 import Emoji
 import AccountContext
@@ -99,7 +98,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 } else {
                     selection = .none
                 }
-                groupBucket.append((message, isRead, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id])))
+                groupBucket.append((message, isRead, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: false)))
             } else {
                 let selection: ChatHistoryMessageSelection
                 if let selectedMessages = selectedMessages {
@@ -107,7 +106,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 } else {
                     selection = .none
                 }
-                entries.append(.MessageEntry(message, presentationData, isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id])))
+                entries.append(.MessageEntry(message, presentationData, isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId)))
             }
         } else {
             let selection: ChatHistoryMessageSelection
@@ -116,7 +115,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
             } else {
                 selection = .none
             }
-            entries.append(.MessageEntry(message, presentationData, isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id])))
+            entries.append(.MessageEntry(message, presentationData, isRead, entry.monthLocation, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId)))
         }
     }
     
@@ -167,11 +166,11 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                     if messages.count > 1, let groupInfo = messages[0].groupInfo {
                         var groupMessages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
                         for message in messages {
-                            groupMessages.append((message, false, .none, ChatMessageEntryAttributes(rank: adminRank, isContact: false, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id])))
+                            groupMessages.append((message, false, .none, ChatMessageEntryAttributes(rank: adminRank, isContact: false, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: false)))
                         }
                         entries.insert(.MessageGroupEntry(groupInfo, groupMessages, presentationData), at: 0)
                     } else {
-                        entries.insert(.MessageEntry(messages[0], presentationData, false, nil, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: false, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[messages[0].id])), at: 0)
+                        entries.insert(.MessageEntry(messages[0], presentationData, false, nil, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: false, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[messages[0].id], isPlaying: false)), at: 0)
                     }
                     
                     let replyCount = view.entries.isEmpty ? 0 : 1

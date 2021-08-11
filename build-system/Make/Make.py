@@ -53,7 +53,7 @@ class BazelCommandLine:
             # If enabled the skip function bodies frontend flag is passed when using derived
             # files generation.
             '--features=swift.skip_function_bodies_for_derived_files',
-            
+
             # Set the number of parallel processes to match the available CPU core count.
             '--jobs={}'.format(os.cpu_count()),
         ]
@@ -198,7 +198,7 @@ class BazelCommandLine:
 
                 # Always build universal Watch binaries.
                 '--watchos_cpus=armv7k,arm64_32',
-                
+
                 # Generate DSYM files when building.
                 '--apple_generate_dsym',
 
@@ -230,7 +230,7 @@ class BazelCommandLine:
     def get_define_arguments(self):
         return [
             '--define=buildNumber={}'.format(self.build_number),
-            '--define=telegramVersion={}'.format(self.build_environment.app_version)
+            '--define=telegramVersion={}'.format(1.0)
         ]
 
     def get_project_generation_arguments(self):
@@ -352,7 +352,7 @@ def resolve_configuration(bazel_command_line: BazelCommandLine, arguments):
         raise Exception('Neither configurationPath nor configurationGenerator are set')
 
 
-def generate_project(arguments):        
+def generate_project(arguments):
     bazel_command_line = BazelCommandLine(
         bazel_path=arguments.bazel,
         override_bazel_version=arguments.overrideBazelVersion,
@@ -379,7 +379,7 @@ def generate_project(arguments):
         disable_provisioning_profiles = arguments.disableProvisioningProfiles
     if arguments.generateDsym is not None:
         generate_dsym = arguments.generateDsym
-    
+
     call_executable(['killall', 'Xcode'], check_result=False)
 
     generate(
@@ -434,7 +434,7 @@ def add_project_and_build_common_arguments(current_parser: argparse.ArgumentPars
             A command line invocation that will dynamically generate the configuration data
             (project constants and provisioning profiles).
             The expression will be parsed according to the shell parsing rules into program and arguments parts.
-            The program will be then invoked with the given arguments plus the path to the output directory.   
+            The program will be then invoked with the given arguments plus the path to the output directory.
             See build-system/generate-configuration.sh for an example.
             Example: --configurationGenerator="sh ~/my_script.sh argument1"
             ''',
@@ -503,7 +503,7 @@ if __name__ == '__main__':
 
     cleanParser = subparsers.add_parser(
         'clean', help='''
-            Clean local bazel cache. Does not affect files cached remotely (via --cacheHost=...) or 
+            Clean local bazel cache. Does not affect files cached remotely (via --cacheHost=...) or
             locally in an external directory ('--cacheDir=...')
             '''
     )

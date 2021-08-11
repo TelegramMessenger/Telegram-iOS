@@ -4,7 +4,6 @@ import SwiftSignalKit
 import Postbox
 import CoreMedia
 import TelegramCore
-import SyncCore
 import TelegramAudio
 
 private let traceEvents = false
@@ -282,7 +281,6 @@ private final class MediaPlayerContext {
                     CMTimebaseSetRate(loadedState.controlTimebase.timebase, rate: 0.0)
                 }
             }
-            let currentTimestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
             var duration: Double = 0.0
             if let videoTrackFrameBuffer = loadedState.mediaBuffers.videoBuffer {
                 duration = max(duration, CMTimeGetSeconds(videoTrackFrameBuffer.duration))

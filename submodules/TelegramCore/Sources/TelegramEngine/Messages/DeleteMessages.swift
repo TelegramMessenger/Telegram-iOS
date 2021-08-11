@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import TelegramApi
-import SyncCore
 
 func addMessageMediaResourceIdsToRemove(media: Media, resourceIds: inout [WrappedMediaResourceId]) {
     if let image = media as? TelegramMediaImage {

@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -98,7 +97,7 @@ private enum ConfirmPhoneNumberCodeEntry: ItemListNodeEntry {
                 let formattedNumber = formatPhoneNumber(phoneNumber)
                 let stringAndRanges = strings.CancelResetAccount_TextSMS(formattedNumber)
                 var result = ""
-                result += stringAndRanges.0
+                result += stringAndRanges.string
                 if let range = result.range(of: formattedNumber) {
                     result.insert("*", at: range.upperBound)
                     result.insert("*", at: range.upperBound)
@@ -269,7 +268,7 @@ public func confirmPhoneNumberCodeController(context: AccountContext, phoneNumbe
                     return state
                 }
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CancelResetAccount_Success(formatPhoneNumber(phoneNumber)).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CancelResetAccount_Success(formatPhoneNumber(phoneNumber)).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 dismissImpl?()
             }))
         }

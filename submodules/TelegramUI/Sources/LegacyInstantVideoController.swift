@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -144,7 +143,7 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
             legacyController.view.disablesInteractiveTransitionGestureRecognizer = true
             var uploadInterface: LegacyLiveUploadInterface?
             if peerId.namespace != Namespaces.Peer.SecretChat {
-                uploadInterface = LegacyLiveUploadInterface(account: context.account)
+                uploadInterface = LegacyLiveUploadInterface(context: context)
             }
             
             var slowmodeValidUntil: Int32 = 0

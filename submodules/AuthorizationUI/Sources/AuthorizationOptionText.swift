@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import Display
 import TelegramPresentationData
 import TextFormat
@@ -30,13 +29,13 @@ public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, 
                 return (NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
             } else {
                 let timeString = NSString(format: "%d:%.02d", Int(minutes), Int(seconds))
-                return (NSAttributedString(string: strings.Login_WillSendSms(timeString as String).0, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                return (NSAttributedString(string: strings.Login_WillSendSms(timeString as String).string, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
             }
         case .call, .flashCall:
             if timeout <= 0 {
                 return (NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
             } else {
-                return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).0, minutes, seconds), font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+                return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).string, minutes, seconds), font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
             }
         }
     } else {

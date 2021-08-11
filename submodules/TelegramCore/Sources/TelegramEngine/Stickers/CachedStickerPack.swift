@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import MurMurHash32
 
-import SyncCore
 
 private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 100, highWaterItemCount: 200)
 

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import TelegramUIPreferences
+import PresentationStrings
 
 public extension PresentationFontSize {
     init(systemFontSize: CGFloat) {

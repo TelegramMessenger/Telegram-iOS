@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import SyncCore
 
 private let dateFormatter: DateFormatter = {
     let formatter = DateFormatter()

@@ -1,5 +1,4 @@
 import Postbox
-import SyncCore
 
 public func currentVoipConfiguration(transaction: Transaction) -> VoipConfiguration {
     if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.voipConfiguration) as? VoipConfiguration {

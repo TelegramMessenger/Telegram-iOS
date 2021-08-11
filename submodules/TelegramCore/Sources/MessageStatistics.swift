@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 import MtProtoKit
-import SyncCore
 
 public struct MessageStats: Equatable {
     public let views: Int

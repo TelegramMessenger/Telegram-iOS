@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -358,18 +357,18 @@ public final class ShareController: ViewController {
         
         self.statusBar.statusBarStyle = .Ignore
         
-        self.activeAccountsDisposable = self.sharedContext.activeAccounts.start(next: { [weak self] (primary, accounts, _) in
+        self.activeAccountsDisposable = self.sharedContext.activeAccountContexts.start(next: { [weak self] (primary, accounts, _) in
             guard let strongSelf = self else { return }
             
             guard let primary = primary else { return }
 
             guard let account = accounts.first(where: { (accountId, account, _) -> Bool in
-                primary.id == accountId
+                primary.account.id == accountId
             })?.1 else { return }
             
-            guard account.id != strongSelf.currentAccount.id else { return }
+            guard account.account.id != strongSelf.currentAccount.id else { return }
             
-            strongSelf.switchToAccount(account: account, animateIn: false)
+            strongSelf.switchToAccount(account: account.account, animateIn: false)
         }, error: { _ in }, completed: {})
         
         switch subject {
@@ -1098,7 +1097,7 @@ final class MessageStoryRenderer {
             dateHeaderNode = currentDateHeaderNode
             headerItem.updateNode(dateHeaderNode, previous: nil, next: headerItem)
         } else {
-            dateHeaderNode = headerItem.node()
+            dateHeaderNode = headerItem.node(synchronousLoad: true)
             dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
             self.messagesContainerNode.addSubnode(dateHeaderNode)
             self.dateHeaderNode = dateHeaderNode

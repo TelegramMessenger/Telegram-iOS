@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 func _internal_sendScheduledMessageNowInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Void in

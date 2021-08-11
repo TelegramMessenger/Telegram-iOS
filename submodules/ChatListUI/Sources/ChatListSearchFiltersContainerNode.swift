@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import SyncCore
 import Postbox
 import TelegramCore
 import TelegramPresentationData

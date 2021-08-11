@@ -6,7 +6,6 @@ import Display
 import AVFoundation
 import ImageIO
 import TelegramCore
-import SyncCore
 import WebPBinding
 import TelegramUIPreferences
 import MediaResources

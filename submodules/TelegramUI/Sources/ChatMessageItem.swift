@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
@@ -192,9 +191,8 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
     let lhsHeader: ChatMessageDateHeader?
     let rhsHeader: ChatMessageDateHeader?
     if let lhs = lhs as? ChatMessageItem {
-        lhsHeader = lhs.header
+        lhsHeader = lhs.dateHeader
     } else if let _ = lhs as? ChatHoleItem {
-        //lhsHeader = lhs.header
         lhsHeader = nil
     } else if let lhs = lhs as? ChatUnreadItem {
         lhsHeader = lhs.header
@@ -205,7 +203,7 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
     }
     if let rhs = rhs {
         if let rhs = rhs as? ChatMessageItem {
-            rhsHeader = rhs.header
+            rhsHeader = rhs.dateHeader
         } else if let _ = rhs as? ChatHoleItem {
             //rhsHeader = rhs.header
             rhsHeader = nil
@@ -257,8 +255,11 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let effectiveAuthorId: PeerId?
     let additionalContent: ChatMessageItemAdditionalContent?
     
-    public let accessoryItem: ListViewAccessoryItem?
-    let header: ChatMessageDateHeader
+    //public let accessoryItem: ListViewAccessoryItem?
+    let dateHeader: ChatMessageDateHeader
+    let avatarHeader: ChatMessageAvatarHeader?
+
+    let headers: [ListViewItemHeader]
     
     var message: Message {
         switch self.content {
@@ -288,7 +289,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.disableDate = disableDate
         self.additionalContent = additionalContent
         
-        var accessoryItem: ListViewAccessoryItem?
+        var avatarHeader: ChatMessageAvatarHeader?
         let incoming = content.effectivelyIncoming(self.context.account.peerId)
         
         var effectiveAuthor: Peer?
@@ -325,7 +326,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             isScheduledMessages = true
         }
         
-        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
+        self.dateHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
             let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
@@ -355,11 +356,18 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
             if !hasActionMedia && !isBroadcastChannel {
                 if let effectiveAuthor = effectiveAuthor {
-                    accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, forwardInfo: message.forwardInfo, emptyColor: presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill, controllerInteraction: controllerInteraction)
+                    //accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, forwardInfo: message.forwardInfo, emptyColor: presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill, controllerInteraction: controllerInteraction)
+                    avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), message: message, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction)
                 }
             }
         }
-        self.accessoryItem = accessoryItem
+        self.avatarHeader = avatarHeader
+
+        var headers: [ListViewItemHeader] = [self.dateHeader]
+        if let avatarHeader = self.avatarHeader {
+            headers.append(avatarHeader)
+        }
+        self.headers = headers
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -467,25 +475,25 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         var mergedBottom: ChatMessageMerge = .none
         var dateAtBottom = false
         if let top = top as? ChatMessageItem {
-            if top.header.id != self.header.id {
+            if top.dateHeader.id != self.dateHeader.id {
                 mergedBottom = .none
             } else {
                 mergedBottom = messagesShouldBeMerged(accountPeerId: self.context.account.peerId, message, top.message)
             }
         }
         if let bottom = bottom as? ChatMessageItem {
-            if bottom.header.id != self.header.id {
+            if bottom.dateHeader.id != self.dateHeader.id {
                 mergedTop = .none
                 dateAtBottom = true
             } else {
                 mergedTop = messagesShouldBeMerged(accountPeerId: self.context.account.peerId, bottom.message, message)
             }
         } else if let bottom = bottom as? ChatUnreadItem {
-            if bottom.header.id != self.header.id {
+            if bottom.header.id != self.dateHeader.id {
                 dateAtBottom = true
             }
         } else if let bottom = bottom as? ChatReplyCountItem {
-            if bottom.header.id != self.header.id {
+            if bottom.header.id != self.dateHeader.id {
                 dateAtBottom = true
             }
         } else if let _ = bottom as? ChatHoleItem {

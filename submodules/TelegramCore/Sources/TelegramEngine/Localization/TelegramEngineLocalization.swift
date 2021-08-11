@@ -1,6 +1,5 @@
 import SwiftSignalKit
 import Postbox
-import SyncCore
 
 public extension TelegramEngine {
     final class Localization {

@@ -1,4 +1,5 @@
 import Foundation
+import PresentationStrings
 
 public func compactNumericCountString(_ count: Int, decimalSeparator: String = ".") -> String {
     if count >= 1000 * 1000 {
@@ -110,8 +111,10 @@ public func shortTimeIntervalString(strings: PresentationStrings, value: Int32) 
         return strings.MessageTimer_ShortHours(max(1, value / (60 * 60)))
     } else if value < 60 * 60 * 24 * 7 {
         return strings.MessageTimer_ShortDays(max(1, value / (60 * 60 * 24)))
-    } else {
+    } else if value < 60 * 60 * 24 * 31 {
         return strings.MessageTimer_ShortWeeks(max(1, value / (60 * 60 * 24 * 7)))
+    } else {
+        return strings.MessageTimer_ShortMonths(max(1, value / (60 * 60 * 24 * 7 * 30)))
     }
 }
 

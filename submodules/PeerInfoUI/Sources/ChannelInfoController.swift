@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
@@ -738,7 +737,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         updateState {
                             $0.withUpdatedUpdatingAvatar(.image(representation, true))
                         }
-                        updateAvatarDisposable.set((updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: resource), mapResourceToAvatarSizes: { resource, representations in
+                        updateAvatarDisposable.set((context.engine.peers.updatePeerPhoto(peerId: peerId, photo: context.engine.peers.uploadedPeerPhoto(resource: resource), mapResourceToAvatarSizes: { resource, representations in
                             return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                         })
                         |> deliverOnMainQueue).start(next: { result in
@@ -777,7 +776,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                             return $0.withUpdatedUpdatingAvatar(ItemListAvatarAndNameInfoItemUpdatingAvatar.none)
                         }
                     }
-                    updateAvatarDisposable.set((updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                    updateAvatarDisposable.set((context.engine.peers.updatePeerPhoto(peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     }) |> deliverOnMainQueue).start(next: { result in
                         switch result {
@@ -993,7 +992,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         
                         let updateTitle: Signal<Void, Void>
                         if let titleValue = updateValues.title {
-                            updateTitle = updatePeerTitle(account: context.account, peerId: peerId, title: titleValue)
+                            updateTitle = context.engine.peers.updatePeerTitle(peerId: peerId, title: titleValue)
                                 |> mapError { _ in return Void() }
                         } else {
                             updateTitle = .complete()
@@ -1001,7 +1000,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         
                         let updateDescription: Signal<Void, Void>
                         if let descriptionValue = updateValues.description {
-                            updateDescription = updatePeerDescription(account: context.account, peerId: peerId, description: descriptionValue.isEmpty ? nil : descriptionValue)
+                            updateDescription = context.engine.peers.updatePeerDescription(peerId: peerId, description: descriptionValue.isEmpty ? nil : descriptionValue)
                                 |> mapError { _ in return Void() }
                         } else {
                             updateDescription = .complete()

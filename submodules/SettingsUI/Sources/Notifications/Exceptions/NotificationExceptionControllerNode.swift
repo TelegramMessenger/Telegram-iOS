@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -344,7 +343,7 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
                             
                             let dateString = formatter.string(from: Date(timeIntervalSince1970: Double(until)))
                             
-                            title = presentationData.strings.Notification_Exceptions_MutedUntil(dateString).0
+                            title = presentationData.strings.Notification_Exceptions_MutedUntil(dateString).string
                         } else {
                             muted = true
                             title = presentationData.strings.Notification_Exceptions_AlwaysOff
@@ -363,7 +362,7 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
                         break
                     default:
                         let soundName = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: value.settings.messageSound)
-                        title += (title.isEmpty ? presentationData.strings.Notification_Exceptions_Sound(soundName).0 : ", \(presentationData.strings.Notification_Exceptions_Sound(soundName).0)")
+                        title += (title.isEmpty ? presentationData.strings.Notification_Exceptions_Sound(soundName).string : ", \(presentationData.strings.Notification_Exceptions_Sound(soundName).string)")
                 }
                 switch value.settings.displayPreviews {
                     case .default:
@@ -717,7 +716,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         self.listNode = ListView()
         self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()
@@ -1165,7 +1164,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()

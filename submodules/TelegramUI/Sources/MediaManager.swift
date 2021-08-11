@@ -4,7 +4,6 @@ import AVFoundation
 import MobileCoreServices
 import Postbox
 import TelegramCore
-import SyncCore
 import MediaPlayer
 import TelegramAudio
 import UniversalMediaPlayer

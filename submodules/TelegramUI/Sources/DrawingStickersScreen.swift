@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AccountContext
 import TelegramPresentationData
@@ -183,13 +182,13 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         self.stickerListView = ListView()
         self.stickerListView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
         self.stickerListView.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.maskListView = ListView()
         self.maskListView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
         self.maskListView.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.topSeparatorNode = ASDisplayNode()
@@ -1038,21 +1037,21 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         transition.updateFrame(view: self.blurView, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: maximumHeight)))
         
         transition.updateFrame(node: self.collectionListContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: maximumHeight + contentVerticalOffset - bottomPanelHeight - bottomInset), size: CGSize(width: width, height: max(0.0, bottomPanelHeight + UIScreenPixel + bottomInset))))
-        transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: bottomPanelHeight + bottomInset)))
+        transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0), size: CGSize(width: width, height: bottomPanelHeight + bottomInset)))
     
         transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + topPanelHeight), size: CGSize(width: width, height: separatorHeight)))
         transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: maximumHeight + contentVerticalOffset - bottomPanelHeight - bottomInset), size: CGSize(width: width, height: separatorHeight)))
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
-        let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0)
-        self.stickerListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight, height: width)
+        let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0 + 5.0)
+        self.stickerListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight + 31.0, height: width)
         transition.updatePosition(node: self.stickerListView, position: listPosition)
         
-        self.maskListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight, height: width)
+        self.maskListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight + 31.0, height: width)
         transition.updatePosition(node: self.maskListView, position: listPosition)
         
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: bottomPanelHeight, height: width), insets: UIEdgeInsets(top: 4.0 + leftInset, left: 0.0, bottom: 4.0 + rightInset, right: 0.0), duration: duration, curve: curve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: bottomPanelHeight + 31.0, height: width), insets: UIEdgeInsets(top: 4.0 + leftInset, left: 0.0, bottom: 4.0 + rightInset, right: 0.0), duration: duration, curve: curve)
         self.stickerListView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         self.maskListView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         

@@ -952,9 +952,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             NSMutableArray *messageServiceTransactions = [[NSMutableArray alloc] init];
             for (id<MTMessageService> messageService in _messageServices)
             {
-                if ([messageService respondsToSelector:@selector(mtProtoMessageTransaction:authInfoSelector:sessionInfo:)])
+                if ([messageService respondsToSelector:@selector(mtProtoMessageTransaction:authInfoSelector:sessionInfo:scheme:)])
                 {
-                    MTMessageTransaction *messageTransaction = [messageService mtProtoMessageTransaction:self authInfoSelector:authInfoSelector sessionInfo:transactionSessionInfo];
+                    MTMessageTransaction *messageTransaction = [messageService mtProtoMessageTransaction:self authInfoSelector:authInfoSelector sessionInfo:transactionSessionInfo scheme:scheme];
                     if (messageTransaction != nil)
                     {
                         for (MTOutgoingMessage *message in messageTransaction.messagePayload)
@@ -2055,7 +2055,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     [self getAuthKeyForCurrentScheme:scheme createIfNeeded:false authInfoSelector:&authInfoSelector];
     
     if (MTLogEnabled()) {
-        MTLog(@"[MTProto#%p@%p missing key %lld selector %d]", self, _context, _validAuthInfo.authInfo.authKeyId, authInfoSelector);
+        MTLog(@"[MTProto#%p@%p missing key %lld selector %d useExplicitAuthKey: %lld, canResetAuthData: %s]", self, _context, _validAuthInfo.authInfo.authKeyId, authInfoSelector, _useExplicitAuthKey.authKeyId, _canResetAuthData ? "true" : "false");
     }
     
     if (_useExplicitAuthKey != nil) {

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import Display
-import SyncCore
 import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -42,7 +41,7 @@ final class ListMessageDateHeader: ListViewItemHeader {
     private let month: Int32
     private let year: Int32
     
-    let id: Int64
+    let id: ListViewItemNode.HeaderId
     let theme: PresentationTheme
     let strings: PresentationStrings
     let fontSize: PresentationFontSize
@@ -61,14 +60,23 @@ final class ListMessageDateHeader: ListViewItemHeader {
         self.month = timeinfo.tm_mon
         self.year = timeinfo.tm_year
         
-        self.id = Int64(self.roundedTimestamp)
+        self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(self.roundedTimestamp))
     }
     
     let stickDirection: ListViewItemHeaderStickDirection = .top
+    let stickOverInsets: Bool = true
     
     let height: CGFloat = 28.0
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ListMessageDateHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
-    func node() -> ListViewItemHeaderNode {
+    func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ListMessageDateHeaderNode(theme: self.theme, strings: self.strings, fontSize: self.fontSize, roundedTimestamp: self.roundedTimestamp, month: self.month, year: self.year)
     }
     

@@ -1,7 +1,6 @@
 import Foundation
 import Intents
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import BuildConfig

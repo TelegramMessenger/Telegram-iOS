@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
-import SyncCore
 
 public func updateLoggingSettings(accountManager: AccountManager, _ f: @escaping (LoggingSettings) -> LoggingSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in

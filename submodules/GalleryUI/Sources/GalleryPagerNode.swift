@@ -112,6 +112,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     public var beginCustomDismiss: () -> Void = { }
     public var completeCustomDismiss: () -> Void = { }
     public var baseNavigationController: () -> NavigationController? = { return nil }
+    public var galleryController: () -> ViewController? = { return nil }
     
     public init(pageGap: CGFloat, disableTapNavigation: Bool) {
         self.pageGap = pageGap
@@ -167,7 +168,11 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
                 }
             } else if point.x > size.width - edgeWidth(width: size.width) && strongSelf.canGoToNextItem() {
                 if strongSelf.items.count > 1 {
-                    highlightedSide = true
+                    if point.y < 80.0 {
+                        highlightedSide = nil
+                    } else {
+                        highlightedSide = true
+                    }
                 }
             }
             
@@ -175,7 +180,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
                 return .fail
             }
             
-            if let result = strongSelf.hitTest(point, with: nil), let node = result.asyncdisplaykit_node as? ASButtonNode {
+            if let result = strongSelf.hitTest(point, with: nil), let _ = result.asyncdisplaykit_node as? ASButtonNode {
                 return .fail
             }
             return .keepWithSingleTap
@@ -480,6 +485,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         node.beginCustomDismiss = self.beginCustomDismiss
         node.completeCustomDismiss = self.completeCustomDismiss
         node.baseNavigationController = self.baseNavigationController
+        node.galleryController = self.galleryController
         node.index = index
         return node
     }
@@ -698,6 +704,12 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         } else {
             self.invalidatedItems = false
             self.centralItemIndexOffsetUpdated(nil)
+        }
+    }
+
+    public func forEachItemNode(_ f: (GalleryItemNode) -> Void) {
+        for itemNode in self.itemNodes {
+            f(itemNode)
         }
     }
 }

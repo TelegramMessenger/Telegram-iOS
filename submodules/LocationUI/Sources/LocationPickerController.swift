@@ -3,7 +3,6 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -127,7 +126,7 @@ public final class LocationPickerController: ViewController {
                 let controller = ActionSheetController(presentationData: strongSelf.presentationData)
                 var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
                 if case let .share(peer, _, _) = strongSelf.mode, let receiver = peer as? TelegramUser {
-                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).0
+                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).string
                 }
                 controller.setItemGroups([
                     ActionSheetItemGroup(items: [

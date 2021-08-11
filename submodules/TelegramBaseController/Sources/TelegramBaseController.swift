@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
@@ -77,6 +76,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     
     public var tempVoicePlaylistEnded: (() -> Void)?
     public var tempVoicePlaylistItemChanged: ((SharedMediaPlaylistItem?, SharedMediaPlaylistItem?) -> Void)?
+    public var tempVoicePlaylistCurrentItem: SharedMediaPlaylistItem?
     
     public var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     
@@ -150,6 +150,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         updatedVoiceItem = playlistStateAndType.1.item
                     }
                     
+                    strongSelf.tempVoicePlaylistCurrentItem = updatedVoiceItem
                     strongSelf.tempVoicePlaylistItemChanged?(previousVoiceItem, updatedVoiceItem)
                     if let playlistStateAndType = playlistStateAndType {
                         strongSelf.playlistStateAndType = (playlistStateAndType.1.item, playlistStateAndType.1.previousItem, playlistStateAndType.1.nextItem, playlistStateAndType.1.order, playlistStateAndType.2, playlistStateAndType.0)
@@ -287,7 +288,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             let disposable = MetaDisposable()
                             
                             callContextCache.impl.syncWith { impl in
-                                let callContext = impl.get(account: context.account, peerId: peerId, call: activeCall)
+                                let callContext = impl.get(account: context.account, engine: context.engine, peerId: peerId, call: activeCall)
                                 disposable.set((callContext.context.panelData
                                 |> deliverOnMainQueue).start(next: { panelData in
                                     callContext.keep()
@@ -861,7 +862,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 return transaction.getPeerCachedData(peerId: peerId)
             }
             
-            let _ = (combineLatest(currentAccountPeer, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId), cachedData)
+            let _ = (combineLatest(currentAccountPeer, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId), cachedData)
             |> map { currentAccountPeer, availablePeers, cachedData -> ([FoundPeer], CachedPeerData?) in
                 var result = currentAccountPeer
                 result.append(contentsOf: availablePeers)

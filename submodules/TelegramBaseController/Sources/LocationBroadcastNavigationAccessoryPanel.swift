@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -119,7 +118,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
                 case .summary:
                     let text: String
                     if peers.count == 1 {
-                        text = self.strings.DialogList_LiveLocationSharingTo(peers[0].displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)).0
+                        text = self.strings.DialogList_LiveLocationSharingTo(peers[0].displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)).string
                     } else {
                         text = self.strings.DialogList_LiveLocationChatsCount(Int32(peers.count))
                     }
@@ -140,7 +139,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
                         }
                         let rawText: String
                         if filteredPeers.count != peers.count {
-                            rawText = self.strings.Conversation_LiveLocationYouAndOther(otherString).0
+                            rawText = self.strings.Conversation_LiveLocationYouAndOther(otherString).string
                         } else {
                             rawText = otherString
                         }

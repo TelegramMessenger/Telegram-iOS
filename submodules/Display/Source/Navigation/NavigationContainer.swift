@@ -487,6 +487,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 toValue.value.setIgnoreAppearanceMethodInvocations(true)
                 self.addSubnode(toValue.value.displayNode)
                 toValue.value.setIgnoreAppearanceMethodInvocations(false)
+                toValue.value.displayNode.recursivelyEnsureDisplaySynchronously(true)
                 toValue.value.viewDidAppear(false)
             }
         }

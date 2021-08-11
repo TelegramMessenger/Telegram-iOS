@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -203,7 +202,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
                 case let .availability(availability):
                     switch availability {
                         case .available:
-                            statusText = presentationData.strings.Username_UsernameIsAvailable(currentAddressName).0
+                            statusText = presentationData.strings.Username_UsernameIsAvailable(currentAddressName).string
                         case .invalid:
                             statusText = presentationData.strings.Username_InvalidCharacters
                         case .taken:
@@ -217,7 +216,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
         
         var infoText = presentationData.strings.Username_Help
         infoText += "\n\n"
-        let hintText = presentationData.strings.Username_LinkHint(currentAddressName.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")).0.replacingOccurrences(of: "]", with: "]()")
+        let hintText = presentationData.strings.Username_LinkHint(currentAddressName.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")).string.replacingOccurrences(of: "]", with: "]()")
         infoText += hintText
         entries.append(.publicLinkInfo(presentationData.theme, infoText))
     }

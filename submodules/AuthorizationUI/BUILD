@@ -9,7 +9,6 @@ swift_library(
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/Display:Display",
         "//submodules/TextFormat:TextFormat",
         "//submodules/Markdown:Markdown",

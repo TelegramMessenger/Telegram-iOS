@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import LocationResources
@@ -457,7 +456,11 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
         self.item?.infoAction?()
     }
     
-    override public func header() -> ListViewItemHeader? {
-        return self.item?.header
+    override public func headers() -> [ListViewItemHeader]? {
+        if let item = self.item {
+            return item.header.flatMap { [$0] }
+        } else {
+            return nil
+        }
     }
 }

@@ -4,8 +4,9 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 import Postbox
-import SyncCore
 import AccountContext
+import AvatarNode
+import TelegramCore
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -22,7 +23,7 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     private let roundedTimestamp: Int32
     private let scheduled: Bool
     
-    let id: Int64
+    let id: ListViewItemNode.HeaderId
     let presentationData: ChatPresentationData
     let context: AccountContext
     let action: ((Int32) -> Void)?
@@ -33,21 +34,24 @@ final class ChatMessageDateHeader: ListViewItemHeader {
         self.presentationData = presentationData
         self.context = context
         self.action = action
-        if timestamp == scheduleWhenOnlineTimestamp {
-            self.roundedTimestamp = scheduleWhenOnlineTimestamp
-        } else if timestamp == Int32.max {
-            self.roundedTimestamp = timestamp / (granularity) * (granularity)
-        } else {
-            self.roundedTimestamp = ((timestamp + timezoneOffset) / (granularity)) * (granularity)
-        }
-        self.id = Int64(self.roundedTimestamp)
+        self.roundedTimestamp = dateHeaderTimestampId(timestamp: timestamp)
+        self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(self.roundedTimestamp))
     }
     
     let stickDirection: ListViewItemHeaderStickDirection = .bottom
+    let stickOverInsets: Bool = true
     
     let height: CGFloat = 34.0
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ChatMessageDateHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
-    func node() -> ListViewItemHeaderNode {
+    func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, presentationData: self.presentationData, context: self.context, action: self.action)
     }
     
@@ -87,6 +91,16 @@ private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String 
             return strings.Month_GenDecember
         default:
             return ""
+    }
+}
+
+private func dateHeaderTimestampId(timestamp: Int32) -> Int32 {
+    if timestamp == scheduleWhenOnlineTimestamp {
+        return timestamp
+    } else if timestamp == Int32.max {
+        return timestamp / (granularity) * (granularity)
+    } else {
+        return ((timestamp + timezoneOffset) / (granularity)) * (granularity)
     }
 }
 
@@ -139,10 +153,10 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             if timeinfo.tm_yday == timeinfoNow.tm_yday {
                 text = presentationData.strings.Weekday_Today
             } else {
-                text = presentationData.strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)").0
+                text = presentationData.strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)").string
             }
         } else {
-            text = presentationData.strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").0
+            text = presentationData.strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: presentationData.strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").string
         }
         
         if scheduled {
@@ -151,7 +165,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
             } else if timeinfo.tm_year == timeinfoNow.tm_year && timeinfo.tm_yday == timeinfoNow.tm_yday {
                 text = presentationData.strings.ScheduledMessages_ScheduledToday
             } else {
-                text = presentationData.strings.ScheduledMessages_ScheduledDate(text).0
+                text = presentationData.strings.ScheduledMessages_ScheduledDate(text).string
             }
         }
         self.text = text
@@ -164,12 +178,11 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
-        
-        //self.backgroundNode.image = graphics.dateStaticBackground
+
         self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         self.stickBackgroundNode.alpha = 0.0
-        //self.backgroundNode.addSubnode(self.stickBackgroundNode)
+
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
         
@@ -198,8 +211,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.presentationData = presentationData
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
-        
-        //self.backgroundNode.image = graphics.dateStaticBackground
+
         self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         
@@ -220,12 +232,6 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     
     func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
         self.backgroundNode.updateColor(color: color, enableBlur: enableBlur, transition: .immediate)
-        /*let chatDateSize: CGFloat = 20.0
-        self.backgroundNode.image = generateImage(CGSize(width: chatDateSize, height: chatDateSize), contextGenerator: { size, context -> Void in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(color.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-        })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)*/
     }
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
@@ -304,6 +310,195 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     @objc func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.action?(self.localTimestamp)
+        }
+    }
+}
+
+final class ChatMessageAvatarHeader: ListViewItemHeader {
+    struct Id: Hashable {
+        var peerId: PeerId
+        var timestampId: Int32
+    }
+
+    let id: ListViewItemNode.HeaderId
+    let peerId: PeerId
+    let peer: Peer?
+    let messageReference: MessageReference?
+    let effectiveTimestamp: Int32
+    let presentationData: ChatPresentationData
+    let context: AccountContext
+    let controllerInteraction: ChatControllerInteraction
+
+    init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction) {
+        self.peerId = peerId
+        self.peer = peer
+        self.messageReference = messageReference
+
+        var effectiveTimestamp = message.timestamp
+        if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+            effectiveTimestamp = forwardInfo.date
+        }
+        self.effectiveTimestamp = effectiveTimestamp
+
+        self.presentationData = presentationData
+        self.context = context
+        self.controllerInteraction = controllerInteraction
+        self.id = ListViewItemNode.HeaderId(space: 1, id: Id(peerId: peerId, timestampId: dateHeaderTimestampId(timestamp: timestamp)))
+    }
+
+    let stickDirection: ListViewItemHeaderStickDirection = .top
+    let stickOverInsets: Bool = false
+
+    let height: CGFloat = 38.0
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ChatMessageAvatarHeader, other.id == self.id {
+            if abs(self.effectiveTimestamp - other.effectiveTimestamp) >= 10 * 60 {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+
+    func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
+        return ChatMessageAvatarHeaderNode(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, synchronousLoad: synchronousLoad)
+    }
+
+    func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
+        guard let node = node as? ChatMessageAvatarHeaderNode, let next = next as? ChatMessageAvatarHeader else {
+            return
+        }
+        node.updatePresentationData(next.presentationData, context: next.context)
+    }
+}
+
+private let avatarFont = avatarPlaceholderFont(size: 16.0)
+
+final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
+    private let peerId: PeerId
+    private let messageReference: MessageReference?
+    private let peer: Peer?
+
+    private let containerNode: ContextControllerSourceNode
+    private let avatarNode: AvatarNode
+    private var presentationData: ChatPresentationData
+    private let context: AccountContext
+    private let controllerInteraction: ChatControllerInteraction
+
+    init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, synchronousLoad: Bool) {
+        self.peerId = peerId
+        self.peer = peer
+        self.messageReference = messageReference
+        self.presentationData = presentationData
+        self.context = context
+        self.controllerInteraction = controllerInteraction
+
+        self.containerNode = ContextControllerSourceNode()
+
+        self.avatarNode = AvatarNode(font: avatarFont)
+
+        super.init(layerBacked: false, dynamicBounce: true, isRotated: true, seeThrough: false)
+
+        self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.avatarNode)
+
+        if let peer = peer {
+            self.setPeer(context: context, theme: presentationData.theme.theme, synchronousLoad: synchronousLoad, peer: peer, authorOfMessage: messageReference, emptyColor: .black)
+        }
+
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self, let peer = strongSelf.peer else {
+                return
+            }
+            var messageId: MessageId?
+            if let messageReference = messageReference, case let .message(m) = messageReference.content {
+                messageId = m.id
+            }
+            strongSelf.controllerInteraction.openPeerContextMenu(peer, messageId, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
+        }
+
+        self.updateSelectionState(animated: false)
+    }
+
+    func setCustomLetters(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, letters: [String], emptyColor: UIColor) {
+        self.containerNode.isGestureEnabled = false
+
+        self.avatarNode.setCustomLetters(letters, icon: !letters.isEmpty ? nil : .phone)
+    }
+
+    func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
+        self.containerNode.isGestureEnabled = peer.smallProfileImage != nil
+
+        var overrideImage: AvatarNodeImageOverride?
+        if peer.isDeleted {
+            overrideImage = .deletedIcon
+        }
+        self.avatarNode.setPeer(context: context, theme: theme, peer: peer, authorOfMessage: authorOfMessage, overrideImage: overrideImage, emptyColor: emptyColor, synchronousLoad: synchronousLoad, displayDimensions: CGSize(width: 38.0, height: 38.0))
+    }
+
+    override func didLoad() {
+        super.didLoad()
+
+        self.avatarNode.view.addGestureRecognizer(ListViewTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+    }
+
+    func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
+        self.presentationData = presentationData
+
+        self.setNeedsLayout()
+    }
+
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+        self.containerNode.frame = CGRect(origin: CGPoint(x: leftInset + 3.0, y: 0.0), size: CGSize(width: 38.0, height: 38.0))
+        self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+    }
+
+    override func animateRemoved(duration: Double) {
+        self.alpha = 0.0
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
+        self.avatarNode.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
+    }
+
+    override func animateAdded(duration: Double) {
+        self.layer.animateAlpha(from: 0.0, to: self.alpha, duration: 0.2)
+        self.avatarNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
+    }
+
+    override func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+    }
+
+    override func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
+    }
+
+    func updateSelectionState(animated: Bool) {
+        let offset: CGFloat = self.controllerInteraction.selectionState != nil ? 42.0 : 0.0
+
+        let previousSubnodeTransform = self.subnodeTransform
+        self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
+        if animated {
+            self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
+        }
+    }
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.bounds.contains(point) {
+            return nil
+        }
+        let result = self.containerNode.view.hitTest(self.view.convert(point, to: self.containerNode.view), with: event)
+        return result
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
+    }
+
+    @objc func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.controllerInteraction.openPeer(self.peerId, .info, nil)
         }
     }
 }

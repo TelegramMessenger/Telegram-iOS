@@ -4,7 +4,6 @@ import SwiftSignalKit
 import Postbox
 import Display
 import TelegramCore
-import SyncCore
 import Compression
 import GZip
 import RLottieBinding

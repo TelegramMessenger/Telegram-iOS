@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-import SyncCore
 
 public struct PeerCommand: Hashable {
     public let peer: Peer
