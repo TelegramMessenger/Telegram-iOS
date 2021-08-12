@@ -955,8 +955,6 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             }
             if let status = status {
                 contentNode.state = .progress(status)
-            } else {
-                
             }
         }, completed: { [weak self] in
             guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
