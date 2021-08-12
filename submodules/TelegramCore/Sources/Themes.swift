@@ -12,7 +12,7 @@ let telegramThemeFormat = "ios"
 let telegramThemeFileExtension = "tgios-theme"
 #endif
 
-public func telegramThemes(postbox: Postbox, network: Network, accountManager: AccountManager?, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
+public func telegramThemes(postbox: Postbox, network: Network, accountManager: AccountManager<TelegramAccountManagerTypes>?, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
     let fetch: ([TelegramTheme]?, Int32?) -> Signal<[TelegramTheme], NoError> = { current, hash in
         network.request(Api.functions.account.getThemes(format: telegramThemeFormat, hash: hash ?? 0))
         |> retryRequest
@@ -130,7 +130,7 @@ private func checkThemeUpdated(network: Network, theme: TelegramTheme) -> Signal
     }
 }
 
-private func saveUnsaveTheme(account: Account, accountManager: AccountManager, theme: TelegramTheme, unsave: Bool) -> Signal<Void, NoError> {
+private func saveUnsaveTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme, unsave: Bool) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
         var items = entries.map { $0.contents as! TelegramTheme }
@@ -372,7 +372,7 @@ public func createTheme(account: Account, title: String, resource: MediaResource
     }
 }
 
-public func updateTheme(account: Account, accountManager: AccountManager, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil, settings: TelegramThemeSettings?) -> Signal<CreateThemeResult, CreateThemeError> {
+public func updateTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil, settings: TelegramThemeSettings?) -> Signal<CreateThemeResult, CreateThemeError> {
     guard title != nil || slug != nil || resource != nil else {
         return .complete()
     }
@@ -468,15 +468,15 @@ public func updateTheme(account: Account, accountManager: AccountManager, theme:
     }
 }
 
-public func saveThemeInteractively(account: Account, accountManager: AccountManager, theme: TelegramTheme) -> Signal<Void, NoError> {
+public func saveThemeInteractively(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme) -> Signal<Void, NoError> {
     return saveUnsaveTheme(account: account, accountManager: accountManager, theme: theme, unsave: false)
 }
 
-public func deleteThemeInteractively(account: Account, accountManager: AccountManager, theme: TelegramTheme) -> Signal<Void, NoError> {
+public func deleteThemeInteractively(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme) -> Signal<Void, NoError> {
     return saveUnsaveTheme(account: account, accountManager: accountManager, theme: theme, unsave: true)
 }
 
-public func applyTheme(accountManager: AccountManager, account: Account, theme: TelegramTheme?, autoNight: Bool = false) -> Signal<Never, NoError> {
+public func applyTheme(accountManager: AccountManager<TelegramAccountManagerTypes>, account: Account, theme: TelegramTheme?, autoNight: Bool = false) -> Signal<Never, NoError> {
     return accountManager.transaction { transaction -> Signal<Never, NoError> in
         transaction.updateSharedData(SharedDataKeys.themeSettings, { _ in
             return ThemeSettings(currentTheme: theme)
@@ -491,7 +491,7 @@ public func applyTheme(accountManager: AccountManager, account: Account, theme: 
     |> switchToLatest
 }
 
-func managedThemesUpdates(accountManager: AccountManager, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func managedThemesUpdates(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let currentTheme = Atomic<TelegramTheme?>(value: nil)
     return accountManager.sharedData(keys: [SharedDataKeys.themeSettings])
     |> map { sharedData -> TelegramTheme? in
@@ -559,7 +559,7 @@ private func areThemesEqual(_ lhs: TelegramTheme, _ rhs: TelegramTheme) -> Bool 
     return true
 }
 
-public func actualizedTheme(account: Account, accountManager: AccountManager, theme: TelegramTheme) -> Signal<TelegramTheme, NoError> {
+public func actualizedTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme) -> Signal<TelegramTheme, NoError> {
     var currentTheme = theme
     return accountManager.sharedData(keys: [SharedDataKeys.themeSettings])
     |> mapToSignal { sharedData -> Signal<TelegramTheme, NoError> in

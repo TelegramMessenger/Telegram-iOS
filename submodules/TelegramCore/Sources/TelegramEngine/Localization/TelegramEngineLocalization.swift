@@ -9,7 +9,7 @@ public extension TelegramEngine {
             self.account = account
         }
 
-        public func getCountriesList(accountManager: AccountManager, langCode: String?, forceUpdate: Bool = false) -> Signal<[Country], NoError> {
+        public func getCountriesList(accountManager: AccountManager<TelegramAccountManagerTypes>, langCode: String?, forceUpdate: Bool = false) -> Signal<[Country], NoError> {
             return _internal_getCountriesList(accountManager: accountManager, network: self.account.network, langCode: langCode, forceUpdate: forceUpdate)
         }
 
@@ -29,7 +29,7 @@ public extension TelegramEngine {
             return _internal_requestLocalizationPreview(network: self.account.network, identifier: identifier)
         }
 
-        public func downloadAndApplyLocalization(accountManager: AccountManager, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
+        public func downloadAndApplyLocalization(accountManager: AccountManager<TelegramAccountManagerTypes>, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
             return _internal_downloadAndApplyLocalization(accountManager: accountManager, postbox: self.account.postbox, network: self.account.network, languageCode: languageCode)
         }
     }
@@ -43,7 +43,7 @@ public extension TelegramEngineUnauthorized {
             self.account = account
         }
 
-        public func getCountriesList(accountManager: AccountManager, langCode: String?, forceUpdate: Bool = false) -> Signal<[Country], NoError> {
+        public func getCountriesList(accountManager: AccountManager<TelegramAccountManagerTypes>, langCode: String?, forceUpdate: Bool = false) -> Signal<[Country], NoError> {
         	return _internal_getCountriesList(accountManager: accountManager, network: self.account.network, langCode: langCode, forceUpdate: forceUpdate)
 	    }
 
@@ -55,7 +55,7 @@ public extension TelegramEngineUnauthorized {
             return _internal_currentlySuggestedLocalization(network: self.account.network, extractKeys: extractKeys)
         }
 
-        public func downloadAndApplyLocalization(accountManager: AccountManager, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
+        public func downloadAndApplyLocalization(accountManager: AccountManager<TelegramAccountManagerTypes>, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
             return _internal_downloadAndApplyLocalization(accountManager: accountManager, postbox: self.account.postbox, network: self.account.network, languageCode: languageCode)
         }
     }

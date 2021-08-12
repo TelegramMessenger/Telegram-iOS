@@ -20,7 +20,7 @@ public enum ExportAuthTransferTokenResult {
     case passwordRequested(UnauthorizedAccount)
 }
 
-func _internal_exportAuthTransferToken(accountManager: AccountManager, account: UnauthorizedAccount, otherAccountUserIds: [PeerId.Id], syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {
+func _internal_exportAuthTransferToken(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, otherAccountUserIds: [PeerId.Id], syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {
     return account.network.request(Api.functions.auth.exportLoginToken(apiId: account.networkArguments.apiId, apiHash: account.networkArguments.apiHash, exceptIds: otherAccountUserIds.map({ $0._internalGetInt32Value() })))
     |> map(Optional.init)
     |> `catch` { error -> Signal<Api.auth.LoginToken?, ExportAuthTransferTokenError> in

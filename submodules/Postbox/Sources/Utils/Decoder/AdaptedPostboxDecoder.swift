@@ -10,6 +10,16 @@ final public class AdaptedPostboxDecoder {
         case dataArray
     }
 
+    public final class RawObjectData: Codable {
+        public let data: Data
+        public let typeHash: Int32
+
+        public init(data: Data, typeHash: Int32) {
+            self.data = data
+            self.typeHash = typeHash
+        }
+    }
+
     public init() {
     }
 
@@ -24,7 +34,7 @@ final public class AdaptedPostboxDecoder {
 }
 
 extension AdaptedPostboxDecoder.ContentType {
-    init?(valueType: ValueType) {
+    init?(valueType: ObjectDataValueType) {
         switch valueType {
         case .Int32:
             return nil

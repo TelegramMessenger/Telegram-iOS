@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
-public func updateProxySettingsInteractively(accountManager: AccountManager, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Bool, NoError> {
+public func updateProxySettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (ProxySettings) -> ProxySettings) -> Signal<Bool, NoError> {
     return accountManager.transaction { transaction -> Bool in
         return updateProxySettingsInteractively(transaction: transaction, f)
     }
@@ -20,7 +20,7 @@ extension ProxyServerSettings {
     }
 }
 
-public func updateProxySettingsInteractively(transaction: AccountManagerModifier, _ f: @escaping (ProxySettings) -> ProxySettings) -> Bool {
+public func updateProxySettingsInteractively(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, _ f: @escaping (ProxySettings) -> ProxySettings) -> Bool {
     var hasChanges = false
     transaction.updateSharedData(SharedDataKeys.proxySettings, { current in
         let previous = (current as? ProxySettings) ?? ProxySettings.defaultSettings

@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public struct WatchPresetSettings: PreferencesEntry, Equatable {
@@ -53,7 +54,7 @@ public struct WatchPresetSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateWatchPresetSettingsInteractively(accountManager: AccountManager, _ f: @escaping (WatchPresetSettings) -> WatchPresetSettings) -> Signal<Void, NoError> {
+public func updateWatchPresetSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (WatchPresetSettings) -> WatchPresetSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.watchPresetSettings, { entry in
             let currentSettings: WatchPresetSettings

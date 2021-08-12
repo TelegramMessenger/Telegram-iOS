@@ -35,6 +35,14 @@ extension _AdaptedPostboxDecoder.KeyedContainer: KeyedDecodingContainerProtocol 
     
     func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T : Decodable {
         if let (data, valueType) = self.decoder.decodeObjectDataForKey(key.stringValue) {
+            if type == AdaptedPostboxDecoder.RawObjectData.self {
+                if case let .Object(typeHash) = valueType {
+                    return AdaptedPostboxDecoder.RawObjectData(data: data, typeHash: typeHash) as! T
+                } else {
+                    decodingErrorBreakpoint()
+                    throw DecodingError.typeMismatch(T.self, DecodingError.Context(codingPath: self.codingPath + [key], debugDescription: ""))
+                }
+            }
             if let mappedType = AdaptedPostboxDecoder.ContentType(valueType: valueType) {
                 return try AdaptedPostboxDecoder().decode(T.self, from: data, contentType: mappedType)
             } else {

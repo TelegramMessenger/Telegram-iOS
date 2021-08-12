@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Postbox
+import TelegramCore
 import Display
 import SwiftSignalKit
 import MonotonicTime
@@ -65,7 +66,7 @@ public final class AppLockContextImpl: AppLockContext {
     private let syncQueue = Queue()
     
     private let applicationBindings: TelegramApplicationBindings
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let presentationDataSignal: Signal<PresentationData, NoError>
     private let window: Window1?
     private let rootController: UIViewController?
@@ -90,7 +91,7 @@ public final class AppLockContextImpl: AppLockContext {
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
-    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
+    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.applicationBindings = applicationBindings

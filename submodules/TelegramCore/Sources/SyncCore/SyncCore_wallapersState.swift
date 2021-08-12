@@ -26,7 +26,7 @@ public struct WallpapersState: PreferencesEntry, Equatable {
 }
 
 public extension WallpapersState {
-    static func update(transaction: AccountManagerModifier, _ f: (WallpapersState) -> WallpapersState) {
+    static func update(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, _ f: (WallpapersState) -> WallpapersState) {
         transaction.updateSharedData(SharedDataKeys.wallapersState, { current in
             let item = (transaction.getSharedData(SharedDataKeys.wallapersState) as? WallpapersState) ?? WallpapersState(wallpapers: [])
             return f(item)
