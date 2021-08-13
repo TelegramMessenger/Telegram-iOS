@@ -327,6 +327,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private var reorderFeedbackDisposable: MetaDisposable?
     private var reorderInProgress: Bool = false
     private var reorderingItemsCompleted: (() -> Void)?
+    private var reorderScrollStartTimestamp: Double?
     public var reorderedItemHasShadow = true
     
     private let waitingForNodesDisposable = MetaDisposable()
@@ -3974,19 +3975,37 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         var offsetRanges = OffsetRanges()
         
+        var scrollingForReorder = false
         if let reorderOffset = self.reorderNode?.currentOffset(), !self.itemNodes.isEmpty {
             let effectiveInsets = self.visualInsets ?? self.insets
+            
+            var offset: CGFloat = 6.0
+            if let reorderScrollStartTimestamp = self.reorderScrollStartTimestamp, reorderScrollStartTimestamp + 2.0 < timestamp {
+                offset *= 2.0
+            }
             if reorderOffset < effectiveInsets.top + 10.0 {
                 if self.itemNodes[0].apparentFrame.minY < effectiveInsets.top {
                     continueAnimations = true
-                    offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: 6.0)
+                    offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: offset)
+                    scrollingForReorder = true
                 }
             } else if reorderOffset > self.visibleSize.height - effectiveInsets.bottom - 10.0 {
                 if self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY > self.visibleSize.height - effectiveInsets.bottom {
                     continueAnimations = true
-                    offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: -6.0)
+                    if self.reorderScrollStartTimestamp == nil {
+                        self.reorderScrollStartTimestamp = timestamp
+                    }
+                    offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: -offset)
+                    scrollingForReorder = true
                 }
             }
+        }
+        if scrollingForReorder {
+            if self.reorderScrollStartTimestamp == nil {
+                self.reorderScrollStartTimestamp = timestamp
+            }
+        } else {
+            self.reorderScrollStartTimestamp = nil
         }
         
         var requestUpdateVisibleItems = false

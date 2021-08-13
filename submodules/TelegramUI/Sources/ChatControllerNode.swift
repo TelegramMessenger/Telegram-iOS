@@ -988,7 +988,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let _ = accessoryPanelNode as? ReplyAccessoryPanelNode {
                             strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedReplyMessageId(nil) })
                         } else if let _ = accessoryPanelNode as? ForwardAccessoryPanelNode {
-                            strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedForwardMessageIds(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedForwardMessageIds(nil).withUpdatedForwardMessageHideSendersNames(false) })
                         } else if let _ = accessoryPanelNode as? EditAccessoryPanelNode {
                             strongSelf.interfaceInteraction?.setupEditMessage(nil, { _ in })
                         } else if let _ = accessoryPanelNode as? WebpagePreviewAccessoryPanelNode {
@@ -2352,8 +2352,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 if !messages.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
                     if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                        var attributes: [MessageAttribute] = []
+                        if self.chatPresentationInterfaceState.interfaceState.forwardMessageHideSendersNames {
+                            attributes.append(ForwardHideSendersNamesMessageAttribute())
+                        }
                         for id in forwardMessageIds {
-                            messages.append(.forward(source: id, grouping: .auto, attributes: [], correlationId: nil))
+                            messages.append(.forward(source: id, grouping: .auto, attributes: attributes, correlationId: nil))
                         }
                     }
 
@@ -2379,7 +2383,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
                             strongSelf.ignoreUpdateHeight = true
                             textInputPanelNode.text = ""
-                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardMessageHideSendersNames(false).withUpdatedComposeDisableUrlPreview(nil) })
                             strongSelf.ignoreUpdateHeight = false
                         }
                     }, usedCorrelationId)

@@ -6585,3 +6585,26 @@ Sorry for the inconvenience.";
 "Chat.NextChannelArchivedSwipeAction" = "Release to go to archived channels";
 "Chat.NextChannelUnarchivedSwipeProgress" = "Swipe up to go to unarchived channels";
 "Chat.NextChannelUnarchivedSwipeAction" = "Release to go to unarchived channels";
+
+"Conversation.ForwardOptions.Text" = "What whould you like to do with %1$@ from %2$@?";
+"Conversation.ForwardOptions.TextPersonal" = "What whould you like to do with %1$@ from your chat with %2$@?";
+"Conversation.ForwardOptions.ForwardToAnotherChat" = "Forward to Another Chat";
+"Conversation.ForwardOptions.CancelForwarding" = "Cancel Forwarding";
+"Conversation.ForwardOptions.HideSendersNames" = "Hide Senders' Names";
+"Conversation.ForwardOptions.ShowSendersNames" = "Show Senders' Names";
+
+"Conversation.ForwardOptions.Title_1" = "%@ Message";
+"Conversation.ForwardOptions.Title_2" = "%@ Messages";
+"Conversation.ForwardOptions.Title_3_10" = "%@ Messages";
+"Conversation.ForwardOptions.Title_any" = "%@ Messages";
+"Conversation.ForwardOptions.Title_many" = "%@ Messages";
+"Conversation.ForwardOptions.Title_0" = "%@ Messages";
+
+"Conversation.ForwardOptions.Messages_1" = "%@ message";
+"Conversation.ForwardOptions.Messages_2" = "%@ messages";
+"Conversation.ForwardOptions.Messages_3_10" = "%@ messages";
+"Conversation.ForwardOptions.Messages_any" = "%@ messages";
+"Conversation.ForwardOptions.Messages_many" = "%@ messages";
+"Conversation.ForwardOptions.Messages_0" = "%@ messages";
+
+"Conversation.ForwardOptions.You" = "You (senders' names hidden)";
