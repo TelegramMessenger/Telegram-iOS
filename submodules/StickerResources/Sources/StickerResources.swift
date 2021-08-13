@@ -373,6 +373,8 @@ public func chatMessageStickerPackThumbnail(postbox: Postbox, resource: MediaRes
                 }
             }
             
+            addCorners(context, arguments: arguments)
+            
             return context
         }
     }

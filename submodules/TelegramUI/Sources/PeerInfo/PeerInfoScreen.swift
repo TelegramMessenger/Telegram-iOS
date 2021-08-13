@@ -5645,7 +5645,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     func forwardMessages(messageIds: Set<MessageId>?) {
         if let messageIds = messageIds ?? self.state.selectedMessageIds, !messageIds.isEmpty {
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true))
-            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode in
+            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, hideSendersNames in
                 guard let strongSelf = self, let strongController = peerSelectionController else {
                     return
                 }
@@ -5666,8 +5666,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }
                 
+                var attributes: [MessageAttribute] = []
+                if hideSendersNames {
+                    attributes.append(ForwardHideSendersNamesMessageAttribute())
+                }
+                
                 result.append(contentsOf: messageIds.map { messageId -> EnqueueMessage in
-                    return .forward(source: messageId, grouping: .auto, attributes: [], correlationId: nil)
+                    return .forward(source: messageId, grouping: .auto, attributes: attributes, correlationId: nil)
                 })
                 
                 var displayPeers: [Peer] = []

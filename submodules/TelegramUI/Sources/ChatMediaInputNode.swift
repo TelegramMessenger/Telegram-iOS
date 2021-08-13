@@ -549,7 +549,7 @@ final class ChatMediaInputNode: ChatInputNode {
         self.listView.useSingleDimensionTouchPoint = true
         self.listView.reorderedItemHasShadow = false
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
-        self.listView.scroller.panGestureRecognizer.cancelsTouchesInView = false
+        self.listView.scroller.panGestureRecognizer.cancelsTouchesInView = true
         self.listView.accessibilityPageScrolledString = { row, count in
             return strings.VoiceOver_ScrollStatus(row, count).string
         }
@@ -557,7 +557,7 @@ final class ChatMediaInputNode: ChatInputNode {
         self.gifListView = ListView()
         self.gifListView.useSingleDimensionTouchPoint = true
         self.gifListView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
-        self.gifListView.scroller.panGestureRecognizer.cancelsTouchesInView = false
+        self.gifListView.scroller.panGestureRecognizer.cancelsTouchesInView = true
         self.gifListView.accessibilityPageScrolledString = { row, count in
             return strings.VoiceOver_ScrollStatus(row, count).string
         }

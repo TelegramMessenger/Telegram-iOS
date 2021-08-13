@@ -238,14 +238,16 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.validLayout = (size, interfaceState)
 
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
-        let leftInset: CGFloat = 55.0
+        let inset: CGFloat = interfaceState.renderedPeer == nil ? 19.0 : 55.0
+        let leftInset: CGFloat = inset
+        let rightInset: CGFloat = inset
         let textLineInset: CGFloat = 10.0
-        let rightInset: CGFloat = 55.0
         let textRightInset: CGFloat = 20.0
 
         let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
         let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - rightInset - closeButtonSize.width + 12.0, y: 2.0), size: closeButtonSize)
         self.closeButton.frame = closeButtonFrame
+        self.closeButton.isHidden = interfaceState.renderedPeer == nil
 
         self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
 
@@ -288,7 +290,11 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.closePressed()
+            if self.closeButton.isHidden {
+                self.interfaceInteraction?.updateForwardMessageHideSendersNames(!self.hideSendersNames)
+            } else {
+                self.closePressed()
+            }
         }
     }
 }

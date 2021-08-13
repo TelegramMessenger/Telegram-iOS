@@ -216,7 +216,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                 switch thumbnailItem {
                     case let .still(representation):
                         imageSize = representation.dimensions.cgSize.aspectFitted(boundingImageSize)
-                        let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
+                        let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 6.0), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
                         self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource, nilIfEmpty: true))
                     case let .animated(resource, _):
@@ -339,7 +339,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                     imageSize = representation.dimensions.cgSize.aspectFitted(boundingImageSize)
                     
                     let imageNode = TransformImageNode()
-                    let imageApply = imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
+                    let imageApply = imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 6.0), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
                     imageApply()
                     imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource, nilIfEmpty: true))
                     scalingNode.addSubnode(imageNode)

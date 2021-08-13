@@ -166,7 +166,7 @@ private final class FeaturedPackItemNode: ListViewItemNode {
             self.visibilityStatus = self.visibility != .none
         }
     }
-        
+    
     var visibilityStatus: Bool = false {
         didSet {
             if self.visibilityStatus != oldValue {
@@ -291,7 +291,7 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                             } else {
                                 self.containerNode.addSubnode(animatedStickerNode)
                             }
-                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 80, height: 80, mode: .direct(cachePathPrefix: nil))
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 128, height: 128, mode: .cached)
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                 }
@@ -398,7 +398,7 @@ class StickerPaneTrendingListGridItemNode: GridItemNode {
     
     override var isVisibleInGrid: Bool {
         didSet {
-            
+            self.updateVisibility()
         }
     }
     
@@ -451,6 +451,10 @@ class StickerPaneTrendingListGridItemNode: GridItemNode {
         self.currentEntries = entries
         
         self.setNeedsLayout()
+    }
+    
+    func updateVisibility() {
+        
     }
     
     override func layout() {

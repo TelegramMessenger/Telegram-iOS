@@ -11033,7 +11033,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var attemptSelectionImpl: ((Peer) -> Void)?
             let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: filter, attemptSelection: { peer in
                 attemptSelectionImpl?(peer)
-            }, multipleSelection: true, forwardedMessagesCount: messages.count))
+            }, multipleSelection: true, forwardedMessageIds: messages.map { $0.id }))
             let context = self.context
             attemptSelectionImpl = { [weak controller] peer in
                 guard let controller = controller else {
@@ -11048,7 +11048,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 controller.present(textAlertController(context: context, title: nil, text: presentationData.strings.Forward_ErrorDisabledForChat, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
-            controller.multiplePeersSelected = { [weak self, weak controller] peers, peerMap, messageText, mode in
+            controller.multiplePeersSelected = { [weak self, weak controller] peers, peerMap, messageText, mode, hideSendersNames in
                 guard let strongSelf = self, let strongController = controller else {
                     return
                 }
@@ -11069,8 +11069,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
+                var attributes: [MessageAttribute] = []
+                if hideSendersNames {
+                    attributes.append(ForwardHideSendersNamesMessageAttribute())
+                }
+                
                 result.append(contentsOf: messages.map { message -> EnqueueMessage in
-                    return .forward(source: message.id, grouping: .auto, attributes: [], correlationId: nil)
+                    return .forward(source: message.id, grouping: .auto, attributes: attributes, correlationId: nil)
                 })
                 
                 let commit: ([EnqueueMessage]) -> Void = { result in
