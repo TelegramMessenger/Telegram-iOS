@@ -318,6 +318,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var buttonKeyboardMessageDisposable: Disposable?
     private var cachedDataDisposable: Disposable?
     private var chatUnreadCountDisposable: Disposable?
+    private var buttonUnreadCountDisposable: Disposable?
     private var chatUnreadMentionCountDisposable: Disposable?
     private var peerInputActivitiesDisposable: Disposable?
     
@@ -3887,6 +3888,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.cachedDataDisposable?.dispose()
         self.resolveUrlDisposable?.dispose()
         self.chatUnreadCountDisposable?.dispose()
+        self.buttonUnreadCountDisposable?.dispose()
         self.chatUnreadMentionCountDisposable?.dispose()
         self.peerInputActivitiesDisposable?.dispose()
         self.recentlyUsedInlineBotsDisposable?.dispose()
@@ -6822,6 +6824,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let peerId = self.chatLocation.peerId
             if let subject = self.subject, case .scheduledMessages = subject {
             } else {
+                self.buttonUnreadCountDisposable = (self.context.chatLocationUnreadCount(for: self.chatLocation, contextHolder: self.chatLocationContextHolder)
+                |> deliverOnMainQueue).start(next: { [weak self] count in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.chatDisplayNode.navigateButtons.unreadCount = Int32(count)
+                })
+
                 if case .peer = self.chatLocation {
                     let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
                     let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
@@ -6841,8 +6851,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     totalChatCount = count
                                 }
                             }
-                            
-                            strongSelf.chatDisplayNode.navigateButtons.unreadCount = unreadCount
                             
                             if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
                                 var globalRemainingUnreadChatCount = totalChatCount
@@ -7097,7 +7105,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     nextFolderId = nil
                 }
 
-                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: false, chatListFilter: strongSelf.currentChatListFilter, completion: { nextController in
+                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: false, chatListFilter: nextFolderId, completion: { nextController in
                     (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
                 }))
             }

@@ -1361,7 +1361,8 @@ private:
     outputDeviceId:(NSString * _Nonnull)outputDeviceId
     videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer
     requestMediaChannelDescriptions:(id<OngoingGroupCallMediaChannelDescriptionTask> _Nonnull (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull, void (^ _Nonnull)(NSArray<OngoingGroupCallMediaChannelDescription *> * _Nonnull)))requestMediaChannelDescriptions
-    requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart
+    requestAudioBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestAudioBroadcastPart
+    requestVideoBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestVideoBroadcastPart
     outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
     enableNoiseSuppression:(bool)enableNoiseSuppression {
@@ -1433,8 +1434,8 @@ private:
             .initialInputDeviceId = inputDeviceId.UTF8String,
             .initialOutputDeviceId = outputDeviceId.UTF8String,
             .videoCapture = [_videoCapturer getInterface],
-            .requestBroadcastPart = [requestBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
-                id<OngoingGroupCallBroadcastPartTask> task = requestBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
+            .requestAudioBroadcastPart = [requestAudioBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
+                id<OngoingGroupCallBroadcastPartTask> task = requestAudioBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
                     tgcalls::BroadcastPart parsedPart;
                     parsedPart.timestampMilliseconds = part.timestampMilliseconds;
                     
@@ -1461,9 +1462,44 @@ private:
                     }
                     parsedPart.status = mappedStatus;
                     
-                    parsedPart.oggData.resize(part.oggData.length);
-                    [part.oggData getBytes:parsedPart.oggData.data() length:part.oggData.length];
+                    parsedPart.data.resize(part.oggData.length);
+                    [part.oggData getBytes:parsedPart.data.data() length:part.oggData.length];
                     
+                    completion(std::move(parsedPart));
+                });
+                return std::make_shared<BroadcastPartTaskImpl>(task);
+            },
+            .requestVideoBroadcastPart = [requestVideoBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
+                id<OngoingGroupCallBroadcastPartTask> task = requestVideoBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
+                    tgcalls::BroadcastPart parsedPart;
+                    parsedPart.timestampMilliseconds = part.timestampMilliseconds;
+
+                    parsedPart.responseTimestamp = part.responseTimestamp;
+
+                    tgcalls::BroadcastPart::Status mappedStatus;
+                    switch (part.status) {
+                        case OngoingGroupCallBroadcastPartStatusSuccess: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::Success;
+                            break;
+                        }
+                        case OngoingGroupCallBroadcastPartStatusNotReady: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::NotReady;
+                            break;
+                        }
+                        case OngoingGroupCallBroadcastPartStatusResyncNeeded: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::ResyncNeeded;
+                            break;
+                        }
+                        default: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::NotReady;
+                            break;
+                        }
+                    }
+                    parsedPart.status = mappedStatus;
+
+                    parsedPart.data.resize(part.oggData.length);
+                    [part.oggData getBytes:parsedPart.data.data() length:part.oggData.length];
+
                     completion(std::move(parsedPart));
                 });
                 return std::make_shared<BroadcastPartTaskImpl>(task);

@@ -28,8 +28,13 @@ private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQue
     }
 }
 
+private enum BroadcastPartSubject {
+    case audio
+    case video
+}
+
 private protocol BroadcastPartSource: AnyObject {
-    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable
+    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, subject: BroadcastPartSubject, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable
 }
 
 private final class NetworkBroadcastPartSource: BroadcastPartSource {
@@ -46,7 +51,7 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         self.accessHash = accessHash
     }
     
-    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
+    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, subject: BroadcastPartSubject, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
         let timestampIdMilliseconds: Int64
         if timestampMilliseconds != 0 {
             timestampIdMilliseconds = timestampMilliseconds
@@ -71,8 +76,35 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         |> mapToSignal { [weak self] dataSource -> Signal<GetAudioBroadcastPartResult?, NoError> in
             if let dataSource = dataSource {
                 self?.dataSource = dataSource
-                return engine.calls.getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
-                |> map(Optional.init)
+                switch subject {
+                case .audio:
+                    return engine.calls.getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
+                    |> map(Optional.init)
+                case .video:
+                    #if DEBUG && false
+                    return engine.calls.getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
+                    |> map { result -> GetAudioBroadcastPartResult in
+                        switch result.status {
+                        case .data:
+                            guard let path = Bundle.main.path(forResource: "chunk2.ch2.q1", ofType: "mp4"), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+                                return GetAudioBroadcastPartResult(
+                                    status: .notReady,
+                                    responseTimestamp: result.responseTimestamp
+                                )
+                            }
+                            return GetAudioBroadcastPartResult(
+                                status: .data(data),
+                                responseTimestamp: result.responseTimestamp
+                            )
+                        default:
+                            return result
+                        }
+                    }
+                    #else
+                    return engine.calls.getVideoBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
+                    |> map(Optional.init)
+                    #endif
+                }
             } else {
                 return .single(nil)
                 |> delay(2.0, queue: queue)
@@ -403,15 +435,26 @@ public final class OngoingGroupCallContext {
 
                     return OngoingGroupCallMediaChannelDescriptionTaskImpl(disposable: disposable)
                 },
-                requestBroadcastPart: { timestampMilliseconds, durationMilliseconds, completion in
+                requestAudioBroadcastPart: { timestampMilliseconds, durationMilliseconds, completion in
                     let disposable = MetaDisposable()
                     
                     queue.async {
-                        disposable.set(broadcastPartsSource?.requestPart(timestampMilliseconds: timestampMilliseconds, durationMilliseconds: durationMilliseconds, completion: completion, rejoinNeeded: {
+                        disposable.set(broadcastPartsSource?.requestPart(timestampMilliseconds: timestampMilliseconds, durationMilliseconds: durationMilliseconds, subject: .audio, completion: completion, rejoinNeeded: {
                             rejoinNeeded()
                         }))
                     }
                     
+                    return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
+                },
+                requestVideoBroadcastPart: { timestampMilliseconds, durationMilliseconds, completion in
+                    let disposable = MetaDisposable()
+
+                    queue.async {
+                        disposable.set(broadcastPartsSource?.requestPart(timestampMilliseconds: timestampMilliseconds, durationMilliseconds: durationMilliseconds, subject: .video, completion: completion, rejoinNeeded: {
+                            rejoinNeeded()
+                        }))
+                    }
+
                     return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
                 },
                 outgoingAudioBitrateKbit: outgoingAudioBitrateKbit ?? 32,
