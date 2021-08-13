@@ -5285,7 +5285,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 strongSelf.commitPurposefulAction()
                 if let forwardMessageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds {
-                    strongSelf.forwardMessages(messageIds: forwardMessageIds, resetCurrent: true)
+                    strongSelf.forwardMessages(messageIds: forwardMessageIds, hideSendersNames: strongSelf.presentationInterfaceState.interfaceState.forwardMessageHideSendersNames, resetCurrent: true)
                 }
             }
         }, forwardMessages: { [weak self] messages in
@@ -5293,6 +5293,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.commitPurposefulAction()
                 let forwardMessageIds = messages.map { $0.id }.sorted()
                 strongSelf.forwardMessages(messageIds: forwardMessageIds)
+            }
+        }, updateForwardMessageHideSendersNames: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageHideSendersNames(value) }) })
             }
         }, shareSelectedMessages: { [weak self] in
             if let strongSelf = self, let selectedIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
@@ -11000,16 +11004,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    private func forwardMessages(messageIds: [MessageId], resetCurrent: Bool = false) {
+    private func forwardMessages(messageIds: [MessageId], hideSendersNames: Bool = false, resetCurrent: Bool = false) {
         let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
             return messageIds.compactMap(transaction.getMessage)
         }
         |> deliverOnMainQueue).start(next: { [weak self] messages in
-            self?.forwardMessages(messages: messages, resetCurrent: resetCurrent)
+            self?.forwardMessages(messages: messages, hideSendersNames: hideSendersNames, resetCurrent: resetCurrent)
         })
     }
     
-    private func forwardMessages(messages: [Message], resetCurrent: Bool) {
+    private func forwardMessages(messages: [Message], hideSendersNames: Bool = false, resetCurrent: Bool) {
         let _ = self.presentVoiceMessageDiscardAlert(action: {
             var filter: ChatListNodePeersFilter = [.onlyWriteable, .includeSavedMessages, .excludeDisabled, .doNotSearchMessages]
             var hasPublicPolls = false
@@ -11154,7 +11158,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 if resetCurrent {
-                     strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(nil) }) })
+                    strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(nil).withUpdatedForwardMessageHideSendersNames(false) }) })
                 }
                 
                 var isPinnedMessages = false

@@ -49,10 +49,10 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
     } else if let forwardMessageIds = chatPresentationInterfaceState.interfaceState.forwardMessageIds {
         if let forwardPanelNode = currentPanel as? ForwardAccessoryPanelNode, forwardPanelNode.messageIds == forwardMessageIds {
             forwardPanelNode.interfaceInteraction = interfaceInteraction
-            forwardPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+            forwardPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, hideSendersNames: chatPresentationInterfaceState.interfaceState.forwardMessageHideSendersNames)
             return forwardPanelNode
         } else {
-            let panelNode = ForwardAccessoryPanelNode(context: context, messageIds: forwardMessageIds, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+            let panelNode = ForwardAccessoryPanelNode(context: context, messageIds: forwardMessageIds, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, hideSendersNames: chatPresentationInterfaceState.interfaceState.forwardMessageHideSendersNames)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }

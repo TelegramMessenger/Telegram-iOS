@@ -175,6 +175,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedDisplayAsPeers.self, f: { CachedDisplayAsPeers(decoder: $0) })
     declareEncodable(WallpapersState.self, f: { WallpapersState(decoder: $0) })
     declareEncodable(WallpaperDataResource.self, f: { WallpaperDataResource(decoder: $0) })
+    declareEncodable(ForwardHideSendersNamesMessageAttribute.self, f: { ForwardHideSendersNamesMessageAttribute(decoder: $0) })
     
     return
 }()

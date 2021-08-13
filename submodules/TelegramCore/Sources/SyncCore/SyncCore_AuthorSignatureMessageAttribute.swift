@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 
-
 public class AuthorSignatureMessageAttribute: MessageAttribute {
     public let signature: String
     
