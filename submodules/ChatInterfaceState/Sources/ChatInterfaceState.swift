@@ -360,7 +360,7 @@ public final class ChatInterfaceState: Codable, Equatable {
         } else {
             self.forwardMessageIds = nil
         }
-        self.forwardMessageHideSendersNames = ((try? container.decode(Int32.self, forKey: "fhn")) ?? 0) != 0
+        self.forwardMessageHideSendersNames = ((try? container.decodeIfPresent(Int32.self, forKey: "fhn")) ?? 0) != 0
         if let editMessage = try? container.decodeIfPresent(ChatEditMessageState.self, forKey: "em") {
             self.editMessage = editMessage
         } else {
