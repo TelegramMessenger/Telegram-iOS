@@ -2465,7 +2465,7 @@ func _internal_getVideoBroadcastPart(dataSource: AudioBroadcastDataSource, callI
         return .single(GetAudioBroadcastPartResult(status: .notReady, responseTimestamp: Double(timestampIdMilliseconds) / 1000.0))
     }
 
-    return dataSource.download.requestWithAdditionalData(Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(flags: 1 << 0, call: .inputGroupCall(id: callId, accessHash: accessHash), timeMs: timestampIdMilliseconds, scale: scale, videoChannel: 1, videoQuality: 0), offset: 0, limit: 512 * 1024), automaticFloodWait: false, failOnServerErrors: true)
+    return dataSource.download.requestWithAdditionalData(Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(flags: 1 << 0, call: .inputGroupCall(id: callId, accessHash: accessHash), timeMs: timestampIdMilliseconds, scale: scale, videoChannel: 1, videoQuality: 2), offset: 0, limit: 512 * 1024), automaticFloodWait: false, failOnServerErrors: true)
     |> map { result, responseTimestamp -> GetAudioBroadcastPartResult in
         switch result {
         case let .file(_, _, bytes):
