@@ -162,10 +162,13 @@ func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemColle
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false) -> [ChatMediaInputPanelEntry] {
+func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     if hasGifs {
         entries.append(.recentGifs(theme, expanded))
+    }
+    if trendingIsDismissed {
+        entries.append(.trending(true, theme, expanded))
     }
     if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
         entries.append(.savedStickers(theme, expanded))
@@ -251,7 +254,7 @@ func chatMediaInputPanelGifModeEntries(theme: PresentationTheme, reactions: [Str
     return entries
 }
 
-func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, trendingPacks: [FeaturedStickerPackItem], dismissedTrendingStickerPacks: [ItemCollectionId.Id]? = nil, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
+func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, trendingPacks: [FeaturedStickerPackItem], trendingIsDismissed: Bool = false, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     if hasSearch && view.lower == nil {
@@ -279,10 +282,6 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
             }
         }
         
-        var trendingIsDismissed = false
-        if let dismissedTrendingStickerPacks = dismissedTrendingStickerPacks, Set(trendingPacks.map({ $0.info.id.id })) == Set(dismissedTrendingStickerPacks) {
-            trendingIsDismissed = true
-        }
         if !trendingIsDismissed {
             entries.append(.trendingList(theme: theme, strings: strings, packs: trendingPacks))
         }
@@ -1106,10 +1105,15 @@ final class ChatMediaInputNode: ChatInputNode {
             for info in view.collectionInfos {
                 installedPacks.insert(info.0)
             }
+            
+            var trendingIsDismissed = false
+            if let dismissedTrendingStickerPacks = dismissedTrendingStickerPacks, Set(trendingPacks.map({ $0.info.id.id })) == Set(dismissedTrendingStickerPacks) {
+                trendingIsDismissed = true
+            }
                         
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, expanded: panelExpanded)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, expanded: panelExpanded)
             let gifPaneEntries = chatMediaInputPanelGifModeEntries(theme: theme, reactions: reactions, animatedEmojiStickers: animatedEmojiStickers, expanded: panelExpanded)
-            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, dismissedTrendingStickerPacks: dismissedTrendingStickerPacks, strings: strings, theme: theme)
+            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme)
             
             if view.higher == nil {
                 var hasTopSeparator = true
