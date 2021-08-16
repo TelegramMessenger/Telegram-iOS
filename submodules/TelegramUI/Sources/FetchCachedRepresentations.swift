@@ -399,7 +399,7 @@ private func fetchCachedBlurredWallpaperRepresentation(resource: MediaResource, 
     }) |> runOn(Queue.concurrentDefaultQueue())
 }
 
-public func fetchCachedSharedResourceRepresentation(accountManager: AccountManager, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+public func fetchCachedSharedResourceRepresentation(accountManager: AccountManager<TelegramAccountManagerTypes>, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedScaledImageRepresentation {
         return accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in

@@ -4891,6 +4891,8 @@ public final class VoiceChatController: ViewController {
                         memberPeer = user.withUpdatedPhoto([photo])
                     }
                 }
+
+                joinedVideo = true
                 
                 if let videoEndpointId = member.videoEndpointId {
                     peerIdToCameraEndpointId[member.peer.id] = videoEndpointId

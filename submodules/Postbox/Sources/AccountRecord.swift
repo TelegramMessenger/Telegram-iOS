@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol AccountRecordAttribute: class, PostboxCoding {
+public protocol AccountRecordAttribute: Codable {
     func isEqual(to: AccountRecordAttribute) -> Bool
 }
 
@@ -13,10 +13,6 @@ public struct AccountRecordId: Comparable, Hashable, Codable {
     
     public var int64: Int64 {
         return self.rawValue
-    }
-    
-    public var hashValue: Int {
-        return self.rawValue.hashValue
     }
     
     public static func ==(lhs: AccountRecordId, rhs: AccountRecordId) -> Bool {
@@ -34,7 +30,7 @@ public func generateAccountRecordId() -> AccountRecordId {
     return AccountRecordId(rawValue: id)
 }
 
-public final class AccountRecord: PostboxCoding, Equatable, Codable {
+public final class AccountRecord<Attribute: AccountRecordAttribute>: Equatable, Codable {
     enum CodingKeys: String, CodingKey {
         case id
         case attributes
@@ -42,7 +38,7 @@ public final class AccountRecord: PostboxCoding, Equatable, Codable {
     }
     
     public let id: AccountRecordId
-    public let attributes: [AccountRecordAttribute]
+    public let attributes: [Attribute]
     public let temporarySessionId: Int64?
     
     public init(from decoder: Decoder) throws {
@@ -53,17 +49,23 @@ public final class AccountRecord: PostboxCoding, Equatable, Codable {
             self.id = try container.decode(AccountRecordId.self, forKey: .id)
         }
         
-        let attributesData = try container.decode(Array<Data>.self, forKey: .attributes)
-        var attributes: [AccountRecordAttribute] = []
-        for data in attributesData {
-            if let object = PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? AccountRecordAttribute {
-                attributes.append(object)
+        if let attributesData = try? container.decode(Array<Data>.self, forKey: .attributes) {
+            var attributes: [Attribute] = []
+            for data in attributesData {
+                if let attribute = try? AdaptedPostboxDecoder().decode(Attribute.self, from: data) {
+                    attributes.append(attribute)
+                }
             }
+            self.attributes = attributes
+        } else {
+            let attributes = try container.decode([Attribute].self, forKey: .attributes)
+            self.attributes = attributes
         }
-        self.attributes = attributes
         
-        if let temporarySessionIdString = try container.decodeIfPresent(String.self, forKey: .temporarySessionId), let temporarySessionIdValue = Int64(temporarySessionIdString) {
+        if let temporarySessionIdString = try? container.decodeIfPresent(String.self, forKey: .temporarySessionId), let temporarySessionIdValue = Int64(temporarySessionIdString) {
             self.temporarySessionId = temporarySessionIdValue
+        } else if let temporarySessionInt64 = try? container.decodeIfPresent(Int64.self, forKey: .temporarySessionId) {
+            self.temporarySessionId = temporarySessionInt64
         } else {
             self.temporarySessionId = nil
         }
@@ -72,37 +74,15 @@ public final class AccountRecord: PostboxCoding, Equatable, Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(String("\(self.id.rawValue)"), forKey: .id)
-        let attributesData: [Data] = self.attributes.map { attribute in
-            let encoder = PostboxEncoder()
-            encoder.encodeRootObject(attribute)
-            return encoder.makeData()
-        }
-        try container.encode(attributesData, forKey: .attributes)
+        try container.encode(self.attributes, forKey: .attributes)
         let temporarySessionIdString: String? = self.temporarySessionId.flatMap({ "\($0)" })
         try container.encodeIfPresent(temporarySessionIdString, forKey: .temporarySessionId)
     }
     
-    public init(id: AccountRecordId, attributes: [AccountRecordAttribute], temporarySessionId: Int64?) {
+    public init(id: AccountRecordId, attributes: [Attribute], temporarySessionId: Int64?) {
         self.id = id
         self.attributes = attributes
         self.temporarySessionId = temporarySessionId
-    }
-    
-    public init(decoder: PostboxDecoder) {
-        self.id = AccountRecordId(rawValue: decoder.decodeInt64ForKey("id", orElse: 0))
-        self.attributes = (decoder.decodeObjectArrayForKey("attributes") as [PostboxCoding]).map { $0 as! AccountRecordAttribute }
-        self.temporarySessionId = decoder.decodeOptionalInt64ForKey("temporarySessionId")
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt64(self.id.int64, forKey: "id")
-        let attributes: [PostboxCoding] = self.attributes.map { $0 }
-        encoder.encodeGenericObjectArray(attributes, forKey: "attributes")
-        if let temporarySessionId = self.temporarySessionId {
-            encoder.encodeInt64(temporarySessionId, forKey: "temporarySessionId")
-        } else {
-            encoder.encodeNil(forKey: "temporarySessionId")
-        }
     }
     
     public static func ==(lhs: AccountRecord, rhs: AccountRecord) -> Bool {

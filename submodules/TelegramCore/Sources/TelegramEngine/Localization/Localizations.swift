@@ -99,7 +99,7 @@ public enum DownloadAndApplyLocalizationError {
     case generic
 }
 
-func _internal_downloadAndApplyLocalization(accountManager: AccountManager, postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
+func _internal_downloadAndApplyLocalization(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network, languageCode: String) -> Signal<Void, DownloadAndApplyLocalizationError> {
     return _internal_requestLocalizationPreview(network: network, identifier: languageCode)
     |> mapError { _ -> DownloadAndApplyLocalizationError in
         return .generic

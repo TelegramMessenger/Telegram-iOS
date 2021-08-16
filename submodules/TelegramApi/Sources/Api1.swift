@@ -1011,13 +1011,13 @@ public struct messages {
     
     }
     public enum DiscussionMessage: TypeConstructorDescription {
-        case discussionMessage(flags: Int32, messages: [Api.Message], maxId: Int32?, readInboxMaxId: Int32?, readOutboxMaxId: Int32?, chats: [Api.Chat], users: [Api.User])
+        case discussionMessage(flags: Int32, messages: [Api.Message], maxId: Int32?, readInboxMaxId: Int32?, readOutboxMaxId: Int32?, unreadCount: Int32, chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .discussionMessage(let flags, let messages, let maxId, let readInboxMaxId, let readOutboxMaxId, let chats, let users):
+                case .discussionMessage(let flags, let messages, let maxId, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-170029155)
+                        buffer.appendInt32(-1506535550)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -1028,6 +1028,7 @@ public struct messages {
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(maxId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(readInboxMaxId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(readOutboxMaxId!, buffer: buffer, boxed: false)}
+                    serializeInt32(unreadCount, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(chats.count))
                     for item in chats {
@@ -1044,8 +1045,8 @@ public struct messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .discussionMessage(let flags, let messages, let maxId, let readInboxMaxId, let readOutboxMaxId, let chats, let users):
-                return ("discussionMessage", [("flags", flags), ("messages", messages), ("maxId", maxId), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("chats", chats), ("users", users)])
+                case .discussionMessage(let flags, let messages, let maxId, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chats, let users):
+                return ("discussionMessage", [("flags", flags), ("messages", messages), ("maxId", maxId), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chats", chats), ("users", users)])
     }
     }
     
@@ -1062,13 +1063,15 @@ public struct messages {
             if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt32() }
             var _5: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
-            var _6: [Api.Chat]?
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _7: [Api.User]?
+            var _8: [Api.User]?
             if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -1077,8 +1080,9 @@ public struct messages {
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.messages.DiscussionMessage.discussionMessage(flags: _1!, messages: _2!, maxId: _3, readInboxMaxId: _4, readOutboxMaxId: _5, chats: _6!, users: _7!)
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.messages.DiscussionMessage.discussionMessage(flags: _1!, messages: _2!, maxId: _3, readInboxMaxId: _4, readOutboxMaxId: _5, unreadCount: _6!, chats: _7!, users: _8!)
             }
             else {
                 return nil

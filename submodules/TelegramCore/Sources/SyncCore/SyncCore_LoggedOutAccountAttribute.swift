@@ -1,17 +1,17 @@
 import Foundation
 import Postbox
 
-public final class LoggedOutAccountAttribute: AccountRecordAttribute {
+public final class LoggedOutAccountAttribute: Codable, Equatable {
     public init() {
     }
     
-    public init(decoder: PostboxDecoder) {
+    public init(from decoder: Decoder) throws {
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
     }
-    
-    public func isEqual(to: AccountRecordAttribute) -> Bool {
-        return to is LoggedOutAccountAttribute
+
+    public static func ==(lhs: LoggedOutAccountAttribute, rhs: LoggedOutAccountAttribute) -> Bool {
+        return true
     }
 }

@@ -552,7 +552,7 @@ public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
     var mainWindow: Window1? { get }
-    var accountManager: AccountManager { get }
+    var accountManager: AccountManager<TelegramAccountManagerTypes> { get }
     var appLockContext: AppLockContext { get }
     
     var currentPresentationData: Atomic<PresentationData> { get }
@@ -737,6 +737,7 @@ public protocol AccountContext: AnyObject {
     
     func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput
     func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError>
+    func chatLocationUnreadCount(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Int, NoError>
     func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex)
     
     func scheduleGroupCall(peerId: PeerId)

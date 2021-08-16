@@ -110,7 +110,7 @@ private func upgradedSharedDataValue(_ value: PreferencesEntry?) -> PreferencesE
     }
 }
 
-public func upgradedAccounts(accountManager: AccountManager, rootPath: String, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Float, NoError> {
+public func upgradedAccounts(accountManager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Float, NoError> {
     return accountManager.transaction { transaction -> (Int32?, AccountRecordId?) in
         return (transaction.getVersion(), transaction.getCurrent()?.0)
     }
@@ -237,7 +237,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
                 var index: Int32 = 0
                 for record in transaction.getRecords() {
                     transaction.updateRecord(record.id, { _ in
-                        return AccountRecord(id: record.id, attributes: record.attributes + [AccountSortOrderAttribute(order: index)], temporarySessionId: record.temporarySessionId)
+                        return AccountRecord(id: record.id, attributes: record.attributes + [.sortOrder(AccountSortOrderAttribute(order: index))], temporarySessionId: record.temporarySessionId)
                     })
                     index += 1
                 }

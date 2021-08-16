@@ -60,7 +60,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     private let queue = Queue.mainQueue()
     
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let inForeground: Signal<Bool, NoError>
     private let presentationData: Signal<PresentationData, NoError>
     
@@ -188,7 +188,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     public let galleryHiddenMediaManager: GalleryHiddenMediaManager = GalleryHiddenMediaManagerImpl()
     
-    init(accountManager: AccountManager, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>) {
+    init(accountManager: AccountManager<TelegramAccountManagerTypes>, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>) {
         self.accountManager = accountManager
         self.inForeground = inForeground
         self.presentationData = presentationData

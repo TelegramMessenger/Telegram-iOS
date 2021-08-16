@@ -1260,12 +1260,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if expandProgress < 0.1 {
                     chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: nil)
                 } else if expandProgress >= 0.99 {
-                    if chatControllerNode.inputPanelOverscrollNode?.text.0 != swipeText.0 {
-                        chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: swipeText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 1))
+                    if chatControllerNode.inputPanelOverscrollNode?.text.0 != releaseText.0 {
+                        chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: releaseText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 1))
                     }
                 } else {
-                    if chatControllerNode.inputPanelOverscrollNode?.text.0 != releaseText.0 {
-                        chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: releaseText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 2))
+                    if chatControllerNode.inputPanelOverscrollNode?.text.0 != swipeText.0 {
+                        chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: swipeText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 2))
                     }
                 }
             } else {

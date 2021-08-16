@@ -94,7 +94,7 @@ public final class NotificationViewControllerImpl {
         
         if sharedAccountContext == nil {
             initializeAccountManagement()
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
             
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
             let semaphore = DispatchSemaphore(value: 0)

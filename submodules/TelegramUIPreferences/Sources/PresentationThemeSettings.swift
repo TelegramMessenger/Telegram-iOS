@@ -693,7 +693,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
 }
 
-public func updatePresentationThemeSettingsInteractively(accountManager: AccountManager, _ f: @escaping (PresentationThemeSettings) -> PresentationThemeSettings) -> Signal<Void, NoError> {
+public func updatePresentationThemeSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (PresentationThemeSettings) -> PresentationThemeSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
             let currentSettings: PresentationThemeSettings

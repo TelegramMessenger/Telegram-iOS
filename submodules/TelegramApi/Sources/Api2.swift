@@ -17375,7 +17375,7 @@ public extension Api {
         case inputPhotoLegacyFileLocation(id: Int64, accessHash: Int64, fileReference: Buffer, volumeId: Int64, localId: Int32, secret: Int64)
         case inputPeerPhotoFileLocation(flags: Int32, peer: Api.InputPeer, photoId: Int64)
         case inputStickerSetThumb(stickerset: Api.InputStickerSet, thumbVersion: Int32)
-        case inputGroupCallStream(call: Api.InputGroupCall, timeMs: Int64, scale: Int32)
+        case inputGroupCallStream(flags: Int32, call: Api.InputGroupCall, timeMs: Int64, scale: Int32, videoChannel: Int32?, videoQuality: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -17452,13 +17452,16 @@ public extension Api {
                     stickerset.serialize(buffer, true)
                     serializeInt32(thumbVersion, buffer: buffer, boxed: false)
                     break
-                case .inputGroupCallStream(let call, let timeMs, let scale):
+                case .inputGroupCallStream(let flags, let call, let timeMs, let scale, let videoChannel, let videoQuality):
                     if boxed {
-                        buffer.appendInt32(-1146808775)
+                        buffer.appendInt32(93890858)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     call.serialize(buffer, true)
                     serializeInt64(timeMs, buffer: buffer, boxed: false)
                     serializeInt32(scale, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(videoChannel!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(videoQuality!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -17483,8 +17486,8 @@ public extension Api {
                 return ("inputPeerPhotoFileLocation", [("flags", flags), ("peer", peer), ("photoId", photoId)])
                 case .inputStickerSetThumb(let stickerset, let thumbVersion):
                 return ("inputStickerSetThumb", [("stickerset", stickerset), ("thumbVersion", thumbVersion)])
-                case .inputGroupCallStream(let call, let timeMs, let scale):
-                return ("inputGroupCallStream", [("call", call), ("timeMs", timeMs), ("scale", scale)])
+                case .inputGroupCallStream(let flags, let call, let timeMs, let scale, let videoChannel, let videoQuality):
+                return ("inputGroupCallStream", [("flags", flags), ("call", call), ("timeMs", timeMs), ("scale", scale), ("videoChannel", videoChannel), ("videoQuality", videoQuality)])
     }
     }
     
@@ -17641,19 +17644,28 @@ public extension Api {
             }
         }
         public static func parse_inputGroupCallStream(_ reader: BufferReader) -> InputFileLocation? {
-            var _1: Api.InputGroupCall?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.InputGroupCall?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
+                _2 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
             }
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputFileLocation.inputGroupCallStream(call: _1!, timeMs: _2!, scale: _3!)
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.InputFileLocation.inputGroupCallStream(flags: _1!, call: _2!, timeMs: _3!, scale: _4!, videoChannel: _5, videoQuality: _6)
             }
             else {
                 return nil
@@ -18390,19 +18402,22 @@ public extension Api {
     
     }
     public enum InputThemeSettings: TypeConstructorDescription {
-        case inputThemeSettings(flags: Int32, baseTheme: Api.BaseTheme, accentColor: Int32, messageTopColor: Int32?, messageBottomColor: Int32?, wallpaper: Api.InputWallPaper?, wallpaperSettings: Api.WallPaperSettings?)
+        case inputThemeSettings(flags: Int32, baseTheme: Api.BaseTheme, accentColor: Int32, messageColors: [Int32]?, wallpaper: Api.InputWallPaper?, wallpaperSettings: Api.WallPaperSettings?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .inputThemeSettings(let flags, let baseTheme, let accentColor, let messageTopColor, let messageBottomColor, let wallpaper, let wallpaperSettings):
+                case .inputThemeSettings(let flags, let baseTheme, let accentColor, let messageColors, let wallpaper, let wallpaperSettings):
                     if boxed {
-                        buffer.appendInt32(-1118798639)
+                        buffer.appendInt32(-13043438)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     baseTheme.serialize(buffer, true)
                     serializeInt32(accentColor, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(messageTopColor!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(messageBottomColor!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messageColors!.count))
+                    for item in messageColors! {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }}
                     if Int(flags) & Int(1 << 1) != 0 {wallpaper!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {wallpaperSettings!.serialize(buffer, true)}
                     break
@@ -18411,8 +18426,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .inputThemeSettings(let flags, let baseTheme, let accentColor, let messageTopColor, let messageBottomColor, let wallpaper, let wallpaperSettings):
-                return ("inputThemeSettings", [("flags", flags), ("baseTheme", baseTheme), ("accentColor", accentColor), ("messageTopColor", messageTopColor), ("messageBottomColor", messageBottomColor), ("wallpaper", wallpaper), ("wallpaperSettings", wallpaperSettings)])
+                case .inputThemeSettings(let flags, let baseTheme, let accentColor, let messageColors, let wallpaper, let wallpaperSettings):
+                return ("inputThemeSettings", [("flags", flags), ("baseTheme", baseTheme), ("accentColor", accentColor), ("messageColors", messageColors), ("wallpaper", wallpaper), ("wallpaperSettings", wallpaperSettings)])
     }
     }
     
@@ -18425,27 +18440,26 @@ public extension Api {
             }
             var _3: Int32?
             _3 = reader.readInt32()
-            var _4: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
-            var _6: Api.InputWallPaper?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.InputWallPaper
+            var _4: [Int32]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
             } }
-            var _7: Api.WallPaperSettings?
+            var _5: Api.InputWallPaper?
             if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.WallPaperSettings
+                _5 = Api.parse(reader, signature: signature) as? Api.InputWallPaper
+            } }
+            var _6: Api.WallPaperSettings?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.WallPaperSettings
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.InputThemeSettings.inputThemeSettings(flags: _1!, baseTheme: _2!, accentColor: _3!, messageTopColor: _4, messageBottomColor: _5, wallpaper: _6, wallpaperSettings: _7)
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.InputThemeSettings.inputThemeSettings(flags: _1!, baseTheme: _2!, accentColor: _3!, messageColors: _4, wallpaper: _5, wallpaperSettings: _6)
             }
             else {
                 return nil
@@ -21932,19 +21946,22 @@ public extension Api {
     
     }
     public enum ThemeSettings: TypeConstructorDescription {
-        case themeSettings(flags: Int32, baseTheme: Api.BaseTheme, accentColor: Int32, messageTopColor: Int32?, messageBottomColor: Int32?, wallpaper: Api.WallPaper?)
+        case themeSettings(flags: Int32, baseTheme: Api.BaseTheme, accentColor: Int32, messageColors: [Int32]?, wallpaper: Api.WallPaper?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .themeSettings(let flags, let baseTheme, let accentColor, let messageTopColor, let messageBottomColor, let wallpaper):
+                case .themeSettings(let flags, let baseTheme, let accentColor, let messageColors, let wallpaper):
                     if boxed {
-                        buffer.appendInt32(-1676371894)
+                        buffer.appendInt32(-1917524116)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     baseTheme.serialize(buffer, true)
                     serializeInt32(accentColor, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(messageTopColor!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(messageBottomColor!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messageColors!.count))
+                    for item in messageColors! {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }}
                     if Int(flags) & Int(1 << 1) != 0 {wallpaper!.serialize(buffer, true)}
                     break
     }
@@ -21952,8 +21969,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .themeSettings(let flags, let baseTheme, let accentColor, let messageTopColor, let messageBottomColor, let wallpaper):
-                return ("themeSettings", [("flags", flags), ("baseTheme", baseTheme), ("accentColor", accentColor), ("messageTopColor", messageTopColor), ("messageBottomColor", messageBottomColor), ("wallpaper", wallpaper)])
+                case .themeSettings(let flags, let baseTheme, let accentColor, let messageColors, let wallpaper):
+                return ("themeSettings", [("flags", flags), ("baseTheme", baseTheme), ("accentColor", accentColor), ("messageColors", messageColors), ("wallpaper", wallpaper)])
     }
     }
     
@@ -21966,22 +21983,21 @@ public extension Api {
             }
             var _3: Int32?
             _3 = reader.readInt32()
-            var _4: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
-            var _6: Api.WallPaper?
+            var _4: [Int32]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            } }
+            var _5: Api.WallPaper?
             if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.WallPaper
+                _5 = Api.parse(reader, signature: signature) as? Api.WallPaper
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.ThemeSettings.themeSettings(flags: _1!, baseTheme: _2!, accentColor: _3!, messageTopColor: _4, messageBottomColor: _5, wallpaper: _6)
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.ThemeSettings.themeSettings(flags: _1!, baseTheme: _2!, accentColor: _3!, messageColors: _4, wallpaper: _5)
             }
             else {
                 return nil

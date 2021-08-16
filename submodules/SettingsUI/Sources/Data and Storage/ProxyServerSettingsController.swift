@@ -269,7 +269,7 @@ public func proxyServerSettingsController(context: AccountContext, currentSettin
     return proxyServerSettingsController(context: context, presentationData: presentationData, updatedPresentationData: context.sharedContext.presentationData, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, currentSettings: currentSettings)
 }
 
-func proxyServerSettingsController(context: AccountContext? = nil, presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>, accountManager: AccountManager, postbox: Postbox, network: Network, currentSettings: ProxyServerSettings?) -> ViewController {
+func proxyServerSettingsController(context: AccountContext? = nil, presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>, accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network, currentSettings: ProxyServerSettings?) -> ViewController {
     var currentMode: ProxyServerSettingsControllerMode = .socks5
     var currentUsername: String?
     var currentPassword: String?

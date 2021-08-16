@@ -57,7 +57,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public let applicationBindings: TelegramApplicationBindings
     public let sharedContainerPath: String
     public let basePath: String
-    public let accountManager: AccountManager
+    public let accountManager: AccountManager<TelegramAccountManagerTypes>
     public let appLockContext: AppLockContext
     
     private let navigateToChatImpl: (AccountRecordId, PeerId, MessageId?) -> Void
@@ -161,7 +161,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var spotlightDataContext: SpotlightDataContext?
     private var widgetDataContext: WidgetDataContext?
     
-    public init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
+    public init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
         assert(Queue.mainQueue().isCurrent())
         
         precondition(!testHasInstance)
@@ -345,13 +345,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             var result: [AccountRecordId: AccountAttributes] = [:]
             for record in view.records {
                 let isLoggedOut = record.attributes.contains(where: { attribute in
-                    return attribute is LoggedOutAccountAttribute
+                    if case .loggedOut = attribute {
+                        return true
+                    } else {
+                        return false
+                    }
                 })
                 if isLoggedOut {
                     continue
                 }
                 let isTestingEnvironment = record.attributes.contains(where: { attribute in
-                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                    if case let .environment(environment) = attribute, case .test = environment.environment {
                         return true
                     } else {
                         return false
@@ -360,17 +364,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 var backupData: AccountBackupData?
                 var sortIndex: Int32 = 0
                 for attribute in record.attributes {
-                    if let attribute = attribute as? AccountSortOrderAttribute {
-                        sortIndex = attribute.order
-                    } else if let attribute = attribute as? AccountBackupDataAttribute {
-                        backupData = attribute.data
+                    if case let .sortOrder(sortOrder) = attribute {
+                        sortIndex = sortOrder.order
+                    } else if case let .backupData(backupDataValue) = attribute {
+                        backupData = backupDataValue.data
                     }
                 }
                 result[record.id] = AccountAttributes(sortIndex: sortIndex, isTestingEnvironment: isTestingEnvironment, backupData: backupData)
             }
             let authRecord: (AccountRecordId, Bool)? = view.currentAuthAccount.flatMap({ authAccount in
                 let isTestingEnvironment = authAccount.attributes.contains(where: { attribute in
-                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                    if case let .environment(environment) = attribute, case .test = environment.environment {
                         return true
                     } else {
                         return false
@@ -807,8 +811,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     guard let record = record else {
                         return nil
                     }
-                    var attributes = record.attributes.filter({ !($0 is AccountBackupDataAttribute) })
-                    attributes.append(AccountBackupDataAttribute(data: backupData))
+                    var attributes: [TelegramAccountManagerTypes.Attribute] = record.attributes.filter { attribute in
+                        if case .backupData = attribute {
+                            return false
+                        } else {
+                            return true
+                        }
+                    }
+                    attributes.append(.backupData(AccountBackupDataAttribute(data: backupData)))
                     return AccountRecord(id: record.id, attributes: attributes, temporarySessionId: record.temporarySessionId)
                 })
             }
@@ -920,7 +930,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func beginNewAuth(testingEnvironment: Bool) {
         let _ = self.accountManager.transaction({ transaction -> Void in
-            let _ = transaction.createAuth([AccountEnvironmentAttribute(environment: testingEnvironment ? .test : .production)])
+            let _ = transaction.createAuth([.environment(AccountEnvironmentAttribute(environment: testingEnvironment ? .test : .production))])
         }).start()
     }
     

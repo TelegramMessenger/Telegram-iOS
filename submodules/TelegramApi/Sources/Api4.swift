@@ -8010,11 +8010,12 @@ public extension Api {
                     })
                 }
             
-                public static func getGroupCall(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCall>) {
+                public static func getGroupCall(call: Api.InputGroupCall, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCall>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(209498135)
+                    buffer.appendInt32(68699611)
                     call.serialize(buffer, true)
-                    return (FunctionDescription(name: "phone.getGroupCall", parameters: [("call", call)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.GroupCall? in
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "phone.getGroupCall", parameters: [("call", call), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.GroupCall? in
                         let reader = BufferReader(buffer)
                         var result: Api.phone.GroupCall?
                         if let signature = reader.readInt32() {

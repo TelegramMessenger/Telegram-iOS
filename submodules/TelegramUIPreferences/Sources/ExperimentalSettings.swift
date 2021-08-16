@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public struct ExperimentalSettings: PreferencesEntry, Equatable {
@@ -34,7 +35,7 @@ public struct ExperimentalSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateExperimentalSettingsInteractively(accountManager: AccountManager, _ f: @escaping (ExperimentalSettings) -> ExperimentalSettings) -> Signal<Void, NoError> {
+public func updateExperimentalSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (ExperimentalSettings) -> ExperimentalSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalSettings, { entry in
             let currentSettings: ExperimentalSettings

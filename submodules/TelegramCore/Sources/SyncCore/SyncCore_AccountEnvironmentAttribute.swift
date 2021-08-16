@@ -6,26 +6,33 @@ public enum AccountEnvironment: Int32 {
     case test = 1
 }
 
-public final class AccountEnvironmentAttribute: AccountRecordAttribute {
+public final class AccountEnvironmentAttribute: Codable, Equatable {
+    enum CodingKeys: String, CodingKey {
+        case environment
+    }
+
     public let environment: AccountEnvironment
     
     public init(environment: AccountEnvironment) {
         self.environment = environment
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.environment = AccountEnvironment(rawValue: decoder.decodeInt32ForKey("environment", orElse: 0)) ?? .production
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        let environmentValue: Int32 = (try? container.decode(Int32.self, forKey: .environment)) ?? 0
+
+        self.environment = AccountEnvironment(rawValue: environmentValue) ?? .production
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.environment.rawValue, forKey: "environment")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(self.environment.rawValue, forKey: .environment)
     }
-    
-    public func isEqual(to: AccountRecordAttribute) -> Bool {
-        guard let to = to as? AccountEnvironmentAttribute else {
-            return false
-        }
-        if self.environment != to.environment {
+
+    public static func ==(lhs: AccountEnvironmentAttribute, rhs: AccountEnvironmentAttribute) -> Bool {
+        if lhs.environment != rhs.environment {
             return false
         }
         return true

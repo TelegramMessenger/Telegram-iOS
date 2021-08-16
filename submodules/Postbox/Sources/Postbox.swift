@@ -87,6 +87,22 @@ public final class Transaction {
         assert(!self.disposed)
         return self.postbox!.messageHistoryThreadHoleIndexTable.closest(peerId: peerId, threadId: threadId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1))
     }
+
+    public func getThreadMessageCount(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, fromId: Int32?, toIndex: MessageIndex) -> Int? {
+        assert(!self.disposed)
+        let fromIndex: MessageIndex?
+        if let fromId = fromId {
+            fromIndex = self.postbox!.messageHistoryIndexTable.closestIndex(id: MessageId(peerId: peerId, namespace: namespace, id: fromId))
+        } else {
+            fromIndex = nil
+        }
+
+        if let fromIndex = fromIndex {
+            return self.postbox!.messageHistoryThreadsTable.getMessageCountInRange(threadId: threadId, peerId: peerId, namespace: namespace, lowerBound: fromIndex, upperBound: toIndex)
+        } else {
+            return nil
+        }
+    }
     
     public func doesChatListGroupContainHoles(groupId: PeerGroupId) -> Bool {
         assert(!self.disposed)
