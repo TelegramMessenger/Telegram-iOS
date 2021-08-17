@@ -30,7 +30,7 @@ private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQue
 
 private enum BroadcastPartSubject {
     case audio
-    case video
+    case video(channelId: Int32, quality: OngoingGroupCallContext.VideoChannel.Quality)
 }
 
 private protocol BroadcastPartSource: AnyObject {
@@ -80,30 +80,18 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
                 case .audio:
                     return engine.calls.getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
                     |> map(Optional.init)
-                case .video:
-                    #if DEBUG && false
-                    return engine.calls.getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
-                    |> map { result -> GetAudioBroadcastPartResult in
-                        switch result.status {
-                        case .data:
-                            guard let path = Bundle.main.path(forResource: "chunk2.ch2.q1", ofType: "mp4"), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
-                                return GetAudioBroadcastPartResult(
-                                    status: .notReady,
-                                    responseTimestamp: result.responseTimestamp
-                                )
-                            }
-                            return GetAudioBroadcastPartResult(
-                                status: .data(data),
-                                responseTimestamp: result.responseTimestamp
-                            )
-                        default:
-                            return result
-                        }
+                case let .video(channelId, quality):
+                    let mappedQuality: Int32
+                    switch quality {
+                    case .thumbnail:
+                        mappedQuality = 0
+                    case .medium:
+                        mappedQuality = 1
+                    case .full:
+                        mappedQuality = 2
                     }
-                    #else
-                    return engine.calls.getVideoBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
+                    return engine.calls.getVideoBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds, channelId: channelId, quality: mappedQuality)
                     |> map(Optional.init)
-                    #endif
                 }
             } else {
                 return .single(nil)
@@ -446,11 +434,22 @@ public final class OngoingGroupCallContext {
                     
                     return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
                 },
-                requestVideoBroadcastPart: { timestampMilliseconds, durationMilliseconds, completion in
+                requestVideoBroadcastPart: { timestampMilliseconds, durationMilliseconds, channelId, quality, completion in
                     let disposable = MetaDisposable()
 
                     queue.async {
-                        disposable.set(broadcastPartsSource?.requestPart(timestampMilliseconds: timestampMilliseconds, durationMilliseconds: durationMilliseconds, subject: .video, completion: completion, rejoinNeeded: {
+                        let mappedQuality: OngoingGroupCallContext.VideoChannel.Quality
+                        switch quality {
+                        case .thumbnail:
+                            mappedQuality = .thumbnail
+                        case .medium:
+                            mappedQuality = .medium
+                        case .full:
+                            mappedQuality = .full
+                        @unknown default:
+                            mappedQuality = .thumbnail
+                        }
+                        disposable.set(broadcastPartsSource?.requestPart(timestampMilliseconds: timestampMilliseconds, durationMilliseconds: durationMilliseconds, subject: .video(channelId: channelId, quality: mappedQuality), completion: completion, rejoinNeeded: {
                             rejoinNeeded()
                         }))
                     }

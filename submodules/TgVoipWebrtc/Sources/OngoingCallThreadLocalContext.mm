@@ -1362,7 +1362,7 @@ private:
     videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer
     requestMediaChannelDescriptions:(id<OngoingGroupCallMediaChannelDescriptionTask> _Nonnull (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull, void (^ _Nonnull)(NSArray<OngoingGroupCallMediaChannelDescription *> * _Nonnull)))requestMediaChannelDescriptions
     requestAudioBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestAudioBroadcastPart
-    requestVideoBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestVideoBroadcastPart
+    requestVideoBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, int32_t, OngoingGroupCallRequestedVideoQuality, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestVideoBroadcastPart
     outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
     enableNoiseSuppression:(bool)enableNoiseSuppression {
@@ -1469,8 +1469,27 @@ private:
                 });
                 return std::make_shared<BroadcastPartTaskImpl>(task);
             },
-            .requestVideoBroadcastPart = [requestVideoBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
-                id<OngoingGroupCallBroadcastPartTask> task = requestVideoBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
+            .requestVideoBroadcastPart = [requestVideoBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, int32_t channelId, tgcalls::VideoChannelDescription::Quality quality, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
+                OngoingGroupCallRequestedVideoQuality mappedQuality;
+                switch (quality) {
+                    case tgcalls::VideoChannelDescription::Quality::Thumbnail: {
+                        mappedQuality = OngoingGroupCallRequestedVideoQualityThumbnail;
+                        break;
+                    }
+                    case tgcalls::VideoChannelDescription::Quality::Medium: {
+                        mappedQuality = OngoingGroupCallRequestedVideoQualityMedium;
+                        break;
+                    }
+                    case tgcalls::VideoChannelDescription::Quality::Full: {
+                        mappedQuality = OngoingGroupCallRequestedVideoQualityFull;
+                        break;
+                    }
+                    default: {
+                        mappedQuality = OngoingGroupCallRequestedVideoQualityThumbnail;
+                        break;
+                    }
+                }
+                id<OngoingGroupCallBroadcastPartTask> task = requestVideoBroadcastPart(timestampMilliseconds, durationMilliseconds, channelId, mappedQuality, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
                     tgcalls::BroadcastPart parsedPart;
                     parsedPart.timestampMilliseconds = part.timestampMilliseconds;
 
