@@ -155,11 +155,11 @@ final class ThemeAccentColorController: ViewController {
                 var coloredWallpaper: TelegramWallpaper?
                 if !state.backgroundColors.isEmpty {
                     if let patternWallpaper = state.patternWallpaper {
-                        coloredWallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(colors: state.backgroundColors, intensity: state.patternIntensity, rotation: state.rotation))
+                        coloredWallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(colors: state.backgroundColors.map { $0.rgb }, intensity: state.patternIntensity, rotation: state.rotation))
                     } else if state.backgroundColors.count >= 2 {
-                        coloredWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: state.backgroundColors, settings: WallpaperSettings(rotation: state.rotation)))
+                        coloredWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: state.backgroundColors.map { $0.rgb }, settings: WallpaperSettings(rotation: state.rotation)))
                     } else {
-                        coloredWallpaper = .color(state.backgroundColors[0])
+                        coloredWallpaper = .color(state.backgroundColors[0].rgb)
                     }
                 }
                 
@@ -201,13 +201,13 @@ final class ThemeAccentColorController: ViewController {
                         }
                         
                         if let themeReference = generalThemeReference {
-                            updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: state.accentColor, backgroundColors: state.backgroundColors, bubbleColors: state.messagesColors, wallpaper: coloredWallpaper ?? state.initialWallpaper, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
+                            updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: state.accentColor.color, backgroundColors: state.backgroundColors.map { $0.rgb }, bubbleColors: state.messagesColors.map { $0.rgb }, wallpaper: coloredWallpaper ?? state.initialWallpaper, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
                         } else {
-                            updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: state.accentColor, backgroundColors: state.backgroundColors, bubbleColors: state.messagesColors, wallpaper: state.initialWallpaper ?? coloredWallpaper)
+                            updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: state.accentColor.color, backgroundColors: state.backgroundColors.map { $0.rgb }, bubbleColors: state.messagesColors.map { $0.rgb }, wallpaper: state.initialWallpaper ?? coloredWallpaper)
                         }
                         
                         if hasSettings, let baseTheme = baseTheme {
-                            settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor, messageColors: state.messagesColors, wallpaper: coloredWallpaper)
+                            settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor.color, messageColors: state.messagesColors.map { $0.rgb }, wallpaper: coloredWallpaper)
                         }
                         
                         completion(updatedTheme, settings)
@@ -226,12 +226,12 @@ final class ThemeAccentColorController: ViewController {
                     
                     let wallpaper = coloredWallpaper ?? state.initialWallpaper
                     
-                    let settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor, messageColors: state.messagesColors, wallpaper: wallpaper)
+                    let settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor.rgb, messageColors: state.messagesColors.map { $0.rgb }, wallpaper: wallpaper)
                     let baseThemeReference = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: baseTheme))
                     
                     let apply: Signal<Void, CreateThemeError>
                     if create {
-                        apply = (prepareWallpaper |> then(createTheme(account: context.account, title: generateThemeName(accentColor: state.accentColor), resource: nil, thumbnailData: nil, settings: settings)))
+                        apply = (prepareWallpaper |> then(createTheme(account: context.account, title: generateThemeName(accentColor: state.accentColor.color), resource: nil, thumbnailData: nil, settings: settings)))
                         |> mapToSignal { next -> Signal<Void, CreateThemeError> in
                             if case let .result(resultTheme) = next {
                                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
@@ -552,7 +552,7 @@ final class ThemeAccentColorController: ViewController {
                 messageColors = []
             }
             
-            let initialState = ThemeColorState(section: strongSelf.section, accentColor: accentColor, initialWallpaper: initialWallpaper, backgroundColors: backgroundColors, patternWallpaper: patternWallpaper, patternIntensity: patternIntensity, defaultMessagesColor: defaultMessagesColor, messagesColors: messageColors, rotation: rotation)
+            let initialState = ThemeColorState(section: strongSelf.section, accentColor: HSBColor(color: accentColor), initialWallpaper: initialWallpaper, backgroundColors: backgroundColors.map { HSBColor(rgb: $0) }, patternWallpaper: patternWallpaper, patternIntensity: patternIntensity, defaultMessagesColor: defaultMessagesColor.flatMap { HSBColor(color: $0) }, messagesColors: messageColors.map { HSBColor(rgb: $0) }, rotation: rotation)
             
             strongSelf.controllerNode.updateState({ _ in
                 return initialState

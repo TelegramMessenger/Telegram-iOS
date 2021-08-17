@@ -39,17 +39,17 @@ struct ThemeColorState {
     fileprivate var colorPanelCollapsed: Bool
     fileprivate var displayPatternPanel: Bool
     
-    var accentColor: UIColor
+    var accentColor: HSBColor
     var initialWallpaper: TelegramWallpaper?
-    var backgroundColors: [UInt32]
+    var backgroundColors: [HSBColor]
     
     fileprivate var preview: Bool
     fileprivate var previousPatternWallpaper: TelegramWallpaper?
     var patternWallpaper: TelegramWallpaper?
     var patternIntensity: Int32
     
-    var defaultMessagesColor: UIColor?
-    var messagesColors: [UInt32]
+    var defaultMessagesColor: HSBColor?
+    var messagesColors: [HSBColor]
     
     var rotation: Int32
     
@@ -57,7 +57,7 @@ struct ThemeColorState {
         self.section = nil
         self.colorPanelCollapsed = false
         self.displayPatternPanel = false
-        self.accentColor = .clear
+        self.accentColor = HSBColor(hue: 0.0, saturation: 0.0, brightness: 1.0)
         self.initialWallpaper = nil
         self.backgroundColors = []
         self.preview = false
@@ -69,7 +69,7 @@ struct ThemeColorState {
         self.rotation = 0
     }
     
-    init(section: ThemeColorSection, accentColor: UIColor, initialWallpaper: TelegramWallpaper?, backgroundColors: [UInt32], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, defaultMessagesColor: UIColor?, messagesColors: [UInt32], rotation: Int32 = 0) {
+    init(section: ThemeColorSection, accentColor: HSBColor, initialWallpaper: TelegramWallpaper?, backgroundColors: [HSBColor], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, defaultMessagesColor: HSBColor?, messagesColors: [HSBColor], rotation: Int32 = 0) {
         self.section = section
         self.colorPanelCollapsed = false
         self.displayPatternPanel = false
@@ -116,9 +116,9 @@ struct ThemeColorState {
 private func calcPatternColors(for state: ThemeColorState) -> [UIColor] {
     if state.backgroundColors.count >= 1 {
         let patternIntensity = CGFloat(state.patternIntensity) / 100.0
-        let topPatternColor = UIColor(rgb: state.backgroundColors[0]).withAlphaComponent(patternIntensity)
+        let topPatternColor = state.backgroundColors[0].color.withAlphaComponent(patternIntensity)
         if state.backgroundColors.count >= 2 {
-            let bottomPatternColor = UIColor(rgb: state.backgroundColors[1]).withAlphaComponent(patternIntensity)
+            let bottomPatternColor = state.backgroundColors[1].color.withAlphaComponent(patternIntensity)
             return [topPatternColor, bottomPatternColor]
         } else {
             return [topPatternColor, topPatternColor]
@@ -176,7 +176,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private let serviceBackgroundColorPromise = Promise<UIColor>()
     private var wallpaperDisposable = MetaDisposable()
     
-    private var currentBackgroundColors: ([UInt32], Int32?, Int32?)?
+    private var currentBackgroundColors: ([HSBColor], Int32?, Int32?)?
     private var currentBackgroundPromise = Promise<(UIColor, UIColor?)?>()
     
     private var patternWallpaper: TelegramWallpaper?
@@ -332,7 +332,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     switch section {
                         case .accent:
                             if let firstColor = colors.first {
-                                updated.accentColor = UIColor(rgb: firstColor)
+                                updated.accentColor = firstColor
                             }
                         case .background:
                             updated.backgroundColors = colors
@@ -420,7 +420,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         |> mapToThrottled { next -> Signal<ThemeColorState, NoError> in
             return .single(next) |> then(.complete() |> delay(0.0166667, queue: self.queue))
         }
-        |> map { state -> (PresentationTheme?, TelegramWallpaper, UIColor, [UInt32], Int32, PatternWallpaperArguments, Bool) in
+        |> map { state -> (PresentationTheme?, TelegramWallpaper, UIColor, [HSBColor], Int32, PatternWallpaperArguments, Bool) in
             let accentColor = state.accentColor
             var backgroundColors = state.backgroundColors
             let messagesColors = state.messagesColors
@@ -434,7 +434,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
 
             if !backgroundColors.isEmpty {
                 if let patternWallpaper = state.patternWallpaper, case let .file(file) = patternWallpaper {
-                    wallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(colors: backgroundColors, intensity: state.patternIntensity, rotation: state.rotation))
+                    wallpaper = patternWallpaper.withUpdatedSettings(WallpaperSettings(colors: backgroundColors.map { $0.rgb }, intensity: state.patternIntensity, rotation: state.rotation))
 
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 100, height: 100)
                     var convertedRepresentations: [ImageRepresentationWithReference] = []
@@ -443,22 +443,22 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     }
                     convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                 } else if backgroundColors.count >= 2 {
-                    wallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors:  backgroundColors, settings: WallpaperSettings(rotation: state.rotation)))
+                    wallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: backgroundColors.map { $0.rgb }, settings: WallpaperSettings(rotation: state.rotation)))
                 } else {
-                    wallpaper = .color(backgroundColors.first ?? 0xffffff)
+                    wallpaper = .color(backgroundColors.first?.rgb ?? 0xffffff)
                 }
             } else if let themeReference = mode.themeReference, case let .builtin(theme) = themeReference, state.initialWallpaper == nil {
                 var suggestedWallpaper: TelegramWallpaper
                 switch theme {
                     case .dayClassic:
-                        let topColor = accentColor.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957)
-                        let bottomColor = accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
+                        let topColor = HSBColor(color: accentColor.color.withMultiplied(hue: 1.010, saturation: 0.414, brightness: 0.957))
+                        let bottomColor = HSBColor(color: accentColor.color.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965))
                         suggestedWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: [topColor.rgb, bottomColor.rgb], settings: WallpaperSettings()))
-                        backgroundColors = [topColor.rgb, bottomColor.rgb]
+                        backgroundColors = [topColor, bottomColor]
                     case .nightAccent:
-                        let color = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+                        let color = HSBColor(color: accentColor.color.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18))
                         suggestedWallpaper = .color(color.rgb)
-                        backgroundColors = [color.rgb]
+                        backgroundColors = [color]
                     default:
                         suggestedWallpaper = .builtin(WallpaperSettings())
                 }
@@ -472,9 +472,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
 
             if !updateOnlyWallpaper {
                 if let themeReference = mode.themeReference {
-                    updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: messagesColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
+                    updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
                 } else if case let .edit(theme, _, _, _, _, _) = mode {
-                    updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor, backgroundColors: backgroundColors, bubbleColors: messagesColors)
+                    updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb })
                 } else {
                     updatedTheme = theme
                 }
@@ -516,7 +516,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             strongSelf.wallpaper = wallpaper
             strongSelf.patternArguments = patternArguments
 
-            strongSelf.colorsButtonNode.colors = backgroundColors.map(UIColor.init(rgb:))
+            strongSelf.colorsButtonNode.colors = backgroundColors.map { $0.color }
 
             if !preview {
                 if !backgroundColors.isEmpty {
@@ -573,6 +573,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     override func didLoad() {
         super.didLoad()
         
+        self.view.disablesInteractiveModalDismiss = true
+        
         self.scrollNode.view.bounces = false
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsHorizontalScrollIndicator = false
@@ -619,18 +621,18 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         if sectionChanged, let section = self.state.section {
             self.view.endEditing(true)
             
-            var colors: [UInt32]
-            var defaultColor: UIColor?
+            var colors: [HSBColor]
+            var defaultColor: HSBColor?
             switch section {
                 case .accent:
-                    colors = [self.state.accentColor.rgb]
+                    colors = [self.state.accentColor]
                 case .background:
                     if let themeReference = self.mode.themeReference, case let .builtin(theme) = themeReference {
                         switch theme {
                             case .dayClassic:
-                                defaultColor = self.state.accentColor.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965)
+                                defaultColor = HSBColor(color: self.state.accentColor.color.withMultiplied(hue: 1.019, saturation: 0.867, brightness: 0.965))
                             case .nightAccent:
-                                defaultColor = self.state.accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+                                defaultColor = HSBColor(color: self.state.accentColor.color.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18))
                             default:
                                 break
                         }
@@ -644,7 +646,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     if let defaultMessagesColor = self.state.defaultMessagesColor {
                         defaultColor = defaultMessagesColor
                     } else if let themeReference = self.mode.themeReference, case let .builtin(theme) = themeReference, theme == .nightAccent {
-                        defaultColor = self.state.accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
+                        defaultColor = HSBColor(color: self.state.accentColor.color.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59))
                     } else {
                         defaultColor = self.state.accentColor
                     }
@@ -656,7 +658,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
 
             if colors.isEmpty, let defaultColor = defaultColor {
-                colors = [defaultColor.rgb]
+                colors = [defaultColor]
             }
 
             let maximumNumberOfColors: Int
