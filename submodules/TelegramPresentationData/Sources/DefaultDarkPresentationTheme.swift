@@ -4,7 +4,7 @@ import TelegramCore
 import TelegramUIPreferences
 
 public let defaultDarkPresentationTheme = makeDefaultDarkPresentationTheme(preview: false)
-public let defaultDarkColorPresentationTheme = customizeDefaultDarkPresentationTheme(theme: defaultDarkPresentationTheme, editing: false, title: nil, accentColor: UIColor(rgb: 0x007aff), backgroundColors: [], bubbleColors: [], wallpaper: nil, baseColor: nil)
+public let defaultDarkColorPresentationTheme = customizeDefaultDarkPresentationTheme(theme: defaultDarkPresentationTheme, editing: false, title: nil, accentColor: UIColor(rgb: 0x007aff), backgroundColors: [], bubbleColors: [], animateBubbleColors: false, wallpaper: nil, baseColor: nil)
 
 private extension PresentationThemeBaseColor {
     var colorWallpaper: (BuiltinWallpaperData, Int32, [UInt32])? {
@@ -37,7 +37,7 @@ private extension PresentationThemeBaseColor {
     }
 }
 
-public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: [UInt32], wallpaper forcedWallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil) -> PresentationTheme {
+public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: [UInt32], animateBubbleColors: Bool?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .night) {
         return theme
     }
@@ -165,6 +165,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
     
     chat = chat.withUpdated(
         defaultWallpaper: defaultWallpaper,
+        animateMessageColors: animateBubbleColors,
         message: chat.message.withUpdated(
             incoming: chat.message.incoming.withUpdated(
                 linkTextColor: accentColor,
@@ -523,6 +524,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
 
     let chat = PresentationThemeChat(
         defaultWallpaper: .color(0x000000),
+        animateMessageColors: false,
         message: message,
         serviceMessage: serviceMessage,
         inputPanel: inputPanel,

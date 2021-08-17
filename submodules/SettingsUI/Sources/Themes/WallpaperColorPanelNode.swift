@@ -390,7 +390,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     private var sampleItemNodes: [ColorSampleItemNode] = []
     private let multiColorFieldNode: ColorInputFieldNode
 
-    var colorsChanged: (([HSBColor], Bool) -> Void)?
+    var colorsChanged: (([HSBColor], Int, Bool) -> Void)?
     var colorSelected: (() -> Void)?
     var rotate: (() -> Void)?
     
@@ -518,6 +518,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         var updateLayout = updateLayout
         let previousColors = self.state.colors
         let previousPreview = self.state.preview
+        let previousSelection = self.state.selection
         self.state = f(self.state)
         
         let colorWasRemovable = self.multiColorFieldNode.isRemovable
@@ -548,8 +549,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             }
         }
 
-        if self.state.colors != previousColors || self.state.preview != previousPreview {
-            self.colorsChanged?(self.state.colors, !self.state.preview)
+        if self.state.colors != previousColors || self.state.preview != previousPreview || self.state.selection != previousSelection {
+            self.colorsChanged?(self.state.colors, self.state.selection ?? 0, !self.state.preview)
         }
     }
     
@@ -576,41 +577,11 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         }
         
         let buttonSize = CGSize(width: 26.0, height: 26.0)
-        //let middleButtonFrame = CGRect(origin: CGPoint(x: self.state.secondColor != nil ? floor((size.width - 26.0) / 2.0) : (self.state.secondColorAvailable ? size.width - rightInsetWithButton + floor((rightInsetWithButton - buttonSize.width) / 2.0) : size.width + buttonOffset), y: floor((topPanelHeight - buttonSize.height) / 2.0)), size: buttonSize)
-        
-        //transition.updateFrame(node: self.rotateButton, frame: middleButtonFrame)
-        //transition.updateFrame(node: self.swapButton, frame: middleButtonFrame)
-
         let canAddColors = self.state.colors.count < self.state.maximumNumberOfColors
 
         transition.updateFrame(node: self.addButton, frame: CGRect(origin: CGPoint(x: size.width - rightInset - buttonSize.width, y: floor((topPanelHeight - buttonSize.height) / 2.0)), size: buttonSize))
         transition.updateAlpha(node: self.addButton, alpha: canAddColors ? 1.0 : 0.0)
         transition.updateSublayerTransformScale(node: self.addButton, scale: canAddColors ? 1.0 : 0.1)
-        
-        /*let rotateButtonAlpha: CGFloat
-        let swapButtonAlpha: CGFloat
-        let addButtonAlpha: CGFloat
-        if let _ = self.state.secondColor {
-            if self.state.rotateAvailable {
-                rotateButtonAlpha = 1.0
-                swapButtonAlpha = 0.0
-            } else {
-                rotateButtonAlpha = 0.0
-                swapButtonAlpha = 1.0
-            }
-            addButtonAlpha = 0.0
-        } else {
-            swapButtonAlpha = 0.0
-            rotateButtonAlpha = 0.0
-            if self.state.secondColorAvailable {
-                addButtonAlpha = 1.0
-            } else {
-                addButtonAlpha = 0.0
-            }
-        }
-        transition.updateAlpha(node: self.rotateButton, alpha: rotateButtonAlpha)
-        transition.updateAlpha(node: self.swapButton, alpha: swapButtonAlpha)
-        transition.updateAlpha(node: self.addButton, alpha: addButtonAlpha)*/
         
         func degreesToRadians(_ degrees: CGFloat) -> CGFloat {
             var degrees = degrees

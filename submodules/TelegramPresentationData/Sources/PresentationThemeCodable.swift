@@ -1659,6 +1659,7 @@ extension PresentationThemeChat: Codable {
     enum CodingKeys: String, CodingKey {
         case defaultWallpaper
         case message
+        case animateMessageColors
         case serviceMessage
         case inputPanel
         case inputMediaPanel
@@ -1677,6 +1678,7 @@ extension PresentationThemeChat: Codable {
         }
     
         self.init(defaultWallpaper: wallpaper,
+                  animateMessageColors: (try? values.decode(Bool.self, forKey: .animateMessageColors)) ?? false,
                   message: try values.decode(PresentationThemeChatMessage.self, forKey: .message),
                   serviceMessage: try values.decode(PresentationThemeServiceMessage.self, forKey: .serviceMessage),
                   inputPanel: try values.decode(PresentationThemeChatInputPanel.self, forKey: .inputPanel),

@@ -773,7 +773,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             self.bubbleTheme = bubbleTheme
             self.bubbleCorners = bubbleCorners
 
-            if bubbleTheme.chat.message.outgoing.bubble.withoutWallpaper.fill.count >= 3 && self.context.sharedContext.immediateExperimentalUISettings.enableDebugDataDisplay {
+            if bubbleTheme.chat.message.outgoing.bubble.withoutWallpaper.fill.count >= 3 && bubbleTheme.chat.animateMessageColors {
                 if self.outgoingBubbleGradientBackgroundNode == nil {
                     let outgoingBubbleGradientBackgroundNode = GradientBackgroundNode()
                     if let size = self.validLayout {

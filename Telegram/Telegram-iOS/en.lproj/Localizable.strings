@@ -6608,3 +6608,41 @@ Sorry for the inconvenience.";
 "Conversation.ForwardOptions.Messages_0" = "%@ messages";
 
 "Conversation.ForwardOptions.You" = "You (senders' names hidden)";
+
+"Activity.ChoosingSticker" = "choosing sticker";
+"WallpaperPreview.Animate" = "Animate";
+"WallpaperPreview.AnimateDescription" = "Colors will move when you send messages";
+
+
+"Appstore.Cloud" = "**Cloud-based**\nUnlimited storage for chats,\nmedia and documents.";
+"Appstore.Cloud.Profile" = "**Jennifer**\n23 y.o. designer from San Francisco.";
+"Appstore.Creative" = "**Creative**\nColor themes, stickers, GIFs,\nvideo messages and more.";
+"Appstore.Creative.Chat" = "**You**\nSend a dice emoji to roll a die!\n**You**\nAdvance to Illinois Ave. If you pass Go, collect coffee\n**Gabriella**\nPassed!\n**You**\nOkay\nWait for me there.";
+"Appstore.Creative.Chat.Name" = "**Gabriella**";
+"Appstore.Fast" = "**Fast**\nSimple, reliable and synced\nacross all your devices.";
+"Appstore.Fast.Chat1" = "**Alicia Torreaux**\nBob says hi.";
+"Appstore.Fast.Chat2" = "**Roberto**\nSay hello to Alice.";
+"Appstore.Fast.Chat3" = "**Digital Nomads**\nJennie\nWe just reached 2,500 members! WOO!";
+"Appstore.Fast.Chat4" = "**Veronica**\nTable for four, 2 PM. Be there.";
+"Appstore.Fast.Chat5" = "**Animal Videos**\nVote now! Moar cat videos in this channel?";
+"Appstore.Fast.Chat6" = "**Little Sister**\nDon't tell mom yet, but I got the job! I'm going to ROME!";
+"Appstore.Fast.Chat7" = "**James**\nCheck these out";
+"Appstore.Fast.Chat8" = "**Study Group**\nEmma\nSticker";
+"Appstore.Fast.Chat9" = "**Digital Nomads**";
+"Appstore.Free.Chat" = "**Jessica**\nPaper airplane is lyfted by...\nWings\nPropeller\n**You**\nIs this from Monday’s test?\n**Harry**\nOnlinePartyPlan.ppd\nLet's get back to planning!\n**You**\n550 MB keynote file??\n**Helene**\nHe added fireworks videos";
+"Appstore.Free.Chat.Name" = "**Study Group**";
+"Appstore.Open" = "**Open**\nNo ads, no fees. Open source\ncode free for everyone.";
+"Appstore.Powerful" = "**Powerful**\nNo limits on the size of\ngroups and broadcasts.";
+"Appstore.Powerful.Chat" = "**James**\nGood morning!\n\nDwayne joined the group\n\n**You**\nDo you have any idea what time it is?\n**Roxanne**\nIs it still morning?\nSure!\nNot sure\n**Emma**\nVoice";
+"Appstore.Private" = "**Private**\nYour data is never disclosed.\nOnly you are in control.";
+"Appstore.Private.Chat" = "**You**\nNo limits on the size of your cats.";
+"Appstore.Private.Chat.Name" = "**Beatrice**";
+"Appstore.Public" = "**Public**\nPublic channels, open groups,\nbots for integrations.";
+"Appstore.Public.Chat1" = "**Financial Times**\nTruth is like the sun. You can shut it out for a time, but it ain’t goin’ away.";
+"Appstore.Public.Chat2" = "**Bloomberg**\nWe'll be sending you a few big stories daily, which you can expect to start...";
+"Appstore.Public.Chat3" = "**Health and Safety**\nIf you're looking for official news about the Novel Coronavirus and COVID-19";
+"Appstore.Public.IV" = "We now have enough data to measure the relative effectiveness of major climate solutions. This simulator lets you see which ones would work best.\n\nBloomberg\n\nThe Best Way to Slow Global Warming? You Decide in This Climate Simulator\nIt was on Earth Day 2016 when more than 170 nations signed the Paris Agreement calling for limiting global warming \"to well below 2°C\".";
+"Appstore.Secure" = "**Secure**\nAll chats are protected\nwith strong encryption.";
+"Appstore.Secure.Chat" = "**Little Sister**\nAny gift ideas for mom?\n**You**A dog!\n**You**I'm serious. Let's get her a puppy. \n**You**\nI saw this!\n**Little Sister**\nI needed proof this was your idea!";
+"Appstore.Secure.Chat.Name" = "**Little Sister**";
+

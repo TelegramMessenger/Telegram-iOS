@@ -24,6 +24,9 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
         if lhs.messageColors != rhs.messageColors {
             return false
         }
+        if lhs.animateMessageColors != rhs.animateMessageColors {
+            return false
+        }
         if lhs.wallpaper != rhs.wallpaper {
             return false
         }
@@ -33,12 +36,14 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
     public let baseTheme: TelegramBaseTheme
     public let accentColor: UInt32
     public let messageColors: [UInt32]
+    public let animateMessageColors: Bool
     public let wallpaper: TelegramWallpaper?
     
-    public init(baseTheme: TelegramBaseTheme, accentColor: UInt32, messageColors: [UInt32], wallpaper: TelegramWallpaper?) {
+    public init(baseTheme: TelegramBaseTheme, accentColor: UInt32, messageColors: [UInt32], animateMessageColors: Bool, wallpaper: TelegramWallpaper?) {
         self.baseTheme = baseTheme
         self.accentColor = accentColor
         self.messageColors = messageColors
+        self.animateMessageColors = animateMessageColors
         self.wallpaper = wallpaper
     }
     
@@ -55,6 +60,7 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
                 self.messageColors = []
             }
         }
+        self.animateMessageColors = decoder.decodeInt32ForKey("animateMessageColors", orElse: 0) != 0
         self.wallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
     }
     
@@ -62,6 +68,7 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
         encoder.encodeInt32(self.baseTheme.rawValue, forKey: "baseTheme")
         encoder.encodeInt32(Int32(bitPattern: self.accentColor), forKey: "accent")
         encoder.encodeInt32Array(self.messageColors.map(Int32.init(bitPattern:)), forKey: "messageColors")
+        encoder.encodeInt32(self.animateMessageColors ? 1 : 0, forKey: "animateMessageColors")
         if let wallpaper = self.wallpaper {
             encoder.encodeObject(wallpaper, forKey: "wallpaper")
         } else {

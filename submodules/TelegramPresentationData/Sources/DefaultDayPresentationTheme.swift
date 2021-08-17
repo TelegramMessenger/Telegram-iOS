@@ -35,7 +35,7 @@ public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
 public let defaultPresentationTheme = makeDefaultDayPresentationTheme(serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 
-public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: [UInt32], wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
+public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: [UInt32], animateBubbleColors: Bool?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
     if (theme.referenceTheme != .day && theme.referenceTheme != .dayClassic) {
         return theme
     }
@@ -236,6 +236,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
     
     chat = chat.withUpdated(
         defaultWallpaper: defaultWallpaper,
+        animateMessageColors: animateBubbleColors,
         message: chat.message.withUpdated(
             incoming: chat.message.incoming.withUpdated(
                 bubble: chat.message.incoming.bubble.withUpdated(
@@ -738,6 +739,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
 
     let chat = PresentationThemeChat(
         defaultWallpaper: day ? .color(0xffffff) : defaultPatternWallpaper,
+        animateMessageColors: false,
         message: day ? messageDay : message,
         serviceMessage: day ? serviceMessageDay : serviceMessage,
         inputPanel: inputPanel,

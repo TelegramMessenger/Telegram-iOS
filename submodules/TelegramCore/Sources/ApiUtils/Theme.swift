@@ -46,8 +46,8 @@ extension TelegramBaseTheme {
 extension TelegramThemeSettings {
     convenience init?(apiThemeSettings: Api.ThemeSettings) {
         switch apiThemeSettings {
-            case let .themeSettings(_, baseTheme, accentColor, messageColors, wallpaper):
-                self.init(baseTheme: TelegramBaseTheme(apiBaseTheme: baseTheme), accentColor: UInt32(bitPattern: accentColor), messageColors: messageColors?.map(UInt32.init(bitPattern:)) ?? [], wallpaper: wallpaper.flatMap(TelegramWallpaper.init(apiWallpaper:)))
+            case let .themeSettings(flags, baseTheme, accentColor, messageColors, wallpaper):
+                self.init(baseTheme: TelegramBaseTheme(apiBaseTheme: baseTheme), accentColor: UInt32(bitPattern: accentColor), messageColors: messageColors?.map(UInt32.init(bitPattern:)) ?? [], animateMessageColors: (flags & 1 << 2) != 0, wallpaper: wallpaper.flatMap(TelegramWallpaper.init(apiWallpaper:)))
         }
     }
     
@@ -55,6 +55,10 @@ extension TelegramThemeSettings {
         var flags: Int32 = 0
         if !self.messageColors.isEmpty {
             flags |= 1 << 0
+        }
+        
+        if self.animateMessageColors {
+            flags |= 1 << 2
         }
         
         var inputWallpaper: Api.InputWallPaper?
