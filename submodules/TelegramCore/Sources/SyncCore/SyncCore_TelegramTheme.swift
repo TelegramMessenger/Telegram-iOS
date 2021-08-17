@@ -86,9 +86,9 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
     public let settings: TelegramThemeSettings?
     public let isCreator: Bool
     public let isDefault: Bool
-    public let installCount: Int32
+    public let installCount: Int32?
     
-    public init(id: Int64, accessHash: Int64, slug: String, title: String, file: TelegramMediaFile?, settings: TelegramThemeSettings?, isCreator: Bool, isDefault: Bool, installCount: Int32) {
+    public init(id: Int64, accessHash: Int64, slug: String, title: String, file: TelegramMediaFile?, settings: TelegramThemeSettings?, isCreator: Bool, isDefault: Bool, installCount: Int32?) {
         self.id = id
         self.accessHash = accessHash
         self.slug = slug
@@ -109,7 +109,7 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         self.settings = decoder.decodeObjectForKey("settings", decoder: { TelegramThemeSettings(decoder: $0) }) as? TelegramThemeSettings
         self.isCreator = decoder.decodeInt32ForKey("isCreator", orElse: 0) != 0
         self.isDefault = decoder.decodeInt32ForKey("isDefault", orElse: 0) != 0
-        self.installCount = decoder.decodeInt32ForKey("installCount", orElse: 0)
+        self.installCount = decoder.decodeOptionalInt32ForKey("installCount")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -129,7 +129,11 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         }
         encoder.encodeInt32(self.isCreator ? 1 : 0, forKey: "isCreator")
         encoder.encodeInt32(self.isDefault ? 1 : 0, forKey: "isDefault")
-        encoder.encodeInt32(self.installCount, forKey: "installCount")
+        if let installCount = self.installCount {
+            encoder.encodeInt32(installCount, forKey: "installCount")
+        } else {
+            encoder.encodeNil(forKey: "installCount")
+        }
     }
     
     public static func ==(lhs: TelegramTheme, rhs: TelegramTheme) -> Bool {

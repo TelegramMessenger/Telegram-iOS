@@ -1272,6 +1272,62 @@ public struct account {
         }
     
     }
+    public enum ChatThemes: TypeConstructorDescription {
+        case chatThemesNotModified
+        case chatThemes(hash: Int32, themes: [Api.ChatTheme])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .chatThemesNotModified:
+                    if boxed {
+                        buffer.appendInt32(-535699004)
+                    }
+                    
+                    break
+                case .chatThemes(let hash, let themes):
+                    if boxed {
+                        buffer.appendInt32(-28524867)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(themes.count))
+                    for item in themes {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatThemesNotModified:
+                return ("chatThemesNotModified", [])
+                case .chatThemes(let hash, let themes):
+                return ("chatThemes", [("hash", hash), ("themes", themes)])
+    }
+    }
+    
+        public static func parse_chatThemesNotModified(_ reader: BufferReader) -> ChatThemes? {
+            return Api.account.ChatThemes.chatThemesNotModified
+        }
+        public static func parse_chatThemes(_ reader: BufferReader) -> ChatThemes? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.ChatTheme]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ChatTheme.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.account.ChatThemes.chatThemes(hash: _1!, themes: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum Authorizations: TypeConstructorDescription {
         case authorizations(authorizations: [Api.Authorization])
     
@@ -4372,6 +4428,21 @@ public extension Api {
                         var result: Api.messages.CheckedHistoryImportPeer?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.CheckedHistoryImportPeer
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setChatTheme(peer: Api.InputPeer, emoticon: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-432283329)
+                    peer.serialize(buffer, true)
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.setChatTheme", parameters: [("peer", peer), ("emoticon", emoticon)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })
@@ -7612,6 +7683,20 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getChatThemes(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.ChatThemes>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-690545285)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getChatThemes", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.ChatThemes? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.ChatThemes?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.ChatThemes
                         }
                         return result
                     })

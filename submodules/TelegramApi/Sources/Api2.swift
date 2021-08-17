@@ -160,14 +160,14 @@ public extension Api {
     
     }
     public enum ChatFull: TypeConstructorDescription {
-        case chatFull(flags: Int32, id: Int32, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?, call: Api.InputGroupCall?, ttlPeriod: Int32?, groupcallDefaultJoinAs: Api.Peer?)
-        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int32?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?, ttlPeriod: Int32?, pendingSuggestions: [String]?, groupcallDefaultJoinAs: Api.Peer?)
+        case chatFull(flags: Int32, id: Int32, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?, call: Api.InputGroupCall?, ttlPeriod: Int32?, groupcallDefaultJoinAs: Api.Peer?, themeEmoticon: String?)
+        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int32?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?, ttlPeriod: Int32?, pendingSuggestions: [String]?, groupcallDefaultJoinAs: Api.Peer?, themeEmoticon: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId, let call, let ttlPeriod, let groupcallDefaultJoinAs):
+                case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId, let call, let ttlPeriod, let groupcallDefaultJoinAs, let themeEmoticon):
                     if boxed {
-                        buffer.appendInt32(-1977734781)
+                        buffer.appendInt32(1235264985)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -186,10 +186,11 @@ public extension Api {
                     if Int(flags) & Int(1 << 12) != 0 {call!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 14) != 0 {serializeInt32(ttlPeriod!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 15) != 0 {groupcallDefaultJoinAs!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 16) != 0 {serializeString(themeEmoticon!, buffer: buffer, boxed: false)}
                     break
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttlPeriod, let pendingSuggestions, let groupcallDefaultJoinAs):
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttlPeriod, let pendingSuggestions, let groupcallDefaultJoinAs, let themeEmoticon):
                     if boxed {
-                        buffer.appendInt32(1418477459)
+                        buffer.appendInt32(793980732)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -230,16 +231,17 @@ public extension Api {
                         serializeString(item, buffer: buffer, boxed: false)
                     }}
                     if Int(flags) & Int(1 << 26) != 0 {groupcallDefaultJoinAs!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 27) != 0 {serializeString(themeEmoticon!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId, let call, let ttlPeriod, let groupcallDefaultJoinAs):
-                return ("chatFull", [("flags", flags), ("id", id), ("about", about), ("participants", participants), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("folderId", folderId), ("call", call), ("ttlPeriod", ttlPeriod), ("groupcallDefaultJoinAs", groupcallDefaultJoinAs)])
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttlPeriod, let pendingSuggestions, let groupcallDefaultJoinAs):
-                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("onlineCount", onlineCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId), ("folderId", folderId), ("linkedChatId", linkedChatId), ("location", location), ("slowmodeSeconds", slowmodeSeconds), ("slowmodeNextSendDate", slowmodeNextSendDate), ("statsDc", statsDc), ("pts", pts), ("call", call), ("ttlPeriod", ttlPeriod), ("pendingSuggestions", pendingSuggestions), ("groupcallDefaultJoinAs", groupcallDefaultJoinAs)])
+                case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId, let call, let ttlPeriod, let groupcallDefaultJoinAs, let themeEmoticon):
+                return ("chatFull", [("flags", flags), ("id", id), ("about", about), ("participants", participants), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("folderId", folderId), ("call", call), ("ttlPeriod", ttlPeriod), ("groupcallDefaultJoinAs", groupcallDefaultJoinAs), ("themeEmoticon", themeEmoticon)])
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttlPeriod, let pendingSuggestions, let groupcallDefaultJoinAs, let themeEmoticon):
+                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("onlineCount", onlineCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId), ("folderId", folderId), ("linkedChatId", linkedChatId), ("location", location), ("slowmodeSeconds", slowmodeSeconds), ("slowmodeNextSendDate", slowmodeNextSendDate), ("statsDc", statsDc), ("pts", pts), ("call", call), ("ttlPeriod", ttlPeriod), ("pendingSuggestions", pendingSuggestions), ("groupcallDefaultJoinAs", groupcallDefaultJoinAs), ("themeEmoticon", themeEmoticon)])
     }
     }
     
@@ -284,6 +286,8 @@ public extension Api {
             if Int(_1!) & Int(1 << 15) != 0 {if let signature = reader.readInt32() {
                 _13 = Api.parse(reader, signature: signature) as? Api.Peer
             } }
+            var _14: String?
+            if Int(_1!) & Int(1 << 16) != 0 {_14 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -297,8 +301,9 @@ public extension Api {
             let _c11 = (Int(_1!) & Int(1 << 12) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 14) == 0) || _12 != nil
             let _c13 = (Int(_1!) & Int(1 << 15) == 0) || _13 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
-                return Api.ChatFull.chatFull(flags: _1!, id: _2!, about: _3!, participants: _4!, chatPhoto: _5, notifySettings: _6!, exportedInvite: _7, botInfo: _8, pinnedMsgId: _9, folderId: _10, call: _11, ttlPeriod: _12, groupcallDefaultJoinAs: _13)
+            let _c14 = (Int(_1!) & Int(1 << 16) == 0) || _14 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
+                return Api.ChatFull.chatFull(flags: _1!, id: _2!, about: _3!, participants: _4!, chatPhoto: _5, notifySettings: _6!, exportedInvite: _7, botInfo: _8, pinnedMsgId: _9, folderId: _10, call: _11, ttlPeriod: _12, groupcallDefaultJoinAs: _13, themeEmoticon: _14)
             }
             else {
                 return nil
@@ -385,6 +390,8 @@ public extension Api {
             if Int(_1!) & Int(1 << 26) != 0 {if let signature = reader.readInt32() {
                 _31 = Api.parse(reader, signature: signature) as? Api.Peer
             } }
+            var _32: String?
+            if Int(_1!) & Int(1 << 27) != 0 {_32 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -416,8 +423,9 @@ public extension Api {
             let _c29 = (Int(_1!) & Int(1 << 24) == 0) || _29 != nil
             let _c30 = (Int(_1!) & Int(1 << 25) == 0) || _30 != nil
             let _c31 = (Int(_1!) & Int(1 << 26) == 0) || _31 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 {
-                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20, folderId: _21, linkedChatId: _22, location: _23, slowmodeSeconds: _24, slowmodeNextSendDate: _25, statsDc: _26, pts: _27!, call: _28, ttlPeriod: _29, pendingSuggestions: _30, groupcallDefaultJoinAs: _31)
+            let _c32 = (Int(_1!) & Int(1 << 27) == 0) || _32 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 {
+                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20, folderId: _21, linkedChatId: _22, location: _23, slowmodeSeconds: _24, slowmodeNextSendDate: _25, statsDc: _26, pts: _27!, call: _28, ttlPeriod: _29, pendingSuggestions: _30, groupcallDefaultJoinAs: _31, themeEmoticon: _32)
             }
             else {
                 return nil
@@ -2882,13 +2890,13 @@ public extension Api {
     
     }
     public enum UserFull: TypeConstructorDescription {
-        case userFull(flags: Int32, user: Api.User, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?)
+        case userFull(flags: Int32, user: Api.User, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod):
+                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon):
                     if boxed {
-                        buffer.appendInt32(328899191)
+                        buffer.appendInt32(-694681851)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     user.serialize(buffer, true)
@@ -2901,14 +2909,15 @@ public extension Api {
                     serializeInt32(commonChatsCount, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 11) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 14) != 0 {serializeInt32(ttlPeriod!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 15) != 0 {serializeString(themeEmoticon!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod):
-                return ("userFull", [("flags", flags), ("user", user), ("about", about), ("settings", settings), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("commonChatsCount", commonChatsCount), ("folderId", folderId), ("ttlPeriod", ttlPeriod)])
+                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon):
+                return ("userFull", [("flags", flags), ("user", user), ("about", about), ("settings", settings), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("commonChatsCount", commonChatsCount), ("folderId", folderId), ("ttlPeriod", ttlPeriod), ("themeEmoticon", themeEmoticon)])
     }
     }
     
@@ -2945,6 +2954,8 @@ public extension Api {
             if Int(_1!) & Int(1 << 11) != 0 {_10 = reader.readInt32() }
             var _11: Int32?
             if Int(_1!) & Int(1 << 14) != 0 {_11 = reader.readInt32() }
+            var _12: String?
+            if Int(_1!) & Int(1 << 15) != 0 {_12 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
@@ -2956,8 +2967,9 @@ public extension Api {
             let _c9 = _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 11) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 14) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.UserFull.userFull(flags: _1!, user: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10, ttlPeriod: _11)
+            let _c12 = (Int(_1!) & Int(1 << 15) == 0) || _12 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
+                return Api.UserFull.userFull(flags: _1!, user: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10, ttlPeriod: _11, themeEmoticon: _12)
             }
             else {
                 return nil
@@ -18575,6 +18587,52 @@ public extension Api {
         }
     
     }
+    public enum ChatTheme: TypeConstructorDescription {
+        case chatTheme(emoticon: String, theme: Api.Theme, darkTheme: Api.Theme)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .chatTheme(let emoticon, let theme, let darkTheme):
+                    if boxed {
+                        buffer.appendInt32(-318022605)
+                    }
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    theme.serialize(buffer, true)
+                    darkTheme.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatTheme(let emoticon, let theme, let darkTheme):
+                return ("chatTheme", [("emoticon", emoticon), ("theme", theme), ("darkTheme", darkTheme)])
+    }
+    }
+    
+        public static func parse_chatTheme(_ reader: BufferReader) -> ChatTheme? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Api.Theme?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Theme
+            }
+            var _3: Api.Theme?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Theme
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ChatTheme.chatTheme(emoticon: _1!, theme: _2!, darkTheme: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum PhoneCallDiscardReason: TypeConstructorDescription {
         case phoneCallDiscardReasonMissed
         case phoneCallDiscardReasonDisconnect
@@ -20782,6 +20840,7 @@ public extension Api {
         case messageActionInviteToGroupCall(call: Api.InputGroupCall, users: [Int32])
         case messageActionSetMessagesTTL(period: Int32)
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
+        case messageActionSetChatTheme(emoticon: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -20993,6 +21052,12 @@ public extension Api {
                     call.serialize(buffer, true)
                     serializeInt32(scheduleDate, buffer: buffer, boxed: false)
                     break
+                case .messageActionSetChatTheme(let emoticon):
+                    if boxed {
+                        buffer.appendInt32(-1434950843)
+                    }
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -21054,6 +21119,8 @@ public extension Api {
                 return ("messageActionSetMessagesTTL", [("period", period)])
                 case .messageActionGroupCallScheduled(let call, let scheduleDate):
                 return ("messageActionGroupCallScheduled", [("call", call), ("scheduleDate", scheduleDate)])
+                case .messageActionSetChatTheme(let emoticon):
+                return ("messageActionSetChatTheme", [("emoticon", emoticon)])
     }
     }
     
@@ -21402,6 +21469,17 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageAction.messageActionGroupCallScheduled(call: _1!, scheduleDate: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionSetChatTheme(_ reader: BufferReader) -> MessageAction? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionSetChatTheme(emoticon: _1!)
             }
             else {
                 return nil
@@ -21846,13 +21924,13 @@ public extension Api {
     
     }
     public enum Theme: TypeConstructorDescription {
-        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, settings: Api.ThemeSettings?, installsCount: Int32)
+        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, settings: Api.ThemeSettings?, installsCount: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let installsCount):
                     if boxed {
-                        buffer.appendInt32(42930452)
+                        buffer.appendInt32(-402474788)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -21861,7 +21939,7 @@ public extension Api {
                     serializeString(title, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 3) != 0 {settings!.serialize(buffer, true)}
-                    serializeInt32(installsCount, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(installsCount!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -21893,7 +21971,7 @@ public extension Api {
                 _7 = Api.parse(reader, signature: signature) as? Api.ThemeSettings
             } }
             var _8: Int32?
-            _8 = reader.readInt32()
+            if Int(_1!) & Int(1 << 4) != 0 {_8 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -21901,9 +21979,9 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
-            let _c8 = _8 != nil
+            let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6, settings: _7, installsCount: _8!)
+                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6, settings: _7, installsCount: _8)
             }
             else {
                 return nil
