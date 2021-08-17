@@ -200,7 +200,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         }
     }
     
-    var backgroundColors: ([UInt32], Int32?, Int32?)? = nil {
+    var backgroundColors: ([HSBColor], Int32?, Int32?)? = nil {
         didSet {
             var updated = false
             if oldValue?.0 != self.backgroundColors?.0 || oldValue?.1 != self.backgroundColors?.1 {
@@ -329,7 +329,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
             node.removeFromSupernode()
         }
           
-        let backgroundColors = self.backgroundColors ?? ([0xd6e2ee], nil, nil)
+        let backgroundColors = self.backgroundColors.flatMap { ($0.0.map({ $0.rgb }), $0.1, $0.2) } ?? ([0xd6e2ee], nil, nil)
         let intensity: Int32 = backgroundColors.2.flatMap { value in
             if value < 0 {
                 return -80

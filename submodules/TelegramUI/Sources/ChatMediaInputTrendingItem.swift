@@ -133,7 +133,6 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
         
         if self.elevated != elevated {
             self.elevated = elevated
-            self.badgeBackground.isHidden = !self.elevated
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedBoundingSize)
