@@ -944,7 +944,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         snapshot.frame = itemNode.bounds
                         itemNode.view.addSubview(snapshot)
                         
-                        snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak snapshot] _ in
+                        snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshot] _ in
                             snapshot?.removeFromSuperview()
                         })
                     }

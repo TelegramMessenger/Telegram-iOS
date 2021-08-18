@@ -115,7 +115,7 @@ extension TelegramWallpaper: Codable {
                                         colors.append(value.rgb)
                                     } else if component.count <= 3, let value = Int32(component) {
                                         if intensity == nil {
-                                            if value >= 0 && value <= 100 {
+                                            if value >= -100 && value <= 100 {
                                                 intensity = value
                                             } else {
                                                 intensity = 50

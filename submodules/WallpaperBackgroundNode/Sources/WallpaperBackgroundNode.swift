@@ -775,7 +775,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
             if bubbleTheme.chat.message.outgoing.bubble.withoutWallpaper.fill.count >= 3 && bubbleTheme.chat.animateMessageColors {
                 if self.outgoingBubbleGradientBackgroundNode == nil {
-                    let outgoingBubbleGradientBackgroundNode = GradientBackgroundNode()
+                    let outgoingBubbleGradientBackgroundNode = GradientBackgroundNode(adjustSaturation: false)
                     if let size = self.validLayout {
                         outgoingBubbleGradientBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
                         outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: .immediate)

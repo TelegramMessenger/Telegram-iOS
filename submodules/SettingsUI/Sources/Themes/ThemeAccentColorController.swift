@@ -186,8 +186,8 @@ final class ThemeAccentColorController: ViewController {
                 
                 if case let .edit(theme, _, generalThemeReference, _, _, completion) = strongSelf.mode {
                     let _ = (prepareWallpaper
-                    |> deliverOnMainQueue).start(completed: {                        let updatedTheme: PresentationTheme
-                        
+                    |> deliverOnMainQueue).start(completed: {
+                        let updatedTheme: PresentationTheme
                         var settings: TelegramThemeSettings?
                         var hasSettings = false
                         var baseTheme: TelegramBaseTheme?

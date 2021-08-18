@@ -268,6 +268,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     let previewThemePromise = Promise<PresentationTheme>()
     let settingsPromise = Promise<TelegramThemeSettings?>(nil)
     let hasSettings: Bool
+    let mayHaveSettings: Bool
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch mode {
         case let .create(existingTheme, settings):
@@ -278,16 +279,19 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 wallpaper = theme.chat.defaultWallpaper
                 settingsPromise.set(.single(settings))
                 hasSettings = settings != nil
+                mayHaveSettings = settings != nil
             } else {
                 theme = presentationData.theme
                 wallpaper = presentationData.chatWallpaper
                 settingsPromise.set(.single(nil))
                 hasSettings = false
+                mayHaveSettings = true
             }
             initialState = EditThemeControllerState(mode: mode, title: generateThemeName(accentColor: theme.rootController.navigationBar.buttonColor), slug: "", updatedTheme: nil, updating: false)
             previewThemePromise.set(.single(theme.withUpdated(name: "", defaultWallpaper: wallpaper)))
         case let .edit(info):
             hasSettings = info.theme.settings != nil
+            mayHaveSettings = hasSettings
             settingsPromise.set(.single(info.theme.settings))
             if let file = info.theme.file, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let theme = makePresentationTheme(data: data, resolvedWallpaper: info.resolvedWallpaper) {
                 if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
@@ -323,6 +327,8 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     var generalThemeReference: PresentationThemeReference?
     if case let .edit(cloudTheme) = mode {
         generalThemeReference = PresentationThemeReference.cloud(cloudTheme).generalThemeReference
+    } else if case let .create(existingTheme, _) = mode, existingTheme == nil {
+        generalThemeReference = PresentationThemeReference.builtin(presentationData.theme.referenceTheme)
     }
     
     let arguments = EditThemeControllerArguments(context: context, updateState: { f in
@@ -338,7 +344,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     state.updatedTheme = updatedTheme
                     return state
                 }
-                if previousSettings != nil {
+                if previousSettings != nil || mayHaveSettings {
                     settingsPromise.set(.single(settings))
                 }
                 controllerDismissImpl?()
