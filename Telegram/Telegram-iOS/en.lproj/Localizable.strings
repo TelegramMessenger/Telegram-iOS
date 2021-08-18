@@ -6613,6 +6613,14 @@ Sorry for the inconvenience.";
 "WallpaperPreview.Animate" = "Animate";
 "WallpaperPreview.AnimateDescription" = "Colors will move when you send messages";
 
+"Username.InvalidStartsWithUnderscore" = "Sorry, a username can't start with an underscore.";
+"Username.InvalidEndsWithUnderscore" = "Sorry, a username can't end with an underscore.";
+
+"Channel.Username.InvalidStartsWithUnderscore" = "Channel names can't start with an underscore.";
+"Channel.Username.InvalidEndsWithUnderscore" = "Channel names can't end with an underscore.";
+
+"Group.Username.InvalidStartsWithUnderscore" = "Group names can't start with an underscore.";
+"Group.Username.InvalidEndsWithUnderscore" = "Group names can't end with an underscore.";
 
 "Appstore.Cloud" = "**Cloud-based**\nUnlimited storage for chats,\nmedia and documents.";
 "Appstore.Cloud.Profile" = "**Jennifer**\n23 y.o. designer from San Francisco.";
@@ -6645,4 +6653,3 @@ Sorry for the inconvenience.";
 "Appstore.Secure" = "**Secure**\nAll chats are protected\nwith strong encryption.";
 "Appstore.Secure.Chat" = "**Little Sister**\nAny gift ideas for mom?\n**You**A dog!\n**You**I'm serious. Let's get her a puppy. \n**You**\nI saw this!\n**Little Sister**\nI needed proof this was your idea!";
 "Appstore.Secure.Chat.Name" = "**Little Sister**";
-

@@ -1181,8 +1181,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                                 updated.backgroundColors = []
                             }
                         }
-                        appeared = true
                     }
+                    appeared = true
                 } else {
                     updated.colorPanelCollapsed = true
                     if updated.patternWallpaper != nil {
