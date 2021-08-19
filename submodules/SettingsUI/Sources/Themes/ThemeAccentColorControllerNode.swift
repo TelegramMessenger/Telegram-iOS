@@ -758,6 +758,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             needsLayout = true
         }
         
+        if previousState.animateMessageColors != self.state.animateMessageColors {
+            needsLayout = true
+        }
+        
         if previousState.selectedColor != self.state.selectedColor {
             needsLayout = true
         }
@@ -979,7 +983,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 
         let toolbarHeight = 49.0 + layout.intrinsicInsets.bottom
         var relativeOffset: CGFloat = 0.0
-        if !self.state.colorPanelCollapsed {
+        if !self.state.colorPanelCollapsed && self.state.section == .messages {
             relativeOffset = (CGFloat(self.state.selectedColor) / CGFloat(max(1, self.state.messagesColors.count))) * (self.colorPanelNode.frame.height + toolbarHeight + 144.0) * -1.0
         }
         
@@ -1128,8 +1132,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         } else if self.state.section == .messages {
             if self.state.messagesColors.count >= 3 {
                 patternAlpha = 1.0
-                playAlpha = displayOptionButtons ? 1.0 : 0.0
-                centerDistance += playButtonSize.width
+                playAlpha = displayOptionButtons && self.state.animateMessageColors ? 1.0 : 0.0
+                if self.state.animateMessageColors {
+                    centerDistance += playButtonSize.width
+                }
             } else {
                 patternAlpha = 0.0
                 playAlpha = 0.0
@@ -1233,7 +1239,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     }
 
     @objc private func playPressed() {
-        if self.state.backgroundColors.count >= 3 {
+        if self.state.backgroundColors.count >= 3 || self.state.messagesColors.count >= 3 {
             self.backgroundNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
         } else {
             self.updateState({ state in

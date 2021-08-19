@@ -1690,6 +1690,7 @@ extension PresentationThemeChat: Codable {
     public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(self.defaultWallpaper, forKey: .defaultWallpaper)
+        try values.encode(self.animateMessageColors, forKey: .animateMessageColors)
         try values.encode(self.message, forKey: .message)
         try values.encode(self.serviceMessage, forKey: .serviceMessage)
         try values.encode(self.inputPanel, forKey: .inputPanel)
