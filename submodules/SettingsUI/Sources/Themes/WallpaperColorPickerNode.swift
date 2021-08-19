@@ -287,7 +287,7 @@ struct HSBColor: Equatable {
     }
     
     var rgb: UInt32 {
-        return self.color.rgb
+        return self.color.argb
     }
     
     init(values: (h: CGFloat, s: CGFloat, b: CGFloat)) {
