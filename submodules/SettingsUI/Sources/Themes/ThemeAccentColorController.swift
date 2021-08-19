@@ -201,7 +201,7 @@ final class ThemeAccentColorController: ViewController {
                         }
                         
                         if let themeReference = generalThemeReference {
-                            updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: state.accentColor.color, backgroundColors: state.backgroundColors.map { $0.rgb }, bubbleColors: state.messagesColors.map { $0.rgb }, wallpaper: coloredWallpaper ?? state.initialWallpaper, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
+                            updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: state.accentColor.color, backgroundColors: state.backgroundColors.map { $0.rgb }, bubbleColors: state.messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors, wallpaper: coloredWallpaper ?? state.initialWallpaper, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
                         } else {
                             updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: state.accentColor.color, backgroundColors: state.backgroundColors.map { $0.rgb }, bubbleColors: state.messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors, wallpaper: state.initialWallpaper ?? coloredWallpaper)
                         }
@@ -378,6 +378,7 @@ final class ThemeAccentColorController: ViewController {
             let messageColors: [UInt32]
             let defaultMessagesColor: UIColor? = nil
             var rotation: Int32 = 0
+            let animateMessageColors: Bool
             
             func extractWallpaperParameters(_ wallpaper: TelegramWallpaper?) {
                 guard let wallpaper = wallpaper else {
@@ -428,7 +429,7 @@ final class ThemeAccentColorController: ViewController {
                     }
                 }
                 
-                if case .colors(_, true) = strongSelf.mode {
+                if case let .colors(initialThemeReference, true) = strongSelf.mode {
                     let themeSpecificAccentColor = settings.themeSpecificAccentColors[themeReference.index]
                     accentColor = themeSpecificAccentColor?.color ?? defaultDayAccentColor
 
@@ -441,6 +442,14 @@ final class ThemeAccentColorController: ViewController {
                         let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: themeSpecificAccentColor?.color, wallpaper: themeSpecificAccentColor?.wallpaper, baseColor: themeSpecificAccentColor?.baseColor) ?? defaultPresentationTheme
                         referenceTheme = theme
                         wallpaper = theme.chat.defaultWallpaper
+                    }
+                    
+                    if case let .cloud(cloudTheme) = initialThemeReference, let settings = cloudTheme.theme.settings {
+                        animateMessageColors = settings.animateMessageColors
+                    } else if let referenceTheme = referenceTheme {
+                        animateMessageColors = referenceTheme.chat.animateMessageColors
+                    } else {
+                        animateMessageColors = false
                     }
                     
                     extractBuiltinWallpaper(wallpaper)
@@ -486,6 +495,8 @@ final class ThemeAccentColorController: ViewController {
                         } else {
                             messageColors = []
                         }
+                        
+                        animateMessageColors = themeSettings.animateMessageColors
                     } else if case .builtin = themeReference {
                          let themeSpecificAccentColor = settings.themeSpecificAccentColors[themeReference.index]
                          accentColor = themeSpecificAccentColor?.color ?? defaultDayAccentColor
@@ -520,6 +531,8 @@ final class ThemeAccentColorController: ViewController {
                                  messageColors = []
                              }
                          }
+                        
+                        animateMessageColors = false
                     } else {
                         let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference)!
                         
@@ -533,6 +546,8 @@ final class ThemeAccentColorController: ViewController {
                         }
                         
                         messageColors = theme.chat.message.outgoing.bubble.withWallpaper.fill.map(\.rgb)
+                        
+                        animateMessageColors = theme.chat.animateMessageColors
                     }
                 }
             } else if case let .edit(theme, wallpaper, _, _, _, _) = strongSelf.mode {
@@ -546,13 +561,17 @@ final class ThemeAccentColorController: ViewController {
                 }
                 
                 messageColors = theme.chat.message.outgoing.bubble.withWallpaper.fill.map(\.rgb)
+                
+                animateMessageColors = theme.chat.animateMessageColors
             } else {
                 accentColor = defaultDayAccentColor
                 backgroundColors = []
                 messageColors = []
+                
+                animateMessageColors = false
             }
             
-            let initialState = ThemeColorState(section: strongSelf.section, accentColor: HSBColor(color: accentColor), initialWallpaper: initialWallpaper, backgroundColors: backgroundColors.map { HSBColor(rgb: $0) }, patternWallpaper: patternWallpaper, patternIntensity: patternIntensity, animateMessageColors: false, defaultMessagesColor: defaultMessagesColor.flatMap { HSBColor(color: $0) }, messagesColors: messageColors.map { HSBColor(rgb: $0) }, selectedColor: 0, rotation: rotation)
+            let initialState = ThemeColorState(section: strongSelf.section, accentColor: HSBColor(color: accentColor), initialWallpaper: initialWallpaper, backgroundColors: backgroundColors.map { HSBColor(rgb: $0) }, patternWallpaper: patternWallpaper, patternIntensity: patternIntensity, animateMessageColors: animateMessageColors, defaultMessagesColor: defaultMessagesColor.flatMap { HSBColor(color: $0) }, messagesColors: messageColors.map { HSBColor(rgb: $0) }, selectedColor: 0, rotation: rotation)
             
             strongSelf.controllerNode.updateState({ _ in
                 return initialState
