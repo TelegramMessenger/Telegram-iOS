@@ -245,7 +245,7 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         if !self.currentRecordOperations.isEmpty || !self.currentMetadataOperations.isEmpty {
             for (view, pipe) in self.recordsViews.copyItems() {
                 if view.replay(operations: self.currentRecordOperations, metadataOperations: self.currentMetadataOperations) {
-                    pipe.putNext(AccountRecordsView(view))
+                    pipe.putNext(AccountRecordsView<Types>(view))
                 }
             }
         }
@@ -253,7 +253,7 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         if !self.currentUpdatedSharedDataKeys.isEmpty {
             for (view, pipe) in self.sharedDataViews.copyItems() {
                 if view.replay(accountManagerImpl: self, updatedKeys: self.currentUpdatedSharedDataKeys) {
-                    pipe.putNext(AccountSharedDataView(view))
+                    pipe.putNext(AccountSharedDataView<Types>(view))
                 }
             }
         }
@@ -287,7 +287,7 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
     }
     
     fileprivate func accountRecords() -> Signal<AccountRecordsView<Types>, NoError> {
-        return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountRecordsView, NoError> in
+        return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountRecordsView<Types>, NoError> in
             return self.accountRecordsInternal(transaction: transaction)
         })
         |> switchToLatest
@@ -323,9 +323,9 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         let index = self.recordsViews.add((mutableView, pipe))
         
         let queue = self.queue
-        return (.single(AccountRecordsView(mutableView))
+        return (.single(AccountRecordsView<Types>(mutableView))
         |> then(pipe.signal()))
-        |> `catch` { _ -> Signal<AccountRecordsView, NoError> in
+        |> `catch` { _ -> Signal<AccountRecordsView<Types>, NoError> in
         }
         |> afterDisposed { [weak self] in
             queue.async {
@@ -337,14 +337,14 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
     }
     
     private func sharedDataInternal(transaction: AccountManagerModifier<Types>, keys: Set<ValueBoxKey>) -> Signal<AccountSharedDataView<Types>, NoError> {
-        let mutableView = MutableAccountSharedDataView(accountManagerImpl: self, keys: keys)
+        let mutableView = MutableAccountSharedDataView<Types>(accountManagerImpl: self, keys: keys)
         let pipe = ValuePipe<AccountSharedDataView<Types>>()
         let index = self.sharedDataViews.add((mutableView, pipe))
         
         let queue = self.queue
-        return (.single(AccountSharedDataView(mutableView))
+        return (.single(AccountSharedDataView<Types>(mutableView))
         |> then(pipe.signal()))
-        |> `catch` { _ -> Signal<AccountSharedDataView, NoError> in
+        |> `catch` { _ -> Signal<AccountSharedDataView<Types>, NoError> in
         }
         |> afterDisposed { [weak self] in
             queue.async {
@@ -363,7 +363,7 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         let queue = self.queue
         return (.single(NoticeEntryView(mutableView))
         |> then(pipe.signal()))
-        |> `catch` { _ -> Signal<NoticeEntryView, NoError> in
+        |> `catch` { _ -> Signal<NoticeEntryView<Types>, NoError> in
         }
         |> afterDisposed { [weak self] in
             queue.async {
