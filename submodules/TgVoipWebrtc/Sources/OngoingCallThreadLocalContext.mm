@@ -577,7 +577,7 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
     if (_keepLandscape) {
         resolvedId += std::string(":landscape");
     }
-    _interface->switchToDevice(resolvedId);
+    _interface->switchToDevice(resolvedId, false);
 }
 
 - (void)setIsVideoEnabled:(bool)isVideoEnabled {
