@@ -880,7 +880,7 @@ public class WallpaperGalleryController: ViewController {
             currentColorsPanelNode = colorsPanelNode
             self.overlayNode?.insertSubnode(colorsPanelNode, belowSubnode: self.toolbarNode!)
 
-            colorsPanelNode.colorsChanged = { [weak self] colors, _ in
+            colorsPanelNode.colorsChanged = { [weak self] colors, _, _ in
                 guard let strongSelf = self else {
                     return
                 }

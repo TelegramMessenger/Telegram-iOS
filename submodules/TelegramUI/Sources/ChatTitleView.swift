@@ -341,6 +341,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             stringValue = strings.Activity_RecordingVideoMessage
                         case .uploadingInstantVideo:
                             stringValue = strings.Activity_UploadingVideoMessage
+                        case .choosingSticker:
+                            stringValue = strings.Activity_ChoosingSticker
                         case .speakingInGroupCall:
                             stringValue = ""
                     }
@@ -372,6 +374,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         state = .playingGame(string, color)
                     case .speakingInGroupCall:
                         state = .typingText(string, color)
+                    case .choosingSticker:
+                        state = .choosingSticker(string, color)
                 }
             } else {
                 if let titleContent = self.titleContent {

@@ -48,8 +48,11 @@ struct ThemeColorState {
     var patternWallpaper: TelegramWallpaper?
     var patternIntensity: Int32
     
+    var animateMessageColors: Bool
     var defaultMessagesColor: HSBColor?
     var messagesColors: [HSBColor]
+    
+    var selectedColor: Int
     
     var rotation: Int32
     
@@ -64,12 +67,14 @@ struct ThemeColorState {
         self.previousPatternWallpaper = nil
         self.patternWallpaper = nil
         self.patternIntensity = 50
+        self.animateMessageColors = false
         self.defaultMessagesColor = nil
         self.messagesColors = []
+        self.selectedColor = 0
         self.rotation = 0
     }
     
-    init(section: ThemeColorSection, accentColor: HSBColor, initialWallpaper: TelegramWallpaper?, backgroundColors: [HSBColor], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, defaultMessagesColor: HSBColor?, messagesColors: [HSBColor], rotation: Int32 = 0) {
+    init(section: ThemeColorSection, accentColor: HSBColor, initialWallpaper: TelegramWallpaper?, backgroundColors: [HSBColor], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, animateMessageColors: Bool, defaultMessagesColor: HSBColor?, messagesColors: [HSBColor], selectedColor: Int = 0, rotation: Int32 = 0) {
         self.section = section
         self.colorPanelCollapsed = false
         self.displayPatternPanel = false
@@ -80,8 +85,10 @@ struct ThemeColorState {
         self.previousPatternWallpaper = nil
         self.patternWallpaper = patternWallpaper
         self.patternIntensity = patternIntensity
+        self.animateMessageColors = animateMessageColors
         self.defaultMessagesColor = defaultMessagesColor
         self.messagesColors = messagesColors
+        self.selectedColor = selectedColor
         self.rotation = rotation
     }
     
@@ -98,17 +105,21 @@ struct ThemeColorState {
         if self.patternIntensity != otherState.patternIntensity {
             return false
         }
-        if self.rotation != otherState.rotation {
+        if self.animateMessageColors != otherState.animateMessageColors {
             return false
         }
         if self.backgroundColors != otherState.backgroundColors {
             return false
         }
-
         if self.messagesColors != otherState.messagesColors {
             return false
         }
-
+        if self.selectedColor != otherState.selectedColor {
+            return false
+        }
+        if self.rotation != otherState.rotation {
+            return false
+        }
         return true
     }
 }
@@ -324,7 +335,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.colorsButtonNode.addTarget(self, action: #selector(self.toggleColors), forControlEvents: .touchUpInside)
         self.playButtonNode.addTarget(self, action: #selector(self.playPressed), forControlEvents: .touchUpInside)
         
-        self.colorPanelNode.colorsChanged = { [weak self] colors, ended in
+        self.colorPanelNode.colorsChanged = { [weak self] colors, selectedColor, ended in
             if let strongSelf = self, let section = strongSelf.state.section {
                 strongSelf.updateState({ current in
                     var updated = current
@@ -339,8 +350,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         case .messages:
                             updated.messagesColors = colors
                     }
+                    updated.selectedColor = selectedColor
                     return updated
-                })
+                }, animated: true)
             }
         }
         
@@ -472,9 +484,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
 
             if !updateOnlyWallpaper {
                 if let themeReference = mode.themeReference {
-                    updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
+                    updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
                 } else if case let .edit(theme, _, _, _, _, _) = mode {
-                    updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb })
+                    updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors)
                 } else {
                     updatedTheme = theme
                 }
@@ -515,8 +527,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
 
             strongSelf.wallpaper = wallpaper
             strongSelf.patternArguments = patternArguments
-
-            strongSelf.colorsButtonNode.colors = backgroundColors.map { $0.color }
 
             if !preview {
                 if !backgroundColors.isEmpty {
@@ -592,6 +602,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
     }
     
+    private var crossfadeBubbles = false
     func updateState(_ f: (ThemeColorState) -> ThemeColorState, animated: Bool = false) {
         let previousState = self.state
         self.state = f(self.state)
@@ -613,13 +624,23 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
         }
         
-        if (previousState.patternWallpaper != nil) != (self.state.patternWallpaper != nil) {
-            self.patternButtonNode.setSelected(self.state.patternWallpaper != nil, animated: animated)
+        let sectionChanged = previousState.section != self.state.section
+        
+        if self.state.section == .background {
+            if (previousState.patternWallpaper != nil) != (self.state.patternWallpaper != nil) || sectionChanged {
+                self.patternButtonNode.setSelected(self.state.patternWallpaper != nil, animated: animated)
+            }
+        } else if self.state.section == .messages {
+            if previousState.animateMessageColors != self.state.animateMessageColors || sectionChanged {
+                self.crossfadeBubbles = true
+                self.patternButtonNode.setSelected(self.state.animateMessageColors, animated: animated)
+            }
         }
         
-        let sectionChanged = previousState.section != self.state.section
         if sectionChanged, let section = self.state.section {
             self.view.endEditing(true)
+            
+            self.patternButtonNode.title = section == .messages ? self.presentationData.strings.WallpaperPreview_Animate : self.presentationData.strings.WallpaperPreview_Pattern
             
             var colors: [HSBColor]
             var defaultColor: HSBColor?
@@ -688,6 +709,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             needsLayout = true
         }
         
+        self.colorsButtonNode.colors = state.section == .messages ? state.messagesColors.map { $0.color } : state.backgroundColors.map { $0.color }
+        
         if previousState.colorPanelCollapsed != self.state.colorPanelCollapsed {
             animationCurve = .spring
             animationDuration = 0.45
@@ -730,12 +753,33 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         if (previousState.backgroundColors.count >= 2) != (self.state.backgroundColors.count >= 2) {
             needsLayout = true
         }
+        
+        if previousState.messagesColors.count != self.state.messagesColors.count {
+            needsLayout = true
+        }
+        
+        if previousState.animateMessageColors != self.state.animateMessageColors {
+            needsLayout = true
+        }
+        
+        if previousState.selectedColor != self.state.selectedColor {
+            needsLayout = true
+        }
 
-        if previousState.backgroundColors.count != self.state.backgroundColors.count {
-            if self.state.backgroundColors.count <= 2 {
-                self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
-            } else {
-                self.playButtonNode.setImage(self.playButtonPlayImage, for: [])
+        if let section = self.state.section {
+            switch section {
+                case .background:
+                    if previousState.backgroundColors.count != self.state.backgroundColors.count {
+                        if self.state.backgroundColors.count <= 2 {
+                            self.playButtonNode.setImage(self.playButtonRotateImage, for: [])
+                        } else {
+                            self.playButtonNode.setImage(self.playButtonPlayImage, for: [])
+                        }
+                    }
+                case .accent:
+                    break
+                case .messages:
+                    self.playButtonNode.setImage(self.playButtonPlayImage, for: [])
             }
         }
 
@@ -755,6 +799,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             updated.section = section
             updated.displayPatternPanel = false
             updated.colorPanelCollapsed = false
+            updated.selectedColor = 0
             return updated
         }, animated: true)
     }
@@ -884,22 +929,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 }
                 strongSelf.updateState({ state in
                     var state = state
-                    //if state.section == .background {
-                        state.colorPanelCollapsed = true
-                        state.displayPatternPanel = false
-                    //}
+                    state.colorPanelCollapsed = true
+                    state.displayPatternPanel = false
                     return state
                 }, animated: true)
-                /*if message.flags.contains(.Incoming) {
-                    self?.updateSection(.accent)
-                    self?.requestSectionUpdate?(.accent)
-                } else {
-                    self?.updateSection(.messages)
-                    self?.requestSectionUpdate?(.messages)
-                }*/
-            }, clickThroughMessage: { [weak self] in
-                self?.updateSection(.background)
-                self?.requestSectionUpdate?(.background)
+            }, clickThroughMessage: {
             }, backgroundNode: self.backgroundNode)
             return item
         }
@@ -908,6 +942,18 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         if let messageNodes = self.messageNodes {
             for i in 0 ..< items.count {
                 let itemNode = messageNodes[i]
+                
+                if self.crossfadeBubbles {
+                    if let snapshot = itemNode.view.snapshotView(afterScreenUpdates: false) {
+                        snapshot.frame = itemNode.bounds
+                        itemNode.view.addSubview(snapshot)
+                        
+                        snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshot] _ in
+                            snapshot?.removeFromSuperview()
+                        })
+                    }
+                }
+                
                 items[i].updateNode(async: { $0() }, node: {
                     return itemNode
                 }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
@@ -920,6 +966,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     apply(ListViewItemApply(isOnScreen: true))
                 })
             }
+            self.crossfadeBubbles = false
         } else {
             var messageNodes: [ListViewItemNode] = []
             for i in 0 ..< items.count {
@@ -928,22 +975,30 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     itemNode = node
                     apply().1(ListViewItemApply(isOnScreen: true))
                 })
-                //itemNode!.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
                 messageNodes.append(itemNode!)
                 self.messagesContainerNode.addSubnode(itemNode!)
             }
             self.messageNodes = messageNodes
         }
                 
+        let toolbarHeight = 49.0 + layout.intrinsicInsets.bottom
+        var relativeOffset: CGFloat = 0.0
+        if !self.state.colorPanelCollapsed && self.state.section == .messages {
+            relativeOffset = (CGFloat(self.state.selectedColor) / CGFloat(max(1, self.state.messagesColors.count))) * (self.colorPanelNode.frame.height + toolbarHeight + 144.0) * -1.0
+        }
+        
+        let containerSize = CGSize(width: layout.size.width, height: layout.size.height - toolbarHeight - 44.0)
         var bottomOffset: CGFloat = 9.0 + bottomInset
         if let messageNodes = self.messageNodes {
             for itemNode in messageNodes {
                 let previousFrame = itemNode.frame
                 transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: itemNode.frame.size))
                 bottomOffset += itemNode.frame.height
-                itemNode.updateFrame(itemNode.frame, within: layout.size)
+                
+                let relativeFrame = itemNode.frame.offsetBy(dx: 0.0, dy: relativeOffset)
+                itemNode.updateAbsoluteRect(relativeFrame, within: containerSize)
                 if case let .animated(duration, curve) = transition {
-                    itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -itemNode.frame.minY + previousFrame.minY), animationCurve: curve, duration: duration)
+                    itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -relativeFrame.minY + previousFrame.minY), animationCurve: curve, duration: duration)
                 }
             }
         }
@@ -954,7 +1009,6 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             headerItem.updateNode(dateHeaderNode, previous: nil, next: headerItem)
         } else {
             dateHeaderNode = headerItem.node(synchronousLoad: true)
-            //dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
             self.messagesContainerNode.addSubnode(dateHeaderNode)
             self.dateHeaderNode = dateHeaderNode
         }
@@ -1026,9 +1080,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         transition.updateBounds(node: self.backgroundWrapperNode, bounds: CGRect(origin: CGPoint(), size: layout.size))
     
-        let displayOptionButtons = self.state.section == .background
-        var messagesBottomInset: CGFloat = bottomInset
+        let displayOptionButtons = self.state.section == .background || self.state.section == .messages
         
+        var messagesBottomInset: CGFloat = bottomInset
         if displayOptionButtons {
             messagesBottomInset += 56.0
         } else if chatListPreviewAvailable {
@@ -1054,7 +1108,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let maxButtonWidth = max(patternButtonSize.width, colorsButtonSize.width)
         let buttonSize = CGSize(width: maxButtonWidth, height: 30.0)
 
-        let patternAlpha: CGFloat = displayOptionButtons ? 1.0 : 0.0
+        var patternAlpha: CGFloat = displayOptionButtons ? 1.0 : 0.0
         let colorsAlpha: CGFloat = displayOptionButtons ? 1.0 : 0.0
         
         let patternFrame: CGRect
@@ -1067,15 +1121,32 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let playFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - playButtonSize.width) / 2.0), y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset + floor((buttonSize.height - playButtonSize.height) / 2.0)), size: playButtonSize)
 
         let playAlpha: CGFloat
-        if self.state.backgroundColors.count >= 2 {
-            playAlpha = displayOptionButtons ? 1.0 : 0.0
-            centerDistance += playButtonSize.width
+        var centerButtons = false
+        if self.state.section == .background {
+            if self.state.backgroundColors.count >= 2 {
+                playAlpha = displayOptionButtons ? 1.0 : 0.0
+                centerDistance += playButtonSize.width
+            } else {
+                playAlpha = 0.0
+            }
+        } else if self.state.section == .messages {
+            if self.state.messagesColors.count >= 3 {
+                patternAlpha = 1.0
+                playAlpha = displayOptionButtons && self.state.animateMessageColors ? 1.0 : 0.0
+                if self.state.animateMessageColors {
+                    centerDistance += playButtonSize.width
+                }
+            } else {
+                patternAlpha = 0.0
+                playAlpha = 0.0
+                centerButtons = true
+            }
         } else {
             playAlpha = 0.0
         }
-
-        patternFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width * 2.0 - centerDistance) / 2.0), y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset), size: buttonSize)
-        colorsFrame = CGRect(origin: CGPoint(x: patternFrame.maxX + centerDistance, y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset), size: buttonSize)
+        
+        patternFrame = CGRect(origin: CGPoint(x: centerButtons ? floor((layout.size.width - buttonSize.width) / 2.0) : floor((layout.size.width - buttonSize.width * 2.0 - centerDistance) / 2.0), y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset), size: buttonSize)
+        colorsFrame = CGRect(origin: CGPoint(x: centerButtons ? floor((layout.size.width - buttonSize.width) / 2.0) : patternFrame.maxX + centerDistance, y: layout.size.height - bottomInset - 44.0 - buttonsVerticalOffset), size: buttonSize)
         
         transition.updateFrame(node: self.patternButtonNode, frame: patternFrame)
         transition.updateAlpha(node: self.patternButtonNode, alpha: patternAlpha)
@@ -1089,35 +1160,22 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     }
     
     @objc private func togglePattern() {
-        self.view.endEditing(true)
-        
-        let wallpaper = self.state.previousPatternWallpaper ?? self.patternPanelNode.wallpapers.first
-        let backgroundColors = self.currentBackgroundColors
-        
-        var appeared = false
-        self.updateState({ current in
-            var updated = current
-            if !updated.displayPatternPanel {
-                updated.colorPanelCollapsed = false
-                updated.displayPatternPanel = true
-                if current.patternWallpaper == nil, let wallpaper = wallpaper {
-                    updated.patternWallpaper = wallpaper
-                    if updated.backgroundColors.isEmpty {
-                        if let backgroundColors = backgroundColors {
-                            updated.backgroundColors = backgroundColors.0
-                        } else {
-                            updated.backgroundColors = []
-                        }
-                    }
-                    appeared = true
-                }
-            } else {
-                updated.colorPanelCollapsed = true
-                if updated.patternWallpaper != nil {
-                    updated.previousPatternWallpaper = updated.patternWallpaper
-                    updated.patternWallpaper = nil
-                    updated.displayPatternPanel = false
-                } else {
+        if self.state.section == .messages {
+            self.updateState({ current in
+                var updated = current
+                updated.animateMessageColors = !current.animateMessageColors
+                return updated
+            }, animated: true)
+        } else {
+            self.view.endEditing(true)
+            
+            let wallpaper = self.state.previousPatternWallpaper ?? self.patternPanelNode.wallpapers.first
+            let backgroundColors = self.currentBackgroundColors
+            
+            var appeared = false
+            self.updateState({ current in
+                var updated = current
+                if !updated.displayPatternPanel {
                     updated.colorPanelCollapsed = false
                     updated.displayPatternPanel = true
                     if current.patternWallpaper == nil, let wallpaper = wallpaper {
@@ -1129,15 +1187,36 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                                 updated.backgroundColors = []
                             }
                         }
-                        appeared = true
+                    }
+                    appeared = true
+                } else {
+                    updated.colorPanelCollapsed = true
+                    if updated.patternWallpaper != nil {
+                        updated.previousPatternWallpaper = updated.patternWallpaper
+                        updated.patternWallpaper = nil
+                        updated.displayPatternPanel = false
+                    } else {
+                        updated.colorPanelCollapsed = false
+                        updated.displayPatternPanel = true
+                        if current.patternWallpaper == nil, let wallpaper = wallpaper {
+                            updated.patternWallpaper = wallpaper
+                            if updated.backgroundColors.isEmpty {
+                                if let backgroundColors = backgroundColors {
+                                    updated.backgroundColors = backgroundColors.0
+                                } else {
+                                    updated.backgroundColors = []
+                                }
+                            }
+                            appeared = true
+                        }
                     }
                 }
+                return updated
+            }, animated: true)
+            
+            if appeared {
+                self.patternPanelNode.didAppear(initialWallpaper: wallpaper, intensity: self.state.patternIntensity)
             }
-            return updated
-        }, animated: true)
-        
-        if appeared {
-            self.patternPanelNode.didAppear(initialWallpaper: wallpaper, intensity: self.state.patternIntensity)
         }
     }
 
@@ -1160,12 +1239,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     }
 
     @objc private func playPressed() {
-        if self.state.backgroundColors.count >= 3 {
+        if self.state.backgroundColors.count >= 3 || self.state.messagesColors.count >= 3 {
             self.backgroundNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
         } else {
             self.updateState({ state in
                 var state = state
-                state.rotation = (state.rotation + 90) % 360
+                state.rotation = (state.rotation + 45) % 360
                 return state
             }, animated: true)
         }

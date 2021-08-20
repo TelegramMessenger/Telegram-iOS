@@ -141,7 +141,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                 currentBackgroundNode = WallpaperBackgroundNode(context: item.context)
             }
             currentBackgroundNode?.update(wallpaper: item.wallpaper)
-            currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
+            currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.componentTheme, bubbleCorners: item.chatBubbleCorners)
             
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
@@ -261,13 +261,13 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
                     
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.componentTheme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     if let backgroundNode = strongSelf.backgroundNode {
                         backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
                         backgroundNode.update(wallpaper: item.wallpaper)
-                        backgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
+                        backgroundNode.updateBubbleTheme(bubbleTheme: item.componentTheme, bubbleCorners: item.chatBubbleCorners)
                         backgroundNode.updateLayout(size: backgroundNode.bounds.size, transition: .immediate)
                     }
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)

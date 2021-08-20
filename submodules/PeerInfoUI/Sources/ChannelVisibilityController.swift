@@ -560,9 +560,17 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                             text = presentationData.strings.Channel_Username_InvalidStartsWithNumber
                                         }
                                     case .startsWithUnderscore:
-                                        text = presentationData.strings.Channel_Username_InvalidCharacters
+                                        if isGroup {
+                                            text = presentationData.strings.Group_Username_InvalidStartsWithUnderscore
+                                        } else {
+                                            text = presentationData.strings.Channel_Username_InvalidStartsWithUnderscore
+                                        }
                                     case .endsWithUnderscore:
-                                        text = presentationData.strings.Channel_Username_InvalidCharacters
+                                        if isGroup {
+                                            text = presentationData.strings.Group_Username_InvalidEndsWithUnderscore
+                                        } else {
+                                            text = presentationData.strings.Channel_Username_InvalidEndsWithUnderscore
+                                        }
                                     case .tooShort:
                                         if isGroup {
                                             text = presentationData.strings.Group_Username_InvalidTooShort
@@ -696,9 +704,9 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                         case .startsWithDigit:
                                             text = presentationData.strings.Group_Username_InvalidStartsWithNumber
                                         case .startsWithUnderscore:
-                                            text = presentationData.strings.Channel_Username_InvalidCharacters
+                                            text = presentationData.strings.Channel_Username_InvalidStartsWithUnderscore
                                         case .endsWithUnderscore:
-                                            text = presentationData.strings.Channel_Username_InvalidCharacters
+                                            text = presentationData.strings.Channel_Username_InvalidEndsWithUnderscore
                                         case .tooShort:
                                             text = presentationData.strings.Group_Username_InvalidTooShort
                                         case .invalidCharacters:

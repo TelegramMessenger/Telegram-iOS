@@ -323,6 +323,8 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     var generalThemeReference: PresentationThemeReference?
     if case let .edit(cloudTheme) = mode {
         generalThemeReference = PresentationThemeReference.cloud(cloudTheme).generalThemeReference
+    } else if case let .create(existingTheme, _) = mode, existingTheme == nil {
+        generalThemeReference = PresentationThemeReference.builtin(presentationData.theme.referenceTheme)
     }
     
     let arguments = EditThemeControllerArguments(context: context, updateState: { f in

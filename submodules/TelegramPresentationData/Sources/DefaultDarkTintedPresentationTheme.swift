@@ -38,7 +38,7 @@ private extension PresentationThemeBaseColor {
     }
 }
 
-public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: [UInt32], wallpaper forcedWallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil) -> PresentationTheme {
+public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: [UInt32], animateBubbleColors: Bool?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .nightAccent) {
         return theme
     }
@@ -303,6 +303,7 @@ public func customizeDefaultDarkTintedPresentationTheme(theme: PresentationTheme
         
     chat = chat.withUpdated(
         defaultWallpaper: defaultWallpaper,
+        animateMessageColors: animateBubbleColors,
         message: chat.message.withUpdated(
             incoming: chat.message.incoming.withUpdated(
                 bubble: chat.message.incoming.bubble.withUpdated(
@@ -784,6 +785,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
 
     let chat = PresentationThemeChat(
         defaultWallpaper: defaultBuiltinWallpaper(data: .default, colors: [0x1b2836, 0x121a22, 0x1b2836, 0x121a22]),
+        animateMessageColors: false,
         message: message,
         serviceMessage: serviceMessage,
         inputPanel: inputPanel,

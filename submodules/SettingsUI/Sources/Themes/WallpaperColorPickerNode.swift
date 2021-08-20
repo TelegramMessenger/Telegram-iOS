@@ -272,6 +272,7 @@ struct HSBColor: Equatable {
     }
     
     let values: (h: CGFloat, s: CGFloat, b: CGFloat)
+    let backingColor: UIColor
     
     var hue: CGFloat {
         return self.values.h
@@ -286,19 +287,22 @@ struct HSBColor: Equatable {
     }
     
     var rgb: UInt32 {
-        return self.color.rgb
+        return self.color.argb
     }
     
     init(values: (h: CGFloat, s: CGFloat, b: CGFloat)) {
         self.values = values
+        self.backingColor = UIColor(hue: values.h, saturation: values.s, brightness: values.b, alpha: 1.0)
     }
     
     init(hue: CGFloat, saturation: CGFloat, brightness: CGFloat) {
         self.values = (h: hue, s: saturation, b: brightness)
+        self.backingColor = UIColor(hue: self.values.h, saturation: self.values.s, brightness: self.values.b, alpha: 1.0)
     }
     
     init(color: UIColor) {
         self.values = color.hsb
+        self.backingColor = color
     }
     
     init(rgb: UInt32) {
@@ -306,7 +310,7 @@ struct HSBColor: Equatable {
     }
     
     var color: UIColor {
-        return UIColor(hue: self.values.h, saturation: self.values.s, brightness: self.values.b, alpha: 1.0)
+        return self.backingColor
     }
 }
 
