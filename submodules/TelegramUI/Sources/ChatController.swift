@@ -3783,18 +3783,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         themeEmoticon = nil
                     }
                 }
-                
-                var isDarkAppearance = presentationData.theme.overallDarkAppearance
-                if let darkAppearancePreview = darkAppearancePreview {
-                    isDarkAppearance = darkAppearancePreview
-                }
-                
+                                
                 var presentationData = presentationData
                 if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoji == themeEmoticon }) {
+                    var isDarkAppearance = presentationData.theme.overallDarkAppearance
+                    if let darkAppearancePreview = darkAppearancePreview {
+                        isDarkAppearance = darkAppearancePreview
+                    }
                     let customTheme = isDarkAppearance ? theme.darkTheme : theme.theme
                     if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings) {
                         presentationData = presentationData.withUpdated(theme: theme)
                         presentationData = presentationData.withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
+                    }
+                } else if let darkAppearancePreview = darkAppearancePreview {
+                    let lightTheme: PresentationTheme
+                    let darkTheme: PresentationTheme
+                    
+                    if presentationData.theme.overallDarkAppearance {
+                        darkTheme = presentationData.theme
+                    } else {
+                        lightTheme = presentationData.theme
                     }
                 }
                 strongSelf.presentationData = presentationData
@@ -12942,6 +12950,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.themeDarkAppearancePreviewPromise.set(dark)
                 }
             }, completion: { [weak self] emoticon in
+                strongSelf.presentCrossfadeSnapshot()
                 strongSelf.themeDarkAppearancePreviewPromise.set(nil)
                 let _ = context.engine.themes.setChatTheme(peerId: peerId, emoji: emoticon).start(completed: { [weak self] in
                     if let strongSelf = self {

@@ -423,15 +423,18 @@ final class ChatThemeScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.completion(emoticon)
             strongSelf.dismiss()
+            strongSelf.completion(emoticon)
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         self.controllerNode.cancel = { [weak self] in
-            self?.previewTheme(nil)
-            self?.dismiss()
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.dismiss()
+            strongSelf.previewTheme(nil)
         }
     }
     
@@ -466,7 +469,24 @@ final class ChatThemeScreen: ViewController {
     }
 }
 
-class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
+private func iconColors(theme: PresentationTheme) -> [String: UIColor] {
+    let accentColor = theme.actionSheet.controlAccentColor
+    var colors: [String: UIColor] = [:]
+    colors["Sunny.Path 14.Path.Stroke 1"] = accentColor
+    colors["Sunny.Path 15.Path.Stroke 1"] = accentColor
+    colors["Path.Path.Stroke 1"] = accentColor
+    colors["Sunny.Path 39.Path.Stroke 1"] = accentColor
+    colors["Sunny.Path 24.Path.Stroke 1"] = accentColor
+    colors["Sunny.Path 25.Path.Stroke 1"] = accentColor
+    colors["Sunny.Path 18.Path.Stroke 1"] = accentColor
+    colors["Sunny.Path 41.Path.Stroke 1"] = accentColor
+    colors["Sunny.Path 43.Path.Stroke 1"] = accentColor
+    colors["Path 10.Path.Fill 1"] = accentColor
+    colors["Path 11.Path.Fill 1"] = accentColor
+    return colors
+}
+
+private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private let dismissByTapOutside: Bool
@@ -558,22 +578,8 @@ class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
         
-        var colors: [String: UIColor] = [:]
-        let accentColor = self.presentationData.theme.actionSheet.controlAccentColor
-        colors["Sunny.Path 14.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 15.Path.Stroke 1"] = accentColor
-        colors["Path.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 39.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 24.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 25.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 18.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 41.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 43.Path.Stroke 1"] = accentColor
-        colors["Path 10.Path.Fill 1"] = accentColor
-        colors["Path 11.Path.Fill 1"] = accentColor
-        
         self.switchThemeButton = HighlightTrackingButtonNode()
-        self.animationNode = AnimationNode(animation: self.presentationData.theme.overallDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: colors, scale: 1.0)
+        self.animationNode = AnimationNode(animation: self.presentationData.theme.overallDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme), scale: 1.0)
         self.animationNode.isUserInteractionEnabled = false
         
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
@@ -633,9 +639,9 @@ class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
             }
             
             let action: (String?) -> Void = { [weak self] emoticon in
-                if let strongSelf = self {
-                    strongSelf.crossfade()
-                    
+                if let strongSelf = self, strongSelf.selectedEmoticon != emoticon {
+                    strongSelf.animateCrossfade(updateSunIcon: true)
+                                        
                     strongSelf.selectedEmoticon = emoticon
                     strongSelf.previewTheme?(emoticon)
                     let _ = ensureThemeVisible(listNode: strongSelf.listNode, emoticon: emoticon, animated: true)
@@ -699,6 +705,9 @@ class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
+        guard !self.animatedOut else {
+            return
+        }
         let previousTheme = self.presentationData.theme
         self.presentationData = presentationData
         
@@ -717,6 +726,12 @@ class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
         
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
         self.doneButton.updateTheme(SolidRoundedButtonTheme(theme: self.presentationData.theme))
+        
+        if self.animationNode.isPlaying {
+            
+        } else {
+            self.animationNode.setAnimation(name: self.presentationData.theme.overallDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
+        }
     }
         
     override func didLoad() {
@@ -734,22 +749,8 @@ class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
     }
     
     @objc func switchThemePressed() {
-        var colors: [String: UIColor] = [:]
-        let accentColor = self.presentationData.theme.actionSheet.controlAccentColor
-        colors["Sunny.Path 14.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 15.Path.Stroke 1"] = accentColor
-        colors["Path.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 39.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 24.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 25.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 18.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 41.Path.Stroke 1"] = accentColor
-        colors["Sunny.Path 43.Path.Stroke 1"] = accentColor
-        colors["Path 10.Path.Fill 1"] = accentColor
-        colors["Path 11.Path.Fill 1"] = accentColor
-        
-        self.crossfade()
-        self.animationNode.setAnimation(name: self.presentationData.theme.overallDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: colors)
+        self.animateCrossfade()
+        self.animationNode.setAnimation(name: self.presentationData.theme.overallDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
         self.animationNode.playOnce()
         self.previewDarkTheme?(!self.presentationData.theme.overallDarkAppearance)
     }
@@ -760,7 +761,16 @@ class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
         }
     }
     
-    private func crossfade() {
+    private func animateCrossfade(updateSunIcon: Bool = false) {
+        if let snapshotView = self.animationNode.view.snapshotView(afterScreenUpdates: false) {
+            snapshotView.frame = self.animationNode.frame
+            self.animationNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.animationNode.view)
+            
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+        }
+        
         if let snapshotView = self.backgroundNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.backgroundNode.frame
             self.backgroundNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.backgroundNode.view)
