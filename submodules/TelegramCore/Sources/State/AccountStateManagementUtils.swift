@@ -2447,6 +2447,28 @@ func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes
                                         })
                                     }
                                     switch action.action {
+                                        case let .setChatTheme(emoji):
+                                            transaction.updatePeerCachedData(peerIds: [message.id.peerId], update: { peerId, current in
+                                                var current = current
+                                                if current == nil {
+                                                    if peerId.namespace == Namespaces.Peer.CloudUser {
+                                                        current = CachedUserData()
+                                                    } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                                                        current = CachedGroupData()
+                                                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                                        current = CachedChannelData()
+                                                    }
+                                                }
+                                                if let cachedData = current as? CachedUserData {
+                                                    return cachedData.withUpdatedThemeEmoticon(!emoji.isEmpty ? emoji : nil)
+                                                } else if let cachedData = current as? CachedGroupData {
+                                                    return cachedData.withUpdatedThemeEmoticon(!emoji.isEmpty ? emoji : nil)
+                                                } else if let cachedData = current as? CachedChannelData {
+                                                    return cachedData.withUpdatedThemeEmoticon(!emoji.isEmpty ? emoji : nil)
+                                                } else {
+                                                    return current
+                                                }
+                                            })
                                         case .groupCreated, .channelMigratedFromGroup:
                                             let holesAtHistoryStart = transaction.getHole(containing: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1))
                                             for (space, _) in holesAtHistoryStart {
