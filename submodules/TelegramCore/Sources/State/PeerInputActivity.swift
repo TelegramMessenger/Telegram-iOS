@@ -68,7 +68,7 @@ extension PeerInputActivity {
                 self = .speakingInGroupCall(timestamp: timestamp)
             case .sendMessageChooseStickerAction:
                 self = .choosingSticker
-            case let .sendMessageHistoryImportAction:
+            case .sendMessageHistoryImportAction:
                 return nil
         }
     }
