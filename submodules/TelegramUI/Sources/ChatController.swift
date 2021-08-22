@@ -3769,7 +3769,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         |> distinctUntilChanged
         
-        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, context.engine.themes.getChatThemes(accountManager: context.sharedContext.accountManager, onlyCached: true), themeEmoticon, self.themeEmoticonPreviewPromise.get(), self.themeDarkAppearancePreviewPromise.get()).start(next: { [weak self] presentationData, chatThemes, themeEmoticon, themeEmoticonPreview, darkAppearancePreview in
+        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, context.engine.themes.getChatThemes(accountManager: context.sharedContext.accountManager, onlyCached: false), themeEmoticon, self.themeEmoticonPreviewPromise.get(), self.themeDarkAppearancePreviewPromise.get()).start(next: { [weak self] presentationData, chatThemes, themeEmoticon, themeEmoticonPreview, darkAppearancePreview in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
