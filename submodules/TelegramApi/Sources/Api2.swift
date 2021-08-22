@@ -4281,6 +4281,7 @@ public extension Api {
         case sendMessageUploadRoundAction(progress: Int32)
         case speakingInGroupCallAction
         case sendMessageHistoryImportAction(progress: Int32)
+        case sendMessageChooseStickerAction
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4374,6 +4375,12 @@ public extension Api {
                     }
                     serializeInt32(progress, buffer: buffer, boxed: false)
                     break
+                case .sendMessageChooseStickerAction:
+                    if boxed {
+                        buffer.appendInt32(-1336228175)
+                    }
+                    
+                    break
     }
     }
     
@@ -4409,6 +4416,8 @@ public extension Api {
                 return ("speakingInGroupCallAction", [])
                 case .sendMessageHistoryImportAction(let progress):
                 return ("sendMessageHistoryImportAction", [("progress", progress)])
+                case .sendMessageChooseStickerAction:
+                return ("sendMessageChooseStickerAction", [])
     }
     }
     
@@ -4504,6 +4513,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_sendMessageChooseStickerAction(_ reader: BufferReader) -> SendMessageAction? {
+            return Api.SendMessageAction.sendMessageChooseStickerAction
         }
     
     }

@@ -39,6 +39,10 @@ public final class TelegramEngine {
     public lazy var localization: Localization = {
         return Localization(account: self.account)
     }()
+    
+    public lazy var themes: Themes = {
+        return Themes(account: self.account)
+    }()
 
     public lazy var messages: Messages = {
         return Messages(account: self.account)

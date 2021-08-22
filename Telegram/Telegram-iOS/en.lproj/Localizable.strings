@@ -6622,6 +6622,21 @@ Sorry for the inconvenience.";
 "Group.Username.InvalidStartsWithUnderscore" = "Group names can't start with an underscore.";
 "Group.Username.InvalidEndsWithUnderscore" = "Group names can't end with an underscore.";
 
+"UserInfo.ChangeColors" = "Change Colors";
+
+"Conversation.Theme.Title" = "Select Theme";
+"Conversation.Theme.Apply" = "Apply Theme";
+"Conversation.Theme.NoTheme" = "No\nTheme";
+"Conversation.Theme.Reset" = "Reset Theme for This Chat";
+"Conversation.Theme.SwitchToDark" = "Switch to dark appearance";
+"Conversation.Theme.SwitchToLight" = "Switch to light appearance";
+
+"Notification.ChangedTheme" = "%1$@ changed chat theme to %2$@";
+"Notification.DisabledTheme" = "%@ disabled chat theme";
+
+"Notification.YouChangedTheme" = "You changed chat theme to %@";
+"Notification.YouDisabledTheme" = "You disabled chat theme";
+
 "Appstore.Cloud" = "**Cloud-based**\nUnlimited storage for chats,\nmedia and documents.";
 "Appstore.Cloud.Profile" = "**Jennifer**\n23 y.o. designer from San Francisco.";
 "Appstore.Creative" = "**Creative**\nColor themes, stickers, GIFs,\nvideo messages and more.";

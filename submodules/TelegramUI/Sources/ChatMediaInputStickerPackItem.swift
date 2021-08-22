@@ -225,13 +225,15 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                         self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: resource, animated: true, nilIfEmpty: true))
                         
                         let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
-                        self.imageNode.isHidden = loopAnimatedStickers
-                        
+    
                         let animatedStickerNode: AnimatedStickerNode
                         if let current = self.animatedStickerNode {
                             animatedStickerNode = current
                         } else {
                             animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode.started = { [weak self] in
+                                self?.imageNode.isHidden = true
+                            }
                             self.animatedStickerNode = animatedStickerNode
                             if let placeholderNode = self.placeholderNode {
                                 self.scalingNode.insertSubnode(animatedStickerNode, belowSubnode: placeholderNode)

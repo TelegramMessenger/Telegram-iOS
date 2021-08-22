@@ -66,6 +66,8 @@ extension PeerInputActivity {
                 self = .uploadingInstantVideo(progress: progress)
             case .speakingInGroupCallAction:
                 self = .speakingInGroupCall(timestamp: timestamp)
+            case .sendMessageChooseStickerAction:
+                self = .choosingSticker
             case let .sendMessageHistoryImportAction:
                 return nil
         }

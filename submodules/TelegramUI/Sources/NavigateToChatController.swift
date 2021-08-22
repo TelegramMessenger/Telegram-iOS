@@ -49,6 +49,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if params.activateInput {
                     controller.activateInput()
                 }
+                if params.changeColors {
+                    controller.presentThemeSelection()
+                }
                 if let botStart = params.botStart {
                     controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
                         return state.updatedBotStartPayload(botStart.payload)
@@ -115,6 +118,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
         }
         if params.activateInput {
             controller.activateInput()
+        }
+        if params.changeColors {
+            controller.presentThemeSelection()
         }
     }
     

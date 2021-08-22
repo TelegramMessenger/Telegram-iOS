@@ -181,6 +181,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[608050278] = { return Api.SendMessageAction.parse_sendMessageUploadRoundAction($0) }
     dict[-651419003] = { return Api.SendMessageAction.parse_speakingInGroupCallAction($0) }
     dict[-606432698] = { return Api.SendMessageAction.parse_sendMessageHistoryImportAction($0) }
+    dict[-1336228175] = { return Api.SendMessageAction.parse_sendMessageChooseStickerAction($0) }
     dict[-1137792208] = { return Api.PrivacyKey.parse_privacyKeyStatusTimestamp($0) }
     dict[1343122938] = { return Api.PrivacyKey.parse_privacyKeyChatInvite($0) }
     dict[1030105979] = { return Api.PrivacyKey.parse_privacyKeyPhoneCall($0) }

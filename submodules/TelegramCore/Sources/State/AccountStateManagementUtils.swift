@@ -1412,9 +1412,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 }
                 updatedState.deleteMessages(messageIds)
             case let .updateTheme(theme):
-                if let theme = TelegramTheme(apiTheme: theme) {
-                    updatedState.updateTheme(theme)
-                }
+                updatedState.updateTheme(TelegramTheme(apiTheme: theme))
             case let .updateMessageID(id, randomId):
                 updatedState.updatedOutgoingUniqueMessageIds[randomId] = id
             case .updateDialogFilters:

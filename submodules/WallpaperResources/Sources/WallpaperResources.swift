@@ -1291,7 +1291,7 @@ public func themeImage(account: Account, accountManager: AccountManager<Telegram
     }
 }
 
-public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, emoticon: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let colorsSignal: Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Int32?), NoError>
 
     var reference: MediaResourceReference?
@@ -1468,21 +1468,71 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                     }
                 }
                 
-                let incomingColors = colors.1
-                let incoming = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: incomingColors)
-                
-                let outgoingColors = colors.2
-                let outgoing = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: outgoingColors)
-                
                 c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
                 c.scaleBy(x: 1.0, y: -1.0)
                 c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                c.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
+                
+                let incomingColors = colors.1
+                if emoticon {
+                    let rect = CGRect(x: 8.0, y: 44.0, width: 48.0, height: 24.0)
+                    c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
+                    c.clip()
+                    
+                    if incomingColors.count >= 2 {
+                        let gradientColors = incomingColors.map { $0.cgColor } as CFArray
+
+                        var locations: [CGFloat] = []
+                        for i in 0 ..< incomingColors.count {
+                            let t = CGFloat(i) / CGFloat(incomingColors.count - 1)
+                            locations.append(t)
+                        }
+                        let colorSpace = CGColorSpaceCreateDeviceRGB()
+                        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: rect.minY), end: CGPoint(x: 0.0, y: rect.maxY), options: CGGradientDrawingOptions())
+                    } else if !incomingColors.isEmpty {
+                        c.setFillColor(incomingColors[0].cgColor)
+                        c.fill(rect)
+                    }
+                        
+                    c.resetClip()
+                } else {
+                    let incoming = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: incomingColors)
+                    c.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
+                }
                 
                 c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
                 c.scaleBy(x: -1.0, y: 1.0)
                 c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                c.draw(outgoing!.cgImage!, in: CGRect(x: 9.0, y: 12.0, width: 57.0, height: 16.0))
+                
+                let outgoingColors = colors.2
+                if emoticon {
+                    let rect = CGRect(x: 8.0, y: 72.0, width: 48.0, height: 24.0)
+                    c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
+                    c.clip()
+                    
+                    if outgoingColors.count >= 2 {
+                        let gradientColors = outgoingColors.map { $0.cgColor } as CFArray
+
+                        var locations: [CGFloat] = []
+                        for i in 0 ..< outgoingColors.count {
+                            let t = CGFloat(i) / CGFloat(outgoingColors.count - 1)
+                            locations.append(t)
+                        }
+                        let colorSpace = CGColorSpaceCreateDeviceRGB()
+                        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: rect.minY), end: CGPoint(x: 0.0, y: rect.maxY), options: CGGradientDrawingOptions())
+                    } else if !outgoingColors.isEmpty {
+                        c.setFillColor(outgoingColors[0].cgColor)
+                        c.fill(rect)
+                    }
+                        
+                    c.resetClip()
+                } else {
+                    let outgoing = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: outgoingColors)
+                    c.draw(outgoing!.cgImage!, in: CGRect(x: 9.0, y: 12.0, width: 57.0, height: 16.0))
+                }
             }
             addCorners(context, arguments: arguments)
             return context

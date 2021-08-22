@@ -528,6 +528,24 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+            case let .setChatTheme(emoji):
+                if emoji.isEmpty {
+                    if message.author?.id == accountPeerId {
+                        attributedString = NSAttributedString(string: strings.Notification_YouDisabledTheme, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                        let resultTitleString = strings.Notification_DisabledTheme(authorName)
+                        attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    }
+                } else {
+                    if message.author?.id == accountPeerId {
+                        attributedString = NSAttributedString(string: strings.Notification_YouChangedTheme(emoji).string, font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                        let resultTitleString = strings.Notification_ChangedTheme(authorName, emoji)
+                        attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
+                    }
+                }
             case .unknown:
                 attributedString = nil
             }

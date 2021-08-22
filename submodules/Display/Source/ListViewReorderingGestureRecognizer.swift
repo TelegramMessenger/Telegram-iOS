@@ -115,6 +115,9 @@ public final class ListViewReorderingGestureRecognizer: UIGestureRecognizer {
                         self.startLongPressTimer()
                     } else {
                         self.state = .began
+                        if let itemNode = self.itemNode {
+                            self.began(itemNode)
+                        }
                     }
                 } else {
                     self.state = .failed

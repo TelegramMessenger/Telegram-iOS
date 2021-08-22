@@ -130,7 +130,7 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
             case .speakingInGroupCall:
                 return .speakingInGroupCallAction
             case .choosingSticker:
-                return .sendMessageGamePlayAction
+                return .sendMessageChooseStickerAction
         }
     } else {
         return .sendMessageCancelAction
