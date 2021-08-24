@@ -383,6 +383,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             let result = self.contentNode.tapActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY), gesture: gesture, isEstimating: isEstimating)
 
             if item.message.adAttribute != nil {
+                if case .none = result {
+                    if self.contentNode.hasActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY)) {
+                        return .ignore
+                    }
+                }
                 return result
             }
 
