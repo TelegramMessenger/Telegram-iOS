@@ -698,6 +698,7 @@ public final class PendingMessageManager {
             } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                 var isForward = false
                 var hideSendersNames = false
+                var hideCaptions = false
                 var replyMessageId: Int32?
                 var scheduleTime: Int32?
                 
@@ -715,8 +716,9 @@ public final class PendingMessageManager {
                     } else if let attribute = attribute as? OutgoingScheduleInfoMessageAttribute {
                         flags |= Int32(1 << 10)
                         scheduleTime = attribute.scheduleTime
-                    } else if let _ = attribute as? ForwardHideSendersNamesMessageAttribute {
-                        hideSendersNames = true
+                    } else if let attribute = attribute as? ForwardOptionsMessageAttribute {
+                        hideSendersNames = attribute.hideNames
+                        hideCaptions = attribute.hideCaptions
                     }
                 }
                 
@@ -727,6 +729,9 @@ public final class PendingMessageManager {
                     }
                     if hideSendersNames {
                         flags |= (1 << 11)
+                    }
+                    if hideCaptions {
+                        flags |= (1 << 12)
                     }
                     
                     var forwardIds: [(MessageId, Int64)] = []

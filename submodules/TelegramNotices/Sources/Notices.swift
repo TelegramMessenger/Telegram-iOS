@@ -167,6 +167,8 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case locationProximityAlertTip = 20
     case nextChatSuggestionTip = 21
     case dismissedTrendingStickerPacks = 22
+    case chatSpecificThemesDarkPreviewTip = 23
+    case chatForwardOptionsTip = 24
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -305,6 +307,14 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func dismissedTrendingStickerPacks() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedTrendingStickerPacks.key)
+    }
+    
+    static func chatSpecificThemesDarkPreviewTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatSpecificThemesDarkPreviewTip.key)
+    }
+    
+    static func chatForwardOptionsTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatForwardOptionsTip.key)
     }
 }
 
@@ -810,6 +820,56 @@ public struct ApplicationSpecificNotice {
     public static func setDismissedTrendingStickerPacks(accountManager: AccountManager<TelegramAccountManagerTypes>, values: [Int64]) -> Signal<Void, NoError> {
         return accountManager.transaction { transaction -> Void in
             transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedTrendingStickerPacks(), ApplicationSpecificInt64ArrayNotice(values: values))
+        }
+    }
+    
+    public static func getChatSpecificThemesDarkPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatSpecificThemesDarkPreviewTip()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementChatSpecificThemesDarkPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatSpecificThemesDarkPreviewTip()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.chatSpecificThemesDarkPreviewTip(), ApplicationSpecificCounterNotice(value: currentValue))
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func getChatForwardOptionsTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatForwardOptionsTip()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementChatForwardOptionsTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatForwardOptionsTip()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.chatForwardOptionsTip(), ApplicationSpecificCounterNotice(value: currentValue))
+            
+            return Int(previousValue)
         }
     }
     

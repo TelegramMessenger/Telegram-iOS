@@ -2259,7 +2259,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         var transition: ContainedViewLayoutTransition = .immediate
         if case let .System(duration) = animation {
-            transition = .animated(duration: duration, curve: .spring)
+            if false, let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                transition = .animated(duration: duration, curve: .easeInOut)
+            } else {
+                transition = .animated(duration: duration, curve: .spring)
+            }
         }
         
         var forceBackgroundSide = false
@@ -2373,6 +2377,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.adminBadgeNode = nil
         }
         
+        var timingFunction = kCAMediaTimingFunctionSpring
+        if false, let subject = item.associatedData.subject, case .forwardedMessages = subject {
+            timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+        }
+        
         if let forwardInfoNode = forwardInfoSizeApply.1(bubbleContentWidth) {
             strongSelf.forwardInfoNode = forwardInfoNode
             var animateFrame = true
@@ -2390,7 +2399,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             forwardInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: CGSize(width: bubbleContentWidth, height: forwardInfoSizeApply.0.height))
             if case let .System(duration) = animation {
                 if animateFrame {
-                    forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoNode.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoNode.frame, duration: duration, timingFunction: timingFunction)
                 }
             }
         } else {
@@ -2409,7 +2418,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             replyInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: replyInfoSizeApply.0)
             if case let .System(duration) = animation {
                 if animateFrame {
-                    replyInfoNode.layer.animateFrame(from: previousReplyInfoNodeFrame, to: replyInfoNode.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    replyInfoNode.layer.animateFrame(from: previousReplyInfoNodeFrame, to: replyInfoNode.frame, duration: duration, timingFunction: timingFunction)
                 }
             }
         } else {
@@ -2672,12 +2681,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 if animateFrame {
-                    contentNode.layer.animateFrame(from: previousContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    contentNode.layer.animateFrame(from: previousContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: timingFunction)
                 } else if animateAlpha {
                     contentNode.animateInsertionIntoBubble(duration)
                     var previousAlignedContentNodeFrame = contentNodeFrame
                     previousAlignedContentNodeFrame.origin.x += backgroundFrame.size.width - strongSelf.backgroundNode.frame.size.width
-                    contentNode.layer.animateFrame(from: previousAlignedContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    contentNode.layer.animateFrame(from: previousAlignedContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: timingFunction)
                 }
             }
             contentNodeIndex += 1
@@ -2782,7 +2791,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 strongSelf.insertSubnode(actionButtonsNode, belowSubnode: strongSelf.messageAccessibilityArea)
             } else {
                 if case let .System(duration) = animation {
-                    actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: timingFunction)
                 }
             }
         } else if let actionButtonsNode = strongSelf.actionButtonsNode {

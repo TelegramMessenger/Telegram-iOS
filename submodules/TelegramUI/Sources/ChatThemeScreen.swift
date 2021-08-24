@@ -9,6 +9,7 @@ import AccountContext
 import SolidRoundedButtonNode
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramNotices
 import PresentationDataUtils
 import AnimationUI
 import MergeLists
@@ -19,7 +20,7 @@ private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
-        context.setFillColor(theme.actionSheet.inputBackgroundColor.cgColor)
+        context.setFillColor(UIColor(rgb: 0x808084, alpha: 0.1).cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
         
         context.setLineWidth(2.0)
@@ -42,6 +43,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     let themeReference: PresentationThemeReference?
     var selected: Bool
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let wallpaper: TelegramWallpaper?
     
     var stableId: Int {
@@ -64,6 +66,9 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
         if lhs.theme !== rhs.theme {
             return false
         }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.wallpaper != rhs.wallpaper {
             return false
         }
@@ -75,7 +80,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, action: @escaping (String?) -> Void) -> ListViewItem {
-        return ThemeSettingsThemeIconItem(context: context, emoticon: self.emoticon, themeReference: self.themeReference, selected: self.selected, theme: self.theme, wallpaper: self.wallpaper, action: action)
+        return ThemeSettingsThemeIconItem(context: context, emoticon: self.emoticon, themeReference: self.themeReference, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, action: action)
     }
 }
 
@@ -86,15 +91,17 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
     let themeReference: PresentationThemeReference?
     let selected: Bool
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let wallpaper: TelegramWallpaper?
     let action: (String?) -> Void
     
-    public init(context: AccountContext, emoticon: String?, themeReference: PresentationThemeReference?, selected: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper?, action: @escaping (String?) -> Void) {
+    public init(context: AccountContext, emoticon: String?, themeReference: PresentationThemeReference?, selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, action: @escaping (String?) -> Void) {
         self.context = context
         self.emoticon = emoticon
         self.themeReference = themeReference
         self.selected = selected
         self.theme = theme
+        self.strings = strings
         self.wallpaper = wallpaper
         self.action = action
     }
@@ -228,7 +235,9 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         self.imageNode = TransformImageNode()
         self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 82.0, height: 108.0))
         self.imageNode.isLayerBacked = true
-
+        self.imageNode.cornerRadius = 8.0
+        self.imageNode.clipsToBounds = true
+        
         self.overlayNode = ASImageNode()
         self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 84.0, height: 110.0))
         self.overlayNode.isLayerBacked = true
@@ -274,7 +283,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                 updatedSelected = true
             }
             
-            let text = NSAttributedString(string: "No\nTheme", font: Font.semibold(15.0), textColor: item.theme.actionSheet.controlAccentColor)
+            let text = NSAttributedString(string: item.strings.Conversation_Theme_NoTheme, font: Font.semibold(15.0), textColor: item.theme.actionSheet.controlAccentColor)
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: text, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let title = NSAttributedString(string: item.emoticon ?? "❌", font: Font.regular(22.0), textColor: .black)
@@ -287,13 +296,11 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                     
                     if updatedThemeReference || updatedWallpaper {
                         if let themeReference = item.themeReference {
-                            strongSelf.imageNode.cornerRadius = 0.0
                             strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, emoticon: true))
                             strongSelf.imageNode.backgroundColor = nil
                         }
                     }
                     if item.themeReference == nil {
-                        strongSelf.imageNode.cornerRadius = 9.0
                         strongSelf.imageNode.backgroundColor = item.theme.actionSheet.opaqueItemBackgroundColor
                     }
                     
@@ -312,7 +319,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
 
                     let imageSize = CGSize(width: 82.0, height: 108.0)
                     strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: 4.0, y: 6.0), size: imageSize)
-                    let applyLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(radius: 9.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: .clear))
+                    let applyLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: .clear))
                     applyLayout()
                     
                     strongSelf.overlayNode.frame = strongSelf.imageNode.frame.insetBy(dx: -1.0, dy: -1.0)
@@ -368,6 +375,14 @@ final class ChatThemeScreen: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    var passthroughHitTestImpl: ((CGPoint) -> UIView?)? {
+        didSet {
+            if self.isNodeLoaded {
+                self.controllerNode.passthroughHitTestImpl = self.passthroughHitTestImpl
+            }
+        }
+    }
+    
     init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), initiallySelectedEmoticon: String?, dismissByTapOutside: Bool = true, previewTheme: @escaping (String?) -> Void, previewDarkTheme: @escaping (Bool) -> Void, completion: @escaping (String?) -> Void) {
         self.context = context
         self.presentationData = updatedPresentationData.initial
@@ -404,6 +419,7 @@ final class ChatThemeScreen: ViewController {
     
     override public func loadDisplayNode() {
         self.displayNode = ChatThemeScreenNode(context: self.context, presentationData: self.presentationData, initiallySelectedEmoticon: self.initiallySelectedEmoticon, dismissByTapOutside: self.dismissByTapOutside)
+        self.controllerNode.passthroughHitTestImpl = self.passthroughHitTestImpl
         self.controllerNode.previewTheme = { [weak self] emoticon in
             guard let strongSelf = self else {
                 return
@@ -411,7 +427,7 @@ final class ChatThemeScreen: ViewController {
             strongSelf.previewTheme(emoticon ?? "")
         }
         self.controllerNode.present = { [weak self] c in
-            self?.present(c, in: .window(.root))
+            self?.present(c, in: .current)
         }
         self.controllerNode.previewDarkTheme = { [weak self] dark in
             guard let strongSelf = self else {
@@ -632,15 +648,15 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 
             var entries: [ThemeSettingsThemeEntry] = []
             if strongSelf.initiallySelectedEmoticon != nil {
-                entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: nil, themeReference: nil, selected: selectedEmoticon == nil, theme: presentationData.theme, wallpaper: nil))
+                entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: nil, themeReference: nil, selected: selectedEmoticon == nil, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             for theme in themes {
-                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: theme.emoji, themeReference: .cloud(PresentationCloudTheme(theme: isDarkAppearance ? theme.darkTheme : theme.theme, resolvedWallpaper: nil, creatorAccountId: nil)), selected: selectedEmoticon == theme.emoji, theme: presentationData.theme, wallpaper: nil))
+                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: theme.emoji, themeReference: .cloud(PresentationCloudTheme(theme: isDarkAppearance ? theme.darkTheme : theme.theme, resolvedWallpaper: nil, creatorAccountId: nil)), selected: selectedEmoticon == theme.emoji, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             
             let action: (String?) -> Void = { [weak self] emoticon in
                 if let strongSelf = self, strongSelf.selectedEmoticon != emoticon {
-                    strongSelf.animateCrossfade(updateSunIcon: true)
+                    strongSelf.animateCrossfade(animateBackground: strongSelf.presentationData.theme.overallDarkAppearance, updateSunIcon: true)
                                         
                     strongSelf.selectedEmoticon = emoticon
                     strongSelf.previewTheme?(emoticon)
@@ -749,10 +765,12 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     }
     
     @objc func switchThemePressed() {
-        self.animateCrossfade()
+        self.animateCrossfade(animateBackground: true)
         self.animationNode.setAnimation(name: self.presentationData.theme.overallDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
         self.animationNode.playOnce()
         self.previewDarkTheme?(!self.presentationData.theme.overallDarkAppearance)
+        
+        let _ = ApplicationSpecificNotice.incrementChatSpecificThemesDarkPreviewTip(accountManager: self.context.sharedContext.accountManager, count: 3).start()
     }
     
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -761,21 +779,23 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
     }
     
-    private func animateCrossfade(updateSunIcon: Bool = false) {
+    private func animateCrossfade(animateBackground: Bool = true, updateSunIcon: Bool = false) {
+        let delay: Double = animateBackground ? 0.0 : 0.1
+        
         if let snapshotView = self.animationNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.animationNode.frame
             self.animationNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.animationNode.view)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }
         
-        if let snapshotView = self.backgroundNode.view.snapshotView(afterScreenUpdates: false) {
+        if animateBackground, let snapshotView = self.backgroundNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.backgroundNode.frame
             self.backgroundNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.backgroundNode.view)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }
@@ -784,7 +804,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             snapshotView.frame = self.contentContainerNode.frame
             self.contentContainerNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.contentContainerNode.view)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }
@@ -814,13 +834,20 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         
         let frame = self.switchThemeButton.view.convert(self.switchThemeButton.bounds, to: self.view)
         
-        Queue.mainQueue().after(1.0) {
-            if !self.animatedOut {
-                self.present?(TooltipScreen(text: self.presentationData.theme.overallDarkAppearance ? self.presentationData.strings.Conversation_Theme_SwitchToLight : self.presentationData.strings.Conversation_Theme_SwitchToDark, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 3.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
-                    return .dismiss(consume: false)
-                }))
+        let _ = (ApplicationSpecificNotice.getChatSpecificThemesDarkPreviewTip(accountManager: self.context.sharedContext.accountManager)
+        |> deliverOnMainQueue).start(next: { [weak self] count in
+            if let strongSelf = self, count < 3 {
+                Queue.mainQueue().after(1.0) {
+                    if !strongSelf.animatedOut {
+                        strongSelf.present?(TooltipScreen(text: strongSelf.presentationData.theme.overallDarkAppearance ? strongSelf.presentationData.strings.Conversation_Theme_SwitchToLight : strongSelf.presentationData.strings.Conversation_Theme_SwitchToDark, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 3.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+                            return .dismiss(consume: false)
+                        }))
+                        
+                        let _ = ApplicationSpecificNotice.incrementChatSpecificThemesDarkPreviewTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                    }
+                }
             }
-        }
+        })
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
@@ -843,17 +870,22 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         
         let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
         let dimPosition = self.dimNode.layer.position
-        self.dimNode.layer.animatePosition(from: dimPosition, to: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-        self.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+        self.dimNode.layer.animatePosition(from: dimPosition, to: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
+        self.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             offsetCompleted = true
             internalCompletion()
         })
     }
     
+    var passthroughHitTestImpl: ((CGPoint) -> UIView?)?
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.bounds.contains(point) {
             if !self.contentBackgroundNode.bounds.contains(self.convert(point, to: self.contentBackgroundNode)) {
-                return self.dimNode.view
+                if let result = self.passthroughHitTestImpl?(point) {
+                    return result
+                } else {
+                    return nil
+                }
             }
         }
         return super.hitTest(point, with: event)

@@ -1725,7 +1725,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     })
                 }
                 
-                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context, displayBackground: true)
+                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context, presentationData: self.presentationData, displayBackground: true)
                 mediaAccessoryPanel.containerNode.headerNode.displayScrubber = item.playbackData?.type != .instantVideo
                 mediaAccessoryPanel.getController = { [weak self] in
                     return self?.navigationController?.topViewController as? ViewController

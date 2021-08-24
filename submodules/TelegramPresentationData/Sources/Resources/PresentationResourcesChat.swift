@@ -195,7 +195,7 @@ public struct PresentationResourcesChat {
             return generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setBlendMode(.copy)
-                context.setStrokeColor(theme.chat.inputPanel.panelControlColor.cgColor)
+                context.setStrokeColor(theme.chat.inputPanel.panelControlAccentColor.cgColor)
                 context.setLineWidth(2.0)
                 context.setLineCap(.round)
                 context.move(to: CGPoint(x: 1.0, y: 1.0))
@@ -223,6 +223,30 @@ public struct PresentationResourcesChat {
     public static func chatInputPanelVerticalSeparatorLineImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelVerticalSeparatorLineImage.rawValue, { theme in
             return generateVerticallyStretchableFilledCircleImage(radius: 1.0, color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    public static func chatInputPanelForwardIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelForwardIconImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/ForwardIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    public static func chatInputPanelReplyIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelReplyIconImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/ReplyIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    public static func chatInputPanelEditIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelEditIconImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/EditIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    public static func chatInputPanelWebpageIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelWebpageIconImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/WebpageIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
         })
     }
     

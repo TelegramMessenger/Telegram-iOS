@@ -113,7 +113,7 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
                 return true
             case _ as EmojiSearchQueryMessageAttribute:
                 return true
-            case _ as ForwardHideSendersNamesMessageAttribute:
+            case _ as ForwardOptionsMessageAttribute:
                 return true
             default:
                 return false
@@ -132,7 +132,7 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
                 return true
             case _ as OutgoingScheduleInfoMessageAttribute:
                 return true
-            case _ as ForwardHideSendersNamesMessageAttribute:
+            case _ as ForwardOptionsMessageAttribute:
                 return true
             default:
                 return false
@@ -520,6 +520,8 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                 case let .forward(source, grouping, requestedAttributes, correlationId):
                     let sourceMessage = transaction.getMessage(source)
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
+                        var messageText = sourceMessage.text
+                        
                         if let peer = peer as? TelegramSecretChat {
                             var isAction = false
                             for media in sourceMessage.media {
@@ -564,10 +566,21 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         var forwardInfo: StoreMessageForwardInfo?
                         
                         var hideSendersNames = false
+                        var hideCaptions = false
                         for attribute in requestedAttributes {
-                            if let _ = attribute as? ForwardHideSendersNamesMessageAttribute {
-                                hideSendersNames = true
+                            if let attribute = attribute as? ForwardOptionsMessageAttribute {
+                                hideSendersNames = attribute.hideNames
+                                hideCaptions = attribute.hideCaptions
                                 break
+                            }
+                        }
+                        
+                        if hideCaptions {
+                            for media in sourceMessage.media {
+                                if media is TelegramMediaImage || media is TelegramMediaFile {
+                                    messageText = ""
+                                    break
+                                }
                             }
                         }
                         
@@ -725,7 +738,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             augmentedMediaList = augmentedMediaList.map(convertForwardedMediaForSecretChat)
                         }
                                                 
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, threadId: threadId, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: augmentedMediaList))
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, threadId: threadId, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: augmentedMediaList))
                     }
             }
         }

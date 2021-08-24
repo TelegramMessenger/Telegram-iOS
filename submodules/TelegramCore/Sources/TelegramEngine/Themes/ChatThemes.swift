@@ -111,7 +111,7 @@ func _internal_getChatThemes(accountManager: AccountManager<TelegramAccountManag
     }
 }
 
-func _internal_setChatTheme(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, emoji: String?) -> Signal<Void, NoError> {
+func _internal_setChatTheme(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, emoticon: String?) -> Signal<Void, NoError> {
     return postbox.loadedPeerWithId(peerId)
     |> mapToSignal { peer in
         guard let inputPeer = apiInputPeer(peer) else {
@@ -121,17 +121,17 @@ func _internal_setChatTheme(postbox: Postbox, network: Network, stateManager: Ac
         return postbox.transaction { transaction -> Signal<Void, NoError> in
             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                 if let current = current as? CachedUserData {
-                    return current.withUpdatedThemeEmoticon(emoji)
+                    return current.withUpdatedThemeEmoticon(emoticon)
                 } else if let current = current as? CachedGroupData {
-                    return current.withUpdatedThemeEmoticon(emoji)
+                    return current.withUpdatedThemeEmoticon(emoticon)
                 } else if let current = current as? CachedChannelData {
-                    return current.withUpdatedThemeEmoticon(emoji)
+                    return current.withUpdatedThemeEmoticon(emoticon)
                 } else {
                     return current
                 }
             })
             
-            return network.request(Api.functions.messages.setChatTheme(peer: inputPeer, emoticon: emoji ?? ""))
+            return network.request(Api.functions.messages.setChatTheme(peer: inputPeer, emoticon: emoticon ?? ""))
             |> `catch` { error in
                 return .complete()
             }

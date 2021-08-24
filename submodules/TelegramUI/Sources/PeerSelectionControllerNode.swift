@@ -58,7 +58,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     var requestOpenDisabledPeer: ((Peer) -> Void)?
     var requestOpenPeerFromSearch: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
-    var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode, Bool) -> Void)?
+    var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -193,10 +193,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, forwardSelectedMessages: {
         }, forwardCurrentForwardMessages: {
         }, forwardMessages: { _ in
-        }, updateForwardMessageHideSendersNames: { [weak self] value in
+        }, updateForwardOptionsState: { [weak self] value in
             if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageHideSendersNames(value) }) })
+                strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState($0.forwardOptionsState) }) })
             }
+        }, presentForwardOptions: { _ in
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: { [weak self] f in
             if let strongSelf = self {
@@ -334,7 +335,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     func beginSelection() {
         if let _ = self.textInputPanelNode {
         } else {
-            let forwardAccessoryPanelNode = ForwardAccessoryPanelNode(context: self.context, messageIds: self.forwardedMessageIds, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.chatFontSize, nameDisplayOrder: self.presentationData.nameDisplayOrder, hideSendersNames: false)
+            let forwardAccessoryPanelNode = ForwardAccessoryPanelNode(context: self.context, messageIds: self.forwardedMessageIds, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.chatFontSize, nameDisplayOrder: self.presentationData.nameDisplayOrder, forwardOptionsState: self.presentationInterfaceState.interfaceState.forwardOptionsState)
             forwardAccessoryPanelNode.interfaceInteraction = self.interfaceInteraction
             self.addSubnode(forwardAccessoryPanelNode)
             self.forwardAccessoryPanelNode = forwardAccessoryPanelNode
@@ -347,7 +348,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 }
                 
                 let effectiveInputText = strongSelf.presentationInterfaceState.interfaceState.composeInputState.inputText
-                let hideSendersNames = strongSelf.presentationInterfaceState.interfaceState.forwardMessageHideSendersNames
+                let forwardOptionsState = strongSelf.presentationInterfaceState.interfaceState.forwardOptionsState
                 
                 if strongSelf.contactListActive {
                     strongSelf.contactListNode?.multipleSelection = true
@@ -362,7 +363,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         }
                     }
                     if !selectedPeers.isEmpty {
-                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, hideSendersNames)
+                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, forwardOptionsState)
                     }
                 } else {
                     var selectedPeerIds: [PeerId] = []
@@ -379,7 +380,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                                 selectedPeers.append(peer)
                             }
                         }
-                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, hideSendersNames)
+                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, forwardOptionsState)
                     }
                 }
             }
@@ -454,7 +455,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         if let forwardAccessoryPanelNode = self.forwardAccessoryPanelNode {
             let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height))
             forwardAccessoryPanelNode.updateState(size: size, interfaceState: self.presentationInterfaceState)
-            forwardAccessoryPanelNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, hideSendersNames: self.presentationInterfaceState.interfaceState.forwardMessageHideSendersNames)
+            forwardAccessoryPanelNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, forwardOptionsState: self.presentationInterfaceState.interfaceState.forwardOptionsState)
             let panelFrame = CGRect(x: layout.safeInsets.left, y: layout.size.height - (textPanelHeight ?? 0.0) - size.height, width: size.width - layout.safeInsets.left - layout.safeInsets.right, height: size.height)
             
             accessoryHeight = size.height

@@ -6,7 +6,6 @@ import Emoji
 import AccountContext
 import TelegramPresentationData
 
-
 func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData, historyAppearsCleared: Bool, pendingUnpinnedAllMessages: Bool, pendingRemovedMessages: Set<MessageId>, associatedData: ChatMessageItemAssociatedData, updatingMedia: [MessageId: ChatUpdatingMessageMedia], customChannelDiscussionReadState: MessageId?, customThreadOutgoingReadState: MessageId?) -> [ChatHistoryEntry] {
     if historyAppearsCleared {
         return []

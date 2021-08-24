@@ -12,6 +12,10 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         return (nil, nil)
     }
     
+    if case .forwardedMessages = chatPresentationInterfaceState.subject {
+        return (nil, nil)
+    }
+    
     if let _ = chatPresentationInterfaceState.search {
         var selectionPanel: ChatMessageSelectionInputPanelNode?
         if let selectionState = chatPresentationInterfaceState.interfaceState.selectionState {

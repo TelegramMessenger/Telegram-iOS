@@ -6588,10 +6588,46 @@ Sorry for the inconvenience.";
 
 "Conversation.ForwardOptions.Text" = "What whould you like to do with %1$@ from %2$@?";
 "Conversation.ForwardOptions.TextPersonal" = "What whould you like to do with %1$@ from your chat with %2$@?";
-"Conversation.ForwardOptions.ForwardToAnotherChat" = "Forward to Another Chat";
+"Conversation.ForwardOptions.ShowOptions" = "Show Forwarding Options";
 "Conversation.ForwardOptions.CancelForwarding" = "Cancel Forwarding";
+
+"Conversation.ForwardOptions.HideSendersName" = "Hide Sender's Name";
+"Conversation.ForwardOptions.ShowSendersName" = "Show Sender's Name";
+
 "Conversation.ForwardOptions.HideSendersNames" = "Hide Senders' Names";
 "Conversation.ForwardOptions.ShowSendersNames" = "Show Senders' Names";
+
+"Conversation.ForwardOptions.ShowCaption" = "Show Captions";
+"Conversation.ForwardOptions.HideCaption" = "Hide Captions";
+
+"Conversation.ForwardOptions.ChangeRecipient" = "Change Recipient";
+"Conversation.ForwardOptions.SendMessage" = "Send Message";
+"Conversation.ForwardOptions.SendMessages" = "Send Messages";
+
+"Conversation.ForwardOptions.TapForOptions" = "Tap here for forwarding options";
+
+"Conversation.ForwardOptions.UserMessageForwardVisible" = "%@ will see that it was forwarded";
+"Conversation.ForwardOptions.UserMessageForwardHidden" = "%@ won't see that it was forwarded";
+"Conversation.ForwardOptions.UserMessagesForwardVisible" = "%@ will see they were forwarded";
+"Conversation.ForwardOptions.UserMessagesForwardHidden" = "%@ won't see they were forwarded";
+
+"Conversation.ForwardOptions.GroupMessageForwardVisible" = "Members will see that it was forwarded";
+"Conversation.ForwardOptions.GroupMessageForwardHidden" = "Members won't see that it was forwarded";
+"Conversation.ForwardOptions.GroupMessagesForwardVisible" = "Members will see they were forwarded";
+"Conversation.ForwardOptions.GroupMessagesForwardHidden" = "Members won't see they were forwarded";
+
+"Conversation.ForwardOptions.ChannelMessageForwardVisible" = "Subscribers will see that it was forwarded";
+"Conversation.ForwardOptions.ChannelMessageForwardHidden" = "Subscribers won't see that it was forwarded";
+"Conversation.ForwardOptions.ChannelMessagesForwardVisible" = "Subscribers will see they were forwarded";
+"Conversation.ForwardOptions.ChannelMessagesForwardHidden" = "Subscribers won't see they were forwarded";
+
+"Conversation.ForwardOptions.ForwardTitleSingle" = "Forward Message";
+"Conversation.ForwardOptions.ForwardTitle_1" = "Forward %@ Message";
+"Conversation.ForwardOptions.ForwardTitle_2" = "Forward %@ Messages";
+"Conversation.ForwardOptions.ForwardTitle_3_10" = "Forward %@ Messages";
+"Conversation.ForwardOptions.ForwardTitle_any" = "Forward %@ Messages";
+"Conversation.ForwardOptions.ForwardTitle_many" = "Forward %@ Messages";
+"Conversation.ForwardOptions.ForwardTitle_0" = "Forward %@ Messages";
 
 "Conversation.ForwardOptions.Title_1" = "%@ Message";
 "Conversation.ForwardOptions.Title_2" = "%@ Messages";
@@ -6606,8 +6642,6 @@ Sorry for the inconvenience.";
 "Conversation.ForwardOptions.Messages_any" = "%@ messages";
 "Conversation.ForwardOptions.Messages_many" = "%@ messages";
 "Conversation.ForwardOptions.Messages_0" = "%@ messages";
-
-"Conversation.ForwardOptions.You" = "You (senders' names hidden)";
 
 "Activity.ChoosingSticker" = "choosing sticker";
 "WallpaperPreview.Animate" = "Animate";
@@ -6668,3 +6702,5 @@ Sorry for the inconvenience.";
 "Appstore.Secure" = "**Secure**\nAll chats are protected\nwith strong encryption.";
 "Appstore.Secure.Chat" = "**Little Sister**\nAny gift ideas for mom?\n**You**A dog!\n**You**I'm serious. Let's get her a puppy. \n**You**\nI saw this!\n**Little Sister**\nI needed proof this was your idea!";
 "Appstore.Secure.Chat.Name" = "**Little Sister**";
+
+"Conversation.ReplyMessagePanelTitle" = "Reply to %@";

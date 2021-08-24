@@ -2447,7 +2447,7 @@ func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes
                                         })
                                     }
                                     switch action.action {
-                                        case let .setChatTheme(emoji):
+                                        case let .setChatTheme(emoticon):
                                             transaction.updatePeerCachedData(peerIds: [message.id.peerId], update: { peerId, current in
                                                 var current = current
                                                 if current == nil {
@@ -2460,11 +2460,11 @@ func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes
                                                     }
                                                 }
                                                 if let cachedData = current as? CachedUserData {
-                                                    return cachedData.withUpdatedThemeEmoticon(!emoji.isEmpty ? emoji : nil)
+                                                    return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
                                                 } else if let cachedData = current as? CachedGroupData {
-                                                    return cachedData.withUpdatedThemeEmoticon(!emoji.isEmpty ? emoji : nil)
+                                                    return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
                                                 } else if let cachedData = current as? CachedChannelData {
-                                                    return cachedData.withUpdatedThemeEmoticon(!emoji.isEmpty ? emoji : nil)
+                                                    return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
                                                 } else {
                                                     return current
                                                 }
