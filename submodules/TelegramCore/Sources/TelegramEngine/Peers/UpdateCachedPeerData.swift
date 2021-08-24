@@ -210,6 +210,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 
                                     return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
                                         .withUpdatedAutoremoveTimeout(autoremoveTimeout)
+                                        .withUpdatedThemeEmoticon(userFull.themeEmoticon)
                             }
                         })
                         return true
@@ -320,6 +321,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         .withUpdatedPhoto(photo)
                                         .withUpdatedActiveCall(updatedActiveCall)
                                         .withUpdatedCallJoinPeerId(groupCallDefaultJoinAs?.peerId)
+                                        .withUpdatedThemeEmoticon(chatFull.themeEmoticon)
                                 })
                             case .channelFull:
                                 break
@@ -540,6 +542,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedCallJoinPeerId(groupcallDefaultJoinAs?.peerId)
                                                     .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                                                     .withUpdatedPendingSuggestions(pendingSuggestions ?? [])
+                                                    .withUpdatedThemeEmoticon(themeEmoticon)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

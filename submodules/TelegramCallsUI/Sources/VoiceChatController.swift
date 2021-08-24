@@ -6160,17 +6160,6 @@ public final class VoiceChatController: ViewController {
             }), in: .window(.root))
         }
         
-        private func displayToggleVideoSourceTooltip(screencast: Bool) {
-//            guard let videoContainerNode = self.mainStageVideoContainerNode else {
-//                return
-//            }
-//
-//            let location = videoContainerNode.view.convert(videoContainerNode.otherVideoWrapperNode.frame, to: nil)
-//            self.controller?.present(TooltipScreen(text: screencast ? self.presentationData.strings.VoiceChat_TapToViewCameraVideo : self.presentationData.strings.VoiceChat_TapToViewScreenVideo, icon: nil, location: .point(location.offsetBy(dx: -9.0, dy: 0.0), .right), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
-//                return .dismiss(consume: false)
-//            }), in: .window(.root))
-        }
-        
         private var isScheduled: Bool {
             return self.isScheduling || self.callState?.scheduleTimestamp != nil
         }

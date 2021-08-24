@@ -319,7 +319,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             return transaction.getPeer(peerId)
         }
         |> deliverOnMainQueue).start(next: { peer in
-            guard let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) else {
+            guard let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) else {
                 return
             }
             pushControllerImpl?(controller)

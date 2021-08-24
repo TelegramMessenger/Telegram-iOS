@@ -351,6 +351,7 @@ private enum SharedDataKeyValues: Int32 {
     case themeSettings = 6
     case countriesList = 7
     case wallapersState = 8
+    case chatThemes = 9
 }
 
 public struct SharedDataKeys {
@@ -399,6 +400,12 @@ public struct SharedDataKeys {
     public static let wallapersState: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: SharedDataKeyValues.wallapersState.rawValue)
+        return key
+    }()
+    
+    public static let chatThemes: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: SharedDataKeyValues.chatThemes.rawValue)
         return key
     }()
 }
