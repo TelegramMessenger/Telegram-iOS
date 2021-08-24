@@ -1981,7 +1981,7 @@ public final class GroupCallParticipantsContext {
         self.updateMuteState(peerId: self.myPeerId, muteState: nil, volume: nil, raiseHand: false)
     }
     
-    public func updateShouldBeRecording(_ shouldBeRecording: Bool, title: String?) {
+    public func updateShouldBeRecording(_ shouldBeRecording: Bool, title: String?, videoOrientation: Bool?) {
         var flags: Int32 = 0
         if shouldBeRecording {
             flags |= 1 << 0
@@ -1989,7 +1989,13 @@ public final class GroupCallParticipantsContext {
         if let title = title, !title.isEmpty {
             flags |= (1 << 1)
         }
-        self.updateShouldBeRecordingDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallRecord(flags: flags, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), title: title))
+        var videoPortrait: Api.Bool?
+        if let videoOrientation = videoOrientation {
+            flags |= (1 << 2)
+            videoPortrait = videoOrientation ? .boolTrue : .boolFalse
+        }
+
+        self.updateShouldBeRecordingDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallRecord(flags: flags, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), title: title, videoPortrait: videoPortrait))
         |> deliverOnMainQueue).start(next: { [weak self] updates in
             guard let strongSelf = self else {
                 return

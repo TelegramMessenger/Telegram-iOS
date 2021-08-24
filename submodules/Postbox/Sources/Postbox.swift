@@ -712,6 +712,11 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
     }
+
+    public func putItemCacheEntryData(id: ItemCacheEntryId, entry: Data, collectionSpec: ItemCacheCollectionSpec) {
+        assert(!self.disposed)
+        self.postbox?.putItemCacheEntryData(id: id, entry: entry, collectionSpec: collectionSpec)
+    }
     
     public func removeItemCacheEntry(id: ItemCacheEntryId) {
         assert(!self.disposed)
@@ -721,6 +726,11 @@ public final class Transaction {
     public func retrieveItemCacheEntry(id: ItemCacheEntryId) -> PostboxCoding? {
         assert(!self.disposed)
         return self.postbox?.retrieveItemCacheEntry(id: id)
+    }
+
+    public func retrieveItemCacheEntryData(id: ItemCacheEntryId) -> Data? {
+        assert(!self.disposed)
+        return self.postbox?.retrieveItemCacheEntryData(id: id)
     }
     
     public func clearItemCacheCollection(collectionId: ItemCacheCollectionId) {
@@ -2332,9 +2342,18 @@ public final class Postbox {
         self.itemCacheTable.put(id: id, entry: entry, metaTable: self.itemCacheMetaTable)
         self.currentUpdatedCacheEntryKeys.insert(id)
     }
+
+    fileprivate func putItemCacheEntryData(id: ItemCacheEntryId, entry: Data, collectionSpec: ItemCacheCollectionSpec) {
+        self.itemCacheTable.putData(id: id, entry: entry, metaTable: self.itemCacheMetaTable)
+        self.currentUpdatedCacheEntryKeys.insert(id)
+    }
     
     func retrieveItemCacheEntry(id: ItemCacheEntryId) -> PostboxCoding? {
         return self.itemCacheTable.retrieve(id: id, metaTable: self.itemCacheMetaTable)
+    }
+
+    func retrieveItemCacheEntryData(id: ItemCacheEntryId) -> Data? {
+        return self.itemCacheTable.retrieveData(id: id, metaTable: self.itemCacheMetaTable)
     }
     
     func clearItemCacheCollection(collectionId: ItemCacheCollectionId) {

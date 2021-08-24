@@ -16,6 +16,9 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
     private let selectAll: Bool
     
     var shouldBeDismissed: Signal<Bool, NoError> {
+        if self.message.adAttribute != nil {
+            return .single(false)
+        }
         let viewKey = PostboxViewKey.messages(Set([self.message.id]))
         return self.postbox.combinedView(keys: [viewKey])
         |> map { views -> Bool in

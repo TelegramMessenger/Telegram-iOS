@@ -288,6 +288,72 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single([])
     }
+
+    if messages.count == 1, let _ = messages[0].adAttribute {
+        let message = messages[0]
+
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+        var actions: [ContextMenuItem] = []
+        //TODO:localize
+        actions.append(.action(ContextMenuActionItem(text: "What are sponsored\nmessages?", textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+        }, iconSource: nil, action: { _, f in
+            f(.default)
+        })))
+
+        actions.append(.separator)
+
+        actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+        }, action: { _, f in
+            let copyTextWithEntities = {
+                var messageEntities: [MessageTextEntity]?
+                var restrictedText: String?
+                for attribute in message.attributes {
+                    if let attribute = attribute as? TextEntitiesMessageAttribute {
+                        messageEntities = attribute.entities
+                    }
+                    if let attribute = attribute as? RestrictedContentMessageAttribute {
+                        restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                    }
+                }
+
+                if let restrictedText = restrictedText {
+                    storeMessageTextInPasteboard(restrictedText, entities: nil)
+                } else {
+                    storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                }
+
+                Queue.mainQueue().after(0.2, {
+                    let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
+                    controllerInteraction.displayUndo(content)
+                })
+            }
+
+            copyTextWithEntities()
+            f(.default)
+        })))
+
+        if let author = message.author, let addressName = author.addressName {
+            let link = "https://t.me/\(addressName)"
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                UIPasteboard.general.string = link
+
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+                Queue.mainQueue().after(0.2, {
+                    controllerInteraction.displayUndo(.linkCopied(text: presentationData.strings.Conversation_LinkCopied))
+                })
+
+                f(.default)
+            })))
+        }
+
+        return .single(actions)
+    }
     
     var loadStickerSaveStatus: MediaId?
     var loadCopyMediaResource: MediaResource?

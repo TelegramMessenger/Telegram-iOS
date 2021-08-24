@@ -18,13 +18,13 @@ final class VoiceChatRecordingSetupController: ViewController {
     }
     
     private let context: AccountContext
-    private let completion: () -> Void
+    private let completion: (Bool?) -> Void
     
     private var animatedIn = false
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, completion: @escaping () -> Void) {
+    init(context: AccountContext, completion: @escaping (Bool?) -> Void) {
         self.context = context
         self.completion = completion
         
@@ -54,8 +54,8 @@ final class VoiceChatRecordingSetupController: ViewController {
     
     override public func loadDisplayNode() {
         self.displayNode = VoiceChatRecordingSetupControllerNode(controller: self, context: self.context)
-        self.controllerNode.completion = { [weak self] in
-            self?.completion()
+        self.controllerNode.completion = { [weak self] videoOrientation in
+            self?.completion(videoOrientation)
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -143,7 +143,7 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
     private var mediaMode: MediaMode = .videoAndAudio
     private var videoMode: VideoMode = .portrait
     
-    var completion: (() -> Void)?
+    var completion: ((Bool?) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
@@ -304,7 +304,19 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
     }
     
     @objc private func donePressed() {
-        self.completion?()
+        let videoOrientation: Bool?
+        switch self.mediaMode {
+        case .audioOnly:
+            videoOrientation = nil
+        case .videoAndAudio:
+            switch self.videoMode {
+            case .portrait:
+                videoOrientation = true
+            case .landscape:
+                videoOrientation = false
+            }
+        }
+        self.completion?(videoOrientation)
         self.dismiss?()
     }
     
