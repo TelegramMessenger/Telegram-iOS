@@ -2551,7 +2551,7 @@ public final class VoiceChatController: ViewController {
 
                             let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_StopRecordingTitle, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StopRecordingStop, action: {
                                 if let strongSelf = self {
-                                    strongSelf.call.setShouldBeRecording(false, title: nil)
+                                    strongSelf.call.setShouldBeRecording(false, title: nil, videoOrientation: nil)
 
                                     strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: strongSelf.presentationData.strings.VoiceChat_RecordingSaved), action: { [weak self] value in
                                         if case .info = value, let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
@@ -2581,9 +2581,9 @@ public final class VoiceChatController: ViewController {
                                     return
                                 }
 
-                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] in
+                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
                                     if let strongSelf = self {
-                                        strongSelf.call.setShouldBeRecording(true, title: "")
+                                        strongSelf.call.setShouldBeRecording(true, title: "", videoOrientation: videoOrientation)
 
                                         strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
                                         strongSelf.call.playTone(.recordingStarted)

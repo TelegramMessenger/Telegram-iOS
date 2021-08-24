@@ -71,10 +71,21 @@ final class ItemCacheTable: Table {
             self.valueBox.set(self.table, key: self.itemKey(id: id), value: encoder.readBufferNoCopy())
         })
     }
+
+    func putData(id: ItemCacheEntryId, entry: Data, metaTable: ItemCacheMetaTable) {
+        self.valueBox.set(self.table, key: self.itemKey(id: id), value: ReadBuffer(data: entry))
+    }
     
     func retrieve(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) -> PostboxCoding? {
         if let value = self.valueBox.get(self.table, key: self.itemKey(id: id)), let entry = PostboxDecoder(buffer: value).decodeRootObject() {
             return entry
+        }
+        return nil
+    }
+
+    func retrieveData(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) -> Data? {
+        if let value = self.valueBox.get(self.table, key: self.itemKey(id: id)) {
+            return value.makeData()
         }
         return nil
     }

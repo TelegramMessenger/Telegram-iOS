@@ -443,7 +443,7 @@ public protocol PresentationGroupCall: AnyObject {
     func playTone(_ tone: PresentationGroupCallTone)
     
     func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState?
-    func setShouldBeRecording(_ shouldBeRecording: Bool, title: String?)
+    func setShouldBeRecording(_ shouldBeRecording: Bool, title: String?, videoOrientation: Bool?)
     
     func updateTitle(_ title: String)
     

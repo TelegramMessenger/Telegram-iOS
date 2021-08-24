@@ -19217,6 +19217,76 @@ public extension Api {
         }
     
     }
+    public enum SponsoredMessage: TypeConstructorDescription {
+        case sponsoredMessage(flags: Int32, randomId: Buffer, peerId: Api.Peer, fromId: Api.Peer, message: String, media: Api.MessageMedia?, entities: [Api.MessageEntity]?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .sponsoredMessage(let flags, let randomId, let peerId, let fromId, let message, let media, let entities):
+                    if boxed {
+                        buffer.appendInt32(-160304943)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeBytes(randomId, buffer: buffer, boxed: false)
+                    peerId.serialize(buffer, true)
+                    fromId.serialize(buffer, true)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {media!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .sponsoredMessage(let flags, let randomId, let peerId, let fromId, let message, let media, let entities):
+                return ("sponsoredMessage", [("flags", flags), ("randomId", randomId), ("peerId", peerId), ("fromId", fromId), ("message", message), ("media", media), ("entities", entities)])
+    }
+    }
+    
+        public static func parse_sponsoredMessage(_ reader: BufferReader) -> SponsoredMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Buffer?
+            _2 = parseBytes(reader)
+            var _3: Api.Peer?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _4: Api.Peer?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Api.MessageMedia?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+            } }
+            var _7: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, peerId: _3!, fromId: _4!, message: _5!, media: _6, entities: _7)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum BaseTheme: TypeConstructorDescription {
         case baseThemeClassic
         case baseThemeDay

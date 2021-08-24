@@ -469,6 +469,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
+    private let adSeenProcessingManager = ChatMessageThrottledProcessingManager()
     private let messageReactionsProcessingManager = ChatMessageThrottledProcessingManager()
     private let seenLiveLocationProcessingManager = ChatMessageThrottledProcessingManager()
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
@@ -556,6 +557,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var freezeOverscrollControl: Bool = false
     private var feedback: HapticFeedback?
     var openNextChannelToRead: ((EnginePeer, TelegramEngine.NextUnreadChannelLocation) -> Void)?
+
+    private let adMessagesContext: AdMessagesHistoryContext?
     
     private let clientId: Atomic<Int32>
     
@@ -581,6 +584,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.chatPresentationDataPromise = Promise(self.currentPresentationData)
         
         self.prefetchManager = InChatPrefetchManager(context: context)
+
+        let adMessages: Signal<[Message], NoError>
+        if case .bubbles = mode, case let .peer(peerId) = chatLocation, case .none = subject {
+            let adMessagesContext = context.engine.messages.adMessages(peerId: peerId)
+            self.adMessagesContext = adMessagesContext
+            adMessages = adMessagesContext.state
+        } else {
+            self.adMessagesContext = nil
+            adMessages = .single([])
+        }
         
         let clientId = Atomic<Int32>(value: nextClientId)
         self.clientId = clientId
@@ -605,6 +618,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.messageProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateViewCountForMessageIds(messageIds: messageIds, clientId: clientId.with { $0 })
+        }
+        self.adSeenProcessingManager.process = { [weak self] messageIds in
+            guard let strongSelf = self, let adMessagesContext = strongSelf.adMessagesContext else {
+                return
+            }
+            for id in messageIds {
+                if let message = strongSelf.messageInCurrentHistoryView(id), let adAttribute = message.adAttribute {
+                    adMessagesContext.markAsSeen(opaqueId: adAttribute.opaqueId)
+                }
+            }
         }
         self.messageReactionsProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateReactionsForMessageIds(messageIds: messageIds)
@@ -846,8 +869,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             animatedEmojiStickers,
             customChannelDiscussionReadState,
             customThreadOutgoingReadState,
-            self.currentlyPlayingMessageIdPromise.get()
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, currentlyPlayingMessageId in
+            self.currentlyPlayingMessageIdPromise.get(),
+            adMessages
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, currentlyPlayingMessageId, adMessages in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -932,7 +956,26 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId)
                 
-                let filteredEntries = chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared, pendingUnpinnedAllMessages: pendingUnpinnedAllMessages, pendingRemovedMessages: pendingRemovedMessages, associatedData: associatedData, updatingMedia: updatingMedia, customChannelDiscussionReadState: customChannelDiscussionReadState, customThreadOutgoingReadState: customThreadOutgoingReadState)
+                let filteredEntries = chatHistoryEntriesForView(
+                    location: chatLocation,
+                    view: view,
+                    includeUnreadEntry: mode == .bubbles,
+                    includeEmptyEntry: mode == .bubbles && tagMask == nil,
+                    includeChatInfoEntry: mode == .bubbles,
+                    includeSearchEntry: includeSearchEntry && tagMask != nil,
+                    reverse: reverse,
+                    groupMessages: mode == .bubbles,
+                    selectedMessages: selectedMessages,
+                    presentationData: chatPresentationData,
+                    historyAppearsCleared: historyAppearsCleared,
+                    pendingUnpinnedAllMessages: pendingUnpinnedAllMessages,
+                    pendingRemovedMessages: pendingRemovedMessages,
+                    associatedData: associatedData,
+                    updatingMedia: updatingMedia,
+                    customChannelDiscussionReadState: customChannelDiscussionReadState,
+                    customThreadOutgoingReadState: customThreadOutgoingReadState,
+                    adMessages: adMessages
+                )
                 let lastHeaderId = filteredEntries.last.flatMap { listMessageDateHeaderId(timestamp: $0.index.timestamp) } ?? 0
                 let processedView = ChatHistoryView(originalView: view, filteredEntries: filteredEntries, associatedData: associatedData, lastHeaderId: lastHeaderId, id: id, locationInput: update.2)
                 let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages))
@@ -1334,6 +1377,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             let toLaterRange = (historyView.filteredEntries.count - 1 - (visible.firstIndex - 1), historyView.filteredEntries.count - 1)
             
             var messageIdsWithViewCount: [MessageId] = []
+            var messageIdsWithAds: [MessageId] = []
             var messageIdsWithUpdateableReactions: [MessageId] = []
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
@@ -1360,6 +1404,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.id.namespace == Namespaces.Message.Cloud {
                                     messageIdsWithViewCount.append(message.id)
                                 }
+                            } else if attribute is AdMessageAttribute {
+                                messageIdsWithAds.append(message.id)
                             } else if attribute is ReplyThreadMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
                                     messageIdsWithViewCount.append(message.id)
@@ -1528,6 +1574,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             if !messageIdsWithViewCount.isEmpty {
                 self.messageProcessingManager.add(messageIdsWithViewCount)
+            }
+            if !messageIdsWithAds.isEmpty {
+                self.adSeenProcessingManager.add(messageIdsWithAds)
             }
             if !messageIdsWithUpdateableReactions.isEmpty {
                 self.messageReactionsProcessingManager.add(messageIdsWithUpdateableReactions)
