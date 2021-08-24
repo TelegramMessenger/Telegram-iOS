@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-
 public enum EnqueueMessageGrouping {
     case none
     case auto
@@ -114,6 +113,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
                 return true
             case _ as EmojiSearchQueryMessageAttribute:
                 return true
+            case _ as ForwardHideSendersNamesMessageAttribute:
+                return true
             default:
                 return false
         }
@@ -130,6 +131,8 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
             case _ as NotificationInfoMessageAttribute:
                 return true
             case _ as OutgoingScheduleInfoMessageAttribute:
+                return true
+            case _ as ForwardHideSendersNamesMessageAttribute:
                 return true
             default:
                 return false
@@ -560,6 +563,14 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         
                         var forwardInfo: StoreMessageForwardInfo?
                         
+                        var hideSendersNames = false
+                        for attribute in requestedAttributes {
+                            if let _ = attribute as? ForwardHideSendersNamesMessageAttribute {
+                                hideSendersNames = true
+                                break
+                            }
+                        }
+                        
                         if sourceMessage.id.namespace == Namespaces.Message.Cloud && peerId.namespace != Namespaces.Peer.SecretChat {
                             attributes.append(ForwardSourceInfoAttribute(messageId: sourceMessage.id))
                         
@@ -606,7 +617,9 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 }
                             }
                             
-                            if let sourceForwardInfo = sourceMessage.forwardInfo {
+                            if hideSendersNames {
+                                
+                            } else if let sourceForwardInfo = sourceMessage.forwardInfo {
                                 forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author?.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature, psaType: nil, flags: [])
                             } else {
                                 if sourceMessage.id.peerId != account.peerId {

@@ -107,6 +107,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var titleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
     
     private var inputPanelNode: ChatInputPanelNode?
+    private(set) var inputPanelOverscrollNode: ChatInputPanelOverscrollNode?
     private weak var currentDismissedInputPanelNode: ASDisplayNode?
     private var secondaryInputPanelNode: ChatInputPanelNode?
     private(set) var accessoryPanelNode: AccessoryPanelNode?
@@ -246,7 +247,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.inputContextPanelContainer = ChatControllerTitlePanelNodeContainer()
 
         var getMessageTransitionNode: (() -> ChatMessageTransitionNode?)?
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
+        self.historyNode = ChatHistoryListNode(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
             return getMessageTransitionNode?()
         })
         self.historyNode.rotated = true
@@ -819,7 +820,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else {
             insets = layout.insets(options: [.input])
         }
-        
+
         if case .overlay = self.chatPresentationInterfaceState.mode {
             insets.top = 44.0
         } else {
@@ -987,7 +988,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let _ = accessoryPanelNode as? ReplyAccessoryPanelNode {
                             strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedReplyMessageId(nil) })
                         } else if let _ = accessoryPanelNode as? ForwardAccessoryPanelNode {
-                            strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedForwardMessageIds(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedForwardMessageIds(nil).withUpdatedForwardMessageHideSendersNames(false) })
                         } else if let _ = accessoryPanelNode as? EditAccessoryPanelNode {
                             strongSelf.interfaceInteraction?.setupEditMessage(nil, { _ in })
                         } else if let _ = accessoryPanelNode as? WebpagePreviewAccessoryPanelNode {
@@ -1151,7 +1152,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var displayTopDimNode = false
         let ensureTopInsetForOverlayHighlightedItems: CGFloat? = nil
         var expandTopDimNode = false
-        if case let .media(_, expanded) = self.chatPresentationInterfaceState.inputMode, expanded != nil {
+        if case let .media(_, expanded, _) = self.chatPresentationInterfaceState.inputMode, expanded != nil {
             displayTopDimNode = true
             expandTopDimNode = true
         }
@@ -1229,7 +1230,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let apparentSecondaryInputPanelFrame = secondaryInputPanelFrame
         var apparentInputBackgroundFrame = inputBackgroundFrame
         var apparentNavigateButtonsFrame = navigateButtonsFrame
-        if case let .media(_, maybeExpanded) = self.chatPresentationInterfaceState.inputMode, let expanded = maybeExpanded, case .search = expanded, let inputPanelFrame = inputPanelFrame {
+        if case let .media(_, maybeExpanded, _) = self.chatPresentationInterfaceState.inputMode, let expanded = maybeExpanded, case .search = expanded, let inputPanelFrame = inputPanelFrame {
             let verticalOffset = -inputPanelFrame.height - 41.0
             apparentInputPanelFrame = inputPanelFrame.offsetBy(dx: 0.0, dy: verticalOffset)
             apparentInputBackgroundFrame.size.height -= verticalOffset
@@ -1853,11 +1854,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let inputNode = ChatMediaInputNode(context: self.context, peerId: peerId, chatLocation: self.chatPresentationInterfaceState.chatLocation, controllerInteraction: self.controllerInteraction, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, theme: theme, strings: strings, fontSize: fontSize, gifPaneIsActiveUpdated: { [weak self] value in
                 if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                     interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
-                        if case let .media(_, expanded) = state.inputMode {
+                        if case let .media(_, expanded, focused) = state.inputMode {
                             if value {
-                                return (.media(mode: .gif, expanded: expanded), nil)
+                                return (.media(mode: .gif, expanded: expanded, focused: focused), nil)
                             } else {
-                                return (.media(mode: .other, expanded: expanded), nil)
+                                return (.media(mode: .other, expanded: expanded, focused: focused), nil)
                             }
                         } else {
                             return (state.inputMode, nil)
@@ -2111,8 +2112,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     @objc func topDimNodeTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { state in
-                if case let .media(mode, expanded) = state.inputMode, expanded != nil {
-                    return (.media(mode: mode, expanded: nil), nil)
+                if case let .media(mode, expanded, focused) = state.inputMode, expanded != nil {
+                    return (.media(mode: mode, expanded: nil, focused: focused), nil)
                 } else {
                     return (state.inputMode, nil)
                 }
@@ -2121,10 +2122,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func scrollToTop() {
-        if case let .media(_, maybeExpanded) = self.chatPresentationInterfaceState.inputMode, maybeExpanded != nil {
+        if case let .media(_, maybeExpanded, _) = self.chatPresentationInterfaceState.inputMode, maybeExpanded != nil {
             self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { state in
-                if case let .media(mode, expanded) = state.inputMode, expanded != nil {
-                    return (.media(mode: mode, expanded: expanded), nil)
+                if case let .media(mode, expanded, focused) = state.inputMode, expanded != nil {
+                    return (.media(mode: mode, expanded: expanded, focused: focused), nil)
                 } else {
                     return (state.inputMode, nil)
                 }
@@ -2258,7 +2259,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             |> deliverOnMainQueue).start(next: { [weak self] in
                 self?.openStickersDisposable = nil
                 self?.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-                    return (.media(mode: .other, expanded: nil), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+                    return (.media(mode: .other, expanded: nil, focused: false), state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
                 })
             })
         }
@@ -2351,8 +2352,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 if !messages.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
                     if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                        var attributes: [MessageAttribute] = []
+                        if self.chatPresentationInterfaceState.interfaceState.forwardMessageHideSendersNames {
+                            attributes.append(ForwardHideSendersNamesMessageAttribute())
+                        }
                         for id in forwardMessageIds {
-                            messages.append(.forward(source: id, grouping: .auto, attributes: [], correlationId: nil))
+                            messages.append(.forward(source: id, grouping: .auto, attributes: attributes, correlationId: nil))
                         }
                     }
 
@@ -2378,7 +2383,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
                             strongSelf.ignoreUpdateHeight = true
                             textInputPanelNode.text = ""
-                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardMessageHideSendersNames(false).withUpdatedComposeDisableUrlPreview(nil) })
                             strongSelf.ignoreUpdateHeight = false
                         }
                     }, usedCorrelationId)
@@ -2490,6 +2495,18 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
 
+    var shouldAllowOverscrollActions: Bool {
+        if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
+            if inputPanelNode.isFocused {
+                return false
+            }
+            if !inputPanelNode.text.isEmpty {
+                return false
+            }
+        }
+        return true
+    }
+
     final class SnapshotState {
         fileprivate let historySnapshotState: ChatHistoryListNode.SnapshotState
         let titleViewSnapshotState: ChatTitleView.SnapshotState?
@@ -2534,8 +2551,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         )
     }
 
-    func animateFromSnapshot(_ snapshotState: SnapshotState) {
-        self.historyNode.animateFromSnapshot(snapshotState.historySnapshotState)
+    func animateFromSnapshot(_ snapshotState: SnapshotState, completion: @escaping () -> Void) {
+        self.historyNode.animateFromSnapshot(snapshotState.historySnapshotState, completion: completion)
         self.navigateButtons.animateFromSnapshot(snapshotState.navigationButtonsSnapshotState)
 
         if let titleAccessoryPanelSnapshot = snapshotState.titleAccessoryPanelSnapshot {
@@ -2569,6 +2586,56 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 navigationBar.backgroundNode.update(size: previousFrame.size, transition: .immediate)
                 navigationBar.backgroundNode.update(size: currentFrame.size, transition: .animated(duration: 0.5, curve: .spring))
             }
+        }
+    }
+
+    private var preivousChatInputPanelOverscrollNodeTimestamp: Double = 0.0
+
+    func setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode?) {
+        let directionUp: Bool
+        if let overscrollNode = overscrollNode {
+            if let current = self.inputPanelOverscrollNode {
+                directionUp = current.priority > overscrollNode.priority
+            } else {
+                directionUp = true
+            }
+        } else {
+            directionUp = false
+        }
+
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .easeInOut)
+
+        let timestamp = CFAbsoluteTimeGetCurrent()
+        if self.preivousChatInputPanelOverscrollNodeTimestamp > timestamp - 0.05 {
+            if let inputPanelOverscrollNode = self.inputPanelOverscrollNode {
+                self.inputPanelOverscrollNode = nil
+                inputPanelOverscrollNode.removeFromSupernode()
+            }
+        }
+        self.preivousChatInputPanelOverscrollNodeTimestamp = timestamp
+
+        if let inputPanelOverscrollNode = self.inputPanelOverscrollNode {
+            self.inputPanelOverscrollNode = nil
+            inputPanelOverscrollNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: directionUp ? -5.0 : 5.0), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
+            inputPanelOverscrollNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak inputPanelOverscrollNode] _ in
+                inputPanelOverscrollNode?.removeFromSupernode()
+            })
+        }
+
+        if let inputPanelNode = self.inputPanelNode, let overscrollNode = overscrollNode {
+            self.inputPanelOverscrollNode = overscrollNode
+            inputPanelNode.supernode?.insertSubnode(overscrollNode, aboveSubnode: inputPanelNode)
+
+            overscrollNode.frame = inputPanelNode.frame
+            overscrollNode.update(size: overscrollNode.bounds.size)
+
+            overscrollNode.layer.animatePosition(from: CGPoint(x: 0.0, y: directionUp ? 5.0 : -5.0), to: CGPoint(), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, additive: true)
+            overscrollNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        }
+
+        if let inputPanelNode = self.inputPanelNode {
+            transition.updateAlpha(node: inputPanelNode, alpha: overscrollNode == nil ? 1.0 : 0.0)
+            transition.updateSublayerTransformOffset(layer: inputPanelNode.layer, offset: CGPoint(x: 0.0, y: overscrollNode == nil ? 0.0 : -5.0))
         }
     }
 }

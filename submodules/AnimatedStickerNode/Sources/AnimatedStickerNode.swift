@@ -869,6 +869,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.timer.swap(nil)?.invalidate()
     }
     
+    private weak var nodeToCopyFrameFrom: AnimatedStickerNode?
     override public func didLoad() {
         super.didLoad()
         
@@ -879,7 +880,21 @@ public final class AnimatedStickerNode: ASDisplayNode {
         //self.renderer = MetalAnimationRenderer()
         #endif
         self.renderer?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+        if let contents = self.nodeToCopyFrameFrom?.renderer?.contents {
+            self.renderer?.contents = contents
+        }
+        self.nodeToCopyFrameFrom = nil
         self.addSubnode(self.renderer!)
+    }
+    
+    public func cloneCurrentFrame(from otherNode: AnimatedStickerNode?) {
+        if let renderer = self.renderer {
+            if let contents = otherNode?.renderer?.contents {
+                renderer.contents = contents
+            }
+        } else {
+            self.nodeToCopyFrameFrom = otherNode
+        }
     }
 
     public func setup(source: AnimatedStickerNodeSource, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
@@ -973,7 +988,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     private var isSetUpForPlayback = false
-    
+        
     public func play(firstFrame: Bool = false, fromIndex: Int? = nil) {
         switch self.playbackMode {
         case .once:

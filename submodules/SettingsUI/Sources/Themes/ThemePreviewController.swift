@@ -145,7 +145,7 @@ public final class ThemePreviewController: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] theme, presentationTheme in
             if let strongSelf = self, let theme = theme {
                 let titleView = CounterContollerTitleView(theme: strongSelf.previewTheme)
-                titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount)))
+                titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount ?? 0)))
                 strongSelf.navigationItem.titleView = titleView
                 strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings))
             }

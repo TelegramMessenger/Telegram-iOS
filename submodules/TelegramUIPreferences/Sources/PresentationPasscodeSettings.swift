@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
@@ -74,13 +75,13 @@ public struct PresentationPasscodeSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updatePresentationPasscodeSettingsInteractively(accountManager: AccountManager, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) -> Signal<Void, NoError> {
+public func updatePresentationPasscodeSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         updatePresentationPasscodeSettingsInternal(transaction: transaction, f)
     }
 }
 
-public func updatePresentationPasscodeSettingsInternal(transaction: AccountManagerModifier, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) {
+public func updatePresentationPasscodeSettingsInternal(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, _ f: @escaping (PresentationPasscodeSettings) -> PresentationPasscodeSettings) {
     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings, { entry in
         let currentSettings: PresentationPasscodeSettings
         if let entry = entry as? PresentationPasscodeSettings {

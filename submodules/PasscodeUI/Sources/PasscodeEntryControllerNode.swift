@@ -18,7 +18,7 @@ private let subtitleFont = Font.regular(15.0)
 private let buttonFont = Font.regular(17.0)
 
 final class PasscodeEntryControllerNode: ASDisplayNode {
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private var presentationData: PresentationData
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -53,7 +53,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     var checkPasscode: ((String) -> Void)?
     var requestBiometrics: (() -> Void)?
     
-    init(accountManager: AccountManager, presentationData: PresentationData, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, modalPresentation: Bool) {
+    init(accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, modalPresentation: Bool) {
         self.accountManager = accountManager
         self.presentationData = presentationData
         self.theme = theme
@@ -207,7 +207,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
                 let baseColor: UIColor
                 let lightness = color.lightness
                 if lightness < 0.1 || lightness > 0.9 {
-                    baseColor = self.theme.chat.message.outgoing.bubble.withoutWallpaper.fill
+                    baseColor = self.theme.chat.message.outgoing.bubble.withoutWallpaper.fill[0]
                 } else{
                     baseColor = color
                 }

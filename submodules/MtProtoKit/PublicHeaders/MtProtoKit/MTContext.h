@@ -56,6 +56,8 @@
 
 + (MTQueue * _Nonnull)contextQueue;
 
++ (void)performWithObjCTry:(dispatch_block_t _Nonnull)block;
+
 - (instancetype _Nonnull)initWithSerialization:(id<MTSerialization> _Nonnull)serialization encryptionProvider:(id<EncryptionProvider> _Nonnull)encryptionProvider apiEnvironment:(MTApiEnvironment * _Nonnull)apiEnvironment isTestingEnvironment:(bool)isTestingEnvironment useTempAuthKeys:(bool)useTempAuthKeys;
 
 - (void)performBatchUpdates:(void (^ _Nonnull)())block;

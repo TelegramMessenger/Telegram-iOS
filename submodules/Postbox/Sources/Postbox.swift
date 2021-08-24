@@ -87,6 +87,22 @@ public final class Transaction {
         assert(!self.disposed)
         return self.postbox!.messageHistoryThreadHoleIndexTable.closest(peerId: peerId, threadId: threadId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1))
     }
+
+    public func getThreadMessageCount(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, fromId: Int32?, toIndex: MessageIndex) -> Int? {
+        assert(!self.disposed)
+        let fromIndex: MessageIndex?
+        if let fromId = fromId {
+            fromIndex = self.postbox!.messageHistoryIndexTable.closestIndex(id: MessageId(peerId: peerId, namespace: namespace, id: fromId))
+        } else {
+            fromIndex = nil
+        }
+
+        if let fromIndex = fromIndex {
+            return self.postbox!.messageHistoryThreadsTable.getMessageCountInRange(threadId: threadId, peerId: peerId, namespace: namespace, lowerBound: fromIndex, upperBound: toIndex)
+        } else {
+            return nil
+        }
+    }
     
     public func doesChatListGroupContainHoles(groupId: PeerGroupId) -> Bool {
         assert(!self.disposed)
@@ -696,6 +712,11 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
     }
+
+    public func putItemCacheEntryData(id: ItemCacheEntryId, entry: Data, collectionSpec: ItemCacheCollectionSpec) {
+        assert(!self.disposed)
+        self.postbox?.putItemCacheEntryData(id: id, entry: entry, collectionSpec: collectionSpec)
+    }
     
     public func removeItemCacheEntry(id: ItemCacheEntryId) {
         assert(!self.disposed)
@@ -705,6 +726,11 @@ public final class Transaction {
     public func retrieveItemCacheEntry(id: ItemCacheEntryId) -> PostboxCoding? {
         assert(!self.disposed)
         return self.postbox?.retrieveItemCacheEntry(id: id)
+    }
+
+    public func retrieveItemCacheEntryData(id: ItemCacheEntryId) -> Data? {
+        assert(!self.disposed)
+        return self.postbox?.retrieveItemCacheEntryData(id: id)
     }
     
     public func clearItemCacheCollection(collectionId: ItemCacheCollectionId) {
@@ -2316,9 +2342,18 @@ public final class Postbox {
         self.itemCacheTable.put(id: id, entry: entry, metaTable: self.itemCacheMetaTable)
         self.currentUpdatedCacheEntryKeys.insert(id)
     }
+
+    fileprivate func putItemCacheEntryData(id: ItemCacheEntryId, entry: Data, collectionSpec: ItemCacheCollectionSpec) {
+        self.itemCacheTable.putData(id: id, entry: entry, metaTable: self.itemCacheMetaTable)
+        self.currentUpdatedCacheEntryKeys.insert(id)
+    }
     
     func retrieveItemCacheEntry(id: ItemCacheEntryId) -> PostboxCoding? {
         return self.itemCacheTable.retrieve(id: id, metaTable: self.itemCacheMetaTable)
+    }
+
+    func retrieveItemCacheEntryData(id: ItemCacheEntryId) -> Data? {
+        return self.itemCacheTable.retrieveData(id: id, metaTable: self.itemCacheMetaTable)
     }
     
     func clearItemCacheCollection(collectionId: ItemCacheCollectionId) {

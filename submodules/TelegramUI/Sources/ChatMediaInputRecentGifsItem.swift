@@ -124,15 +124,17 @@ final class ChatMediaInputRecentGifsItemNode: ListViewItemNode {
         let expandScale: CGFloat = expanded ? 1.0 : boundingImageScale
         let expandTransition: ContainedViewLayoutTransition = self.currentExpanded != expanded ? .animated(duration: 0.3, curve: .spring) : .immediate
         expandTransition.updateTransformScale(node: self.scalingNode, scale: expandScale)
-        expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -2.0 : 3.0)))
+        expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -53.0 : -7.0)))
 
-        expandTransition.updateAlpha(node: self.titleNode, alpha: expanded ? 1.0 : 0.0)
         let titleSize = self.titleNode.updateLayout(CGSize(width: expandedBoundingSize.width - 8.0, height: expandedBoundingSize.height))
         
-        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 2.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 6.0), size: titleSize)
         let displayTitleFrame = expanded ? titleFrame : CGRect(origin: CGPoint(x: titleFrame.minX, y: self.imageNode.position.y - titleFrame.size.height), size: titleFrame.size)
         expandTransition.updateFrameAsPositionAndBounds(node: self.titleNode, frame: displayTitleFrame)
         expandTransition.updateTransformScale(node: self.titleNode, scale: expanded ? 1.0 : 0.001)
+        
+        let alphaTransition: ContainedViewLayoutTransition = self.currentExpanded != expanded ? .animated(duration: expanded ? 0.15 : 0.1, curve: .linear) : .immediate
+        alphaTransition.updateAlpha(node: self.titleNode, alpha: expanded ? 1.0 : 0.0, delay: expanded ? 0.05 : 0.0)
         
         self.currentExpanded = expanded
         

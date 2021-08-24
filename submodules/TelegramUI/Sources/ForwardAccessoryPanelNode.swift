@@ -6,10 +6,13 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
+import TelegramUIPreferences
 import AccountContext
 import LocalizedPeerData
 import AlertUI
 import PresentationDataUtils
+import TextFormat
+import Markdown
 
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
     for media in message.media {
@@ -76,6 +79,8 @@ func textStringForForwardedMessage(_ message: Message, strings: PresentationStri
 final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
     let messageIds: [MessageId]
+    private var authors: String?
+    private var sourcePeer: (isPersonal: Bool, displayTitle: String)?
     
     let closeButton: ASButtonNode
     let lineNode: ASImageNode
@@ -87,14 +92,20 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     let context: AccountContext
     var theme: PresentationTheme
     var strings: PresentationStrings
-
+    var fontSize: PresentationFontSize
+    var nameDisplayOrder: PresentationPersonNameOrder
+    var hideSendersNames: Bool
+    
     private var validLayout: (size: CGSize, interfaceState: ChatPresentationInterfaceState)?
     
-    init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, nameDisplayOrder: PresentationPersonNameOrder, hideSendersNames: Bool) {
         self.context = context
         self.messageIds = messageIds
         self.theme = theme
         self.strings = strings
+        self.fontSize = fontSize
+        self.nameDisplayOrder = nameDisplayOrder
+        self.hideSendersNames = hideSendersNames
         
         self.closeButton = ASButtonNode()
         self.closeButton.accessibilityLabel = strings.VoiceOver_DiscardPreparedContent
@@ -133,6 +144,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                 var authors = ""
                 var uniquePeerIds = Set<PeerId>()
                 var text = ""
+                var sourcePeer: (Bool, String)?
                 for message in messages {
                     if let author = message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
                         uniquePeerIds.insert(author.id)
@@ -140,6 +152,9 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                             authors.append(", ")
                         }
                         authors.append(author.compactDisplayTitle)
+                    }
+                    if let peer = message.peers[message.id.peerId] {
+                        sourcePeer = (peer.id.namespace == Namespaces.Peer.CloudUser, peer.displayTitle(strings: strongSelf.strings, displayOrder: strongSelf.nameDisplayOrder))
                     }
                 }
                 if messages.count == 1 {
@@ -149,7 +164,15 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                     text = strings.ForwardedMessages(Int32(messages.count))
                 }
                 
-                strongSelf.titleNode.attributedText = NSAttributedString(string: authors, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                strongSelf.sourcePeer = sourcePeer
+                strongSelf.authors = authors
+                
+                if strongSelf.hideSendersNames {
+                    strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.Conversation_ForwardOptions_You, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                } else {
+                    strongSelf.titleNode.attributedText = NSAttributedString(string: authors, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                }
+                
                 strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
                 
                 let headerString: String
@@ -178,20 +201,27 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     }
     
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        if self.theme !== theme || self.strings !== strings {
+        self.updateThemeAndStrings(theme: theme, strings: strings, hideSendersNames: self.hideSendersNames)
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, hideSendersNames: Bool) {
+        if self.theme !== theme || self.strings !== strings || self.hideSendersNames != hideSendersNames {
             self.theme = theme
             self.strings = strings
+            self.hideSendersNames = hideSendersNames
             
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
             
             self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
             
-            if let text = self.titleNode.attributedText?.string {
-                self.titleNode.attributedText = NSAttributedString(string: text, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
+            if hideSendersNames {
+                self.titleNode.attributedText = NSAttributedString(string: strings.Conversation_ForwardOptions_You, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
+            } else if let authors = self.authors {
+                self.titleNode.attributedText = NSAttributedString(string: authors, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
             }
             
             if let text = self.textNode.attributedText?.string {
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
             }
             
             if let (size, interfaceState) = self.validLayout {
@@ -208,14 +238,16 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.validLayout = (size, interfaceState)
 
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
-        let leftInset: CGFloat = 55.0
+        let inset: CGFloat = interfaceState.renderedPeer == nil ? 19.0 : 55.0
+        let leftInset: CGFloat = inset
+        let rightInset: CGFloat = inset
         let textLineInset: CGFloat = 10.0
-        let rightInset: CGFloat = 55.0
         let textRightInset: CGFloat = 20.0
 
         let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
         let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - rightInset - closeButtonSize.width + 12.0, y: 2.0), size: closeButtonSize)
         self.closeButton.frame = closeButtonFrame
+        self.closeButton.isHidden = interfaceState.renderedPeer == nil
 
         self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
 
@@ -229,9 +261,28 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     }
     
     @objc func closePressed() {
-        let alertController = textAlertController(context: self.context, title: self.strings.Conversation_CancelForwardTitle, text: self.strings.Conversation_CancelForwardText, actions: [TextAlertAction(type: .genericAction, title: self.strings.Conversation_CancelForwardSelectChat, action: { [weak self] in
+        guard let (isPersonal, peerDisplayTitle) = self.sourcePeer else {
+            return
+        }
+        let messageCount = Int32(self.messageIds.count)
+        let messages = self.strings.Conversation_ForwardOptions_Messages(messageCount)
+        let string = isPersonal ? self.strings.Conversation_ForwardOptions_TextPersonal(messages, peerDisplayTitle) : self.strings.Conversation_ForwardOptions_Text(messages, peerDisplayTitle)
+        
+        let font = Font.regular(floor(self.fontSize.baseDisplaySize * 15.0 / 17.0))
+        let boldFont = Font.semibold(floor(self.fontSize.baseDisplaySize * 15.0 / 17.0))
+        let body = MarkdownAttributeSet(font: font, textColor: self.theme.actionSheet.secondaryTextColor)
+        let bold = MarkdownAttributeSet(font: boldFont, textColor: self.theme.actionSheet.secondaryTextColor)
+        
+        let title = NSAttributedString(string: self.strings.Conversation_ForwardOptions_Title(messageCount), font: Font.semibold(floor(self.fontSize.baseDisplaySize)), textColor: self.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+        let text = addAttributesToStringWithRanges(string._tuple, body: body, argumentAttributes: [0: bold, 1: bold], textAlignment: .center)
+        
+        let alertController = richTextAlertController(context: self.context, title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: self.strings.Conversation_ForwardOptions_ForwardToAnotherChat, action: { [weak self] in
             self?.interfaceInteraction?.forwardCurrentForwardMessages()
-        }), TextAlertAction(type: .defaultAction, title: self.strings.Conversation_CancelForwardCancelForward, action: { [weak self] in
+        }), TextAlertAction(type: .genericAction, title: self.hideSendersNames ? self.strings.Conversation_ForwardOptions_ShowSendersNames : self.strings.Conversation_ForwardOptions_HideSendersNames, action: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.interfaceInteraction?.updateForwardMessageHideSendersNames(!strongSelf.hideSendersNames)
+            }
+        }), TextAlertAction(type: .destructiveAction, title: self.strings.Conversation_ForwardOptions_CancelForwarding, action: { [weak self] in
             self?.dismiss?()
         })], actionLayout: .vertical)
         self.interfaceInteraction?.presentController(alertController, nil)
@@ -239,7 +290,11 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.interfaceInteraction?.forwardCurrentForwardMessages()
+            if self.closeButton.isHidden {
+                self.interfaceInteraction?.updateForwardMessageHideSendersNames(!self.hideSendersNames)
+            } else {
+                self.closePressed()
+            }
         }
     }
 }

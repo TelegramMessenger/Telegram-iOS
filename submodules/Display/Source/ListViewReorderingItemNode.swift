@@ -25,14 +25,16 @@ private final class CopyView: UIView {
     let topShadow: UIImageView
     let bottomShadow: UIImageView
     
-    override init(frame: CGRect) {
+    init(frame: CGRect, hasShadow: Bool) {
         self.topShadow = UIImageView()
         self.bottomShadow = UIImageView()
         
         super.init(frame: frame)
         
-        self.topShadow.image = generateShadowImage(mirror: true)
-        self.bottomShadow.image = generateShadowImage(mirror: false)
+        if hasShadow {
+            self.topShadow.image = generateShadowImage(mirror: true)
+            self.bottomShadow.image = generateShadowImage(mirror: false)
+        }
         
         self.addSubview(self.topShadow)
         self.addSubview(self.bottomShadow)
@@ -51,9 +53,9 @@ final class ListViewReorderingItemNode: ASDisplayNode {
     private let copyView: CopyView
     private let initialLocation: CGPoint
     
-    init(itemNode: ListViewItemNode, initialLocation: CGPoint) {
+    init(itemNode: ListViewItemNode, initialLocation: CGPoint, hasShadow: Bool) {
         self.itemNode = itemNode
-        self.copyView = CopyView(frame: CGRect())
+        self.copyView = CopyView(frame: CGRect(), hasShadow: hasShadow)
         let snapshotView = itemNode.snapshotForReordering()
         self.initialLocation = initialLocation
         
@@ -68,8 +70,6 @@ final class ListViewReorderingItemNode: ASDisplayNode {
         self.copyView.frame = CGRect(origin: CGPoint(x: initialLocation.x, y: initialLocation.y), size: itemNode.bounds.size)
         
         self.copyView.topShadow.frame = CGRect(origin: CGPoint(x: 0.0, y: -30.0), size: CGSize(width: copyView.bounds.size.width, height: 45.0))
-        
-        self.copyView.bottomShadow.image = generateShadowImage(mirror: false)
         self.copyView.bottomShadow.frame = CGRect(origin: CGPoint(x: 0.0, y: self.copyView.bounds.size.height - 15.0), size: CGSize(width: self.copyView.bounds.size.width, height: 45.0))
         
         self.copyView.topShadow.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)

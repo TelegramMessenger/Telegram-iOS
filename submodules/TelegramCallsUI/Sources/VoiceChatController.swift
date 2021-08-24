@@ -1119,7 +1119,7 @@ public final class VoiceChatController: ViewController {
             self.scheduleTextNode.textAlignment = .center
             self.scheduleTextNode.maximumNumberOfLines = 4
             
-            self.scheduleCancelButton = SolidRoundedButtonNode(title: self.presentationData.strings.Common_Cancel, theme: SolidRoundedButtonTheme(backgroundColor:  UIColor(rgb: 0x2b2b2f), foregroundColor: .white), height: 52.0, cornerRadius: 10.0)
+            self.scheduleCancelButton = SolidRoundedButtonNode(title: self.presentationData.strings.Common_Cancel, theme: SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0x2b2b2f), foregroundColor: .white), height: 52.0, cornerRadius: 10.0)
             self.scheduleCancelButton.isHidden = !self.isScheduling
             
             self.dateFormatter = DateFormatter()
@@ -2410,7 +2410,6 @@ public final class VoiceChatController: ViewController {
                     return []
                 }
 
-                let presentationData = strongSelf.presentationData
                 var items: [ContextMenuItem] = []
 
                 if peers.count > 1 {
@@ -2552,7 +2551,7 @@ public final class VoiceChatController: ViewController {
 
                             let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_StopRecordingTitle, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StopRecordingStop, action: {
                                 if let strongSelf = self {
-                                    strongSelf.call.setShouldBeRecording(false, title: nil)
+                                    strongSelf.call.setShouldBeRecording(false, title: nil, videoOrientation: nil)
 
                                     strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: strongSelf.presentationData.strings.VoiceChat_RecordingSaved), action: { [weak self] value in
                                         if case .info = value, let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
@@ -2582,14 +2581,22 @@ public final class VoiceChatController: ViewController {
                                     return
                                 }
 
-                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
-                                    if let strongSelf = self, let title = title {
-                                        strongSelf.call.setShouldBeRecording(true, title: title)
+                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
+                                    if let strongSelf = self {
+                                        strongSelf.call.setShouldBeRecording(true, title: "", videoOrientation: videoOrientation)
 
                                         strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
                                         strongSelf.call.playTone(.recordingStarted)
                                     }
                                 })
+//                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
+//                                    if let strongSelf = self, let title = title {
+//                                        strongSelf.call.setShouldBeRecording(true, title: title)
+//
+//                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
+//                                        strongSelf.call.playTone(.recordingStarted)
+//                                    }
+//                                })
                                 self?.controller?.present(controller, in: .window(.root))
                             })))
                         }
@@ -4884,6 +4891,8 @@ public final class VoiceChatController: ViewController {
                         memberPeer = user.withUpdatedPhoto([photo])
                     }
                 }
+
+                joinedVideo = true
                 
                 if let videoEndpointId = member.videoEndpointId {
                     peerIdToCameraEndpointId[member.peer.id] = videoEndpointId
@@ -6149,17 +6158,6 @@ public final class VoiceChatController: ViewController {
             self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_UnmuteSuggestion, style: .gradient(UIColor(rgb: 0x1d446c), UIColor(rgb: 0x193e63)), icon: nil, location: .point(point, position), displayDuration: .custom(8.0), shouldDismissOnTouch: { _ in
                 return .dismiss(consume: false)
             }), in: .window(.root))
-        }
-        
-        private func displayToggleVideoSourceTooltip(screencast: Bool) {
-//            guard let videoContainerNode = self.mainStageVideoContainerNode else {
-//                return
-//            }
-//
-//            let location = videoContainerNode.view.convert(videoContainerNode.otherVideoWrapperNode.frame, to: nil)
-//            self.controller?.present(TooltipScreen(text: screencast ? self.presentationData.strings.VoiceChat_TapToViewCameraVideo : self.presentationData.strings.VoiceChat_TapToViewScreenVideo, icon: nil, location: .point(location.offsetBy(dx: -9.0, dy: 0.0), .right), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
-//                return .dismiss(consume: false)
-//            }), in: .window(.root))
         }
         
         private var isScheduled: Bool {

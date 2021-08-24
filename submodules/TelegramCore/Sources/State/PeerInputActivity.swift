@@ -11,6 +11,7 @@ public enum PeerInputActivity: Comparable {
     case recordingInstantVideo
     case uploadingInstantVideo(progress: Int32)
     case speakingInGroupCall(timestamp: Int32)
+    case choosingSticker
     
     public var key: Int32 {
         switch self {
@@ -32,6 +33,8 @@ public enum PeerInputActivity: Comparable {
                 return 7
             case .playingGame:
                 return 8
+            case .choosingSticker:
+                return 9
         }
     }
     
@@ -63,7 +66,9 @@ extension PeerInputActivity {
                 self = .uploadingInstantVideo(progress: progress)
             case .speakingInGroupCallAction:
                 self = .speakingInGroupCall(timestamp: timestamp)
-            case let .sendMessageHistoryImportAction:
+            case .sendMessageChooseStickerAction:
+                self = .choosingSticker
+            case .sendMessageHistoryImportAction:
                 return nil
         }
     }

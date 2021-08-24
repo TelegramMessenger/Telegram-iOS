@@ -23,6 +23,12 @@ private let typeStore = { () -> EncodableTypeStore in
     return _typeStore
 }()
 
+public func postboxEncodableTypeHash(_ type: Any.Type) -> Int32 {
+    let string = "\(type)"
+    let hash = murMurHashString32(string)
+    return hash
+}
+
 public func declareEncodable(_ type: Any.Type, f: @escaping(PostboxDecoder) -> PostboxCoding) {
     let string = "\(type)"
     let hash = murMurHashString32(string)
@@ -230,6 +236,58 @@ enum ValueType: Int8 {
     case Nil = 11
     case StringArray = 12
     case BytesArray = 13
+}
+
+enum ObjectDataValueType {
+    case Int32
+    case Int64
+    case Bool
+    case Double
+    case String
+    case Object(hash: Int32)
+    case Int32Array
+    case Int64Array
+    case ObjectArray
+    case ObjectDictionary
+    case Bytes
+    case Nil
+    case StringArray
+    case BytesArray
+}
+
+private extension ObjectDataValueType {
+    init?(_ type: ValueType) {
+        switch type {
+        case .Int32:
+            self = .Int32
+        case .Int64:
+            self = .Int64
+        case .Bool:
+            self = .Bool
+        case .Double:
+            self = .Double
+        case .String:
+            self = .String
+        case .Object:
+            return nil
+        case .Int32Array:
+            self = .Int32Array
+        case .Int64Array:
+            self = .Int64Array
+        case .ObjectArray:
+            self = .ObjectArray
+        case .ObjectDictionary:
+            self = .ObjectDictionary
+        case .Bytes:
+            self = .Bytes
+        case .Nil:
+            self = .Nil
+        case .StringArray:
+            self = .StringArray
+        case .BytesArray:
+            self = .BytesArray
+        }
+    }
 }
 
 public final class PostboxEncoder {
@@ -977,10 +1035,12 @@ public final class PostboxDecoder {
         }
     }
 
-    func decodeObjectDataForKey(_ key: String) -> (Data, ValueType)? {
+    func decodeObjectDataForKey(_ key: String) -> (Data, ObjectDataValueType)? {
         var actualValueType: ValueType = .Nil
         if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: nil, actualValueType: &actualValueType, consumeKey: true) {
             if case .Object = actualValueType {
+                var hash: Int32 = 0
+                memcpy(&hash, self.buffer.memory + self.offset, 4)
                 self.offset += 4
 
                 var length: Int32 = 0
@@ -990,14 +1050,14 @@ public final class PostboxDecoder {
                 let innerData = ReadBuffer(memory: self.buffer.memory + self.offset, length: Int(length), freeWhenDone: false).makeData()
                 self.offset += Int(length)
 
-                return (innerData, actualValueType)
+                return (innerData, .Object(hash: hash))
             } else {
                 let initialOffset = self.offset
                 PostboxDecoder.skipValue(self.buffer.memory.assumingMemoryBound(to: Int8.self), offset: &self.offset, length: self.buffer.length, valueType: actualValueType)
 
                 let data = ReadBuffer(memory: UnsafeMutableRawPointer(mutating: self.buffer.memory.advanced(by: initialOffset)), length: self.offset - initialOffset, freeWhenDone: false).makeData()
 
-                return (data, actualValueType)
+                return (data, ObjectDataValueType(actualValueType)!)
             }
         } else {
             return nil

@@ -104,6 +104,10 @@ public extension TelegramEngine {
             return _internal_getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
         }
 
+        public func getVideoBroadcastPart(dataSource: AudioBroadcastDataSource, callId: Int64, accessHash: Int64, timestampIdMilliseconds: Int64, durationMilliseconds: Int64, channelId: Int32, quality: Int32) -> Signal<GetAudioBroadcastPartResult, NoError> {
+            return _internal_getVideoBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds, channelId: channelId, quality: quality)
+        }
+
         public func groupCall(peerId: PeerId, myPeerId: PeerId, id: Int64, accessHash: Int64, state: GroupCallParticipantsContext.State, previousServiceState: GroupCallParticipantsContext.ServiceState?) -> GroupCallParticipantsContext {
             return GroupCallParticipantsContext(account: self.account, peerId: peerId, myPeerId: myPeerId, id: id, accessHash: accessHash, state: state, previousServiceState: previousServiceState)
         }

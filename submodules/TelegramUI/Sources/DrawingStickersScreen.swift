@@ -224,6 +224,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue {
                     strongSelf.controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
                         context: strongSelf.context,
+                        highlightedPackId: nil,
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
@@ -263,6 +264,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, navigateBackToStickers: {
         }, setGifMode: { _ in
         }, openSettings: {
+        }, openTrending: { _ in
+        }, dismissTrendingPacks: { _ in
         }, toggleSearch: { [weak self] value, searchMode, query in
             if let strongSelf = self {
                 if let searchMode = searchMode, value {
@@ -287,8 +290,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                             if let strongSelf = self {
                                 strongSelf.controllerInteraction.updateInputMode { current in
                                     switch current {
-                                        case let .media(mode, _):
-                                            return .media(mode: mode, expanded: .search(searchMode))
+                                        case let .media(mode, _, focused):
+                                            return .media(mode: mode, expanded: .search(searchMode), focused: focused)
                                         default:
                                             return current
                                     }
@@ -299,8 +302,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 } else {
                     strongSelf.controllerInteraction.updateInputMode { current in
                         switch current {
-                            case let .media(mode, _):
-                                return .media(mode: mode, expanded: nil)
+                            case let .media(mode, _, focused):
+                                return .media(mode: mode, expanded: nil, focused: focused)
                             default:
                                 return current
                         }
@@ -336,6 +339,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue {
                     strongSelf.controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
                         context: strongSelf.context,
+                        highlightedPackId: nil,
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
@@ -375,6 +379,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             }, navigateBackToStickers: {
         }, setGifMode: { _ in
         }, openSettings: {
+        }, openTrending: { _ in
+        }, dismissTrendingPacks: { _ in
         }, toggleSearch: { [weak self] value, searchMode, query in
                 if let strongSelf = self {
                     if let searchMode = searchMode, value {
@@ -399,8 +405,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                                     if let strongSelf = self {
                                         strongSelf.controllerInteraction.updateInputMode { current in
                                             switch current {
-                                                case let .media(mode, _):
-                                                    return .media(mode: mode, expanded: .search(searchMode))
+                                                case let .media(mode, _, focused):
+                                                    return .media(mode: mode, expanded: .search(searchMode), focused: focused)
                                                 default:
                                                     return current
                                             }
@@ -411,8 +417,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     } else {
                         strongSelf.controllerInteraction.updateInputMode { current in
                             switch current {
-                                case let .media(mode, _):
-                                    return .media(mode: mode, expanded: nil)
+                                case let .media(mode, _, focused):
+                                    return .media(mode: mode, expanded: nil, focused: focused)
                                 default:
                                     return current
                             }
@@ -582,20 +588,9 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             for info in view.collectionInfos {
                 installedPacks.insert(info.0)
             }
-            
-            var hasUnreadTrending: Bool?
-            for pack in trendingPacks {
-                if hasUnreadTrending == nil {
-                    hasUnreadTrending = false
-                }
-                if pack.unread {
-                    hasUnreadTrending = true
-                    break
-                }
-            }
-            
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false, hasSettings: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
+                        
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, hasGifs: false, hasSettings: false)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: trendingPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
             
             let (previousPanelEntries, previousGridEntries) = previousStickerEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: stickersInputNodeInteraction, scrollToItem: nil), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: stickersInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
@@ -629,8 +624,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 installedPacks.insert(info.0)
             }
             
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false, hasSettings: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, hasGifs: false, hasSettings: false)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: [], hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
                         
             let (previousPanelEntries, previousGridEntries) = previousMaskEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: masksInputNodeInteraction, scrollToItem: nil), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: masksInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)

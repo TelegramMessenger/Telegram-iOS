@@ -1382,8 +1382,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             } else {
                 var outgoingAudioBitrateKbit: Int32?
                 let appConfiguration = self.accountContext.currentAppConfiguration.with({ $0 })
-                if let data = appConfiguration.data, let value = data["voice_chat_send_bitrate"] as? Int32 {
-                    outgoingAudioBitrateKbit = value
+                if let data = appConfiguration.data, let value = data["voice_chat_send_bitrate"] as? Double {
+                    outgoingAudioBitrateKbit = Int32(value)
                 }
 
                 genericCallContext = OngoingGroupCallContext(video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
@@ -2859,14 +2859,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    public func setShouldBeRecording(_ shouldBeRecording: Bool, title: String?) {
+    public func setShouldBeRecording(_ shouldBeRecording: Bool, title: String?, videoOrientation: Bool?) {
         if !self.stateValue.canManageCall {
             return
         }
         if (self.stateValue.recordingStartTimestamp != nil) == shouldBeRecording {
             return
         }
-        self.participantsContext?.updateShouldBeRecording(shouldBeRecording, title: title)
+        self.participantsContext?.updateShouldBeRecording(shouldBeRecording, title: title, videoOrientation: videoOrientation)
     }
     
     private func requestCall(movingFromBroadcastToRtc: Bool) {

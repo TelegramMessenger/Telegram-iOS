@@ -371,7 +371,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                     if let navigationController = getNavigationControllerImpl?() {
                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(participant.peer.id)))
                     }
-                } else if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: participant.peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                } else if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: participant.peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                     pushControllerImpl?(infoController)
                 }
             }))

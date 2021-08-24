@@ -860,6 +860,11 @@ func _internal_currentChatListFilters(postbox: Postbox) -> Signal<[ChatListFilte
     }
 }
 
+func _internal_currentChatListFilters(transaction: Transaction) -> [ChatListFilter] {
+    let settings = transaction.getPreferencesEntry(key: PreferencesKeys.chatListFilters) as? ChatListFiltersState ?? ChatListFiltersState.default
+    return settings.filters
+}
+
 func updateChatListFiltersState(transaction: Transaction, _ f: (ChatListFiltersState) -> ChatListFiltersState) -> ChatListFiltersState {
     var result: ChatListFiltersState?
     transaction.updatePreferencesEntry(key: PreferencesKeys.chatListFilters, { entry in

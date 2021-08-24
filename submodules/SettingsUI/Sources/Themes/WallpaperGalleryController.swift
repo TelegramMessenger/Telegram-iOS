@@ -631,11 +631,11 @@ public class WallpaperGalleryController: ViewController {
                     strongSelf.patternInitialWallpaper = enabled ? initialWallpaper : nil
                     switch initialWallpaper {
                     case let .color(color):
-                        strongSelf.patternPanelNode?.backgroundColors = ([color], nil, nil)
+                        strongSelf.patternPanelNode?.backgroundColors = ([HSBColor(rgb: color)], nil, nil)
                     case let .gradient(gradient):
-                        strongSelf.patternPanelNode?.backgroundColors = (gradient.colors, gradient.settings.rotation, nil)
+                        strongSelf.patternPanelNode?.backgroundColors = (gradient.colors.map { HSBColor(rgb: $0) }, gradient.settings.rotation, nil)
                     case let .file(file) where file.isPattern:
-                        strongSelf.patternPanelNode?.backgroundColors = (file.settings.colors, file.settings.rotation, file.settings.intensity)
+                        strongSelf.patternPanelNode?.backgroundColors = (file.settings.colors.map { HSBColor(rgb: $0) }, file.settings.rotation, file.settings.intensity)
                     default:
                         break
                     }
@@ -678,7 +678,7 @@ public class WallpaperGalleryController: ViewController {
                         strongSelf.colorsPanelNode?.updateState({ _ in
                             return WallpaperColorPanelNodeState(
                                 selection: 0,
-                                colors: colors.map(\.rgb),
+                                colors: colors.map { HSBColor(color: $0) },
                                 maximumNumberOfColors: 4,
                                 rotateAvailable: false,
                                 rotation: 0,
@@ -863,7 +863,7 @@ public class WallpaperGalleryController: ViewController {
                         break
                     }
 
-                    strongSelf.patternPanelNode?.backgroundColors = (colors, rotation, intensity)
+                    strongSelf.patternPanelNode?.backgroundColors = (colors.map { HSBColor(rgb: $0) }, rotation, intensity)
                 }
             }
             self.patternPanelNode = patternPanelNode
@@ -880,7 +880,7 @@ public class WallpaperGalleryController: ViewController {
             currentColorsPanelNode = colorsPanelNode
             self.overlayNode?.insertSubnode(colorsPanelNode, belowSubnode: self.toolbarNode!)
 
-            colorsPanelNode.colorsChanged = { [weak self] colors, _ in
+            colorsPanelNode.colorsChanged = { [weak self] colors, _, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -888,10 +888,10 @@ public class WallpaperGalleryController: ViewController {
                     return
                 }
 
-                var wallpaper: TelegramWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: colors, settings: WallpaperSettings(blur: false, motion: false, colors: [], intensity: nil, rotation: nil)))
+                var wallpaper: TelegramWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: colors.map { $0.rgb }, settings: WallpaperSettings(blur: false, motion: false, colors: [], intensity: nil, rotation: nil)))
 
                 if case let .file(file) = currentWallpaper {
-                    wallpaper = currentWallpaper.withUpdatedSettings(WallpaperSettings(blur: false, motion: false, colors: colors, intensity: file.settings.intensity, rotation: file.settings.rotation))
+                    wallpaper = currentWallpaper.withUpdatedSettings(WallpaperSettings(blur: false, motion: false, colors: colors.map { $0.rgb }, intensity: file.settings.intensity, rotation: file.settings.rotation))
                 }
 
                 strongSelf.updateEntries(wallpaper: wallpaper)

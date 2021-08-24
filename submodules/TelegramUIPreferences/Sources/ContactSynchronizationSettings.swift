@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public enum ContactsSortOrder: Int32 {
@@ -48,7 +49,7 @@ public struct ContactSynchronizationSettings: Equatable, PreferencesEntry {
     }
 }
 
-public func updateContactSettingsInteractively(accountManager: AccountManager, _ f: @escaping (ContactSynchronizationSettings) -> ContactSynchronizationSettings) -> Signal<Void, NoError> {
+public func updateContactSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (ContactSynchronizationSettings) -> ContactSynchronizationSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings, { entry in
             let currentSettings: ContactSynchronizationSettings

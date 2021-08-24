@@ -107,6 +107,8 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     bool _saveEditedPhotos;
     
     TGMenuSheetPallete *_pallete;
+    
+    bool _savingStartImage;
 }
 @end
 
@@ -345,6 +347,15 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     [_assetsDisposable dispose];
     [_selectionChangedDisposable dispose];
     [_itemsSizeChangedDisposable dispose];
+}
+
+- (void)saveStartImage {
+    _savingStartImage = true;
+    __weak TGAttachmentCameraView *weakCameraView = _cameraView;
+    [_cameraView saveStartImage:^{
+        __strong TGAttachmentCameraView *strongCameraView = weakCameraView;
+        [strongCameraView stopPreview];
+    }];
 }
 
 - (UIView *)getItemSnapshot:(NSString *)uniqueId {
@@ -1227,7 +1238,9 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 {
     [super menuView:menuView didDisappearAnimated:animated];
     menuView.tapDismissalAllowed = nil;
-    [_cameraView stopPreview];
+    if (!_savingStartImage) {
+        [_cameraView stopPreview];
+    }
 }
 
 #pragma mark -

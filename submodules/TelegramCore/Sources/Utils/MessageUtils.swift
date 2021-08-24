@@ -291,3 +291,14 @@ public extension Message {
     }
 }
 
+public extension Message {
+    var adAttribute: AdMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? AdMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+}
+

@@ -5,10 +5,12 @@ import Display
 
 public final class SolidRoundedButtonTheme {
     public let backgroundColor: UIColor
+    public let gradientBackgroundColor: UIColor?
     public let foregroundColor: UIColor
     
-    public init(backgroundColor: UIColor, foregroundColor: UIColor) {
+    public init(backgroundColor: UIColor, gradientBackgroundColor: UIColor? = nil, foregroundColor: UIColor) {
         self.backgroundColor = backgroundColor
+        self.gradientBackgroundColor = gradientBackgroundColor
         self.foregroundColor = foregroundColor
     }
 }
@@ -59,6 +61,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.title = title
         
         self.buttonBackgroundNode = ASDisplayNode()
+        self.buttonBackgroundNode.clipsToBounds = true
         self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         self.buttonBackgroundNode.cornerRadius = cornerRadius
         if #available(iOS 13.0, *) {

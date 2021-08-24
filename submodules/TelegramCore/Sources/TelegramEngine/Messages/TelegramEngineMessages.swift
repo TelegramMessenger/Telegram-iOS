@@ -199,5 +199,9 @@ public extension TelegramEngine {
                 )
             }
         }
+
+        public func adMessages(peerId: PeerId) -> AdMessagesHistoryContext {
+            return AdMessagesHistoryContext(account: self.account, peerId: peerId)
+        }
     }
 }

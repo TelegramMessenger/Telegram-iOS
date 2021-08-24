@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public struct WebBrowserSettings: PreferencesEntry, Equatable {
@@ -42,7 +43,7 @@ public struct WebBrowserSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateWebBrowserSettingsInteractively(accountManager: AccountManager, _ f: @escaping (WebBrowserSettings) -> WebBrowserSettings) -> Signal<Void, NoError> {
+public func updateWebBrowserSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (WebBrowserSettings) -> WebBrowserSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.webBrowserSettings, { entry in
             let currentSettings: WebBrowserSettings

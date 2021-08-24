@@ -194,7 +194,11 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
                     switch error {
                         case .startsWithDigit:
                             statusText = presentationData.strings.Username_InvalidStartsWithNumber
-                        case .startsWithUnderscore, .endsWithUnderscore, .invalidCharacters:
+                        case .startsWithUnderscore:
+                            statusText = presentationData.strings.Username_InvalidStartsWithUnderscore
+                        case .endsWithUnderscore:
+                            statusText = presentationData.strings.Username_InvalidEndsWithUnderscore
+                        case .invalidCharacters:
                             statusText = presentationData.strings.Username_InvalidCharacters
                         case .tooShort:
                             statusText = presentationData.strings.Username_InvalidTooShort

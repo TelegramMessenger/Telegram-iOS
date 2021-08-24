@@ -683,8 +683,8 @@ final class SharedApplicationContext {
             UINavigationController.attemptRotationToDeviceOrientation()
         })
         
-        let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false)
+        let accountManagerSignal = Signal<AccountManager<TelegramAccountManagerTypes>, NoError> { subscriber in
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false)
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
@@ -776,7 +776,7 @@ final class SharedApplicationContext {
         |> take(1)
         |> deliverOnMainQueue
         |> take(1)
-        |> mapToSignal { accountManager -> Signal<(AccountManager, InitialPresentationDataAndSettings), NoError> in
+        |> mapToSignal { accountManager -> Signal<(AccountManager<TelegramAccountManagerTypes>, InitialPresentationDataAndSettings), NoError> in
             var systemUserInterfaceStyle: WindowUserInterfaceStyle = .light
             if #available(iOS 13.0, *) {
                 if let traitCollection = window.rootViewController?.traitCollection {
@@ -1192,7 +1192,7 @@ final class SharedApplicationContext {
 
         let logoutDataSignal: Signal<(AccountManager, Set<PeerId>), NoError> = self.sharedContextPromise.get()
         |> take(1)
-        |> mapToSignal { sharedContext -> Signal<(AccountManager, Set<PeerId>), NoError> in
+        |> mapToSignal { sharedContext -> Signal<(AccountManager<TelegramAccountManagerTypes>, Set<PeerId>), NoError> in
             return sharedContext.sharedContext.activeAccountContexts
             |> map { _, accounts, _ -> Set<PeerId> in
                 return Set(accounts.map { $0.1.account.peerId })
@@ -1203,7 +1203,7 @@ final class SharedApplicationContext {
                 }
                 return updated
             }
-            |> map { loggedOutAccountPeerIds -> (AccountManager, Set<PeerId>) in
+            |> map { loggedOutAccountPeerIds -> (AccountManager<TelegramAccountManagerTypes>, Set<PeerId>) in
                 return (sharedContext.sharedContext.accountManager, loggedOutAccountPeerIds)
             }
         }

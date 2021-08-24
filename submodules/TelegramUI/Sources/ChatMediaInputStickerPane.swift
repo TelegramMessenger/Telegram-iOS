@@ -28,7 +28,10 @@ private func fixGridScrolling(_ gridNode: GridNode) {
             var scrollIndex: Int?
             if itemFrame.minY + itemFrame.height * 0.6 < contentInset {
                 for i in 0 ..< gridNode.items.count {
-                    if let _ = gridNode.items[i] as? ChatMediaInputStickerGridItem {
+                    if let _ = gridNode.items[i] as? StickerPaneTrendingListGridItem {
+                        scrollIndex = i
+                        break
+                    } else if let _ = gridNode.items[i] as? ChatMediaInputStickerGridItem {
                         scrollIndex = i
                         break
                     }

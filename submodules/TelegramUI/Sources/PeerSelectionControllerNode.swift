@@ -20,6 +20,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let dismiss: () -> Void
     private let filter: ChatListNodePeersFilter
     private let hasGlobalSearch: Bool
+    private let forwardedMessageIds: [EngineMessage.Id]
     
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
@@ -37,6 +38,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let segmentedControlNode: SegmentedControlNode?
     
     private var textInputPanelNode: PeerSelectionTextInputPanelNode?
+    private var forwardAccessoryPanelNode: ForwardAccessoryPanelNode?
     
     var contactListNode: ContactListNode?
     let chatListNode: ChatListNode
@@ -56,7 +58,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     var requestOpenDisabledPeer: ((Peer) -> Void)?
     var requestOpenPeerFromSearch: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
-    var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode) -> Void)?
+    var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode, Bool) -> Void)?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -66,28 +68,21 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return self.readyValue.get()
     }
     
-    init(context: AccountContext, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessagesCount: Int, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
         self.dismiss = dismiss
         self.filter = filter
         self.hasGlobalSearch = hasGlobalSearch
+        self.forwardedMessageIds = forwardedMessageIds
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(PeerId(0)), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
         
-        var mockMessageIds: [MessageId]?
-        if forwardedMessagesCount > 0 {
-            var messageIds: [MessageId] = []
-            for _ in 0 ..< forwardedMessagesCount {
-                messageIds.append(MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: Int32.random(in: 0 ..< Int32.max)))
-            }
-            mockMessageIds = messageIds
-        }
-        self.presentationInterfaceState = self.presentationInterfaceState.updatedInterfaceState { $0.withUpdatedForwardMessageIds(mockMessageIds) }
+        self.presentationInterfaceState = self.presentationInterfaceState.updatedInterfaceState { $0.withUpdatedForwardMessageIds(forwardedMessageIds) }
         
         if hasChatListSelector && hasContactSelector {
             self.toolbarBackgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.navigationBar.blurredBackgroundColor)
@@ -198,6 +193,10 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, forwardSelectedMessages: {
         }, forwardCurrentForwardMessages: {
         }, forwardMessages: { _ in
+        }, updateForwardMessageHideSendersNames: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageHideSendersNames(value) }) })
+            }
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: { [weak self] f in
             if let strongSelf = self {
@@ -335,6 +334,11 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     func beginSelection() {
         if let _ = self.textInputPanelNode {
         } else {
+            let forwardAccessoryPanelNode = ForwardAccessoryPanelNode(context: self.context, messageIds: self.forwardedMessageIds, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.chatFontSize, nameDisplayOrder: self.presentationData.nameDisplayOrder, hideSendersNames: false)
+            forwardAccessoryPanelNode.interfaceInteraction = self.interfaceInteraction
+            self.addSubnode(forwardAccessoryPanelNode)
+            self.forwardAccessoryPanelNode = forwardAccessoryPanelNode
+            
             let textInputPanelNode = PeerSelectionTextInputPanelNode(presentationInterfaceState: self.presentationInterfaceState, presentController: { [weak self] c in self?.present(c, nil) })
             textInputPanelNode.interfaceInteraction = self.interfaceInteraction
             textInputPanelNode.sendMessage = { [weak self] mode in
@@ -342,10 +346,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     return
                 }
                 
+                let effectiveInputText = strongSelf.presentationInterfaceState.interfaceState.composeInputState.inputText
+                let hideSendersNames = strongSelf.presentationInterfaceState.interfaceState.forwardMessageHideSendersNames
+                
                 if strongSelf.contactListActive {
                     strongSelf.contactListNode?.multipleSelection = true
                     let selectedContactPeers = strongSelf.contactListNode?.selectedPeers ?? []
-                    let effectiveInputText = strongSelf.presentationInterfaceState.interfaceState.composeInputState.inputText
+
                     var selectedPeers: [Peer] = []
                     var selectedPeerMap: [PeerId: Peer] = [:]
                     for contactPeer in selectedContactPeers {
@@ -355,7 +362,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         }
                     }
                     if !selectedPeers.isEmpty {
-                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode)
+                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, hideSendersNames)
                     }
                 } else {
                     var selectedPeerIds: [PeerId] = []
@@ -366,14 +373,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         return state
                     }
                     if !selectedPeerIds.isEmpty {
-                        let effectiveInputText = strongSelf.presentationInterfaceState.interfaceState.composeInputState.inputText
                         var selectedPeers: [Peer] = []
                         for peerId in selectedPeerIds {
                             if let peer = selectedPeerMap[peerId] {
                                 selectedPeers.append(peer)
                             }
                         }
-                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode)
+                        strongSelf.requestSend?(selectedPeers, selectedPeerMap, effectiveInputText, mode, hideSendersNames)
                     }
                 }
             }
@@ -416,6 +422,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         var toolbarHeight: CGFloat = cleanInsets.bottom
         var textPanelHeight: CGFloat?
+        var accessoryHeight: CGFloat = 0.0
+        
+        if let forwardAccessoryPanelNode = self.forwardAccessoryPanelNode {
+            let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height))
+            accessoryHeight = size.height
+        }
         
         if let textInputPanelNode = self.textInputPanelNode {
             var panelTransition = transition
@@ -433,15 +445,30 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             let panelFrame = CGRect(x: 0.0, y: layout.size.height - panelHeight, width: layout.size.width, height: panelHeight)
             if textInputPanelNode.frame.width.isZero {
                 var initialPanelFrame = panelFrame
-                initialPanelFrame.origin.y = layout.size.height
+                initialPanelFrame.origin.y = layout.size.height + accessoryHeight
                 textInputPanelNode.frame = initialPanelFrame
             }
             transition.updateFrame(node: textInputPanelNode, frame: panelFrame)
         }
         
+        if let forwardAccessoryPanelNode = self.forwardAccessoryPanelNode {
+            let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height))
+            forwardAccessoryPanelNode.updateState(size: size, interfaceState: self.presentationInterfaceState)
+            forwardAccessoryPanelNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, hideSendersNames: self.presentationInterfaceState.interfaceState.forwardMessageHideSendersNames)
+            let panelFrame = CGRect(x: layout.safeInsets.left, y: layout.size.height - (textPanelHeight ?? 0.0) - size.height, width: size.width - layout.safeInsets.left - layout.safeInsets.right, height: size.height)
+            
+            accessoryHeight = size.height
+            if forwardAccessoryPanelNode.frame.width.isZero {
+                var initialPanelFrame = panelFrame
+                initialPanelFrame.origin.y = layout.size.height
+                forwardAccessoryPanelNode.frame = initialPanelFrame
+            }
+            transition.updateFrame(node: forwardAccessoryPanelNode, frame: panelFrame)
+        }
+        
         if let segmentedControlNode = self.segmentedControlNode, let toolbarBackgroundNode = self.toolbarBackgroundNode, let toolbarSeparatorNode = self.toolbarSeparatorNode {
             if let textPanelHeight = textPanelHeight {
-                toolbarHeight = textPanelHeight
+                toolbarHeight = textPanelHeight + accessoryHeight
             } else {
                 toolbarHeight += 44.0
             }

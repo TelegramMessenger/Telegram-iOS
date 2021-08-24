@@ -64,7 +64,7 @@ private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError>
     }
 }
 
-func sharedAccountInfos(accountManager: AccountManager, accounts: Signal<[Account], NoError>) -> Signal<StoredAccountInfos, NoError> {
+func sharedAccountInfos(accountManager: AccountManager<TelegramAccountManagerTypes>, accounts: Signal<[Account], NoError>) -> Signal<StoredAccountInfos, NoError> {
     return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.proxySettings]), accounts)
     |> take(1)
     |> mapToSignal { sharedData, accounts -> Signal<StoredAccountInfos, NoError> in
