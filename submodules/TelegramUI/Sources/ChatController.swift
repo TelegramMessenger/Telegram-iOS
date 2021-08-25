@@ -340,6 +340,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let recordingActivityPromise = ValuePromise<ChatRecordingActivity>(.none, ignoreRepeated: true)
     private var recordingActivityDisposable: Disposable?
     private var acquiredRecordingActivityDisposable: Disposable?
+    private let choosingStickerActivityPromise = Promise<Bool>(false)
+    private var choosingStickerActivityDisposable: Disposable?
     
     private var searchDisposable: MetaDisposable?
     
@@ -3821,6 +3823,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
+        self.choosingStickerActivityDisposable = (self.choosingStickerActivityPromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.context.account.updateLocalInputActivity(peerId: activitySpace, activity: .choosingSticker, isPresent: value)
+            }
+        })
+        
         self.recordingActivityDisposable = (self.recordingActivityPromise.get()
         |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
@@ -4399,6 +4408,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if let currentItem = self.tempVoicePlaylistCurrentItem {
             self.chatDisplayNode.historyNode.voicePlaylistItemChanged(nil, currentItem)
         }
+        
+        self.choosingStickerActivityPromise.set(self.chatDisplayNode.choosingSticker)
         
         self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode in
             guard let strongSelf = self else {
