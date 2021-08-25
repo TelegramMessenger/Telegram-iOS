@@ -12,6 +12,7 @@ private let animationDurationFactor: Double = 1.0
 
 public protocol ContextControllerProtocol {
     var useComplexItemsTransitionAnimation: Bool { get set }
+    var immediateItemsTransitionAnimation: Bool { get set }
     
     func setItems(_ items: Signal<[ContextMenuItem], NoError>)
     func dismiss(completion: (() -> Void)?)
@@ -1164,6 +1165,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     private func setItems(items: [ContextMenuItem]) {
+        if let _ = self.currentItems, !self.didCompleteAnimationIn && self.getController()?.immediateItemsTransitionAnimation == true {
+            return
+        }
+        
         self.currentItems = items
         
         let previousActionsContainerNode = self.actionsContainerNode
@@ -1600,7 +1605,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
             
         if let previousActionsContainerNode = previousActionsContainerNode {
-            if transition.isAnimated {
+            if transition.isAnimated && self.getController()?.immediateItemsTransitionAnimation == false {
                 if previousActionsContainerNode.hasAdditionalActions && !self.actionsContainerNode.hasAdditionalActions && self.getController()?.useComplexItemsTransitionAnimation == true {
                     var initialFrame = self.actionsContainerNode.frame
                     let delta = (previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height)
@@ -1814,6 +1819,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public var dismissed: (() -> Void)?
     
     public var useComplexItemsTransitionAnimation = false
+    public var immediateItemsTransitionAnimation = false
     
     private var shouldBeDismissedDisposable: Disposable?
     

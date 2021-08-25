@@ -992,7 +992,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration) = animation {
-                        transition = .animated(duration: duration, curve: .spring)
+                        if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                            transition = .animated(duration: duration, curve: .linear)
+                        } else {
+                            transition = .animated(duration: duration, curve: .spring)
+                        }
                     }
                     
                     let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))

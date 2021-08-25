@@ -217,9 +217,9 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         }
     }
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat

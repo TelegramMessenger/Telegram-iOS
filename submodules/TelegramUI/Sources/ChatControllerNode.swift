@@ -245,9 +245,64 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.titleAccessoryPanelContainer.clipsToBounds = true
         
         self.inputContextPanelContainer = ChatControllerTitlePanelNodeContainer()
+        
+        var source: ChatHistoryListSource
+        if case let .forwardedMessages(messageIds, hideNames, hideCaptions) = subject {
+            let messages = combineLatest(context.account.postbox.messagesAtIds(messageIds), context.account.postbox.loadedPeerWithId(context.account.peerId))
+            |> mapToSignal { messages, accountPeer -> Signal<([Message], Int32, Bool), NoError> in
+                return combineLatest(hideNames, hideCaptions)
+                |> map { hideNames, hideCaptions -> ([Message], Int32, Bool) in
+                    var messages = messages
+                    messages.sort(by: { lhsMessage, rhsMessage in
+                        return lhsMessage.timestamp > rhsMessage.timestamp
+                    })
+                    messages = messages.map { message in
+                        var flags = message.flags
+                        flags.remove(.Incoming)
+                        
+                        var attributes = message.attributes
+                        attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleWhenOnlineTimestamp))
+                        attributes = attributes.filter({ attribute in
+                            if attribute is EditedMessageAttribute {
+                                return false
+                            }
+                            if attribute is ReplyMessageAttribute {
+                                return false
+                            }
+                            return true
+                        })
+                        
+                        var messageText = message.text
+                        var forwardInfo = message.forwardInfo
+                        if forwardInfo == nil {
+                            forwardInfo = MessageForwardInfo(author: message.author, source: nil, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
+                        }
+                        if hideNames {
+                            forwardInfo = nil
+                        }
+                        
+                        if hideNames && hideCaptions {
+                            for media in message.media {
+                                if media is TelegramMediaImage || media is TelegramMediaFile {
+                                    messageText = ""
+                                    break
+                                }
+                            }
+                        }
+                        
+                        return message.withUpdatedFlags(flags).withUpdatedText(messageText).withUpdatedTimestamp(scheduleWhenOnlineTimestamp).withUpdatedAttributes(attributes).withUpdatedAuthor(accountPeer).withUpdatedForwardInfo(forwardInfo)
+                    }
+                    
+                    return (messages, Int32(messages.count), false)
+                }
+            }
+            source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), loadMore: nil)
+        } else {
+            source = .default
+        }
 
         var getMessageTransitionNode: (() -> ChatMessageTransitionNode?)?
-        self.historyNode = ChatHistoryListNode(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
+        self.historyNode = ChatHistoryListNode(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
             return getMessageTransitionNode?()
         })
         self.historyNode.rotated = true
@@ -367,9 +422,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.interactiveEmojis = emojis
             }
         })
-
-        self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper)
-        self.backgroundNode.updateBubbleTheme(bubbleTheme: chatPresentationInterfaceState.theme, bubbleCorners: chatPresentationInterfaceState.bubbleCorners)
 
         var backgroundColors: [UInt32] = []
         switch chatPresentationInterfaceState.chatWallpaper {
@@ -988,7 +1040,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let _ = accessoryPanelNode as? ReplyAccessoryPanelNode {
                             strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedReplyMessageId(nil) })
                         } else if let _ = accessoryPanelNode as? ForwardAccessoryPanelNode {
-                            strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedForwardMessageIds(nil).withUpdatedForwardMessageHideSendersNames(false) })
+                            strongSelf.requestUpdateChatInterfaceState(.animated(duration: 0.4, curve: .spring), false, { $0.withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil) })
                         } else if let _ = accessoryPanelNode as? EditAccessoryPanelNode {
                             strongSelf.interfaceInteraction?.setupEditMessage(nil, { _ in })
                         } else if let _ = accessoryPanelNode as? WebpagePreviewAccessoryPanelNode {
@@ -1602,14 +1654,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.chatPresentationInterfaceState = self.chatPresentationInterfaceState.updatedInterfaceState { $0.withUpdatedEffectiveInputState(textInputPanelNode.inputTextState) }
         }
         
-        if self.chatPresentationInterfaceState != chatPresentationInterfaceState {
+        let presentationReadyUpdated = self.chatPresentationInterfaceState.presentationReady != chatPresentationInterfaceState.presentationReady
+        
+        if self.chatPresentationInterfaceState != chatPresentationInterfaceState && chatPresentationInterfaceState.presentationReady {
             self.onLayoutCompletions.append(completion)
             
-            let themeUpdated = self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme
+            let themeUpdated = presentationReadyUpdated || (self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme)
             
-            if self.chatPresentationInterfaceState.chatWallpaper != chatPresentationInterfaceState.chatWallpaper {
-                self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper)
-            }
+            self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper)
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
             
@@ -2096,6 +2148,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         switch self.chatPresentationInterfaceState.mode {
         case .standard(previewing: true):
+            if let result = self.historyNode.view.hitTest(self.view.convert(point, to: self.historyNode.view), with: event), let node = result.asyncdisplaykit_node as? ChatMessageSelectionNode {
+                return result
+            }
             if let result = self.navigateButtons.hitTest(self.view.convert(point, to: self.navigateButtons.view), with: event) {
                 return result
             }
@@ -2353,9 +2408,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if !messages.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
                     if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                         var attributes: [MessageAttribute] = []
-                        if self.chatPresentationInterfaceState.interfaceState.forwardMessageHideSendersNames {
-                            attributes.append(ForwardHideSendersNamesMessageAttribute())
-                        }
+                        attributes.append(ForwardOptionsMessageAttribute(hideNames: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideNames == true, hideCaptions: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideCaptions == true))
+
                         for id in forwardMessageIds {
                             messages.append(.forward(source: id, grouping: .auto, attributes: attributes, correlationId: nil))
                         }
@@ -2383,7 +2437,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
                             strongSelf.ignoreUpdateHeight = true
                             textInputPanelNode.text = ""
-                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardMessageHideSendersNames(false).withUpdatedComposeDisableUrlPreview(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeDisableUrlPreview(nil) })
                             strongSelf.ignoreUpdateHeight = false
                         }
                     }, usedCorrelationId)

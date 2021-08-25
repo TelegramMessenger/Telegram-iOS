@@ -32,6 +32,7 @@ extension PeekControllerTheme {
 
 public final class PeekController: ViewController, ContextControllerProtocol {
     public var useComplexItemsTransitionAnimation: Bool = false
+    public var immediateItemsTransitionAnimation = false
     
     public func setItems(_ items: Signal<[ContextMenuItem], NoError>) {
         

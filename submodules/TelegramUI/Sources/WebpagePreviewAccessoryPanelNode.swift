@@ -15,8 +15,9 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private(set) var webpage: TelegramMediaWebpage
     private(set) var url: String
     
-    let closeButton: ASButtonNode
+    let closeButton: HighlightableButtonNode
     let lineNode: ASImageNode
+    let iconNode: ASImageNode
     let titleNode: TextNode
     private var titleString: NSAttributedString?
     
@@ -32,7 +33,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         self.theme = theme
         self.strings = strings
         
-        self.closeButton = ASButtonNode()
+        self.closeButton = HighlightableButtonNode()
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
@@ -41,6 +42,11 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.displayWithoutProcessing = true
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.displayWithoutProcessing = false
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.image = PresentationResourcesChat.chatInputPanelWebpageIconImage(theme)
         
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
@@ -73,6 +79,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                 
                 self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
                 self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+                self.iconNode.image = PresentationResourcesChat.chatInputPanelWebpageIconImage(theme)
             }
             
             if let text = self.titleString?.string {
@@ -152,10 +159,14 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         let rightInset: CGFloat = 55.0
         let textRightInset: CGFloat = 20.0
         
-        let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        self.closeButton.frame = CGRect(origin: CGPoint(x: bounds.size.width - rightInset - closeButtonSize.width, y: 19.0), size: closeButtonSize)
+        let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
+        self.closeButton.frame = CGRect(origin: CGPoint(x: bounds.size.width - closeButtonSize.width, y: 2.0), size: closeButtonSize)
         
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
+        
+        if let icon = self.iconNode.image {
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 9.0), size: icon.size)
+        }
         
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
