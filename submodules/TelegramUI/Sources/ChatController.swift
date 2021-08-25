@@ -358,11 +358,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var themeDarkAppearancePreviewPromise = ValuePromise<Bool?>(nil)
     private var didSetPresentationData = false
     private var presentationDataPromise = Promise<PresentationData>()
-    private var presentationData: PresentationData {
-        didSet {
-            self.presentationDataPromise.set(.single(self.presentationData))
-        }
-    }
+    private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     override public var updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) {
         return (self.presentationData, self.presentationDataPromise.get())
@@ -3849,9 +3845,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         |> map { cachedData -> String? in
             if let cachedData = cachedData as? CachedUserData {
                 return cachedData.themeEmoticon
-            } else if let cachedData = cachedData as? CachedUserData {
+            } else if let cachedData = cachedData as? CachedGroupData {
                 return cachedData.themeEmoticon
-            } else if let cachedData = cachedData as? CachedUserData {
+            } else if let cachedData = cachedData as? CachedChannelData {
                 return cachedData.themeEmoticon
             } else {
                 return nil
@@ -3902,7 +3898,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if isFirstTime || previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || presentationData.chatWallpaper != previousChatWallpaper {
                     strongSelf.themeAndStringsUpdated()
                 }
-                
+                strongSelf.presentationDataPromise.set(.single(strongSelf.presentationData))
                 strongSelf.presentationReady.set(.single(true))
             }
         })
