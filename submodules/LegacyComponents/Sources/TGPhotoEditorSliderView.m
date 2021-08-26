@@ -322,7 +322,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 
 #pragma mark - Properties
 
-- (bool)isTracking
+- (BOOL)isTracking
 {
     return _knobView.highlighted;
 }
