@@ -1259,7 +1259,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         if self.freezeOverscrollControl {
             return
         }
-        if let offset = offset, offset < 0.0, self.offerNextChannelToRead, let chatControllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, chatControllerNode.shouldAllowOverscrollActions {
+        if let offset = offset, offset < -0.1, self.offerNextChannelToRead, let chatControllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, chatControllerNode.shouldAllowOverscrollActions {
             let overscrollView: ComponentHostView<Empty>
             if let current = self.overscrollView {
                 overscrollView = current
@@ -1271,21 +1271,23 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
 
             let expandDistance = max(-offset - 12.0, 0.0)
-            let expandProgress: CGFloat = min(1.0, expandDistance / 90.0)
+            let expandProgress: CGFloat = min(1.0, expandDistance / 94.0)
 
-            if let _ = nextChannelToRead {
-                let previousType = self.currentOverscrollExpandProgress >= 0.99
-                let currentType = expandProgress >= 0.99
+            let previousType = self.currentOverscrollExpandProgress >= 1.0
+            let currentType = expandProgress >= 1.0
 
-                if previousType != currentType {
-                    if self.feedback == nil {
-                        self.feedback = HapticFeedback()
-                    }
-                    self.feedback?.tap()
+            if previousType != currentType {
+                if self.feedback == nil {
+                    self.feedback = HapticFeedback()
                 }
-
-                self.currentOverscrollExpandProgress = expandProgress
+                if let _ = nextChannelToRead {
+                    self.feedback?.tap()
+                } else {
+                    self.feedback?.success()
+                }
             }
+
+            self.currentOverscrollExpandProgress = expandProgress
 
             if let nextChannelToRead = self.nextChannelToRead {
                 let swipeText: (String, [(Int, NSRange)])
@@ -1307,7 +1309,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
 
                 if expandProgress < 0.1 {
                     chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: nil)
-                } else if expandProgress >= 0.99 {
+                } else if expandProgress >= 1.0 {
                     if chatControllerNode.inputPanelOverscrollNode?.text.0 != releaseText.0 {
                         chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: releaseText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 1))
                     }
