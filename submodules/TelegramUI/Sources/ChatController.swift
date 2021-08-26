@@ -1294,9 +1294,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             guard let strongSelf = self else {
                                                 return
                                             }
+
+                                            var botPeer: TelegramUser?
+                                            if let peer = message.author as? TelegramUser, peer.botInfo != nil {
+                                                botPeer = peer
+                                            } else if let peer = message.peers[message.id.peerId] as? TelegramUser, peer.botInfo != nil {
+                                                botPeer = peer
+                                            }
+
                                             if value {
                                                 openBot()
-                                            } else if let botPeer = message.author as? TelegramUser {
+                                            } else if let botPeer = botPeer {
                                                 strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_BotInteractiveUrlAlert(botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                                                     if let strongSelf = self {
                                                         let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: botPeer.id).start()
