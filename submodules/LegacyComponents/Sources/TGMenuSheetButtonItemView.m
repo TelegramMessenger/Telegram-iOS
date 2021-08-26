@@ -95,8 +95,9 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
     _button.highlightBackgroundColor = nil;
     [self _updateForType:_buttonType];
     
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         self.accessibilityIgnoresInvertColors = true;
+    }
 }
 
 - (void)setPallete:(TGMenuSheetPallete *)pallete
@@ -176,6 +177,8 @@ const CGFloat TGMenuSheetButtonItemViewHeight = 57.0f;
 
 - (void)setThickDivider:(bool)thickDivider
 {
+    _thickDivider = thickDivider;
+    
     if (thickDivider && _customDivider == nil)
     {
         _customDivider = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.bounds.size.width, TGScreenPixel)];

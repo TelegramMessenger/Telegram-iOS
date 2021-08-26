@@ -17,13 +17,14 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     let dateTimeFormat: PresentationDateTimeFormat
     let messageId: MessageId
     
-    let closeButton: ASButtonNode
+    let closeButton: HighlightableButtonNode
     let lineNode: ASImageNode
+    let iconNode: ASImageNode
     let titleNode: ImmediateTextNode
     let textNode: ImmediateTextNode
     let imageNode: TransformImageNode
     let dimNode: ASDisplayNode
-    let iconNode: ASImageNode
+    let drawIconNode: ASImageNode
     
     private let actionArea: AccessibilityAreaNode
     
@@ -75,7 +76,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.nameDisplayOrder = nameDisplayOrder
         self.dateTimeFormat = dateTimeFormat
         
-        self.closeButton = ASButtonNode()
+        self.closeButton = HighlightableButtonNode()
         self.closeButton.accessibilityLabel = strings.VoiceOver_DiscardPreparedContent
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
@@ -85,6 +86,11 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.displayWithoutProcessing = true
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.displayWithoutProcessing = false
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.image = PresentationResourcesChat.chatInputPanelEditIconImage(theme)
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
@@ -105,10 +111,10 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.dimNode.cornerRadius = 2.0
         self.dimNode.isHidden = true
         
-        self.iconNode = ASImageNode()
-        self.iconNode.contentMode = .center
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: .white)
-        self.iconNode.isHidden = true
+        self.drawIconNode = ASImageNode()
+        self.drawIconNode.contentMode = .center
+        self.drawIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: .white)
+        self.drawIconNode.isHidden = true
         
         self.activityIndicator = ActivityIndicator(type: .custom(theme.chat.inputPanel.panelControlAccentColor, 22.0, 2.0, false))
         self.activityIndicator.isHidden = true
@@ -125,11 +131,12 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.closeButton)
         
         self.addSubnode(self.lineNode)
+        self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.imageNode)
         self.addSubnode(self.dimNode)
-        self.addSubnode(self.iconNode)
+        self.addSubnode(self.drawIconNode)
         self.addSubnode(self.activityIndicator)
         self.addSubnode(self.statusNode)
         self.addSubnode(self.tapNode)
@@ -271,10 +278,10 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         
         if isPhoto && !self.imageNode.isHidden {
             self.dimNode.isHidden = false
-            self.iconNode.isHidden = false
+            self.drawIconNode.isHidden = false
         } else {
             self.dimNode.isHidden = true
-            self.iconNode.isHidden = true
+            self.drawIconNode.isHidden = true
         }
         
         if let updateImageSignal = updateImageSignal {
@@ -299,6 +306,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
             
             self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+            self.iconNode.image = PresentationResourcesChat.chatInputPanelEditIconImage(theme)
             
             if let text = self.titleNode.attributedText?.string {
                 self.titleNode.attributedText = NSAttributedString(string: text, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
@@ -350,12 +358,16 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.statusNode.frame = CGRect(origin: CGPoint(x: 18.0, y: 15.0), size: indicatorSize).insetBy(dx: -2.0, dy: -2.0)
         
         let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
-        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - rightInset - closeButtonSize.width + 16.0, y: 2.0), size: closeButtonSize)
+        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - closeButtonSize.width, y: 2.0), size: closeButtonSize)
         self.closeButton.frame = closeButtonFrame
         
         self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
         
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
+        
+        if let icon = self.iconNode.image {
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 10.0), size: icon.size)
+        }
         
         var imageTextInset: CGFloat = 0.0
         if !self.imageNode.isHidden {
@@ -363,7 +375,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
         self.imageNode.frame = CGRect(origin: CGPoint(x: leftInset + 9.0, y: 8.0), size: CGSize(width: 35.0, height: 35.0))
         self.dimNode.frame = self.imageNode.frame
-        self.iconNode.frame = self.imageNode.frame
+        self.drawIconNode.frame = self.imageNode.frame
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
         self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset, y: 7.0), size: titleSize)

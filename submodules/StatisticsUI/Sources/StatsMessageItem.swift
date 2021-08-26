@@ -358,8 +358,7 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     let contentImageSize = CGSize(width: 40.0, height: 40.0)
-                    
-                    var contentImageNodeAppeared = false
+
                     if let dimensions = dimensions {
                         let makeImageLayout = strongSelf.contentImageNode.asyncLayout()
                         let imageSize = contentImageSize
@@ -371,7 +370,6 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.contentImageNode.setSignal(updateImageSignal)
                             if currentContentImageMedia == nil {
                                 strongSelf.contentImageNode.isHidden = false
-                                contentImageNodeAppeared = true
                             }
                         }
                     } else {

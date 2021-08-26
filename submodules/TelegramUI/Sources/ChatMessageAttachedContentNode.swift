@@ -297,9 +297,9 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             
             let incoming = message.effectivelyIncoming(context.account.peerId)
             
-            var horizontalInsets = UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 12.0)
+            var horizontalInsets = UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0)
             if displayLine {
-                horizontalInsets.left += 10.0
+                horizontalInsets.left += 12.0
             }
             
             var preferMediaBeforeText = false
@@ -612,9 +612,11 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             
             return (initialWidth, { constrainedSize, position in
                 var insets = UIEdgeInsets(top: 0.0, left: horizontalInsets.left, bottom: 5.0, right: horizontalInsets.right)
+                var lineInsets = insets
                 switch position {
                     case .linear(.None, _):
                         insets.top += 8.0
+                        lineInsets.top += 8.0 + 8.0
                     default:
                         break
                 }
@@ -705,7 +707,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     boundingSize.width = max(boundingSize.width, videoLayout.contentSize.width + videoLayout.overflowLeft + videoLayout.overflowRight)
                 }
                 
-                lineHeight += insets.top + insets.bottom
+                lineHeight += lineInsets.top + lineInsets.bottom
                 
                 var imageApply: (() -> Void)?
                 if let inlineImageSize = inlineImageSize, let inlineImageDimensions = inlineImageDimensions {
@@ -731,7 +733,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                         titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
                         let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: true, wallpaper: !presentationData.theme.wallpaper.isEmpty)
-                        titleHighlightedColor = bubbleColor.fill
+                        titleHighlightedColor = bubbleColor.fill[0]
                     } else {
                         buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(presentationData.theme.theme)!
                         buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonOutgoing(presentationData.theme.theme)!
@@ -741,7 +743,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                         titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
                         let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: false, wallpaper: !presentationData.theme.wallpaper.isEmpty)
-                        titleHighlightedColor = bubbleColor.fill
+                        titleHighlightedColor = bubbleColor.fill[0]
                     }
                     let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, buttonIconImage, buttonHighlightedIconImage, actionTitle, titleColor, titleHighlightedColor)
                     boundingSize.width = max(buttonWidth, boundingSize.width)
@@ -806,7 +808,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     
                     var actionButtonSizeAndApply: ((CGSize, () -> ChatMessageAttachedContentButtonNode))?
                     if let continueActionButtonLayout = continueActionButtonLayout {
-                        let (size, apply) = continueActionButtonLayout(boundingWidth - 13.0 - insets.right)
+                        let (size, apply) = continueActionButtonLayout(boundingWidth - 12.0 - insets.right)
                         actionButtonSizeAndApply = (size, apply)
                         adjustedBoundingSize.width = max(adjustedBoundingSize.width, insets.left + size.width + insets.right)
                         adjustedBoundingSize.height += 7.0 + size.height
@@ -976,7 +978,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                         }
                                     }
                                 }
-                                buttonNode.frame = CGRect(origin: CGPoint(x: 13.0, y: adjustedLineHeight - insets.top - insets.bottom - 2.0 + 6.0), size: size)
+                                buttonNode.frame = CGRect(origin: CGPoint(x: 12.0, y: adjustedLineHeight - insets.top - insets.bottom - 2.0 + 6.0), size: size)
                             } else if let buttonNode = strongSelf.buttonNode {
                                 buttonNode.removeFromSupernode()
                                 strongSelf.buttonNode = nil

@@ -95,12 +95,12 @@ private class VoiceChatPinButtonNode: HighlightTrackingButtonNode {
 final class VoiceChatMainStageNode: ASDisplayNode {
     private let context: AccountContext
     private let call: PresentationGroupCall
-    private var currentPeer: (PeerId, String?, Bool, Bool, Bool)?
+    private(set) var currentPeer: (PeerId, String?, Bool, Bool, Bool)?
     private var currentPeerEntry: VoiceChatPeerEntry?
         
     var callState: PresentationGroupCallState?
     
-    private var currentVideoNode: GroupVideoNode?
+    private(set) var currentVideoNode: GroupVideoNode?
         
     private let backgroundNode: ASDisplayNode
     private let topFadeNode: ASDisplayNode
@@ -637,7 +637,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 }
                 
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.speakingAvatarNode.setPeer(context: strongSelf.context, theme: presentationData.theme, peer: peer)
+                    strongSelf.speakingAvatarNode.setPeer(context: strongSelf.context, theme: presentationData.theme, peer: EnginePeer(peer))
                 
                 let bodyAttributes = MarkdownAttributeSet(font: Font.regular(15.0), textColor: .white, additionalAttributes: [:])
                 let boldAttributes = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: .white, additionalAttributes: [:])

@@ -964,8 +964,8 @@ public final class ChatListNode: ListView {
                             if index.messageIndex.id.peerId == removingPeerId {
                                 didIncludeRemovingPeerId = true
                             }
-                        } else if case let .GroupReferenceEntry(entry) = entry {
-                            didIncludeHiddenByDefaultArchive = entry.hiddenByDefault
+                        } else if case let .GroupReferenceEntry(_, _, _, _, _, _, _, _, hiddenByDefault) = entry {
+                            didIncludeHiddenByDefaultArchive = hiddenByDefault
                         }
                     }
                 }
@@ -973,16 +973,16 @@ public final class ChatListNode: ListView {
                 var doesIncludeArchive = false
                 var doesIncludeHiddenByDefaultArchive = false
                 for entry in processedView.filteredEntries {
-                    if case let .PeerEntry(peerEntry) = entry {
-                        if peerEntry.index.pinningIndex != nil {
-                            updatedPinnedChats.append(peerEntry.index.messageIndex.id.peerId)
+                    if case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = entry {
+                        if index.pinningIndex != nil {
+                            updatedPinnedChats.append(index.messageIndex.id.peerId)
                         }
-                        if peerEntry.index.messageIndex.id.peerId == removingPeerId {
+                        if index.messageIndex.id.peerId == removingPeerId {
                             doesIncludeRemovingPeerId = true
                         }
-                    } else if case let .GroupReferenceEntry(entry) = entry {
+                    } else if case let .GroupReferenceEntry(_, _, _, _, _, _, _, _, hiddenByDefault) = entry {
                         doesIncludeArchive = true
-                        doesIncludeHiddenByDefaultArchive = entry.hiddenByDefault
+                        doesIncludeHiddenByDefaultArchive = hiddenByDefault
                     }
                 }
                 if previousPinnedChats != updatedPinnedChats {
@@ -1289,7 +1289,7 @@ public final class ChatListNode: ListView {
             }
         }
         
-        self.didEndScrolling = { [weak self] in
+        self.didEndScrolling = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
@@ -1343,8 +1343,8 @@ public final class ChatListNode: ListView {
                 var isHiddenArchiveVisible = false
                 strongSelf.forEachItemNode({ itemNode in
                     if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
-                        if case let .groupReference(groupReference) = item.content {
-                            if groupReference.hiddenByDefault {
+                        if case let .groupReference(_, _, _, _, hiddenByDefault) = item.content {
+                            if hiddenByDefault {
                                 isHiddenArchiveVisible = true
                             }
                         }
@@ -1599,8 +1599,8 @@ public final class ChatListNode: ListView {
                     for item in transition.insertItems {
                         if let item = item.item as? ChatListItem {
                             switch item.content {
-                                case let .peer(peer):
-                                    insertedPeerIds.append(peer.peer.peerId)
+                                case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _):
+                                    insertedPeerIds.append(peer.peerId)
                                 case .groupReference:
                                     break
                             }

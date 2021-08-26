@@ -266,7 +266,7 @@ public enum ChatMessagePreviewControllerData {
 public func chatMessagePreviewControllerData(context: AccountContext, chatLocation: ChatLocation?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
     if let mediaData = chatMessageGalleryControllerData(context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, source: nil, synchronousLoad: true, actionInteraction: nil) {
         switch mediaData {
-            case let .gallery(gallery):
+            case .gallery:
                 break
             case let .instantPage(gallery, centralIndex, galleryMedia):
                 return .instantPage(gallery, centralIndex, galleryMedia)

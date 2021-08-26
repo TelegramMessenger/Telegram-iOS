@@ -252,9 +252,9 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 var id: Int64
                 var category: String?
-                if case let .image(image) = entry {
-                    id = image.0.id
-                    category = image.9
+                if case let .image(mediaId, _, _, _, _, _, _, _, _, categoryValue) = entry {
+                    id = mediaId.id
+                    category = categoryValue
                 } else {
                     id = Int64(entry.peer?.id.id._internalGetInt32Value() ?? 0)
                     if let resource = entry.videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
@@ -462,7 +462,6 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var positionCompleted = false
         var boundsCompleted = false
         var copyCompleted = false
-        var surfaceCopyCompleted = false
         
         let (maybeCopyView, copyViewBackground) = node.2()
         copyViewBackground?.alpha = 1.0
@@ -508,11 +507,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             surfaceCopyView.layer.animatePosition(from: CGPoint(x: transformedSurfaceCopyViewInitialFrame.midX, y: transformedSurfaceCopyViewInitialFrame.midY), to: CGPoint(x: transformedSurfaceFrame.midX, y: transformedSurfaceFrame.midY), duration: 0.25 * durationFactor, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
             let scale = CGSize(width: transformedSurfaceCopyViewInitialFrame.size.width / transformedSurfaceFrame.size.width, height: transformedSurfaceCopyViewInitialFrame.size.height / transformedSurfaceFrame.size.height)
             surfaceCopyView.layer.animate(from: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), to: NSValue(caTransform3D: CATransform3DIdentity), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25 * durationFactor, removeOnCompletion: false, completion: { _ in
-                surfaceCopyCompleted = true
                 intermediateCompletion()
             })
-        } else {
-            surfaceCopyCompleted = true
         }
         
         copyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1 * durationFactor, removeOnCompletion: false)

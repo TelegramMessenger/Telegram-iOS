@@ -70,6 +70,16 @@
 @dynamic thumbnailSignalForItem;
 @dynamic editingContext;
 
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar hasUltrawideCamera:(bool)hasUltrawideCamera hasTelephotoCamera:(bool)hasTelephotoCamera {
+    self = [super init];
+    if (self != nil) {
+    }
+    return self;
+}
+
+- (void)setResults:(NSArray *)__unused results {
+}
+
 #pragma mark - Mode
 
 - (void)setInterfaceHiddenForVideoRecording:(bool)__unused hidden animated:(bool)__unused animated

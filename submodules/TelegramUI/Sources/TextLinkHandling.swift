@@ -34,7 +34,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                     peerSignal = context.account.postbox.loadedPeerWithId(peerId) |> map(Optional.init)
                     navigateDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { peer in
                         if let controller = controller, let peer = peer {
-                            if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                            if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                                 (controller.navigationController as? NavigationController)?.pushViewController(infoController)
                             }
                         }

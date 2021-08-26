@@ -1165,10 +1165,7 @@ final class ChatListControllerNode: ASDisplayNode {
             return nil
         }
         
-        var filter: ChatListNodePeersFilter = []
-        if false, case .group = self.groupId {
-            filter.insert(.excludeRecent)
-        }
+        let filter: ChatListNodePeersFilter = []
         
         let contentNode = ChatListSearchContainerNode(context: self.context, filter: filter, groupId: self.groupId, displaySearchFilters: displaySearchFilters, initialFilter: initialFilter, openPeer: { [weak self] peer, _, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, dismissSearch)

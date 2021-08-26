@@ -182,8 +182,8 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             
             var file: TelegramMediaFile?
             var previousFile: TelegramMediaFile?
-            if let currentItem = currentItem, case let .found(found) = currentItem.content {
-                previousFile = found.topItem?.file
+            if let currentItem = currentItem, case let .found(_, topItem, _) = currentItem.content {
+                previousFile = topItem?.file
             }
             
             switch item.content {

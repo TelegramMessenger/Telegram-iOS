@@ -945,6 +945,8 @@ public final class VoiceChatController: ViewController {
                     return false
             }
         }
+
+        private var statsDisposable: Disposable?
         
         init(controller: VoiceChatController, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
             self.controller = controller
@@ -1117,7 +1119,7 @@ public final class VoiceChatController: ViewController {
             self.scheduleTextNode.textAlignment = .center
             self.scheduleTextNode.maximumNumberOfLines = 4
             
-            self.scheduleCancelButton = SolidRoundedButtonNode(title: self.presentationData.strings.Common_Cancel, theme: SolidRoundedButtonTheme(backgroundColor:  UIColor(rgb: 0x2b2b2f), foregroundColor: .white), height: 52.0, cornerRadius: 10.0)
+            self.scheduleCancelButton = SolidRoundedButtonNode(title: self.presentationData.strings.Common_Cancel, theme: SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0x2b2b2f), foregroundColor: .white), height: 52.0, cornerRadius: 10.0)
             self.scheduleCancelButton.isHidden = !self.isScheduling
             
             self.dateFormatter = DateFormatter()
@@ -1684,7 +1686,7 @@ public final class VoiceChatController: ViewController {
                                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme))
                                         var items: [ActionSheetItem] = []
                                         
-                                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: chatPeer, action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(peer), chatPeer: EnginePeer(chatPeer), action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
 
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
                                             actionSheet?.dismissAnimated()
@@ -2338,6 +2340,27 @@ public final class VoiceChatController: ViewController {
                 }
                 strongSelf.appIsActive = active
             })
+
+            if self.context.sharedContext.immediateExperimentalUISettings.enableDebugDataDisplay {
+                self.statsDisposable = ((call as! PresentationGroupCallImpl).getStats()
+                |> deliverOnMainQueue
+                |> then(.complete() |> delay(1.0, queue: .mainQueue()))
+                |> restart).start(next: { [weak self] stats in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    for (endpointId, videoNode) in strongSelf.videoNodes {
+                        if let incomingVideoStats = stats.incomingVideoStats[endpointId] {
+                            videoNode.updateDebugInfo(text: "in: \(incomingVideoStats.receivingQuality)\n srv: \(incomingVideoStats.availableQuality)")
+                        }
+                    }
+                    if let (_, maybeEndpointId, _, _, _) = strongSelf.mainStageNode.currentPeer, let endpointId = maybeEndpointId {
+                        if let incomingVideoStats = stats.incomingVideoStats[endpointId] {
+                            strongSelf.mainStageNode.currentVideoNode?.updateDebugInfo(text: "in: \(incomingVideoStats.receivingQuality)\n srv: \(incomingVideoStats.availableQuality)")
+                        }
+                    }
+                })
+            }
         }
         
         deinit {
@@ -2361,6 +2384,7 @@ public final class VoiceChatController: ViewController {
             self.readyVideoDisposables.dispose()
             self.applicationStateDisposable?.dispose()
             self.myPeerVideoReadyDisposable.dispose()
+            self.statsDisposable?.dispose()
         }
         
         private func openSettingsMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
@@ -2386,7 +2410,6 @@ public final class VoiceChatController: ViewController {
                     return []
                 }
 
-                let presentationData = strongSelf.presentationData
                 var items: [ContextMenuItem] = []
 
                 if peers.count > 1 {
@@ -2528,7 +2551,7 @@ public final class VoiceChatController: ViewController {
 
                             let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_StopRecordingTitle, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StopRecordingStop, action: {
                                 if let strongSelf = self {
-                                    strongSelf.call.setShouldBeRecording(false, title: nil)
+                                    strongSelf.call.setShouldBeRecording(false, title: nil, videoOrientation: nil)
 
                                     strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: strongSelf.presentationData.strings.VoiceChat_RecordingSaved), action: { [weak self] value in
                                         if case .info = value, let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
@@ -2558,14 +2581,22 @@ public final class VoiceChatController: ViewController {
                                     return
                                 }
 
-                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
-                                    if let strongSelf = self, let title = title {
-                                        strongSelf.call.setShouldBeRecording(true, title: title)
+                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
+                                    if let strongSelf = self {
+                                        strongSelf.call.setShouldBeRecording(true, title: "", videoOrientation: videoOrientation)
 
                                         strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
                                         strongSelf.call.playTone(.recordingStarted)
                                     }
                                 })
+//                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
+//                                    if let strongSelf = self, let title = title {
+//                                        strongSelf.call.setShouldBeRecording(true, title: title)
+//
+//                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
+//                                        strongSelf.call.playTone(.recordingStarted)
+//                                    }
+//                                })
                                 self?.controller?.present(controller, in: .window(.root))
                             })))
                         }
@@ -3498,7 +3529,7 @@ public final class VoiceChatController: ViewController {
                                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
                                 }
                             }
-                        }, switchCamera: { [weak self] in
+                        }, switchCamera: {
                             Queue.mainQueue().after(0.1) {
                                 isFrontCamera = !isFrontCamera
                                 videoCapturer.switchVideoInput(isFront: isFrontCamera)
@@ -4860,6 +4891,8 @@ public final class VoiceChatController: ViewController {
                         memberPeer = user.withUpdatedPhoto([photo])
                     }
                 }
+
+                joinedVideo = true
                 
                 if let videoEndpointId = member.videoEndpointId {
                     peerIdToCameraEndpointId[member.peer.id] = videoEndpointId
@@ -6020,15 +6053,15 @@ public final class VoiceChatController: ViewController {
                 } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
                     let durationSignal: SSignal = SSignal(generator: { subscriber in
                         let disposable = (entityRenderer.duration()).start(next: { duration in
-                            subscriber?.putNext(duration)
-                            subscriber?.putCompletion()
+                            subscriber.putNext(duration)
+                            subscriber.putCompletion()
                         })
                         
                         return SBlockDisposable(block: {
                             disposable.dispose()
                         })
                     })
-                    signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                    signal = durationSignal.map(toSignal: { duration -> SSignal in
                         if let duration = duration as? Double {
                             return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
                         } else {
@@ -6125,17 +6158,6 @@ public final class VoiceChatController: ViewController {
             self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_UnmuteSuggestion, style: .gradient(UIColor(rgb: 0x1d446c), UIColor(rgb: 0x193e63)), icon: nil, location: .point(point, position), displayDuration: .custom(8.0), shouldDismissOnTouch: { _ in
                 return .dismiss(consume: false)
             }), in: .window(.root))
-        }
-        
-        private func displayToggleVideoSourceTooltip(screencast: Bool) {
-//            guard let videoContainerNode = self.mainStageVideoContainerNode else {
-//                return
-//            }
-//
-//            let location = videoContainerNode.view.convert(videoContainerNode.otherVideoWrapperNode.frame, to: nil)
-//            self.controller?.present(TooltipScreen(text: screencast ? self.presentationData.strings.VoiceChat_TapToViewCameraVideo : self.presentationData.strings.VoiceChat_TapToViewScreenVideo, icon: nil, location: .point(location.offsetBy(dx: -9.0, dy: 0.0), .right), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
-//                return .dismiss(consume: false)
-//            }), in: .window(.root))
         }
         
         private var isScheduled: Bool {

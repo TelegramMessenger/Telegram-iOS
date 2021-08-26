@@ -288,7 +288,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             let disposable = MetaDisposable()
                             
                             callContextCache.impl.syncWith { impl in
-                                let callContext = impl.get(account: context.account, engine: context.engine, peerId: peerId, call: activeCall)
+                                let callContext = impl.get(account: context.account, engine: context.engine, peerId: peerId, call: EngineGroupCallDescription(activeCall))
                                 disposable.set((callContext.context.panelData
                                 |> deliverOnMainQueue).start(next: { panelData in
                                     callContext.keep()
@@ -333,7 +333,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             }
         }
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = (self.updatedPresentationData.1
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -348,6 +348,10 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 }
             }
         })
+    }
+    
+    open var updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) {
+        return (self.presentationData, self.context.sharedContext.presentationData)
     }
     
     deinit {
@@ -405,7 +409,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     strongSelf.joinGroupCall(
                         peerId: groupCallPanelData.peerId,
                         invite: nil,
-                        activeCall: CachedChannelData.ActiveCall(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title, scheduleTimestamp: groupCallPanelData.info.scheduleTimestamp, subscribedToScheduled: groupCallPanelData.info.subscribedToScheduled)
+                        activeCall: EngineGroupCallDescription(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title, scheduleTimestamp: groupCallPanelData.info.scheduleTimestamp, subscribedToScheduled: groupCallPanelData.info.subscribedToScheduled)
                     )
                 })
                 self.navigationBar?.additionalContentNode.addSubnode(groupCallAccessoryPanel)
@@ -643,7 +647,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     })
                 }
                 
-                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context)
+                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context, presentationData: self.updatedPresentationData.0)
                 mediaAccessoryPanel.containerNode.headerNode.displayScrubber = item.playbackData?.type != .instantVideo
                 mediaAccessoryPanel.getController = { [weak self] in
                     return self
@@ -852,7 +856,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         })]
     }
     
-    open func joinGroupCall(peerId: PeerId, invite: String?, activeCall: CachedChannelData.ActiveCall) {
+    open func joinGroupCall(peerId: PeerId, invite: String?, activeCall: EngineGroupCallDescription) {
         let context = self.context
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         

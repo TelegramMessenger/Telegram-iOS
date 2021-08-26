@@ -311,7 +311,10 @@
                     {
                         fileUrl = tmpURL;
                         dataUTI = @"public.jpeg";
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                         imageData = [[NSData alloc] initWithContentsOfMappedFile:fileUrl.path];
+#pragma clang diagnostic pop
                         
                         NSString *lowcaseString = [fileName lowercaseString];
                         NSRange range = [lowcaseString rangeOfString:@".heic"];

@@ -63,11 +63,8 @@
 - (TGMenuSheetController *)present
 {
     [_parentController.view endEditing:true];
-    
-    if (true || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
-        return [self _presentAvatarMenu];
-    else
-        return [self _presentLegacyAvatarMenu];
+
+    return [self _presentAvatarMenu];
 }
 
 - (TGMenuSheetController *)_presentAvatarMenu

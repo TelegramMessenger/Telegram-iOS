@@ -2,10 +2,10 @@
 
 @interface SMulticastSignalManager : NSObject
 
-- (SSignal *)multicastedSignalForKey:(NSString *)key producer:(SSignal *(^)())producer;
-- (void)startStandaloneSignalIfNotRunningForKey:(NSString *)key producer:(SSignal *(^)())producer;
+- (SSignal * _Nonnull)multicastedSignalForKey:(NSString * _Nonnull)key producer:(SSignal * _Nonnull (^ _Nonnull)())producer;
+- (void)startStandaloneSignalIfNotRunningForKey:(NSString * _Nonnull)key producer:(SSignal * _Nonnull (^ _Nonnull)())producer;
 
-- (SSignal *)multicastedPipeForKey:(NSString *)key;
-- (void)putNext:(id)next toMulticastedPipeForKey:(NSString *)key;
+- (SSignal * _Nonnull)multicastedPipeForKey:(NSString * _Nonnull)key;
+- (void)putNext:(id _Nullable)next toMulticastedPipeForKey:(NSString * _Nonnull)key;
 
 @end

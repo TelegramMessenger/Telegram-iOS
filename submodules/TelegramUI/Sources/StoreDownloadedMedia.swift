@@ -149,7 +149,7 @@ private final class DownloadedMediaStoreManagerPrivateImpl {
     private let appSpecificAssetCollectionValue: Promise<PHAssetCollection>
     private let storeSettings = Promise<MediaAutoDownloadSettings>()
     
-    init(queue: Queue, postbox: Postbox, accountManager: AccountManager) {
+    init(queue: Queue, postbox: Postbox, accountManager: AccountManager<TelegramAccountManagerTypes>) {
         self.queue = queue
         self.postbox = postbox
         
@@ -199,7 +199,7 @@ final class DownloadedMediaStoreManagerImpl: DownloadedMediaStoreManager {
     private let queue = Queue()
     private let impl: QueueLocalObject<DownloadedMediaStoreManagerPrivateImpl>
     
-    init(postbox: Postbox, accountManager: AccountManager) {
+    init(postbox: Postbox, accountManager: AccountManager<TelegramAccountManagerTypes>) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return DownloadedMediaStoreManagerPrivateImpl(queue: queue, postbox: postbox, accountManager: accountManager)

@@ -3,7 +3,7 @@ import UIKit
 import Display
 import Postbox
 
-public protocol ShareContentContainerNode: class {
+public protocol ShareContentContainerNode: AnyObject {
     func activate()
     func deactivate()
     func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?)

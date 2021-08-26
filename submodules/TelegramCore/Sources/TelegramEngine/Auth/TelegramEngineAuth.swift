@@ -11,7 +11,7 @@ public extension TelegramEngineUnauthorized {
             self.account = account
         }
 
-        public func exportAuthTransferToken(accountManager: AccountManager, otherAccountUserIds: [PeerId.Id], syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {
+        public func exportAuthTransferToken(accountManager: AccountManager<TelegramAccountManagerTypes>, otherAccountUserIds: [PeerId.Id], syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {
             return _internal_exportAuthTransferToken(accountManager: accountManager, account: self.account, otherAccountUserIds: otherAccountUserIds, syncContacts: syncContacts)
         }
 

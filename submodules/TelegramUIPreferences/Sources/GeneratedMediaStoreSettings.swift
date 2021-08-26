@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public struct GeneratedMediaStoreSettings: PreferencesEntry, Equatable {
@@ -42,7 +43,7 @@ public struct GeneratedMediaStoreSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateGeneratedMediaStoreSettingsInteractively(accountManager: AccountManager, _ f: @escaping (GeneratedMediaStoreSettings) -> GeneratedMediaStoreSettings) -> Signal<Void, NoError> {
+public func updateGeneratedMediaStoreSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (GeneratedMediaStoreSettings) -> GeneratedMediaStoreSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, { entry in
             let currentSettings: GeneratedMediaStoreSettings

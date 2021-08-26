@@ -267,7 +267,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let outgoing: PresentationThemeBubbleColorComponents = self.presentationData.chatWallpaper.isEmpty ? self.presentationData.theme.chat.message.outgoing.bubble.withoutWallpaper : self.presentationData.theme.chat.message.outgoing.bubble.withWallpaper
         
         let maxCornerRadius = self.presentationData.chatBubbleCorners.mainRadius
-        self.messageBackgroundNode.image = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: maxCornerRadius, incoming: false, fillColor: outgoing.gradientFill, strokeColor: outgoing.fill == outgoing.gradientFill ? outgoing.stroke : .clear, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
+        self.messageBackgroundNode.image = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: maxCornerRadius, incoming: false, fillColor: outgoing.fill.last ?? outgoing.fill[0], strokeColor: outgoing.fill.count > 1 ? outgoing.stroke : .clear, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
         
         self.view.addSubview(self.effectView)
         self.addSubnode(self.dimNode)
@@ -370,8 +370,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         let outgoing: PresentationThemeBubbleColorComponents = self.presentationData.chatWallpaper.isEmpty ? self.presentationData.theme.chat.message.outgoing.bubble.withoutWallpaper : self.presentationData.theme.chat.message.outgoing.bubble.withWallpaper
         let maxCornerRadius = self.presentationData.chatBubbleCorners.mainRadius
-        let minCornerRadius = self.presentationData.chatBubbleCorners.auxiliaryRadius
-        self.messageBackgroundNode.image = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: maxCornerRadius, incoming: false, fillColor: outgoing.gradientFill, strokeColor: outgoing.fill == outgoing.gradientFill ? outgoing.stroke : .clear, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
+        self.messageBackgroundNode.image = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: maxCornerRadius, incoming: false, fillColor: outgoing.fill.last ?? outgoing.fill[0], strokeColor: outgoing.fill.count > 1 ? outgoing.stroke : .clear, neighbors: .none, theme: self.presentationData.theme.chat, wallpaper: self.presentationData.chatWallpaper, knockout: false)
         
         for node in self.contentNodes {
             node.updateTheme(presentationData.theme)

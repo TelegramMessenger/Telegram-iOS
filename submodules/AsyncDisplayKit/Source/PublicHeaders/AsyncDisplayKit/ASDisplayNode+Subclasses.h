@@ -133,7 +133,6 @@ AS_CATEGORY_IMPLEMENTABLE
  * @note This method should not be called directly outside of ASDisplayNode; use -layoutThatFits: or -calculatedLayout instead.
  */
 - (ASLayout *)calculateLayoutThatFits:(ASSizeRange)constrainedSize;
-- (CGSize)calculateSizeThatFits:(CGSize)contrainedSize;
 
 /**
  * ASDisplayNode's implementation of -layoutThatFits:parentSize: calls this method to resolve the node's size

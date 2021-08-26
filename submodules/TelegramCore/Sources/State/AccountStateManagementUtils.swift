@@ -1353,7 +1353,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         if let replyToMsgId = replyToMsgId {
                             replyToMessageId = MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
                         }
-                        inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date)
+                        inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil)
                 }
                 updatedState.addUpdateChatInputState(peerId: peer.peerId, state: inputState)
             case let .updatePhoneCall(phoneCall):
@@ -1412,9 +1412,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 }
                 updatedState.deleteMessages(messageIds)
             case let .updateTheme(theme):
-                if let theme = TelegramTheme(apiTheme: theme) {
-                    updatedState.updateTheme(theme)
-                }
+                updatedState.updateTheme(TelegramTheme(apiTheme: theme))
             case let .updateMessageID(id, randomId):
                 updatedState.updatedOutgoingUniqueMessageIds[randomId] = id
             case .updateDialogFilters:
@@ -2255,7 +2253,7 @@ private func recordPeerActivityTimestamp(peerId: PeerId, timestamp: Int32, into 
     }
 }
 
-func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountPeerId: PeerId, mediaBox: MediaBox, encryptionProvider: EncryptionProvider, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState, removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId]) -> AccountReplayedFinalState? {
+func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, accountPeerId: PeerId, mediaBox: MediaBox, encryptionProvider: EncryptionProvider, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState, removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId]) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(transaction, finalState: finalState.state)
     if !verified {
         Logger.shared.log("State", "failed to verify final state")
@@ -2449,6 +2447,28 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                         })
                                     }
                                     switch action.action {
+                                        case let .setChatTheme(emoticon):
+                                            transaction.updatePeerCachedData(peerIds: [message.id.peerId], update: { peerId, current in
+                                                var current = current
+                                                if current == nil {
+                                                    if peerId.namespace == Namespaces.Peer.CloudUser {
+                                                        current = CachedUserData()
+                                                    } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                                                        current = CachedGroupData()
+                                                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                                        current = CachedChannelData()
+                                                    }
+                                                }
+                                                if let cachedData = current as? CachedUserData {
+                                                    return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
+                                                } else if let cachedData = current as? CachedGroupData {
+                                                    return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
+                                                } else if let cachedData = current as? CachedChannelData {
+                                                    return cachedData.withUpdatedThemeEmoticon(!emoticon.isEmpty ? emoticon : nil)
+                                                } else {
+                                                    return current
+                                                }
+                                            })
                                         case .groupCreated, .channelMigratedFromGroup:
                                             let holesAtHistoryStart = transaction.getHole(containing: MessageId(peerId: chatPeerId, namespace: Namespaces.Message.Cloud, id: id.id - 1))
                                             for (space, _) in holesAtHistoryStart {
@@ -2995,9 +3015,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             case .UpdateRecentGifs:
                 syncRecentGifs = true
             case let .UpdateChatInputState(peerId, inputState):
-                transaction.updatePeerChatInterfaceState(peerId, update: { current in
-                    return auxiliaryMethods.updatePeerChatInputState(current, inputState)
-                })
+                _internal_updateChatInputState(transaction: transaction, peerId: peerId, inputState: inputState)
             case let .UpdateCall(call):
                 updatedCalls.append(call)
             case let .AddCallSignalingData(callId, data):

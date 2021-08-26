@@ -164,7 +164,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     }
     
     override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
-        var rect = absoluteRect
+        let rect = absoluteRect
         self.absoluteLocation = (rect, containerSize)
         if let shimmerNode = self.placeholderNode {
             shimmerNode.updateAbsoluteRect(rect, within: containerSize)
@@ -178,16 +178,15 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             var online = false
             if let peer = peer?.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != context.account.peerId  {
-                let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: timestamp)
+                let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(presence), relativeTo: timestamp)
                 if case .online = relativeStatus {
                     online = true
                 }
             }
             
             self.peerNode.theme = itemTheme
-
             if let peer = peer {
-                self.peerNode.setup(context: context, theme: theme, strings: strings, peer: peer, online: online, synchronousLoad: synchronousLoad)
+                self.peerNode.setup(context: context, theme: theme, strings: strings, peer: EngineRenderedPeer(peer), online: online, synchronousLoad: synchronousLoad)
                 if let shimmerNode = self.placeholderNode {
                     self.placeholderNode = nil
                     shimmerNode.removeFromSupernode()
@@ -219,7 +218,6 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
                 
                 shimmerNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, horizontal: true, size: self.bounds.size)
             }
-
             self.currentState = (context, theme, strings, peer, search, presence)
             self.setNeedsLayout()
             if let presence = presence as? TelegramUserPresence {

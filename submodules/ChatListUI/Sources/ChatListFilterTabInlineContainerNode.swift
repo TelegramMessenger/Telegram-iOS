@@ -146,7 +146,7 @@ private final class ItemNode: ASDisplayNode {
                 return
             }
             
-            if isExtracted, let theme = strongSelf.theme {
+            if isExtracted {
                 strongSelf.extractedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: strongSelf.isSelected ? UIColor(rgb: 0xbbbbbb) : UIColor(rgb: 0xf1f1f1))
             }
             transition.updateAlpha(node: strongSelf.extractedBackgroundNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
@@ -652,8 +652,8 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
                     strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = true
                     strongSelf.scrollNode.view.setContentOffset(strongSelf.scrollNode.view.contentOffset, animated: false)
                     switch filter {
-                    case let .filter(filter):
-                        strongSelf.contextGesture?(filter.id, sourceNode, gesture)
+                    case let .filter(id, _, _):
+                        strongSelf.contextGesture?(id, sourceNode, gesture)
                     default:
                         strongSelf.contextGesture?(nil, sourceNode, gesture)
                     }
@@ -666,11 +666,11 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
                         return
                     }
                     switch filter {
-                    case let .filter(filter):
+                    case let .filter(id, _, _):
                         strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = false
                         strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = true
                         strongSelf.scrollNode.view.setContentOffset(strongSelf.scrollNode.view.contentOffset, animated: false)
-                        strongSelf.contextGesture?(filter.id, sourceNode, gesture)
+                        strongSelf.contextGesture?(id, sourceNode, gesture)
                     default:
                         strongSelf.contextGesture?(nil, sourceNode, gesture)
                     }
@@ -685,9 +685,9 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
                 unreadCount = count
                 unreadHasUnmuted = true
                 isNoFilter = true
-            case let .filter(filter):
-                unreadCount = filter.unread.value
-                unreadHasUnmuted = filter.unread.hasUnmuted
+            case let .filter(_, _, unread):
+                unreadCount = unread.value
+                unreadHasUnmuted = unread.hasUnmuted
             }
             if !wasAdded && (itemNodePair.regular.unreadCount != 0) != (unreadCount != 0) {
                 badgeAnimations[filter.id] = (unreadCount != 0) ? .in : .out
@@ -830,9 +830,7 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
         transition.updateFrame(node: self.itemsBackgroundTintNode, frame: backgroundFrame)
         
         self.scrollNode.view.contentSize = CGSize(width: itemsBackgroundRightX + 8.0, height: size.height)
-        
-        var previousFrame: CGRect?
-        var nextFrame: CGRect?
+
         var selectedFrame: CGRect?
         if let selectedFilter = selectedFilter, let currentIndex = reorderedFilters.firstIndex(where: { $0.id == selectedFilter }) {
             func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {

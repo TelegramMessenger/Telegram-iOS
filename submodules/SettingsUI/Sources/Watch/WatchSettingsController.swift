@@ -77,13 +77,13 @@ private enum WatchSettingsControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! WatchSettingsControllerArguments
         switch self {
-            case let .replyPresetsHeader(theme, text):
+            case let .replyPresetsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .replyPreset(theme, strings, identifier, placeholder, value, _):
+            case let .replyPreset(_, _, identifier, placeholder, value, _):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: ""), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: true), spacing: 0.0, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePreset(identifier, updatedText.trimmingCharacters(in: .whitespacesAndNewlines))
                 }, action: {})
-            case let .replyPresetsInfo(theme, text):
+            case let .replyPresetsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -113,9 +113,6 @@ private func watchSettingsControllerEntries(presentationData: PresentationData, 
 }
 
 public func watchSettingsController(context: AccountContext) -> ViewController {
-    var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController) -> Void)?
-    
     let updateDisposable = MetaDisposable()
     let arguments = WatchSettingsControllerArguments(updatePreset: { identifier, text in
         updateDisposable.set((.complete() |> delay(1.0, queue: Queue.mainQueue()) |> then(updateWatchPresetSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
@@ -141,12 +138,6 @@ public func watchSettingsController(context: AccountContext) -> ViewController {
     }
     
     let controller = ItemListController(context: context, state: signal)
-    pushControllerImpl = { [weak controller] c in
-        (controller?.navigationController as? NavigationController)?.pushViewController(c)
-    }
-    presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window(.root))
-    }
     return controller
 }
 

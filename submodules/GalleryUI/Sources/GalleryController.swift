@@ -868,11 +868,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             ActionSheetButtonItem(title: isCopyLink ? strongSelf.presentationData.strings.Conversation_ContextMenuCopyLink : strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet, weak self] in
                                 actionSheet?.dismissAnimated()
                                 if isCopyLink, let channel = message.peers[message.id.peerId] as? TelegramChannel {
-                                    var threadMessageId: MessageId?
-//                                    if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
-//                                        threadMessageId = replyThreadMessage.messageId
-//                                    }
-                                    let _ = (context.engine.messages.exportMessageLink(peerId: message.id.peerId, messageId: message.id, isThread: threadMessageId != nil)
+                                    let _ = (context.engine.messages.exportMessageLink(peerId: message.id.peerId, messageId: message.id, isThread: false)
                                     |> map { result -> String? in
                                         return result
                                     }
@@ -1045,18 +1041,9 @@ public class GalleryController: ViewController, StandalonePresentableController 
             if let strongSelf = self {
                 strongSelf._hiddenMedia.set(.single(nil))
                 
-                var animatedOutNode = true
-                var animatedOutInterface = false
-                
-                let completion = {
-                    if animatedOutNode && animatedOutInterface {
-                        //self?.presentingViewController?.dismiss(animated: false, completion: nil)
-                    }
-                }
+                let animatedOutNode = true
                 
                 strongSelf.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
-                    animatedOutInterface = true
-                    //completion()
                 })
             }
         }

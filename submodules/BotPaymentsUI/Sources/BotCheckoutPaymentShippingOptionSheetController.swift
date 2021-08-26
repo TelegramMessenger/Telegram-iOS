@@ -12,7 +12,6 @@ final class BotCheckoutPaymentShippingOptionSheetController: ActionSheetControll
     
     init(context: AccountContext, currency: String, options: [BotPaymentShippingOption], currentId: String?, applyValue: @escaping (String) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let theme = presentationData.theme
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))

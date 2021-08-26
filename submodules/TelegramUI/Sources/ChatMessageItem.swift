@@ -255,7 +255,6 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let effectiveAuthorId: PeerId?
     let additionalContent: ChatMessageItemAdditionalContent?
     
-    //public let accessoryItem: ListViewAccessoryItem?
     let dateHeader: ChatMessageDateHeader
     let avatarHeader: ChatMessageAvatarHeader?
 
@@ -364,6 +363,9 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.avatarHeader = avatarHeader
 
         var headers: [ListViewItemHeader] = [self.dateHeader]
+        if !isScheduledMessages && content.index.timestamp == scheduleWhenOnlineTimestamp {
+            headers = []
+        }
         if let avatarHeader = self.avatarHeader {
             headers.append(avatarHeader)
         }

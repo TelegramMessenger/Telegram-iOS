@@ -465,6 +465,23 @@ class PresentationThemeDecoding: Decoder {
         }
 
         guard let topContainer = self.storage.topContainer as? [Any] else {
+            if let topContainer = self.storage.topContainer as? [String : Any] {
+                let sortedKeys = topContainer.keys.sorted(by: { lhs, rhs in
+                    if let lhsValue = Int(lhs), let rhsValue = Int(rhs), lhsValue < rhsValue {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+                var array: [Any] = []
+                for key in sortedKeys {
+                    if let value = topContainer[key] {
+                        array.append(value)
+                    }
+                }
+                return PresentationThemeUnkeyedDecodingContainer(referencing: self, wrapping: array)
+            }
+            
             throw PresentationThemeDecodingError.typeMismatch
         }
 

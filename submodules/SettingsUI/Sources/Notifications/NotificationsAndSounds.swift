@@ -584,142 +584,142 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! NotificationsAndSoundsArguments
         switch self {
-            case let .accountsHeader(theme, text):
+            case let .accountsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .allAccounts(theme, text, value):
+            case let .allAccounts(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateNotificationsFromAllAccounts(updatedValue)
                 }, tag: self.tag)
-            case let .accountsInfo(theme, text):
+            case let .accountsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .permissionInfo(theme, title, text, suppressed):
+            case let .permissionInfo(_, title, text, suppressed):
                 return ItemListInfoItem(presentationData: presentationData, title: title, text: .plain(text), style: .blocks, sectionId: self.section, closeAction: suppressed ? nil : {
                     arguments.suppressWarning()
                 })
-            case let .permissionEnable(theme, text):
+            case let .permissionEnable(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.authorizeNotifications()
                 })
-            case let .messageHeader(theme, text):
+            case let .messageHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .messageAlerts(theme, text, value):
+            case let .messageAlerts(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateMessageAlerts(updatedValue)
                 }, tag: self.tag)
-            case let .messagePreviews(theme, text, value):
+            case let .messagePreviews(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateMessagePreviews(updatedValue)
                 }, tag: self.tag)
-            case let .messageSound(theme, text, value, sound):
+            case let .messageSound(_, text, value, sound):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     let controller = notificationSoundSelectionController(context: arguments.context, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
                         arguments?.updateMessageSound(value)
                     })
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
-            case let .userExceptions(theme, strings, text, value):
+            case let .userExceptions(_, strings, text, value):
                 let label = value.settings.count > 0 ? strings.Notifications_Exceptions(Int32(value.settings.count)) : strings.Notification_Exceptions_Add
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: label, sectionId: self.section, style: .blocks, action: {
                     let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
-            case let .messageNotice(theme, text):
+            case let .messageNotice(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .groupHeader(theme, text):
+            case let .groupHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .groupAlerts(theme, text, value):
+            case let .groupAlerts(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateGroupAlerts(updatedValue)
                 }, tag: self.tag)
-            case let .groupPreviews(theme, text, value):
+            case let .groupPreviews(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateGroupPreviews(updatedValue)
                 }, tag: self.tag)
-            case let .groupSound(theme, text, value, sound):
+            case let .groupSound(_, text, value, sound):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     let controller = notificationSoundSelectionController(context: arguments.context, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
                         arguments?.updateGroupSound(value)
                     })
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
-            case let .groupExceptions(theme, strings, text, value):
+            case let .groupExceptions(_, strings, text, value):
                 let label = value.settings.count > 0 ? strings.Notifications_Exceptions(Int32(value.settings.count)) : strings.Notification_Exceptions_Add
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: label, sectionId: self.section, style: .blocks, action: {
                     let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
-            case let .groupNotice(theme, text):
+            case let .groupNotice(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .channelHeader(theme, text):
+            case let .channelHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .channelAlerts(theme, text, value):
+            case let .channelAlerts(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateChannelAlerts(updatedValue)
                 }, tag: self.tag)
-            case let .channelPreviews(theme, text, value):
+            case let .channelPreviews(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateChannelPreviews(updatedValue)
                 }, tag: self.tag)
-            case let .channelSound(theme, text, value, sound):
+            case let .channelSound(_, text, value, sound):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     let controller = notificationSoundSelectionController(context: arguments.context, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
                         arguments?.updateChannelSound(value)
                     })
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
-            case let .channelExceptions(theme, strings, text, value):
+            case let .channelExceptions(_, strings, text, value):
                 let label = value.settings.count > 0 ? strings.Notifications_Exceptions(Int32(value.settings.count)) : strings.Notification_Exceptions_Add
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: label, sectionId: self.section, style: .blocks, action: {
                     let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
-            case let .channelNotice(theme, text):
+            case let .channelNotice(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .inAppHeader(theme, text):
+            case let .inAppHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .inAppSounds(theme, text, value):
+            case let .inAppSounds(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateInAppSounds(updatedValue)
                 }, tag: self.tag)
-            case let .inAppVibrate(theme, text, value):
+            case let .inAppVibrate(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateInAppVibration(updatedValue)
                 }, tag: self.tag)
-            case let .inAppPreviews(theme, text, value):
+            case let .inAppPreviews(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateInAppPreviews(updatedValue)
                 }, tag: self.tag)
-            case let .displayNamesOnLockscreen(theme, text, value):
+            case let .displayNamesOnLockscreen(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateDisplayNameOnLockscreen(updatedValue)
                 }, tag: self.tag)
-            case let .displayNamesOnLockscreenInfo(theme, text):
+            case let .displayNamesOnLockscreenInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text.replacingOccurrences(of: "]", with: "]()")), sectionId: self.section, linkAction: { _ in
                     arguments.openAppSettings()
                 })
-            case let .badgeHeader(theme, text):
+            case let .badgeHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .includeChannels(theme, text, value):
+            case let .includeChannels(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateIncludeTag(.channels, updatedValue)
                 }, tag: self.tag)
-            case let .unreadCountCategory(theme, text, value):
+            case let .unreadCountCategory(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateTotalUnreadCountCategory(updatedValue)
                 }, tag: self.tag)
-            case let .unreadCountCategoryInfo(theme, text):
+            case let .unreadCountCategoryInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .joinedNotifications(theme, text, value):
+            case let .joinedNotifications(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     arguments.updateJoinedNotifications(updatedValue)
                 }, tag: self.tag)
-            case let .joinedNotificationsInfo(theme, text):
+            case let .joinedNotificationsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .reset(theme, text):
+            case let .reset(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.resetNotifications()
                 }, tag: self.tag)
-            case let .resetNotice(theme, text):
+            case let .resetNotice(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }

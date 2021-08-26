@@ -9,12 +9,12 @@
 #import "SQueueLocalObject.h"
 
 @implementation SQueueLocalObject {
-    SQueue *queue;
+    SQueue *_queue;
     id valueRef;
 }
 -(id)initWithQueue:(SQueue *)queue generate:(id  _Nonnull (^)(void))next {
     if (self = [super init]) {
-        self->queue = queue;
+        self->_queue = queue;
         [queue dispatch:^{
             self->valueRef = next();
         }];
@@ -23,7 +23,7 @@
 }
 
 -(void)with:(void (^)(id object))f {
-    [self->queue dispatch:^{
+    [self->_queue dispatch:^{
         f(self->valueRef);
     }];
 }
@@ -31,7 +31,7 @@
 -(void)dealloc {
     __block id value = self->valueRef;
     self->valueRef = nil;
-    [queue dispatch:^{
+    [_queue dispatch:^{
         value = nil;
     }];
 }

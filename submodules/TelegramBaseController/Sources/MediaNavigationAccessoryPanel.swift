@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import AccountContext
 import TelegramUIPreferences
+import TelegramPresentationData
 
 public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public let containerNode: MediaNavigationAccessoryContainerNode
@@ -19,8 +20,8 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public var getController: (() -> ViewController?)?
     public var presentInGlobalOverlay: ((ViewController) -> Void)?
     
-    public init(context: AccountContext, displayBackground: Bool = false) {
-        self.containerNode = MediaNavigationAccessoryContainerNode(context: context, displayBackground: displayBackground)
+    public init(context: AccountContext, presentationData: PresentationData, displayBackground: Bool = false) {
+        self.containerNode = MediaNavigationAccessoryContainerNode(context: context, presentationData: presentationData, displayBackground: displayBackground)
         
         super.init()
         

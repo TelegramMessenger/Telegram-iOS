@@ -206,8 +206,7 @@ public func widgetSetupScreen(context: AccountContext) -> ViewController {
     let updateState: ((WidgetSetupScreenControllerState) -> WidgetSetupScreenControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
-    
-    var dismissImpl: (() -> Void)?
+
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     
@@ -270,7 +269,7 @@ public func widgetSetupScreen(context: AccountContext) -> ViewController {
             return transaction.getPeer(peerId)
         }
         |> deliverOnMainQueue).start(next: { peer in
-            guard let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) else {
+            guard let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) else {
                 return
             }
             pushControllerImpl?(controller)
@@ -372,11 +371,6 @@ public func widgetSetupScreen(context: AccountContext) -> ViewController {
     }
     
     let controller = ItemListController(context: context, state: signal)
-    dismissImpl = { [weak controller] in
-        if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-            navigationController.filterController(controller, animated: true)
-        }
-    }
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)

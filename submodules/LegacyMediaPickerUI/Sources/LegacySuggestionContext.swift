@@ -29,16 +29,16 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
                         }
                     }
                     
-                    subscriber?.putNext(users)
-                    subscriber?.putCompletion()
+                    subscriber.putNext(users)
+                    subscriber.putCompletion()
                 })
                 
                 return SBlockDisposable {
                     disposable.dispose()
                 }
             } else {
-                subscriber?.putNext(NSArray())
-                subscriber?.putCompletion()
+                subscriber.putNext(NSArray())
+                subscriber.putCompletion()
                 return nil
             }
         }
@@ -59,8 +59,8 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
             }
             |> take(1)
             |> deliverOnMainQueue).start(next: { hashtags in
-                subscriber?.putNext(hashtags)
-                subscriber?.putCompletion()
+                subscriber.putNext(hashtags)
+                subscriber.putCompletion()
             })
             
             return SBlockDisposable {
@@ -83,10 +83,10 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
                 }
                 return result
             }).start(next: { result in
-                subscriber?.putNext(result)
-                subscriber?.putCompletion()
+                subscriber.putNext(result)
+                subscriber.putCompletion()
             }, error: nil, completed: {
-                subscriber?.putCompletion()
+                subscriber.putCompletion()
             })
             
             return SBlockDisposable {

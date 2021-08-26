@@ -16,6 +16,15 @@ static NSMutableArray *postDeviceDidChangeOrientationBlocks() {
 
 static bool _isDeviceRotating = false;
 
+@interface UIView (OrientationChangeDeps)
+
+- (void)_updateToInterfaceOrientation:(int)arg1 duration:(double)arg2 force:(BOOL)arg3;
+
+@end
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wincomplete-implementation"
+
 @implementation UIWindow (OrientationChange)
 
 + (void)load {
@@ -115,3 +124,5 @@ static bool _isDeviceRotating = false;
 }
 
 @end
+
+#pragma clang diagnostic pop

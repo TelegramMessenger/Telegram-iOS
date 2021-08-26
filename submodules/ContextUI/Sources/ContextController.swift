@@ -12,6 +12,7 @@ private let animationDurationFactor: Double = 1.0
 
 public protocol ContextControllerProtocol {
     var useComplexItemsTransitionAnimation: Bool { get set }
+    var immediateItemsTransitionAnimation: Bool { get set }
     
     func setItems(_ items: Signal<[ContextMenuItem], NoError>)
     func dismiss(completion: (() -> Void)?)
@@ -1010,10 +1011,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             var completedEffect = false
             var completedContentNode = false
             var completedActionsNode = false
-            var targetNode: ASDisplayNode?
             
             if let transitionInfo = transitionInfo, let (sourceNode, sourceNodeRect) = transitionInfo.sourceNode() {
-                targetNode = sourceNode
                 let projectedFrame = convertFrame(sourceNodeRect, from: sourceNode.view, to: self.view)
                 self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
                 
@@ -1090,17 +1089,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 animateOutToItem = false
             }
             
-            if animateOutToItem, let targetNode = targetNode, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
-                let actionsSideInset: CGFloat = (validLayout?.safeInsets.left ?? 0.0) + 11.0
+            if animateOutToItem, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
                 
                 let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
-                
-                if let snapshotView = targetNode.view.snapshotContentTree(unhide: true, keepTransform: true), false {
-                    self.view.addSubview(snapshotView)
-                    snapshotView.layer.animatePosition(from: CGPoint(x: self.contentContainerNode.frame.midX, y: self.contentContainerNode.frame.minY + localSourceFrame.height / 2.0), to: localSourceFrame.center, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
-                    snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false, completion: { _ in
-                    })
-                }
                 
                 self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y), duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true)
                 let contentContainerOffset = CGPoint(x: localSourceFrame.center.x - self.contentContainerNode.frame.center.x, y: localSourceFrame.center.y - self.contentContainerNode.frame.center.y)
@@ -1174,6 +1165,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     private func setItems(items: [ContextMenuItem]) {
+        if let _ = self.currentItems, !self.didCompleteAnimationIn && self.getController()?.immediateItemsTransitionAnimation == true {
+            return
+        }
+        
         self.currentItems = items
         
         let previousActionsContainerNode = self.actionsContainerNode
@@ -1610,7 +1605,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
             
         if let previousActionsContainerNode = previousActionsContainerNode {
-            if transition.isAnimated {
+            if transition.isAnimated && self.getController()?.immediateItemsTransitionAnimation == false {
                 if previousActionsContainerNode.hasAdditionalActions && !self.actionsContainerNode.hasAdditionalActions && self.getController()?.useComplexItemsTransitionAnimation == true {
                     var initialFrame = self.actionsContainerNode.frame
                     let delta = (previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height)
@@ -1724,7 +1719,7 @@ public final class ContextControllerReferenceViewInfo {
     }
 }
 
-public protocol ContextReferenceContentSource: class {
+public protocol ContextReferenceContentSource: AnyObject {
     func transitionInfo() -> ContextControllerReferenceViewInfo?
 }
 
@@ -1750,7 +1745,7 @@ public final class ContextControllerPutBackViewInfo {
     }
 }
 
-public protocol ContextExtractedContentSource: class {
+public protocol ContextExtractedContentSource: AnyObject {
     var centerVertically: Bool { get }
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
@@ -1781,7 +1776,7 @@ public final class ContextControllerTakeControllerInfo {
     }
 }
 
-public protocol ContextControllerContentSource: class {
+public protocol ContextControllerContentSource: AnyObject {
     var controller: ViewController { get }
     var navigationController: NavigationController? { get }
     var passthroughTouches: Bool { get }
@@ -1824,6 +1819,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public var dismissed: (() -> Void)?
     
     public var useComplexItemsTransitionAnimation = false
+    public var immediateItemsTransitionAnimation = false
     
     private var shouldBeDismissedDisposable: Disposable?
     

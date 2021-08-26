@@ -102,11 +102,15 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
         
         present(legacyController, nil)
         
-        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, entities: [], withItem: item, paint: true, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: snapshots as? [Any], immediate: transitionCompletion != nil, appeared: {
+        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, entities: [], withItem: item, paint: true, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: snapshots as [Any], immediate: transitionCompletion != nil, appeared: {
             transitionCompletion?()
         }, completion: { result, editingContext in
             let nativeGenerator = legacyAssetPickerItemGenerator()
-            let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: result as! TGMediaSelectableItem, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3, _4 in
+            var selectableResult: TGMediaSelectableItem?
+            if let result = result {
+                selectableResult = unsafeDowncast(result, to: TGMediaSelectableItem.self)
+            }
+            let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3, _4 in
                 nativeGenerator(_1, _2, _3, _4, nil)
             })
             sendMessagesWithSignals(signals, false, 0)
@@ -116,7 +120,7 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
     })
 }
 
-public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, presentationData: PresentationData, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, presentationData: PresentationData, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
     let defaultVideoPreset = defaultVideoPresetForContext(context)
     UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
     
@@ -178,7 +182,14 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
         carouselItem.stickersContext = paintStickersContext
         carouselItem.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
         carouselItem.recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        var openedCamera = false
+        controller.willDismiss = { [weak carouselItem] _ in
+            if let carouselItem = carouselItem, !openedCamera {
+                carouselItem.saveStartImage()
+            }
+        }
         carouselItem.cameraPressed = { [weak controller, weak parentController] cameraView in
+            openedCamera = true
             if let controller = controller {
                 if let parentController = parentController, parentController.context.currentlyInSplitView() {
                     return
@@ -307,7 +318,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
 
                 legacyController.enableSizeClassSignal = true
                 
-                let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak legacyController] presentationData in
+                let presentationDisposable = updatedPresentationData.signal.start(next: { [weak legacyController] presentationData in
                     if let legacyController = legacyController, let controller = legacyController.legacyController as? TGMenuSheetController  {
                         controller.pallete = legacyMenuPaletteFromTheme(presentationData.theme, forceDark: false)
                     }
@@ -319,7 +330,11 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                 TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: "", entities: [], withItem: item, paint: false, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: [], immediate: false, appeared: {
                 }, completion: { result, editingContext in
                     let nativeGenerator = legacyAssetPickerItemGenerator()
-                    let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: result as! TGMediaSelectableItem, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3, _4 in
+                    var selectableResult: TGMediaSelectableItem?
+                    if let result = result {
+                        selectableResult = unsafeDowncast(result, to: TGMediaSelectableItem.self)
+                    }
+                    let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3, _4 in
                         nativeGenerator(_1, _2, _3, _4, nil)
                     })
                     sendMessagesWithSignals(signals, false, 0, { _ in nil}, {})

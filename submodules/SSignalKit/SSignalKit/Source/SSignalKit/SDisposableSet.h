@@ -4,7 +4,7 @@
 
 @interface SDisposableSet : NSObject <SDisposable>
 
-- (void)add:(id<SDisposable>)disposable;
-- (void)remove:(id<SDisposable>)disposable;
+- (void)add:(id<SDisposable> _Nonnull)disposable;
+- (void)remove:(id<SDisposable> _Nonnull)disposable;
 
 @end

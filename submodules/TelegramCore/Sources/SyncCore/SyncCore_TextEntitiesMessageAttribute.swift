@@ -23,7 +23,7 @@ public enum MessageTextEntityType: Equatable {
     case Custom(type: CustomEntityType)
 }
 
-public struct MessageTextEntity: PostboxCoding, Equatable {
+public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
     public let range: Range<Int>
     public let type: MessageTextEntityType
     
@@ -74,6 +74,60 @@ public struct MessageTextEntity: PostboxCoding, Equatable {
                 self.type = .Unknown
         }
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        let rangeStart: Int32 = (try? container.decode(Int32.self, forKey: "start")) ?? 0
+        var rangeEnd: Int32 = (try? container.decode(Int32.self, forKey: "end")) ?? 0
+        rangeEnd = max(rangeEnd, rangeStart)
+
+        let type: Int32 = (try? container.decode(Int32.self, forKey: "_rawValue")) ?? 0
+
+        self.range = Int(rangeStart) ..< Int(rangeEnd)
+
+        switch type {
+            case 1:
+                self.type = .Mention
+            case 2:
+                self.type = .Hashtag
+            case 3:
+                self.type = .BotCommand
+            case 4:
+                self.type = .Url
+            case 5:
+                self.type = .Email
+            case 6:
+                self.type = .Bold
+            case 7:
+                self.type = .Italic
+            case 8:
+                self.type = .Code
+            case 9:
+                self.type = .Pre
+            case 10:
+                let url = (try? container.decode(String.self, forKey: "url")) ?? ""
+                self.type = .TextUrl(url: url)
+            case 11:
+                let peerId = (try? container.decode(Int64.self, forKey: "peerId")) ?? 0
+                self.type = .TextMention(peerId: PeerId(peerId))
+            case 12:
+                self.type = .PhoneNumber
+            case 13:
+                self.type = .Strikethrough
+            case 14:
+                self.type = .BlockQuote
+            case 15:
+                self.type = .Underline
+            case 16:
+                self.type = .BankCard
+            case Int32.max:
+                let customType: Int32 = (try? container.decode(Int32.self, forKey: "type")) ?? 0
+                self.type = .Custom(type: customType)
+            default:
+                self.type = .Unknown
+        }
+    }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(Int32(self.range.lowerBound), forKey: "start")
@@ -118,6 +172,54 @@ public struct MessageTextEntity: PostboxCoding, Equatable {
             case let .Custom(type):
                 encoder.encodeInt32(Int32.max, forKey: "_rawValue")
                 encoder.encodeInt32(type, forKey: "type")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(Int32(self.range.lowerBound), forKey: "start")
+        try container.encode(Int32(self.range.upperBound), forKey: "end")
+        switch self.type {
+            case .Unknown:
+                try container.encode(0 as Int32, forKey: "_rawValue")
+            case .Mention:
+                try container.encode(1 as Int32, forKey: "_rawValue")
+            case .Hashtag:
+                try container.encode(2 as Int32, forKey: "_rawValue")
+            case .BotCommand:
+                try container.encode(3 as Int32, forKey: "_rawValue")
+            case .Url:
+                try container.encode(4 as Int32, forKey: "_rawValue")
+            case .Email:
+                try container.encode(5 as Int32, forKey: "_rawValue")
+            case .Bold:
+                try container.encode(6 as Int32, forKey: "_rawValue")
+            case .Italic:
+                try container.encode(7 as Int32, forKey: "_rawValue")
+            case .Code:
+                try container.encode(8 as Int32, forKey: "_rawValue")
+            case .Pre:
+                try container.encode(9 as Int32, forKey: "_rawValue")
+            case let .TextUrl(url):
+                try container.encode(10 as Int32, forKey: "_rawValue")
+                try container.encode(url, forKey: "url")
+            case let .TextMention(peerId):
+                try container.encode(11 as Int32, forKey: "_rawValue")
+                try container.encode(peerId.toInt64(), forKey: "peerId")
+            case .PhoneNumber:
+                try container.encode(12 as Int32, forKey: "_rawValue")
+            case .Strikethrough:
+                try container.encode(13 as Int32, forKey: "_rawValue")
+            case .BlockQuote:
+                try container.encode(14 as Int32, forKey: "_rawValue")
+            case .Underline:
+                try container.encode(15 as Int32, forKey: "_rawValue")
+            case .BankCard:
+                try container.encode(16 as Int32, forKey: "_rawValue")
+            case let .Custom(type):
+                try container.encode(Int32.max as Int32, forKey: "_rawValue")
+                try container.encode(type as Int32, forKey: "type")
         }
     }
     

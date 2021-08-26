@@ -387,20 +387,22 @@ public final class ShareController: ViewController {
                 break
             case let .image(representations):
                 if case .saveToCameraRoll = preferredAction {
-                    self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
+                    self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Gallery_SaveImage, action: { [weak self] in
                         self?.saveToCameraRoll(representations: representations)
                         self?.actionCompleted?()
                     })
                 }
             case let .media(mediaReference):
                 var canSave = false
+                var isVideo = false
                 if mediaReference.media is TelegramMediaImage {
                     canSave = true
-                } else if mediaReference.media is TelegramMediaFile {
+                } else if let file = mediaReference.media as? TelegramMediaFile {
                     canSave = true
+                    isVideo = file.isVideo
                 }
                 if case .saveToCameraRoll = preferredAction, canSave {
-                    self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
+                    self.defaultAction = ShareControllerAction(title: isVideo ? self.presentationData.strings.Gallery_SaveVideo : self.presentationData.strings.Gallery_SaveImage, action: { [weak self] in
                         self?.saveToCameraRoll(mediaReference: mediaReference)
                         self?.actionCompleted?()
                     })
@@ -748,23 +750,7 @@ public final class ShareController: ViewController {
                                     }
                                 }
                                 
-                                var activities: [UIActivity]?
-                                if false, #available(iOS 10.0, *), strongSelf.sharedContext.applicationBindings.canOpenUrl("instagram-stories://"), case let .messages(messages) = strongSelf.subject, let message = messages.first, let peer = message.peers[message.id.peerId] {
-                                    let shareToInstagram = ShareToInstagramActivity(action: { sharedItems in
-                                        let renderer = MessageStoryRenderer(context: strongSelf.currentContext, messages: messages)
-                                        
-                                        let layout = ContainerViewLayout(size: CGSize(width: 414.0, height: 896.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
-                                        renderer.update(layout: layout) { image in
-                                            if let data = image?.pngData() {
-                                                let pasteboardItems: [[String: Any]] = [["com.instagram.sharedSticker.backgroundImage": data,
-                                                                                         "com.instagram.sharedSticker.contentURL": "https://t.me/\(peer.addressName ?? "")/\(message.id.id)"]]
-                                                UIPasteboard.general.setItems(pasteboardItems, options: [.expirationDate: Date().addingTimeInterval(5 * 60)])
-                                                strongSelf.sharedContext.applicationBindings.openUrl("instagram-stories://share")
-                                            }
-                                        }
-                                    })
-                                    activities = [shareToInstagram]
-                                }
+                                let activities: [UIActivity]? = nil
                                 
                                 let _ = (strongSelf.didAppearPromise.get()
                                 |> filter { $0 }
@@ -803,7 +789,7 @@ public final class ShareController: ViewController {
             }
             var items: [ActionSheetItem] = []
             for info in strongSelf.switchableAccounts {
-                items.append(ActionSheetPeerItem(context: strongSelf.sharedContext.makeTempAccountContext(account: info.account), peer: info.peer, title: info.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), isSelected: info.account.id == strongSelf.currentAccount.id, strings: presentationData.strings, theme: presentationData.theme, action: { [weak self] in
+                items.append(ActionSheetPeerItem(context: strongSelf.sharedContext.makeTempAccountContext(account: info.account), peer: EnginePeer(info.peer), title: info.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), isSelected: info.account.id == strongSelf.currentAccount.id, strings: presentationData.strings, theme: presentationData.theme, action: { [weak self] in
                     dismissAction()
                     self?.switchToAccount(account: info.account, animateIn: true)
                 }))

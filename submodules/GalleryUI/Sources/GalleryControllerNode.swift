@@ -258,13 +258,11 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             transition.updateFrame(node: navigationBar, frame: CGRect(origin: CGPoint(x: 0.0, y: self.areControlsHidden ? -navigationBarHeight : 0.0), size: CGSize(width: layout.size.width, height: navigationBarHeight)))
         }
             
-        let displayThumbnailPanel = layout.size.width < layout.size.height
         var thumbnailPanelHeight: CGFloat = 0.0
         if let currentThumbnailContainerNode = self.currentThumbnailContainerNode {
             let panelHeight: CGFloat = 52.0
-            if displayThumbnailPanel {
-                thumbnailPanelHeight = 52.0
-            }
+            thumbnailPanelHeight = panelHeight
+            
             let thumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 40.0 - panelHeight + 4.0 - layout.intrinsicInsets.bottom + (self.areControlsHidden ? 106.0 : 0.0)), size: CGSize(width: layout.size.width, height: panelHeight - 4.0))
             transition.updateFrame(node: currentThumbnailContainerNode, frame: thumbnailsFrame)
             currentThumbnailContainerNode.updateLayout(size: thumbnailsFrame.size, transition: transition)

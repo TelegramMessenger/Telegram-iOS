@@ -62,8 +62,9 @@
     [self.view addSubview:_wrapperView];
 
     _collectionView = [[[self _collectionViewClass] alloc] initWithFrame:_wrapperView.bounds collectionViewLayout:[self _collectionLayout]];
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+    }
     _collectionView.alwaysBounceVertical = true;
     _collectionView.backgroundColor = self.view.backgroundColor;
     _collectionView.delaysContentTouches = true;
@@ -101,8 +102,9 @@
     [super viewDidLoad];
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     UIInterfaceOrientation orientation = UIInterfaceOrientationPortrait;
     if (self.view.frame.size.width > self.view.frame.size.height)
@@ -267,12 +269,16 @@
     if (!self.isViewLoaded) {
         return;
     }
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     UIEdgeInsets contentInset = [self controllerInsetForInterfaceOrientation:self.interfaceOrientation];
+#pragma clang diagnostic pop
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     CGPoint contentOffset = CGPointMake(0, _collectionView.contentSize.height - _collectionView.frame.size.height + contentInset.bottom);
     if (contentOffset.y < -contentInset.top)
@@ -308,8 +314,9 @@
         orientation = UIInterfaceOrientationLandscapeLeft;
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     
@@ -326,7 +333,10 @@
     }
     else if (lastOffset < -_collectionView.contentInset.top + 2)
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         UIEdgeInsets contentInset = [self controllerInsetForInterfaceOrientation:self.interfaceOrientation];
+#pragma clang diagnostic pop
         
         CGPoint contentOffset = CGPointMake(0, -contentInset.top);
         [_collectionView setContentOffset:contentOffset animated:false];

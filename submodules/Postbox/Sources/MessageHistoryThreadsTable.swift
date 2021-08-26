@@ -82,16 +82,30 @@ class MessageHistoryThreadsTable: Table {
         return indices
     }
     
-    func getMessageCountInRange(threadId: Int64, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
-        precondition(lowerBound.id.namespace == namespace)
-        precondition(upperBound.id.namespace == namespace)
-        var lowerBoundKey = self.key(threadId: threadId, index: lowerBound)
-        if lowerBound.timestamp > 1 {
-            lowerBoundKey = lowerBoundKey.predecessor
+    func getMessageCountInRange(threadId: Int64, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex?, upperBound: MessageIndex?) -> Int {
+        if let lowerBound = lowerBound {
+            precondition(lowerBound.id.namespace == namespace)
         }
-        var upperBoundKey = self.key(threadId: threadId, index: upperBound)
-        if upperBound.timestamp < Int32.max - 1 {
-            upperBoundKey = upperBoundKey.successor
+        if let upperBound = upperBound {
+            precondition(upperBound.id.namespace == namespace)
+        }
+        var lowerBoundKey: ValueBoxKey
+        if let lowerBound = lowerBound {
+            lowerBoundKey = self.key(threadId: threadId, index: lowerBound)
+            if lowerBound.timestamp > 1 {
+                lowerBoundKey = lowerBoundKey.predecessor
+            }
+        } else {
+            lowerBoundKey = self.lowerBound(threadId: threadId, peerId: peerId, namespace: namespace)
+        }
+        var upperBoundKey: ValueBoxKey
+        if let upperBound = upperBound {
+            upperBoundKey = self.key(threadId: threadId, index: upperBound)
+            if upperBound.timestamp < Int32.max - 1 {
+                upperBoundKey = upperBoundKey.successor
+            }
+        } else {
+            upperBoundKey = self.upperBound(threadId: threadId, peerId: peerId, namespace: namespace)
         }
         return Int(self.valueBox.count(self.table, start: lowerBoundKey, end: upperBoundKey))
     }

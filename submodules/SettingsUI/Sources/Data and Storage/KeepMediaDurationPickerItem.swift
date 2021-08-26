@@ -108,7 +108,7 @@ private final class KeepMediaDurationPickerItemNode: ListViewItemNode {
         self.maskNode = ASImageNode()
         
         var textNodes: [TextNode] = []
-        for i in 0 ..< 4 {
+        for _ in 0 ..< 4 {
             let textNode = TextNode()
             textNode.isUserInteractionEnabled = false
             textNode.displaysAsynchronously = false

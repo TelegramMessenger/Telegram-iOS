@@ -59,11 +59,8 @@
     {
         self.backgroundColor = [UIColor blackColor];
         self.clipsToBounds = true;
-        
-        if (false && iosMajorVersion() >= 8)
-            _wrapperView = [[TGCameraPreviewLayerWrapperView alloc] init];
-        else
-            _wrapperView = [[TGCameraLegacyPreviewLayerWrapperView alloc] init];
+
+        _wrapperView = [[TGCameraLegacyPreviewLayerWrapperView alloc] init];
         [self addSubview:_wrapperView];
         
         _wrapperView.videoGravity = AVLayerVideoGravityResizeAspectFill;
@@ -74,8 +71,9 @@
         _fadeView.userInteractionEnabled = false;
         [self addSubview:_fadeView];
         
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _fadeView.accessibilityIgnoresInvertColors = true;
+        }
         
 #if TARGET_IPHONE_SIMULATOR
         _fadeView.backgroundColor = [UIColor redColor];
@@ -230,8 +228,9 @@
     snapshotView.image = image;
     [self insertSubview:snapshotView aboveSubview:_wrapperView];
     
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         snapshotView.accessibilityIgnoresInvertColors = true;
+    }
     
     _snapshotView = snapshotView;
     

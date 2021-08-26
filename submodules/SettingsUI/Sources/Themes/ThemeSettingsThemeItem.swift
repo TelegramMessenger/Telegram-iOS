@@ -268,7 +268,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             }
             
             let title = NSAttributedString(string: item.title, font: item.selected ? selectedTextFont : textFont, textColor: item.selected ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor)
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let (_, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 116.0, height: 116.0), insets: UIEdgeInsets())
             return (itemLayout, { animated in
@@ -533,8 +533,6 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     }
 
     func asyncLayout() -> (_ item: ThemeSettingsThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let currentItem = self.item
-        
         return { item, params, neighbors in
             let contentSize: CGSize
             let insets: UIEdgeInsets
@@ -614,14 +612,14 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     
                     var entries: [ThemeSettingsThemeEntry] = []
                     var index: Int = 0
-                    for var theme in item.themes {
+                    for theme in item.themes {
                         if case let .cloud(theme) = theme {
                             if !item.displayUnsupported && theme.theme.file == nil {
                                 continue
                             }
                         }
                         let title = themeDisplayName(strings: item.strings, reference: theme)
-                        var accentColor = item.themeSpecificAccentColors[theme.generalThemeReference.index]
+                        let accentColor = item.themeSpecificAccentColors[theme.generalThemeReference.index]
                         /*if let customThemeIndex = accentColor?.themeIndex {
                             if let customTheme = themes[customThemeIndex] {
                                 theme = customTheme

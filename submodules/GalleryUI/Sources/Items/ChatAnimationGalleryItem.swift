@@ -208,7 +208,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongSelf.statusNode.alpha = 1.0
                         strongSelf.statusNodeContainer.isUserInteractionEnabled = true
                         strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-                    case let .Fetching(isActive, progress):
+                    case let .Fetching(_, progress):
                         strongSelf.statusNode.isHidden = false
                         strongSelf.statusNode.alpha = 1.0
                         strongSelf.statusNodeContainer.isUserInteractionEnabled = true
@@ -312,7 +312,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
         
-        if let (context, mediaReference) = self.contextAndMedia, let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
+        if let (_, mediaReference) = self.contextAndMedia, let _ = mediaReference.concrete(TelegramMediaFile.self) {
             if isVisible {
             } else {
                 self.fetchDisposable.set(nil)

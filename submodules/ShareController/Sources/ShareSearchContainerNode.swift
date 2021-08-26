@@ -32,15 +32,6 @@ private enum ShareSearchRecentEntryStableId: Hashable {
                 }
         }
     }
-    
-    var hashValue: Int {
-        switch self {
-            case .topPeers:
-                return 0
-            case let .peerId(peerId):
-                return peerId.hashValue
-        }
-    }
 }
 
 private enum ShareSearchRecentEntry: Comparable, Identifiable {
@@ -285,7 +276,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                         }
                     }
                     
-                    if false, foundRemotePeers.2 {
+                    if foundRemotePeers.2 {
                         for _ in 0 ..< 4 {
                             entries.append(ShareSearchPeerEntry(index: index, peer: nil, presence: nil, theme: theme, strings: strings))
                             index += 1

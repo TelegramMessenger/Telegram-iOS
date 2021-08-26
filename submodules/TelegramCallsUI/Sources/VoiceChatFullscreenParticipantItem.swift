@@ -202,6 +202,16 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     var item: VoiceChatFullscreenParticipantItem? {
         return self.layoutParams?.0
     }
+
+    private var isCurrentlyInHierarchy = false {
+        didSet {
+            if self.isCurrentlyInHierarchy != oldValue {
+                self.highlightNode.isCurrentlyInHierarchy = self.isCurrentlyInHierarchy
+                self.audioLevelView?.isManuallyInHierarchy = self.isCurrentlyInHierarchy
+            }
+        }
+    }
+    private var isCurrentlyInHierarchyDisposable: Disposable?
     
     init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
@@ -247,7 +257,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
     
         self.actionContainerNode = ASDisplayNode()
         self.actionButtonNode = HighlightableButtonNode()
-        
+
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
@@ -293,6 +303,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
         self.audioLevelDisposable.dispose()
         self.raiseHandTimer?.invalidate()
         self.silenceTimer?.invalidate()
+        self.isCurrentlyInHierarchyDisposable?.dispose()
     }
     
     override func selected() {
@@ -614,7 +625,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                         
                     strongSelf.accessibilityLabel = titleAttributedString?.string
-                    var combinedValueString = ""
+                    let combinedValueString = ""
 //                    if let statusString = statusAttributedString?.string, !statusString.isEmpty {
 //                        combinedValueString.append(statusString)
 //                    }
@@ -700,7 +711,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
                                     
-                                    if let item = strongSelf.item, strongSelf.videoNode != nil && !active {
+                                    if let _ = strongSelf.item, strongSelf.videoNode != nil && !active {
                                         audioLevelView.alpha = 0.0
                                     }
                                 }
@@ -752,7 +763,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     if item.peer.isDeleted {
                         overrideImage = .deletedIcon
                     }
-                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.peer), overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad, storeUnrounded: true)
                 
                     var hadMicrophoneNode = false
                     var hadRaiseHandNode = false
@@ -971,6 +982,16 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.actionButtonNode, frame: animationFrame)
                                         
                     strongSelf.updateIsHighlighted(transition: transition)
+
+                    if strongSelf.isCurrentlyInHierarchyDisposable == nil {
+                        strongSelf.isCurrentlyInHierarchyDisposable = (item.context.sharedContext.applicationBindings.applicationInForeground
+                        |> deliverOnMainQueue).start(next: { value in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.isCurrentlyInHierarchy = value
+                        })
+                    }
                 }
             })
         }

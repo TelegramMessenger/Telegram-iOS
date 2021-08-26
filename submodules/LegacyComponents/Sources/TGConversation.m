@@ -1367,8 +1367,7 @@
     return TGPeerIdIsAd(_conversationId);
 }
 
-- (NSString *)chatPhotoFullSmall
-{
+- (NSString *)chatPhotoFullSmall {
     NSString *finalAvatarUrl = self.chatPhotoSmall;
     if (finalAvatarUrl.length == 0)
         return finalAvatarUrl;
@@ -1389,8 +1388,7 @@
     return finalAvatarUrl;
 }
 
-- (NSString *)chatPhotoFullBig
-{
+- (NSString *)chatPhotoFullBig {
     NSString *finalAvatarUrl = self.chatPhotoBig;
     if (finalAvatarUrl.length == 0)
         return finalAvatarUrl;

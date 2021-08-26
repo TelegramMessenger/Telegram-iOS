@@ -86,7 +86,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, pres
 }
 
 final class OverlayPlayerControlsNode: ASDisplayNode {
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let postbox: Postbox
     private var presentationData: PresentationData
     
@@ -153,7 +153,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
-    init(account: Account, accountManager: AccountManager, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError>) {
+    init(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError>) {
         self.accountManager = accountManager
         self.postbox = account.postbox
         self.presentationData = presentationData

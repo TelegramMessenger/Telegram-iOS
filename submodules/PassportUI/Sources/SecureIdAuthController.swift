@@ -224,7 +224,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
                         let primaryLanguageByCountry = configuration.nativeLanguageByCountry
                         return .single(SecureIdEncryptedFormData(form: form, primaryLanguageByCountry: primaryLanguageByCountry, accountPeer: accountPeer, servicePeer: servicePeer))
                     }
-                    |> mapError { _ in return RequestSecureIdFormError.generic }
+                    |> castError(RequestSecureIdFormError.self)
                     |> switchToLatest
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] formData in
@@ -252,7 +252,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
                     
                     return .single(accountPeer)
                     }
-                    |> mapError { _ in return GetAllSecureIdValuesError.generic }
+                    |> castError(GetAllSecureIdValuesError.self)
                     |> switchToLatest)
                 |> deliverOnMainQueue).start(next: { [weak self] values, configuration, accountPeer in
                     if let strongSelf = self {
@@ -329,7 +329,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
                 guard let strongSelf = self else {
                     return
                 }
-                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                     (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                 }
             })
@@ -496,17 +496,17 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
     }
     
     private func openPasswordHelp() {
-        guard let verificationState = self.state.verificationState, case let .passwordChallenge(passwordChallenge) = verificationState else {
+        guard let verificationState = self.state.verificationState, case let .passwordChallenge(_, state, hasRecoveryEmail) = verificationState else {
             return
         }
-        switch passwordChallenge.state {
+        switch state {
             case .checking:
                 return
             case .none, .invalid:
                 break
         }
         
-        if passwordChallenge.hasRecoveryEmail {
+        if hasRecoveryEmail {
             self.present(textAlertController(context: self.context, title: self.presentationData.strings.Passport_ForgottenPassword, text: self.presentationData.strings.Passport_PasswordReset, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Login_ResetAccountProtected_Reset, action: { [weak self] in
                 guard let strongSelf = self else {
                     return

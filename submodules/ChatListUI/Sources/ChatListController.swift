@@ -611,8 +611,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                         scrollToEndIfExists = true
                     }
-                    
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput && !peer.isDeleted, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] controller in
+
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), activateInput: activateInput && !peer.isDeleted, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, chatListFilter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id, completion: { [weak self] controller in
                         self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                         if let promoInfo = promoInfo {
                             switch promoInfo {
@@ -836,10 +836,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             switch item.content {
-            case let .groupReference(groupReference):
-                let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupReference.groupId, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: false)
+            case let .groupReference(groupId, _, _, _, _):
+                let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupId, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: false)
                 chatListController.navigationPresentation = .master
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupReference.groupId, chatListController: strongSelf), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId, chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             case let .peer(_, peer, _, _, _, _, _, _, promoInfo, _, _, _):
                 let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
@@ -1481,8 +1481,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             switch entry {
             case .all:
                 return nil
-            case let .filter(filter):
-                return filter.id
+            case let .filter(id, _, _):
+                return id
             }
         }
         
@@ -1996,7 +1996,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         return false
                     }
                     if value == .commit {
-                        let context = strongSelf.context
                         let presentationData = strongSelf.presentationData
                         let progressSignal = Signal<Never, NoError> { subscriber in
                             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
@@ -2228,7 +2227,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 if canRemoveGlobally, (mainPeer is TelegramGroup || mainPeer is TelegramChannel) {
-                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .deleteAndLeave, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .deleteAndLeave, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                     
                     items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
@@ -2266,7 +2265,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         ], parseMarkdown: true), in: .window(.root))
                     }))
                 } else {
-                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .delete, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                     
                     if canClear {
                         let beginClear: (InteractiveHistoryClearingType) -> Void = { type in
@@ -2327,7 +2326,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                                     var items: [ActionSheetItem] = []
                                                                 
-                                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory(canClearCache: false), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .clearHistory(canClearCache: false), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                                     
                                     if joined || mainPeer.isDeleted {
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
@@ -2387,7 +2386,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                                 var items: [ActionSheetItem] = []
                                 
-                                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .deleteAndLeave, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .deleteAndLeave, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                                 
                                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
@@ -2492,7 +2491,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let actionSheet = ActionSheetController(presentationData: self.presentationData)
             var items: [ActionSheetItem] = []
             
-            items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
+            items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .delete, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
             
             if joined || mainPeer.isDeleted {
                 items.append(ActionSheetButtonItem(title: self.presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in

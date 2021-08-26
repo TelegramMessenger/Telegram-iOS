@@ -49,7 +49,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     private let isMediaPlaying: () -> Bool
     private let resumeMediaPlayback: () -> Void
 
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let audioSession: ManagedAudioSession
     private let callKitIntegration: CallKitIntegration?
     
@@ -113,7 +113,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return OngoingCallContext.versions(includeExperimental: includeExperimental, includeReference: includeReference)
     }
     
-    public init(accountManager: AccountManager, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), isMediaPlaying: @escaping () -> Bool, resumeMediaPlayback: @escaping () -> Void, audioSession: ManagedAudioSession, activeAccounts: Signal<[AccountContext], NoError>) {
+    public init(accountManager: AccountManager<TelegramAccountManagerTypes>, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), isMediaPlaying: @escaping () -> Bool, resumeMediaPlayback: @escaping () -> Void, audioSession: ManagedAudioSession, activeAccounts: Signal<[AccountContext], NoError>) {
         self.getDeviceAccessData = getDeviceAccessData
         self.accountManager = accountManager
         self.audioSession = audioSession
@@ -728,7 +728,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return .success
     }
     
-    public func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
+    public func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: EngineGroupCallDescription, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
         let begin: () -> Void = { [weak self] in
             if let requestJoinAsPeerId = requestJoinAsPeerId {
                 requestJoinAsPeerId({ joinAsPeerId in
@@ -772,7 +772,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         peerId: PeerId,
         invite: String?,
         joinAsPeerId: PeerId?,
-        initialCall: CachedChannelData.ActiveCall,
+        initialCall: EngineGroupCallDescription,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()

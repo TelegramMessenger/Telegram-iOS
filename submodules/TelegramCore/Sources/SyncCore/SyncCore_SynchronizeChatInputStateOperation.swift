@@ -8,12 +8,12 @@ public final class SynchronizeChatInputStateOperation: PostboxCoding {
     }
     
     public init(decoder: PostboxDecoder) {
-        self.previousState = decoder.decodeObjectForKey("p", decoder: { SynchronizeableChatInputState(decoder: $0) }) as? SynchronizeableChatInputState
+        self.previousState = decoder.decode(SynchronizeableChatInputState.self, forKey: "p")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         if let previousState = self.previousState {
-            encoder.encodeObject(previousState, forKey: "p")
+            encoder.encode(previousState, forKey: "p")
         } else {
             encoder.encodeNil(forKey: "p")
         }

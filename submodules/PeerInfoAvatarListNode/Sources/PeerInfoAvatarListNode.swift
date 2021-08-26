@@ -846,7 +846,6 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 self.updateItems(size: size, transition: .animated(duration: 0.3, curve: .spring), stripTransition: .animated(duration: 0.3, curve: .spring))
             }
         case .cancelled, .ended:
-            let translation = recognizer.translation(in: self.view)
             let velocity = recognizer.velocity(in: self.view)
             var directionIsToRight: Bool?
             if abs(velocity.x) > 10.0 {
@@ -879,7 +878,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     func setMainItem(_ item: PeerInfoAvatarListItem) {
-        guard case let .image(image) = item else {
+        guard case let .image(imageReference, _, _, _) = item else {
             return
         }
         var items: [PeerInfoAvatarListItem] = []
@@ -893,7 +892,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     if representations.isEmpty {
                         continue
                     }
-                    if image.0 == reference {
+                    if imageReference == reference {
                         entries.insert(entry, at: 0)
                         items.insert(.image(reference, representations, videoRepresentations, immediateThumbnailData), at: 0)
                     } else {
@@ -917,7 +916,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     public func deleteItem(_ item: PeerInfoAvatarListItem) -> Bool {
-        guard case let .image(image) = item else {
+        guard case let .image(imageReference, _, _, _) = item else {
             return false
         }
                 
@@ -936,7 +935,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     if representations.isEmpty {
                         continue
                     }
-                    if image.0 != reference {
+                    if imageReference != reference {
                         entries.append(entry)
                         items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData))
                     } else {
@@ -1004,8 +1003,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 }
                 
                 var synchronous = false
-                if !strongSelf.galleryEntries.isEmpty, let updated = entries.first, case let .image(image) = updated, !image.3.isEmpty, let previous = strongSelf.galleryEntries.first, case let .topImage(topImage) = previous {
-                    let firstEntry = AvatarGalleryEntry.image(image.0, image.1, topImage.0, image.3, image.4, image.5, image.6, image.7, image.8, image.9)
+                if !strongSelf.galleryEntries.isEmpty, let updated = entries.first, case let .image(mediaId, reference, _, videoRepresentations, peer, index, indexData, messageId, thumbnailData, caption) = updated, !videoRepresentations.isEmpty, let previous = strongSelf.galleryEntries.first, case let .topImage(representations, _, _, _, _, _) = previous {
+                    let firstEntry = AvatarGalleryEntry.image(mediaId, reference, representations, videoRepresentations, peer, index, indexData, messageId, thumbnailData, caption)
                     entries.remove(at: 0)
                     entries.insert(firstEntry, at: 0)
                     synchronous = true

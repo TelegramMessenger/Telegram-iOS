@@ -70,88 +70,6 @@ private enum ChannelAdminEntryStableId: Hashable {
     case addAdminsInfo
     case transfer
     case dismiss
-    
-    var hashValue: Int {
-        switch self {
-            case .info:
-                return 0
-            case .rankTitle:
-                return 1
-            case .rank:
-                return 2
-            case .rankInfo:
-                return 3
-            case .rightsTitle:
-                return 4
-            case .addAdminsInfo:
-                return 5
-            case .dismiss:
-                return 6
-            case .transfer:
-                return 7
-            case let .right(flags):
-                return flags.rawValue.hashValue
-        }
-    }
-    
-    static func ==(lhs: ChannelAdminEntryStableId, rhs: ChannelAdminEntryStableId) -> Bool {
-        switch lhs {
-            case .info:
-                if case .info = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .rankTitle:
-                if case .rankTitle = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .rank:
-                if case .rank = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .rankInfo:
-                if case .rankInfo = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .rightsTitle:
-                if case .rightsTitle = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let right(flags):
-                if case .right(flags) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .addAdminsInfo:
-                if case .addAdminsInfo = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .transfer:
-                if case .transfer = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .dismiss:
-                if case .dismiss = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private enum ChannelAdminEntry: ItemListNodeEntry {
@@ -691,7 +609,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     canTransfer = true
                 }
             
-                if let initialParticipant = initialParticipant, case let .member(_, _, adminInfoValue, _, _) = initialParticipant, let adminInfo = adminInfoValue, admin.id != accountPeerId {
+                if let initialParticipant = initialParticipant, case .member = initialParticipant, admin.id != accountPeerId {
                     if channel.flags.contains(.isCreator) {
                         canDismiss = true
                     } else {
@@ -812,7 +730,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
             entries.append(.rank(presentationData.theme, presentationData.strings, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
             
-            if let initialParticipant = initialParticipant, case let .member(participant) = initialParticipant, let adminInfo = participant.adminInfo, admin.id != accountPeerId {
+            if let initialParticipant = initialParticipant, case .member = initialParticipant, admin.id != accountPeerId {
                 entries.append(.dismiss(presentationData.theme, presentationData.strings.Channel_Moderator_AccessLevelRevoke))
             }
         }

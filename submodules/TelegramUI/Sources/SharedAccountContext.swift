@@ -57,7 +57,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public let applicationBindings: TelegramApplicationBindings
     public let sharedContainerPath: String
     public let basePath: String
-    public let accountManager: AccountManager
+    public let accountManager: AccountManager<TelegramAccountManagerTypes>
     public let appLockContext: AppLockContext
     
     private let navigateToChatImpl: (AccountRecordId, PeerId, MessageId?) -> Void
@@ -161,7 +161,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var spotlightDataContext: SpotlightDataContext?
     private var widgetDataContext: WidgetDataContext?
     
-    public init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
+    public init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
         assert(Queue.mainQueue().isCurrent())
         
         precondition(!testHasInstance)
@@ -345,13 +345,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             var result: [AccountRecordId: AccountAttributes] = [:]
             for record in view.records {
                 let isLoggedOut = record.attributes.contains(where: { attribute in
-                    return attribute is LoggedOutAccountAttribute
+                    if case .loggedOut = attribute {
+                        return true
+                    } else {
+                        return false
+                    }
                 })
                 if isLoggedOut {
                     continue
                 }
                 let isTestingEnvironment = record.attributes.contains(where: { attribute in
-                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                    if case let .environment(environment) = attribute, case .test = environment.environment {
                         return true
                     } else {
                         return false
@@ -360,17 +364,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 var backupData: AccountBackupData?
                 var sortIndex: Int32 = 0
                 for attribute in record.attributes {
-                    if let attribute = attribute as? AccountSortOrderAttribute {
-                        sortIndex = attribute.order
-                    } else if let attribute = attribute as? AccountBackupDataAttribute {
-                        backupData = attribute.data
+                    if case let .sortOrder(sortOrder) = attribute {
+                        sortIndex = sortOrder.order
+                    } else if case let .backupData(backupDataValue) = attribute {
+                        backupData = backupDataValue.data
                     }
                 }
                 result[record.id] = AccountAttributes(sortIndex: sortIndex, isTestingEnvironment: isTestingEnvironment, backupData: backupData)
             }
             let authRecord: (AccountRecordId, Bool)? = view.currentAuthAccount.flatMap({ authAccount in
                 let isTestingEnvironment = authAccount.attributes.contains(where: { attribute in
-                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                    if case let .environment(environment) = attribute, case .test = environment.environment {
                         return true
                     } else {
                         return false
@@ -807,8 +811,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     guard let record = record else {
                         return nil
                     }
-                    var attributes = record.attributes.filter({ !($0 is AccountBackupDataAttribute) })
-                    attributes.append(AccountBackupDataAttribute(data: backupData))
+                    var attributes: [TelegramAccountManagerTypes.Attribute] = record.attributes.filter { attribute in
+                        if case .backupData = attribute {
+                            return false
+                        } else {
+                            return true
+                        }
+                    }
+                    attributes.append(.backupData(AccountBackupDataAttribute(data: backupData)))
                     return AccountRecord(id: record.id, attributes: attributes, temporarySessionId: record.temporarySessionId)
                 })
             }
@@ -920,7 +930,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func beginNewAuth(testingEnvironment: Bool) {
         let _ = self.accountManager.transaction({ transaction -> Void in
-            let _ = transaction.createAuth([AccountEnvironmentAttribute(environment: testingEnvironment ? .test : .production)])
+            let _ = transaction.createAuth([.environment(AccountEnvironmentAttribute(environment: testingEnvironment ? .test : .production))])
         }).start()
     }
     
@@ -1093,8 +1103,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         handleTextLinkActionImpl(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
     }
     
-    public func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, fromChat: Bool) -> ViewController? {
-        let controller = peerInfoControllerImpl(context: context, peer: peer, mode: mode, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: fromChat)
+    public func makePeerInfoController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, fromChat: Bool) -> ViewController? {
+        let controller = peerInfoControllerImpl(context: context, updatedPresentationData: updatedPresentationData, peer: peer, mode: mode, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: fromChat)
         controller?.navigationPresentation = .modalInLargeLayout
         return controller
     }
@@ -1132,7 +1142,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         if !found {
             let controllerParams = LocationViewParams(sendLiveLocation: { location in
-                let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                //let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
 //                params.enqueueMessage(outMessage)
             }, stopLiveLocation: { messageId in
                 if let messageId = messageId {
@@ -1376,7 +1386,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             let controller = generator(legacyController.context)
             legacyController.bind(controller: controller)
             legacyController.deferScreenEdgeGestures = [.top]
-            controller.selectionBlock = { [weak legacyController, weak controller] asset, _ in
+            controller.selectionBlock = { [weak legacyController] asset, _ in
                 if let asset = asset {
                     let _ = (fetchPhotoLibraryImage(localIdentifier: asset.backingAsset.localIdentifier, thumbnail: false)
                     |> deliverOnMainQueue).start(next: { imageAndFlag in
@@ -1409,11 +1419,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 
 private let defaultChatControllerInteraction = ChatControllerInteraction.default
 
-private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool) -> ViewController? {
+private func peerInfoControllerImpl(context: AccountContext, updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>)?, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool) -> ViewController? {
     if let _ = peer as? TelegramGroup {
-        return PeerInfoScreenImpl(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     } else if let _ = peer as? TelegramChannel {
-        return PeerInfoScreenImpl(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     } else if peer is TelegramUser {
         var nearbyPeerDistance: Int32?
         var callMessages: [Message] = []
@@ -1428,9 +1438,9 @@ private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: P
         case let .group(id):
             ignoreGroupInCommon = id
         }
-        return PeerInfoScreenImpl(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, callMessages: callMessages, ignoreGroupInCommon: ignoreGroupInCommon)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, callMessages: callMessages, ignoreGroupInCommon: ignoreGroupInCommon)
     } else if peer is TelegramSecretChat {
-        return PeerInfoScreenImpl(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     }
     return nil
 }

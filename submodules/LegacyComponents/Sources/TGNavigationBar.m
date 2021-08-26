@@ -133,10 +133,11 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     self.tintColor = pallete.tintColor;
     
     NSMutableDictionary *attributes = [[NSMutableDictionary alloc] init];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     attributes[UITextAttributeTextColor] = pallete.titleColor;
     attributes[UITextAttributeTextShadowColor] = [UIColor clearColor];
-    if (iosMajorVersion() < 7)
-        attributes[UITextAttributeFont] = TGBoldSystemFontOfSize(17.0f);
+#pragma clang diagnostic pop
     
     [self setTitleTextAttributes:attributes];
 }
@@ -228,8 +229,10 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     if (_backgroundContainerView != nil)
     {
         CGFloat backgroundOverflow = iosMajorVersion() >= 7 ? 20.0f : 0.0f;
-        if (iosMajorVersion() >= 11 && self.superview.safeAreaInsets.top > FLT_EPSILON)
-            backgroundOverflow = self.superview.safeAreaInsets.top;
+        if (@available(iOS 11.0, *)) {
+            if (self.superview.safeAreaInsets.top > FLT_EPSILON)
+                backgroundOverflow = self.superview.safeAreaInsets.top;
+        }
         
         CGFloat heightAddition = 0.0;
         if (iosMajorVersion() < 11) {

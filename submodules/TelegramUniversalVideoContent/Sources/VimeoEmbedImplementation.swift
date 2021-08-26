@@ -216,6 +216,8 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
                         }
                     }
                 }
+
+                let _ = download
                 
                 if let position = position {
                     if let ticksToIgnore = self.ignorePosition {

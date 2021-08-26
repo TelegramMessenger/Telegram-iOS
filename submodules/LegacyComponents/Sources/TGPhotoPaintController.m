@@ -194,7 +194,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     self.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         
     _scrollView = [[TGModernGalleryZoomableScrollView alloc] initWithFrame:self.view.bounds hasDoubleTap:false];
-    if (iosMajorVersion() >= 11) {
+    if (@available(iOS 11.0, *)) {
         _scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     }
     _scrollView.contentInset = UIEdgeInsetsZero;

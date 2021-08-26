@@ -893,4 +893,12 @@ public class ChatMessageItemView: ListViewItemNode {
             }
         }
     }
+    
+    override public var preferredAnimationCurve: (CGFloat) -> CGFloat {
+        if false, let item = self.item, let subject = item.associatedData.subject, case .forwardedMessages = subject {
+            return listViewAnimationCurveEaseInOut
+        } else {
+            return listViewAnimationCurveSystem
+        }
+    }
 }

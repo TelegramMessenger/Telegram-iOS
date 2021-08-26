@@ -81,8 +81,8 @@ typedef enum {
 @property (nonatomic) NSData *photoFileReferenceSmall;
 @property (nonatomic) NSData *photoFileReferenceBig;
 
-@property (nonatomic) NSString *photoFullUrlSmall;
-@property (nonatomic) NSString *photoFullUrlBig;
+@property (nonatomic, strong, readonly) NSString *photoFullUrlSmall;
+@property (nonatomic, strong, readonly) NSString *photoFullUrlBig;
 
 @property (nonatomic) TGUserPresence presence;
 

@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
+import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
@@ -37,7 +38,7 @@ public final class PasscodeEntryController: ViewController {
     }
     
     private let applicationBindings: TelegramApplicationBindings
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let appLockContext: AppLockContext
     private let presentationDataSignal: Signal<PresentationData, NoError>
     
@@ -61,7 +62,7 @@ public final class PasscodeEntryController: ViewController {
     private var statusBarHost: StatusBarHost?
     private var previousStatusBarStyle: UIStatusBarStyle?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.appLockContext = appLockContext

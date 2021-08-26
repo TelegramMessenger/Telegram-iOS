@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public enum WebSearchScope: Int32 {
@@ -35,7 +36,7 @@ public struct WebSearchSettings: Equatable, PreferencesEntry {
     }
 }
 
-public func updateWebSearchSettingsInteractively(accountManager: AccountManager, _ f: @escaping (WebSearchSettings) -> WebSearchSettings) -> Signal<Void, NoError> {
+public func updateWebSearchSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (WebSearchSettings) -> WebSearchSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.webSearchSettings, { entry in
             let currentSettings: WebSearchSettings

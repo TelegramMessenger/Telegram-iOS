@@ -386,7 +386,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 if nextType == nil {
                     if MFMailComposeViewController.canSendMail(), let controller = controller {
                         let formattedNumber = formatPhoneNumber(number)
-                        strongSelf.presentEmailComposeController(address: "sms@stel.com", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).string, from: controller)
+                        strongSelf.presentEmailComposeController(address: "reports@stel.com", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).string, from: controller)
                     } else {
                         controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }

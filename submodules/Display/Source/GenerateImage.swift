@@ -300,18 +300,23 @@ public func generateGradientTintedImage(image: UIImage?, colors: [UIColor]) -> U
         context.scaleBy(x: 1.0, y: -1.0)
         context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
         context.clip(to: imageRect, mask: image.cgImage!)
-        
-        let gradientColors = colors.map { $0.cgColor } as CFArray
-        let delta: CGFloat = 1.0 / (CGFloat(colors.count) - 1.0)
-        
-        var locations: [CGFloat] = []
-        for i in 0 ..< colors.count {
-            locations.append(delta * CGFloat(i))
+
+        if colors.count >= 2 {
+            let gradientColors = colors.map { $0.cgColor } as CFArray
+
+            var locations: [CGFloat] = []
+            for i in 0 ..< colors.count {
+                let t = CGFloat(i) / CGFloat(colors.count - 1)
+                locations.append(t)
+            }
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: imageRect.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
+        } else if !colors.isEmpty {
+            context.setFillColor(colors[0].cgColor)
+            context.fill(imageRect)
         }
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-        
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: imageRect.height), end: CGPoint(x: 0.0, y: 0.0), options: CGGradientDrawingOptions())
         
         context.restoreGState()
     }
@@ -553,7 +558,6 @@ public class DrawingContext {
         }
         if self.hasGeneratedImage {
             preconditionFailure()
-            return nil
         }
         self.hasGeneratedImage = true
 

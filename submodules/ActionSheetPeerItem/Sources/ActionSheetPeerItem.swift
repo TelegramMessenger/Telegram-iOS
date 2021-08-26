@@ -3,21 +3,20 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import Postbox
 import TelegramPresentationData
 import AvatarNode
 import AccountContext
 
 public class ActionSheetPeerItem: ActionSheetItem {
     public let context: AccountContext
-    public let peer: Peer
+    public let peer: EnginePeer
     public let theme: PresentationTheme
     public let title: String
     public let isSelected: Bool
     public let strings: PresentationStrings
     public let action: () -> Void
     
-    public init(context: AccountContext, peer: Peer, title: String, isSelected: Bool, strings: PresentationStrings, theme: PresentationTheme, action: @escaping () -> Void) {
+    public init(context: AccountContext, peer: EnginePeer, title: String, isSelected: Bool, strings: PresentationStrings, theme: PresentationTheme, action: @escaping () -> Void) {
         self.context = context
         self.peer = peer
         self.title = title

@@ -290,6 +290,28 @@ public final class AccountContextImpl: AccountContext {
             return context.maxReadOutgoingMessageId
         }
     }
+
+    public func chatLocationUnreadCount(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Int, NoError> {
+        switch location {
+        case let .peer(peerId):
+            let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
+            return self.account.postbox.combinedView(keys: [unreadCountsKey])
+            |> map { views in
+                var unreadCount: Int32 = 0
+
+                if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
+                    if let count = view.count(for: .peer(peerId)) {
+                        unreadCount = count
+                    }
+                }
+
+                return Int(unreadCount)
+            }
+        case let .replyThread(data):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
+            return context.unreadCount
+        }
+    }
     
     public func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex) {
         switch location {
@@ -305,7 +327,7 @@ public final class AccountContextImpl: AccountContext {
         let _ = self.sharedContext.callManager?.scheduleGroupCall(context: self, peerId: peerId, endCurrentIfAny: true)
     }
     
-    public func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: CachedChannelData.ActiveCall) {
+    public func joinGroupCall(peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, activeCall: EngineGroupCallDescription) {
         let callResult = self.sharedContext.callManager?.joinGroupCall(context: self, peerId: peerId, invite: invite, requestJoinAsPeerId: requestJoinAsPeerId, initialCall: activeCall, endCurrentIfAny: false)
         if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
             if currentPeerId == peerId {

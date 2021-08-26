@@ -1,14 +1,14 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
 import MergeLists
 import ItemListUI
+import AccountContext
 
 struct CallListNodeView {
-    let originalView: CallListView
+    let originalView: EngineCallList
     let filteredEntries: [CallListNodeEntry]
     let presentationData: ItemListPresentationData
 }
@@ -45,10 +45,10 @@ struct CallListNodeViewTransition {
 }
 
 enum CallListNodeViewScrollPosition {
-    case index(index: MessageIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
+    case index(index: EngineMessage.Index, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool)
 }
 
-func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toView: CallListNodeView, reason: CallListNodeViewTransitionReason, disableAnimations: Bool, account: Account, scrollPosition: CallListNodeViewScrollPosition?) -> Signal<CallListNodeViewTransition, NoError> {
+func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toView: CallListNodeView, reason: CallListNodeViewTransitionReason, disableAnimations: Bool, context: AccountContext, scrollPosition: CallListNodeViewScrollPosition?) -> Signal<CallListNodeViewTransition, NoError> {
     return Signal { subscriber in
         let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries, allUpdated: fromView?.presentationData != toView.presentationData)
         
@@ -68,11 +68,11 @@ func preparedCallListNodeViewTransition(from fromView: CallListNodeView?, to toV
         
         var options: ListViewDeleteAndInsertOptions = []
         var maxAnimatedInsertionIndex = -1
-        var stationaryItemRange: (Int, Int)?
-        var scrollToItem: ListViewScrollToItem?
+        let stationaryItemRange: (Int, Int)? = nil
+        var scrollToItem: ListViewScrollToItem? = nil
         
         var wasEmpty = false
-        if let fromView = fromView, fromView.originalView.entries.isEmpty {
+        if let fromView = fromView, fromView.originalView.items.isEmpty {
             wasEmpty = true
         }
         

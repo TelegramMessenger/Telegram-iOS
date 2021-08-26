@@ -138,8 +138,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     }
     
     private func setupGradientAnimations() {
-        return
-        if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
+        /*if let _ = self.foregroundGradientLayer.animation(forKey: "movement") {
         } else {
             let previousValue = self.foregroundGradientLayer.startPoint
             let newValue: CGPoint
@@ -163,7 +162,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
             
             self.foregroundGradientLayer.add(animation, forKey: "movement")
             CATransaction.commit()
-        }
+        }*/
     }
     
     func updateAnimations() {
@@ -173,7 +172,9 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
             return
         }
         self.setupGradientAnimations()
-        self.maskCurveView.startAnimating()
+        if isCurrentlyInHierarchy {
+            self.maskCurveView.startAnimating()
+        }
     }
 }
 
@@ -207,6 +208,9 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     private var currentScheduleTimestamp: Int32?
     private var currentMembers: PresentationGroupCallMembers?
     private var currentIsConnected = true
+
+    private let hierarchyTrackingNode: HierarchyTrackingNode
+    private var isCurrentlyInHierarchy = true
     
     public override init() {
         self.backgroundNode = CallStatusBarBackgroundNode()
@@ -214,13 +218,29 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         self.subtitleNode = ImmediateAnimatedCountLabelNode()
         self.subtitleNode.reverseAnimationDirection = true
         self.speakerNode = ImmediateTextNode()
+
+        var updateInHierarchy: ((Bool) -> Void)?
+        self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
+            updateInHierarchy?(value)
+        })
         
         super.init()
+
+        self.addSubnode(self.hierarchyTrackingNode)
                 
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
         self.addSubnode(self.speakerNode)
+
+        updateInHierarchy = { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.isCurrentlyInHierarchy = value
+                if value {
+                    strongSelf.update()
+                }
+            }
+        }
     }
     
     deinit {
@@ -232,13 +252,17 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     
     public func update(content: Content) {
         self.currentContent = content
-        self.update()
+        if self.isCurrentlyInHierarchy {
+            self.update()
+        }
     }
     
     public override func update(size: CGSize) {
         self.currentSize = size
         self.update()
     }
+
+    private let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
     
     private func update() {
         guard let size = self.currentSize, let content = self.currentContent else {
@@ -330,8 +354,10 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                                 currentIsConnected = false
                             }
                             strongSelf.currentIsConnected = currentIsConnected
-                            
-                            strongSelf.update()
+
+                            if strongSelf.isCurrentlyInHierarchy {
+                                strongSelf.update()
+                            }
                         }
                     }))
                     self.audioLevelDisposable.set((combineLatest(call.myAudioLevel, .single([]) |> then(call.audioLevels))
@@ -352,8 +378,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         
         var title: String = ""
         var speakerSubtitle: String = ""
-        
-        let textFont = Font.with(size: 13.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
+
         let textColor = UIColor.white
         var segments: [AnimatedCountLabelNode.Segment] = []
         var displaySpeakerSubtitle = false

@@ -529,7 +529,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: icon, title: strings.Notification_Exceptions_AddException, alwaysPlain: true, sectionId: self.section, editing: editing, action: {
                     arguments.selectPeer()
                 })
-            case let .peer(_, peer, theme, strings, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing, isSearching):
+            case let .peer(_, peer, _, _, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing, isSearching):
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(value, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -542,7 +542,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 })
-            case let .removeAll(theme, strings):
+            case let .removeAll(_, strings):
                 return ItemListActionItem(presentationData: presentationData, title: strings.Notification_Exceptions_DeleteAll, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.removeAll()
                 })

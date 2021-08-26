@@ -228,7 +228,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                         let avatarSize: CGFloat = 40.0
                         
                         if let peer = item.message.author {
-                            strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: nil, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: false)
+                            strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(peer), overrideImage: nil, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: false)
                         }
                         
                         strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))

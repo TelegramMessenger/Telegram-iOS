@@ -48,7 +48,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
     
     func item(context: AccountContext, presentationData: PresentationData, interaction: InviteContactsInteraction) -> ListViewItem {
         switch self {
-            case let .option(_, option, theme, _):
+            case let .option(_, option, _, _):
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: option.title, icon: option.icon, header: nil, action: option.action)
             case let .peer(_, id, contact, count, selection, theme, strings, nameSortOrder, nameDisplayOrder):
                 let status: ContactsPeerItemStatus

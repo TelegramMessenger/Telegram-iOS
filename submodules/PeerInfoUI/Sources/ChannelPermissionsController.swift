@@ -680,11 +680,6 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             
             removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: context.engine, peerId: peerId, memberId: memberId, bannedRights: nil)
             |> deliverOnMainQueue).start(error: { _ in
-                updateState { state in
-                    var state = state
-                    state.removingPeerId = nil
-                    return state
-                }
             }, completed: {
                 updateState { state in
                     var state = state
@@ -703,7 +698,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
     }, openPeerInfo: { peer in
-        if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+        if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
             pushControllerImpl?(controller)
         }
     }, openKicked: {

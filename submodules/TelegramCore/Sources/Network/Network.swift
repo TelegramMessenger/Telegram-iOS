@@ -493,7 +493,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                     context = current
                     context.updateApiEnvironment({ _ in return apiEnvironment})
                 } else {
-                    context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)!
+                    context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
                     store.contexts[key] = context
                 }
                 contextValue = context
@@ -1093,13 +1093,25 @@ class Keychain: NSObject, MTKeychain {
     }
     
     func setObject(_ object: Any!, forKey aKey: String!, group: String!) {
-        let data = NSKeyedArchiver.archivedData(withRootObject: object)
-        self.set(group + ":" + aKey, data)
+        guard let object = object else {
+            return
+        }
+        MTContext.perform(objCTry: {
+            let data = NSKeyedArchiver.archivedData(withRootObject: object)
+            self.set(group + ":" + aKey, data)
+        })
     }
     
     func object(forKey aKey: String!, group: String!) -> Any! {
+        guard let aKey = aKey, let group = group else {
+            return nil
+        }
         if let data = self.get(group + ":" + aKey) {
-            return NSKeyedUnarchiver.unarchiveObject(with: data as Data)
+            var result: Any?
+            MTContext.perform(objCTry: {
+                result = NSKeyedUnarchiver.unarchiveObject(with: data as Data)
+            })
+            return result
         }
         return nil
     }

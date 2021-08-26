@@ -226,7 +226,7 @@ public final class LocationViewController: ViewController {
                     strongSelf.present(c, in: .window(.root), with: a)
                 }, openSettings: {
                     context.sharedContext.applicationBindings.openSettings()
-                }) { [weak self] authorized in
+                }, { [weak self] authorized in
                     guard let strongSelf = self, authorized else {
                         return
                     }
@@ -311,7 +311,7 @@ public final class LocationViewController: ViewController {
                         })
                         strongSelf.present(controller, in: .window(.root))
                     })
-                }
+                })
             }
         }, updateSendActionHighlight: { [weak self] highlighted in
             guard let strongSelf = self else {
@@ -326,7 +326,7 @@ public final class LocationViewController: ViewController {
                 strongSelf.present(c, in: .window(.root), with: a)
             }, openSettings: {
                 context.sharedContext.applicationBindings.openSettings()
-            }) { [weak self] authorized in
+            }, { [weak self] authorized in
                 guard let strongSelf = self, authorized else {
                     return
                 }
@@ -415,7 +415,7 @@ public final class LocationViewController: ViewController {
                         strongSelf.present(controller, in: .window(.root))
                     })
                 }
-            }
+            })
         }, stopLiveLocation: { [weak self] in
             params.stopLiveLocation(nil)
             self?.dismiss()

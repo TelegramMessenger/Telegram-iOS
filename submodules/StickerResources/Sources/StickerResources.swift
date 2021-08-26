@@ -83,8 +83,7 @@ private func chatMessageStickerDatas(postbox: Postbox, file: TelegramMediaFile, 
                     return Tuple(thumbnailData.complete ? try? Data(contentsOf: URL(fileURLWithPath: thumbnailData.path)) : nil, fullSizeData.0, fullSizeData.1)
                 }).start(next: { next in
                     subscriber.putNext(next)
-                }, error: { error in
-                    subscriber.putError(error)
+                }, error: { _ in
                 }, completed: {
                     subscriber.putCompletion()
                 })
@@ -135,8 +134,7 @@ public func chatMessageAnimatedStickerDatas(postbox: Postbox, file: TelegramMedi
                         return Tuple(thumbnailData.complete ? try? Data(contentsOf: URL(fileURLWithPath: thumbnailData.path)) : nil, fullSizeData.0, fullSizeData.1)
                     }).start(next: { next in
                         subscriber.putNext(next)
-                    }, error: { error in
-                        subscriber.putError(error)
+                    }, error: { _ in
                     }, completed: {
                         subscriber.putCompletion()
                     })
@@ -173,8 +171,7 @@ private func chatMessageStickerThumbnailData(postbox: Postbox, file: TelegramMed
                     return thumbnailData.complete ? try? Data(contentsOf: URL(fileURLWithPath: thumbnailData.path)) : nil
                 }).start(next: { next in
                     subscriber.putNext(next)
-                }, error: { error in
-                    subscriber.putError(error)
+                }, error: { _ in
                 }, completed: {
                     subscriber.putCompletion()
                 })
@@ -214,8 +211,7 @@ private func chatMessageStickerPackThumbnailData(postbox: Postbox, resource: Med
                 let fetch: Disposable? = nil
                 let disposable = fullSizeData.start(next: { next in
                     subscriber.putNext(next.0)
-                }, error: { error in
-                    subscriber.putError(error)
+                }, error: { _ in
                 }, completed: {
                     subscriber.putCompletion()
                 })
@@ -376,6 +372,8 @@ public func chatMessageStickerPackThumbnail(postbox: Postbox, resource: MediaRes
                     c.draw(cgImage.masking(mask!)!, in: fittedRect)
                 }
             }
+            
+            addCorners(context, arguments: arguments)
             
             return context
         }

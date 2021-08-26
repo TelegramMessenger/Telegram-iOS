@@ -262,6 +262,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var synchronousNodes = false
     public final var debugInfo = false
     
+    public final var useSingleDimensionTouchPoint = false
+    
     public var enableExtractedBackgrounds: Bool = false {
         didSet {
             if self.enableExtractedBackgrounds != oldValue {
@@ -292,12 +294,15 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var visibleContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var visibleBottomContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var beganInteractiveDragging: (CGPoint) -> Void = { _ in }
-    public final var endedInteractiveDragging: () -> Void = { }
-    public final var didEndScrolling: (() -> Void)?
+    public final var endedInteractiveDragging: (CGPoint) -> Void = { _ in }
+    public final var didEndScrolling: ((Bool) -> Void)?
     
     private var currentGeneralScrollDirection: GeneralScrollDirection?
     public final var generalScrollDirectionUpdated: (GeneralScrollDirection) -> Void = { _ in }
     
+    public private(set) var isReordering = false
+    public final var willBeginReorder: (CGPoint) -> Void = { _ in }
+    public final var reorderBegan: () -> Void = { }
     public final var reorderItem: (Int, Int, Any?) -> Signal<Bool, NoError> = { _, _, _ in return .single(false) }
     public final var reorderCompleted: (Any?) -> Void = { _ in }
     
@@ -320,8 +325,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private var reorderNode: ListViewReorderingItemNode?
     private var reorderFeedback: HapticFeedback?
     private var reorderFeedbackDisposable: MetaDisposable?
-    private var isReorderingItems: Bool = false
+    private var reorderInProgress: Bool = false
     private var reorderingItemsCompleted: (() -> Void)?
+    private var reorderScrollStartTimestamp: Double?
+    public var reorderedItemHasShadow = true
     
     private let waitingForNodesDisposable = MetaDisposable()
     
@@ -392,15 +399,19 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             let itemNodeFrame = itemNode.frame
                             let itemNodeBounds = itemNode.bounds
                             if itemNode.isReorderable(at: point.offsetBy(dx: -itemNodeFrame.minX + itemNodeBounds.minX, dy: -itemNodeFrame.minY + itemNodeBounds.minY)) {
-                                strongSelf.beginReordering(itemNode: itemNode)
-                                return true
+                                let requiresLongPress = !strongSelf.reorderedItemHasShadow
+                                return (true, requiresLongPress, itemNode)
                             }
                             break
                         }
                     }
                 }
             }
-            return false
+            return (false, false, nil)
+        }, willBegin: { [weak self] point in
+            self?.willBeginReorder(point)
+        }, began: { [weak self] itemNode in
+            self?.beginReordering(itemNode: itemNode)
         }, ended: { [weak self] in
             self?.endReordering()
         }, moved: { [weak self] offset in
@@ -467,10 +478,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private func beginReordering(itemNode: ListViewItemNode) {
+        self.isReordering = true
+        self.reorderBegan()
+        
         if let reorderNode = self.reorderNode {
             reorderNode.removeFromSupernode()
         }
-        let reorderNode = ListViewReorderingItemNode(itemNode: itemNode, initialLocation: itemNode.frame.origin)
+        let reorderNode = ListViewReorderingItemNode(itemNode: itemNode, initialLocation: itemNode.frame.origin, hasShadow: self.reorderedItemHasShadow)
         self.reorderNode = reorderNode
         if let verticalScrollIndicator = self.verticalScrollIndicator {
             self.insertSubnode(reorderNode, belowSubnode: verticalScrollIndicator)
@@ -507,8 +521,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             }
             strongSelf.reorderCompleted(strongSelf.opaqueTransactionState)
+            strongSelf.isReordering = false
         }
-        if self.isReorderingItems {
+        if self.reorderInProgress {
             self.reorderingItemsCompleted = f
         } else {
             f()
@@ -585,14 +600,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         if self.reorderFeedbackDisposable == nil {
                             self.reorderFeedbackDisposable = MetaDisposable()
                         }
-                        self.isReorderingItems = true
+                        self.reorderInProgress = true
                         self.reorderFeedbackDisposable?.set((self.reorderItem(reorderItemIndex, toIndex, self.opaqueTransactionState)
                         |> deliverOnMainQueue).start(next: { [weak self] value in
                             guard let strongSelf = self else {
                                 return
                             }
                             
-                            strongSelf.isReorderingItems = false
+                            strongSelf.reorderInProgress = false
                             if let reorderingItemsCompleted = strongSelf.reorderingItemsCompleted {
                                 strongSelf.reorderingItemsCompleted = nil
                                 reorderingItemsCompleted()
@@ -710,9 +725,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.resetScrollIndicatorFlashTimer(start: true)
             
             self.lastContentOffsetTimestamp = 0.0
-            self.didEndScrolling?()
+            self.didEndScrolling?(false)
         }
-        self.endedInteractiveDragging()
+        self.endedInteractiveDragging(self.touchesPosition)
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
@@ -722,7 +737,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.updateHeaderItemsFlashing(animated: true)
         self.resetScrollIndicatorFlashTimer(start: true)
         if !scrollView.isTracking {
-            self.didEndScrolling?()
+            self.didEndScrolling?(true)
         }
     }
     
@@ -2661,24 +2676,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             }
                     }
                     
-                    if !offset.isZero {
-                        let scrollToItemTransition: ContainedViewLayoutTransition
-                        if !scrollToItem.animated {
-                            scrollToItemTransition = .immediate
-                        } else {
-                            switch scrollToItem.curve {
-                            case let .Spring(duration):
-                                scrollToItemTransition = .animated(duration: duration, curve: .spring)
-                            case let .Default(duration):
-                                scrollToItemTransition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
-                            case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
-                                scrollToItemTransition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
-                            }
-                        }
-                        
-                        //self.didScrollWithOffset?(-offset, scrollToItemTransition, nil)
-                    }
-                    
                     for itemNode in self.itemNodes {
                         var frame = itemNode.frame
                         frame.origin.y += offset
@@ -2749,24 +2746,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 self.scrollIndicatorInsets = updateSizeAndInsets.scrollIndicatorInsets ?? self.insets
                 self.ensureTopInsetForOverlayHighlightedItems = updateSizeAndInsets.ensureTopInsetForOverlayHighlightedItems
                 self.visibleSize = updateSizeAndInsets.size
-                
-                let updateSizeAndInsetsTransition: ContainedViewLayoutTransition
-                if updateSizeAndInsets.duration.isZero {
-                    updateSizeAndInsetsTransition = .immediate
-                } else {
-                    switch updateSizeAndInsets.curve {
-                    case let .Spring(duration):
-                        updateSizeAndInsetsTransition = .animated(duration: duration, curve: .spring)
-                    case let .Default(duration):
-                        updateSizeAndInsetsTransition = .animated(duration: duration ?? 0.3, curve: .easeInOut)
-                    case let .Custom(duration, cp1x, cp1y, cp2x, cp2y):
-                        updateSizeAndInsetsTransition = .animated(duration: duration, curve: .custom(cp1x, cp1y, cp2x, cp2y))
-                    }
-                }
-
-                if !offsetFix.isZero {
-                    //self.didScrollWithOffset?(-offsetFix, updateSizeAndInsetsTransition, nil)
-                }
                 
                 for itemNode in self.itemNodes {
                     itemNode.updateFrame(itemNode.frame.offsetBy(dx: 0.0, dy: offsetFix), within: self.visibleSize)
@@ -3171,16 +3150,38 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 reverseAnimation = reverseBasicAnimation
                             }
                     }
-                    animation.completion = { _ in
-                        for itemNode in temporaryPreviousNodes {
-                            itemNode.removeFromSupernode()
-                            itemNode.extractedBackgroundNode?.removeFromSupernode()
+                    
+                    if scrollToItem.displayLink {
+                        self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, -offset, 0.0)
+                        let offsetAnimation = ListViewAnimation(from: -offset, to: 0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: listViewAnimationCurveSystem, beginAt: timestamp, update: { [weak self] progress, currentValue in
+                            if let strongSelf = self {
+                                strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue, 0.0)
+                                
+                                if progress == 1.0 {
+                                    for itemNode in temporaryPreviousNodes {
+                                        itemNode.removeFromSupernode()
+                                        itemNode.extractedBackgroundNode?.removeFromSupernode()
+                                    }
+                                    for headerNode in temporaryHeaderNodes {
+                                        headerNode.removeFromSupernode()
+                                    }
+                                }
+                            }
+                        })
+                        self.animations.append(offsetAnimation)
+                    } else {
+                        animation.completion = { _ in
+                            for itemNode in temporaryPreviousNodes {
+                                itemNode.removeFromSupernode()
+                                itemNode.extractedBackgroundNode?.removeFromSupernode()
+                            }
+                            for headerNode in temporaryHeaderNodes {
+                                headerNode.removeFromSupernode()
+                            }
                         }
-                        for headerNode in temporaryHeaderNodes {
-                            headerNode.removeFromSupernode()
-                        }
+                        self.layer.add(animation, forKey: nil)
                     }
-                    self.layer.add(animation, forKey: nil)
+
                     for itemNode in self.itemNodes {
                         itemNode.applyAbsoluteOffset(value: CGPoint(x: 0.0, y: -offset), animationCurve: animationCurve, duration: animationDuration)
                     }
@@ -3962,7 +3963,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             animation.applyAt(timestamp)
             
             if animation.completeAt(timestamp) {
-                animations.remove(at: i)
+                self.animations.remove(at: i)
                 animationCount -= 1
                 i -= 1
             } else {
@@ -3974,19 +3975,37 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         var offsetRanges = OffsetRanges()
         
+        var scrollingForReorder = false
         if let reorderOffset = self.reorderNode?.currentOffset(), !self.itemNodes.isEmpty {
             let effectiveInsets = self.visualInsets ?? self.insets
+            
+            var offset: CGFloat = 6.0
+            if let reorderScrollStartTimestamp = self.reorderScrollStartTimestamp, reorderScrollStartTimestamp + 2.0 < timestamp {
+                offset *= 2.0
+            }
             if reorderOffset < effectiveInsets.top + 10.0 {
                 if self.itemNodes[0].apparentFrame.minY < effectiveInsets.top {
                     continueAnimations = true
-                    offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: 6.0)
+                    offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: offset)
+                    scrollingForReorder = true
                 }
             } else if reorderOffset > self.visibleSize.height - effectiveInsets.bottom - 10.0 {
                 if self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY > self.visibleSize.height - effectiveInsets.bottom {
                     continueAnimations = true
-                    offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: -6.0)
+                    if self.reorderScrollStartTimestamp == nil {
+                        self.reorderScrollStartTimestamp = timestamp
+                    }
+                    offsetRanges.offset(IndexRange(first: 0, last: Int.max), offset: -offset)
+                    scrollingForReorder = true
                 }
             }
+        }
+        if scrollingForReorder {
+            if self.reorderScrollStartTimestamp == nil {
+                self.reorderScrollStartTimestamp = timestamp
+            }
+        } else {
+            self.reorderScrollStartTimestamp = nil
         }
         
         var requestUpdateVisibleItems = false
@@ -4184,6 +4203,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     public func itemIndexAtPoint(_ point: CGPoint) -> Int? {
+        var point = point
+        if self.useSingleDimensionTouchPoint {
+            point.x = 0.0
+        }
         for itemNode in self.itemNodes {
             if itemNode.apparentContentFrame.contains(point) {
                 return itemNode.index

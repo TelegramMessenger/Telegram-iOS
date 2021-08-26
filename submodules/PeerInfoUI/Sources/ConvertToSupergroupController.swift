@@ -79,13 +79,13 @@ private enum ConvertToSupergroupEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ConvertToSupergroupArguments
         switch self {
-            case let .info(theme, text):
+            case let .info(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
-            case let .action(theme, title):
+            case let .action(_, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.convert()
                 })
-            case let .actionInfo(theme, text):
+            case let .actionInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         }
     }

@@ -147,6 +147,12 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 break inner
             }
         }
+
+        if message.adAttribute != nil {
+            result.removeAll()
+
+            result.append((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+        }
         
         if isUnsupportedMedia {
             result.append((message, ChatMessageUnsupportedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
@@ -175,6 +181,10 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             hasDiscussion = true
         }
         if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == firstMessage.id {
+            hasDiscussion = false
+        }
+
+        if firstMessage.adAttribute != nil {
             hasDiscussion = false
         }
         
@@ -371,7 +381,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 selectionBackgroundFrame = selectionBackgroundFrame.inset(by: selectionInsets)
                 
                 let bubbleColor = graphics.hasWallpaper ? messageTheme.bubble.withWallpaper.fill : messageTheme.bubble.withoutWallpaper.fill
-                let selectionColor = bubbleColor.withAlphaComponent(1.0).mixedWith(messageTheme.accentTextColor.withAlphaComponent(1.0), alpha: 0.08)
+                let selectionColor = bubbleColor[0].withAlphaComponent(1.0).mixedWith(messageTheme.accentTextColor.withAlphaComponent(1.0), alpha: 0.08)
                 
                 self.selectionBackgroundNode?.backgroundColor = selectionColor
                 self.selectionBackgroundNode?.frame = selectionBackgroundFrame
@@ -1171,6 +1181,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 ignoreForward = true
                 effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt32Value(Int32(clamping: authorSignature.persistentHashValue))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
                 displayAuthorInfo = !mergedTop.merged && incoming
+            } else if let _ = item.content.firstMessage.adAttribute, let author = item.content.firstMessage.author {
+                ignoreForward = true
+                effectiveAuthor = author
+                displayAuthorInfo = !mergedTop.merged && incoming
             } else {
                 effectiveAuthor = firstMessage.author
                 
@@ -1287,6 +1301,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if isPreview {
             needShareButton = false
         }
+        if item.content.firstMessage.adAttribute != nil {
+            needShareButton = false
+        }
         
         var tmpWidth: CGFloat
         if allowFullWidth {
@@ -1396,8 +1413,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         switch item.presentationData.theme.wallpaper {
         case .color:
             hasSolidWallpaper = true
-        case let .gradient(_, colors, _):
-            hasSolidWallpaper = colors.count <= 2
+        case let .gradient(gradient):
+            hasSolidWallpaper = gradient.colors.count <= 2
         default:
             break
         }
@@ -1549,7 +1566,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         if initialDisplayHeader && displayAuthorInfo {
-            if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+            if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info, item.content.firstMessage.adAttribute == nil {
                 authorNameString = peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 authorNameColor = chatMessagePeerIdColors[Int(peer.id.id._internalGetInt32Value() % 7)]
             } else if let effectiveAuthor = effectiveAuthor {
@@ -2259,7 +2276,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         var transition: ContainedViewLayoutTransition = .immediate
         if case let .System(duration) = animation {
-            transition = .animated(duration: duration, curve: .spring)
+            if false, let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                transition = .animated(duration: duration, curve: .easeInOut)
+            } else {
+                transition = .animated(duration: duration, curve: .spring)
+            }
         }
         
         var forceBackgroundSide = false
@@ -2373,6 +2394,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.adminBadgeNode = nil
         }
         
+        var timingFunction = kCAMediaTimingFunctionSpring
+        if false, let subject = item.associatedData.subject, case .forwardedMessages = subject {
+            timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+        }
+        
         if let forwardInfoNode = forwardInfoSizeApply.1(bubbleContentWidth) {
             strongSelf.forwardInfoNode = forwardInfoNode
             var animateFrame = true
@@ -2390,7 +2416,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             forwardInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: CGSize(width: bubbleContentWidth, height: forwardInfoSizeApply.0.height))
             if case let .System(duration) = animation {
                 if animateFrame {
-                    forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoNode.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoNode.frame, duration: duration, timingFunction: timingFunction)
                 }
             }
         } else {
@@ -2409,7 +2435,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             replyInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: replyInfoSizeApply.0)
             if case let .System(duration) = animation {
                 if animateFrame {
-                    replyInfoNode.layer.animateFrame(from: previousReplyInfoNodeFrame, to: replyInfoNode.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    replyInfoNode.layer.animateFrame(from: previousReplyInfoNodeFrame, to: replyInfoNode.frame, duration: duration, timingFunction: timingFunction)
                 }
             }
         } else {
@@ -2672,12 +2698,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 if animateFrame {
-                    contentNode.layer.animateFrame(from: previousContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    contentNode.layer.animateFrame(from: previousContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: timingFunction)
                 } else if animateAlpha {
                     contentNode.animateInsertionIntoBubble(duration)
                     var previousAlignedContentNodeFrame = contentNodeFrame
                     previousAlignedContentNodeFrame.origin.x += backgroundFrame.size.width - strongSelf.backgroundNode.frame.size.width
-                    contentNode.layer.animateFrame(from: previousAlignedContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    contentNode.layer.animateFrame(from: previousAlignedContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: timingFunction)
                 }
             }
             contentNodeIndex += 1
@@ -2782,7 +2808,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 strongSelf.insertSubnode(actionButtonsNode, belowSubnode: strongSelf.messageAccessibilityArea)
             } else {
                 if case let .System(duration) = animation {
-                    actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: timingFunction)
                 }
             }
         } else if let actionButtonsNode = strongSelf.actionButtonsNode {

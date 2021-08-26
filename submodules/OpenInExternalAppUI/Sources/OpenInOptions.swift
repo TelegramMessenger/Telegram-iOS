@@ -62,9 +62,20 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
     var options: [OpenInOption] = []
     switch item {
         case let .url(url):
-            options.append(OpenInOption(identifier: "safari", application: .safari, action: {
-                return .openUrl(url: url)
-            }))
+            var skipSafari = false
+            if url.contains("youtube.com/") || url.contains("youtu.be/") {
+                let updatedUrl = url.replacingOccurrences(of: "https://", with: "youtube://").replacingOccurrences(of: "http://", with: "youtube://")
+                options.append(OpenInOption(identifier: "youtube", application: .other(title: "YouTube", identifier: 544007664, scheme: "youtube", store: nil), action: {
+                    return .openUrl(url: updatedUrl)
+                }))
+                skipSafari = true
+            }
+            
+            if !skipSafari {
+                options.append(OpenInOption(identifier: "safari", application: .safari, action: {
+                    return .openUrl(url: url)
+                }))
+            }
 
             options.append(OpenInOption(identifier: "chrome", application: .other(title: "Chrome", identifier: 535886823, scheme: "googlechrome", store: nil), action: {
                 if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
