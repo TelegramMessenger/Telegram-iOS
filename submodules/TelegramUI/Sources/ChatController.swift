@@ -340,6 +340,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let recordingActivityPromise = ValuePromise<ChatRecordingActivity>(.none, ignoreRepeated: true)
     private var recordingActivityDisposable: Disposable?
     private var acquiredRecordingActivityDisposable: Disposable?
+    private let choosingStickerActivityPromise = Promise<Bool>(false)
+    private var choosingStickerActivityDisposable: Disposable?
     
     private var searchDisposable: MetaDisposable?
     
@@ -356,11 +358,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var themeDarkAppearancePreviewPromise = ValuePromise<Bool?>(nil)
     private var didSetPresentationData = false
     private var presentationDataPromise = Promise<PresentationData>()
-    private var presentationData: PresentationData {
-        didSet {
-            self.presentationDataPromise.set(.single(self.presentationData))
-        }
-    }
+    private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     override public var updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) {
         return (self.presentationData, self.presentationDataPromise.get())
@@ -3829,6 +3827,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
+        self.choosingStickerActivityDisposable = (self.choosingStickerActivityPromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.context.account.updateLocalInputActivity(peerId: activitySpace, activity: .choosingSticker, isPresent: value)
+            }
+        })
+        
         self.recordingActivityDisposable = (self.recordingActivityPromise.get()
         |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
@@ -3848,9 +3853,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         |> map { cachedData -> String? in
             if let cachedData = cachedData as? CachedUserData {
                 return cachedData.themeEmoticon
-            } else if let cachedData = cachedData as? CachedUserData {
+            } else if let cachedData = cachedData as? CachedGroupData {
                 return cachedData.themeEmoticon
-            } else if let cachedData = cachedData as? CachedUserData {
+            } else if let cachedData = cachedData as? CachedChannelData {
                 return cachedData.themeEmoticon
             } else {
                 return nil
@@ -3901,7 +3906,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if isFirstTime || previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || presentationData.chatWallpaper != previousChatWallpaper {
                     strongSelf.themeAndStringsUpdated()
                 }
-                
+                strongSelf.presentationDataPromise.set(.single(strongSelf.presentationData))
                 strongSelf.presentationReady.set(.single(true))
             }
         })
@@ -4407,6 +4412,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if let currentItem = self.tempVoicePlaylistCurrentItem {
             self.chatDisplayNode.historyNode.voicePlaylistItemChanged(nil, currentItem)
         }
+        
+        self.choosingStickerActivityPromise.set(self.chatDisplayNode.choosingSticker)
         
         self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode in
             guard let strongSelf = self else {

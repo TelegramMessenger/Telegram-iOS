@@ -492,6 +492,21 @@ final class ChatMediaInputNode: ChatInputNode {
     private var currentView: ItemCollectionsView?
     private let dismissedPeerSpecificStickerPack = Promise<Bool>()
     
+    private var scrollingStickerPacksListPromise = ValuePromise<Bool>(false)
+    private var scrollingStickersGridPromise = ValuePromise<Bool>(false)
+    private var previewingStickersPromise = ValuePromise<Bool>(false)
+    var choosingSticker: Signal<Bool, NoError> {
+        return combineLatest(self.scrollingStickerPacksListPromise.get(), self.scrollingStickersGridPromise.get(), self.previewingStickersPromise.get())
+        |> mapToSignal { scrollingStickerPacksList, scrollingStickersGrid, previewingStickers -> Signal<Bool, NoError> in
+            if scrollingStickerPacksList || scrollingStickersGrid || previewingStickers {
+                return .single(true)
+            } else {
+                return .single(false) |> delay(2.0, queue: Queue.mainQueue())
+            }
+        }
+        |> distinctUntilChanged
+    }
+    
     private var panelFocusScrollToIndex: Int?
     private var panelFocusInitialPosition: CGPoint?
     private let panelIsFocusedPromise = ValuePromise<Bool>(false)
@@ -583,6 +598,13 @@ final class ChatMediaInputNode: ChatInputNode {
         self.paneArrangement = ChatMediaInputPaneArrangement(panes: [.gifs, .stickers], currentIndex: 1, indexTransition: 0.0)
         
         super.init()
+        
+        self.stickerPane.beganScrolling = { [weak self] in
+            self?.scrollingStickersGridPromise.set(true)
+        }
+        self.stickerPane.endedScrolling = { [weak self] in
+            self?.scrollingStickersGridPromise.set(false)
+        }
         
         let temporaryPackOrder = Promise<[ItemCollectionId]?>(nil)
         
@@ -902,7 +924,7 @@ final class ChatMediaInputNode: ChatInputNode {
         self.panesBackgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
 
         self.addSubnode(self.paneClippingContainer)
-        self.paneClippingContainer.addSubnode(panesBackgroundNode)
+        self.paneClippingContainer.addSubnode(self.panesBackgroundNode)
         self.collectionListPanel.addSubnode(self.listView)
         self.collectionListPanel.addSubnode(self.gifListView)
         self.gifListView.isHidden = true
@@ -1217,6 +1239,8 @@ final class ChatMediaInputNode: ChatInputNode {
         self.listView.beganInteractiveDragging = { [weak self] position in
             if let strongSelf = self {
                 strongSelf.stopCollapseTimer()
+                
+                strongSelf.scrollingStickerPacksListPromise.set(true)
 
                 var position = position
                 var index = strongSelf.listView.itemIndexAtPoint(CGPoint(x: 0.0, y: position.y))
@@ -1251,6 +1275,8 @@ final class ChatMediaInputNode: ChatInputNode {
                     strongSelf.panelFocusInitialPosition = nil
                 }
                 strongSelf.startCollapseTimer(timeout: decelerated ? 0.5 : 1.5)
+                
+                strongSelf.scrollingStickerPacksListPromise.set(false)
             }
         }
         
@@ -1682,6 +1708,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     return sourceNode
                 })
                 controller.visibilityUpdated = { [weak self] visible in
+                    self?.previewingStickersPromise.set(visible)
                     self?.requestDisableStickerAnimations?(visible)
                     self?.simulateUpdateLayout(isVisible: !visible)
                 }
