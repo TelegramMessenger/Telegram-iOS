@@ -2428,7 +2428,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         updatedToggledMessageIds = state.toggledMessageIds
                         let isSelected = (self.controllerInteraction.selectionState?.selectedIds.contains(message.id) ?? false)
                         if state.selecting != isSelected {
-                            let messageIds = messages.map { $0.id }
+                            let messageIds = messages.filter { message -> Bool in
+                                for media in messages {
+                                    if media is TelegramMediaAction {
+                                        return false
+                                    }
+                                }
+                                return true
+                            }.map { $0.id }
                             updatedToggledMessageIds.append(messageIds)
                             self.controllerInteraction.toggleMessagesSelection(messageIds, state.selecting)
                         }

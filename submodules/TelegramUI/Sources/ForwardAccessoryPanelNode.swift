@@ -161,7 +161,11 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                         if !authors.isEmpty {
                             authors.append(", ")
                         }
-                        authors.append(author.compactDisplayTitle)
+                        if author.id == context.account.peerId {
+                            authors.append(strongSelf.strings.DialogList_You)
+                        } else {
+                            authors.append(author.compactDisplayTitle)
+                        }
                     }
                     if let peer = message.peers[message.id.peerId] {
                         sourcePeer = (peer.id.namespace == Namespaces.Peer.CloudUser, peer.displayTitle(strings: strongSelf.strings, displayOrder: strongSelf.nameDisplayOrder))
@@ -201,7 +205,14 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                     if let strongSelf = self, count < 3 {
                         Queue.mainQueue().after(3.0) {
                             if let snapshotView = strongSelf.textNode.view.snapshotContentTree() {
-                                strongSelf.textNode.attributedText = NSAttributedString(string: strongSelf.strings.Conversation_ForwardOptions_TapForOptions, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
+                                let text: String
+                                if let (size, _) = strongSelf.validLayout, size.width > 320.0 {
+                                    text = strongSelf.strings.Conversation_ForwardOptions_TapForOptions
+                                } else {
+                                    text = strongSelf.strings.Conversation_ForwardOptions_TapForOptionsShort
+                                }
+                                
+                                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
                                 
                                 strongSelf.view.addSubview(snapshotView)
                                 

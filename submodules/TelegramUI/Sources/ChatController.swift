@@ -3877,7 +3877,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         isDarkAppearance = darkAppearancePreview
                     }
                     let customTheme = isDarkAppearance ? theme.darkTheme : theme.theme
-                    if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings) {
+                    if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings, specialMode: true) {
                         presentationData = presentationData.withUpdated(theme: theme)
                         presentationData = presentationData.withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
                     }
@@ -4631,7 +4631,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 let (cachedData, messages) = cachedDataAndMessages
                 
-                strongSelf.cachedDataPromise.set(.single(cachedData))
+                if cachedData != nil {
+                    strongSelf.cachedDataPromise.set(.single(cachedData))
+                }
                 
                 var pinnedMessageId: MessageId?
                 var peerIsBlocked: Bool = false
@@ -5487,18 +5489,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var items: [ContextMenuItem] = []
                     
                     var hasCaptions = false
-                    loop: for message in messages {
+                    var uniquePeerIds = Set<PeerId>()
+                    for message in messages {
+                        if let author = message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
+                            uniquePeerIds.insert(author.id)
+                        }
                         if !message.text.isEmpty {
                             for media in message.media {
                                 if media is TelegramMediaImage || media is TelegramMediaFile {
                                     hasCaptions = true
-                                    break loop
                                 }
                             }
                         }
                     }
                     
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ShowSendersNames, icon: { theme in
+                    
+                    items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_ShowSendersName : presentationData.strings.Conversation_ForwardOptions_ShowSendersNames, icon: { theme in
                         if presentationInterfaceState.interfaceState.forwardOptionsState?.hideNames == true {
                             return nil
                         } else {
@@ -5513,7 +5519,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                     })))
                     
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_HideSendersNames, icon: { theme in
+                    items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_HideSendersName : presentationData.strings.Conversation_ForwardOptions_HideSendersNames, icon: { theme in
                         if presentationInterfaceState.interfaceState.forwardOptionsState?.hideNames == true {
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                         } else {

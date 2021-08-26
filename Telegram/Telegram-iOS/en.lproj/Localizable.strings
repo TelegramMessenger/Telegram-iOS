@@ -6605,6 +6605,7 @@ Sorry for the inconvenience.";
 "Conversation.ForwardOptions.SendMessages" = "Send Messages";
 
 "Conversation.ForwardOptions.TapForOptions" = "Tap here for forwarding options";
+"Conversation.ForwardOptions.TapForOptionsShort" = "Tap here for options";
 
 "Conversation.ForwardOptions.UserMessageForwardVisible" = "%@ will see that it was forwarded";
 "Conversation.ForwardOptions.UserMessageForwardHidden" = "%@ won't see that it was forwarded";
@@ -6670,6 +6671,9 @@ Sorry for the inconvenience.";
 
 "Notification.YouChangedTheme" = "You changed chat theme to %@";
 "Notification.YouDisabledTheme" = "You disabled chat theme";
+
+"Notification.ChannelChangedTheme" = "Channel theme changed to %2$@";
+"Notification.ChannelDisabledTheme" = "Channel theme disabled";
 
 "Appstore.Cloud" = "**Cloud-based**\nUnlimited storage for chats,\nmedia and documents.";
 "Appstore.Cloud.Profile" = "**Jennifer**\n23 y.o. designer from San Francisco.";

@@ -86,6 +86,7 @@ final class ChatMediaInputRecentGifsItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
+        self.imageNode.contentMode = .scaleAspectFit
         
         self.titleNode = ImmediateTextNode()
         

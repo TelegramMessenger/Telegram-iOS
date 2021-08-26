@@ -2411,6 +2411,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     item.controllerInteraction.displayPsa(type, sourceNode)
                 }
+                
+                if animation.isAnimated {
+                    forwardInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
             let previousForwardInfoNodeFrame = forwardInfoNode.frame
             forwardInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: CGSize(width: bubbleContentWidth, height: forwardInfoSizeApply.0.height))
@@ -2420,8 +2424,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             }
         } else {
-            strongSelf.forwardInfoNode?.removeFromSupernode()
-            strongSelf.forwardInfoNode = nil
+            if animation.isAnimated {
+                if let forwardInfoNode = strongSelf.forwardInfoNode {
+                    strongSelf.forwardInfoNode = nil
+                    forwardInfoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak forwardInfoNode] _ in
+                        forwardInfoNode?.removeFromSupernode()
+                    })
+                }
+            } else {
+                strongSelf.forwardInfoNode?.removeFromSupernode()
+                strongSelf.forwardInfoNode = nil
+            }
         }
         
         if let replyInfoNode = replyInfoSizeApply.1() {

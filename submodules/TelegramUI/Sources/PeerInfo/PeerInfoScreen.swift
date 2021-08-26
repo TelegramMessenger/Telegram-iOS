@@ -3491,6 +3491,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     canChangeColors = peer.hasPermission(.changeInfo)
                 } else if let peer = peer as? TelegramGroup, case .member = peer.role {
                     canChangeColors = !peer.hasBannedPermission(.banChangeInfo)
+                } else if self.data?.encryptionKeyFingerprint != nil {
+                    canChangeColors = false
                 }
                 
                 if canChangeColors {
