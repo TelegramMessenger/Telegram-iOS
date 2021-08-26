@@ -264,7 +264,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         }
         
         if let icon = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 9.0), size: icon.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 10.0), size: icon.size)
         }
         
         var imageTextInset: CGFloat = 0.0

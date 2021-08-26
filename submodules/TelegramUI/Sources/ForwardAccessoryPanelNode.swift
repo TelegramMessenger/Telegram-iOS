@@ -281,7 +281,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.validLayout = (size, interfaceState)
 
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
-        let inset: CGFloat = interfaceState.renderedPeer == nil ? 19.0 : 55.0
+        let inset: CGFloat = 55.0
         let leftInset: CGFloat = inset
         let rightInset: CGFloat = inset
         let textLineInset: CGFloat = 10.0
@@ -297,7 +297,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
 
         if let icon = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 9.0), size: icon.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 10.0), size: icon.size)
         }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset, height: bounds.size.height))

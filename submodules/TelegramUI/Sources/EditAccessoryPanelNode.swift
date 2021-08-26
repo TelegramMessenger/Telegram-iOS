@@ -366,7 +366,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
         
         if let icon = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 9.0), size: icon.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 10.0), size: icon.size)
         }
         
         var imageTextInset: CGFloat = 0.0
