@@ -556,6 +556,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let _ = strongSelf.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
                 return true
             }
+            var hasChatThemeScreen = false
+            strongSelf.controller?.window?.forEachController { c in
+                if c is ChatThemeScreen {
+                    hasChatThemeScreen = true
+                }
+            }
+            if hasChatThemeScreen {
+                return true
+            }
             return false
         }
         
