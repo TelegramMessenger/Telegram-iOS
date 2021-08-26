@@ -6,7 +6,7 @@
 
 @implementation UICollectionView (TGTransitioning)
 
-- (BOOL)isTransitionInProgress
+- (bool)isTransitionInProgress
 {
     return ([self tg_transitionData] != nil);
 }
