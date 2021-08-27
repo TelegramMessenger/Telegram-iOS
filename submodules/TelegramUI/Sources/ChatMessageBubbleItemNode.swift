@@ -3343,17 +3343,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             return parent
         } else if let parent = parent as? GridMessageSelectionNode, parent.bounds.contains(point) {
             return parent
-        } else {
-            if let parentSubnodes = parent.subnodes {
-                for subnode in parentSubnodes {
-                    let subnodeFrame = subnode.frame
-                    if let result = traceSelectionNodes(parent: subnode, point: point.offsetBy(dx: -subnodeFrame.minX, dy: -subnodeFrame.minY)) {
-                        return result
-                    }
+        } else if let parentSubnodes = parent.subnodes {
+            for subnode in parentSubnodes {
+                if let result = traceSelectionNodes(parent: subnode, point: point.offsetBy(dx: -subnode.frame.minX + subnode.bounds.minX, dy: -subnode.frame.minY + subnode.bounds.minY)) {
+                    return result
                 }
             }
-            return nil
         }
+        return nil
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
