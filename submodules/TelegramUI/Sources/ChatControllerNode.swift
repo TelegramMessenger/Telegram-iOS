@@ -252,54 +252,66 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.inputContextPanelContainer = ChatControllerTitlePanelNodeContainer()
         
         var source: ChatHistoryListSource
-        if case let .forwardedMessages(messageIds, hideNames, hideCaptions) = subject {
-            let messages = combineLatest(context.account.postbox.messagesAtIds(messageIds), context.account.postbox.loadedPeerWithId(context.account.peerId))
-            |> mapToSignal { messages, accountPeer -> Signal<([Message], Int32, Bool), NoError> in
-                return combineLatest(hideNames, hideCaptions)
-                |> map { hideNames, hideCaptions -> ([Message], Int32, Bool) in
-                    var messages = messages
-                    messages.sort(by: { lhsMessage, rhsMessage in
-                        return lhsMessage.timestamp > rhsMessage.timestamp
+        if case let .forwardedMessages(messageIds, options) = subject {
+            let messages = combineLatest(context.account.postbox.messagesAtIds(messageIds), context.account.postbox.loadedPeerWithId(context.account.peerId), options)
+            |> map { messages, accountPeer, options -> ([Message], Int32, Bool) in
+                var messages = messages
+                messages.sort(by: { lhsMessage, rhsMessage in
+                    return lhsMessage.timestamp > rhsMessage.timestamp
+                })
+                messages = messages.map { message in
+                    var flags = message.flags
+                    flags.remove(.Incoming)
+                    
+                    var attributes = message.attributes
+                    attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleWhenOnlineTimestamp))
+                    attributes = attributes.filter({ attribute in
+                        if attribute is EditedMessageAttribute {
+                            return false
+                        }
+                        if attribute is ReplyMessageAttribute {
+                            return false
+                        }
+                        if attribute is ReplyMarkupMessageAttribute {
+                            return false
+                        }
+                        return true
                     })
-                    messages = messages.map { message in
-                        var flags = message.flags
-                        flags.remove(.Incoming)
-                        
-                        var attributes = message.attributes
-                        attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleWhenOnlineTimestamp))
-                        attributes = attributes.filter({ attribute in
-                            if attribute is EditedMessageAttribute {
-                                return false
-                            }
-                            if attribute is ReplyMessageAttribute {
-                                return false
-                            }
-                            return true
-                        })
-                        
-                        var messageText = message.text
-                        var forwardInfo = message.forwardInfo
-                        if forwardInfo == nil {
-                            forwardInfo = MessageForwardInfo(author: message.author, source: nil, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
-                        }
-                        if hideNames {
-                            forwardInfo = nil
-                        }
-                        
-                        if hideNames && hideCaptions {
-                            for media in message.media {
+                    
+                    var messageText = message.text
+                    var messageMedia = message.media
+                    var hasDice = false
+                    if options.hideNames {
+                        for media in message.media {
+                            if options.hideCaptions {
                                 if media is TelegramMediaImage || media is TelegramMediaFile {
                                     messageText = ""
                                     break
                                 }
                             }
+                            if let poll = media as? TelegramMediaPoll {
+                                var updatedMedia = message.media.filter { !($0 is TelegramMediaPoll) }
+                                updatedMedia.append(TelegramMediaPoll(pollId: poll.pollId, publicity: poll.publicity, kind: poll.kind, text: poll.text, options: poll.options, correctAnswers: poll.correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil), isClosed: false, deadlineTimeout: nil))
+                                messageMedia = updatedMedia
+                            }
+                            if let _ = media as? TelegramMediaDice {
+                                hasDice = true
+                            }
                         }
-                        
-                        return message.withUpdatedFlags(flags).withUpdatedText(messageText).withUpdatedTimestamp(scheduleWhenOnlineTimestamp).withUpdatedAttributes(attributes).withUpdatedAuthor(accountPeer).withUpdatedForwardInfo(forwardInfo)
                     }
                     
-                    return (messages, Int32(messages.count), false)
+                    var forwardInfo = message.forwardInfo
+                    if forwardInfo == nil {
+                        forwardInfo = MessageForwardInfo(author: message.author, source: nil, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
+                    }
+                    if options.hideNames && !hasDice {
+                        forwardInfo = nil
+                    }
+                    
+                    return message.withUpdatedFlags(flags).withUpdatedText(messageText).withUpdatedMedia(messageMedia).withUpdatedTimestamp(scheduleWhenOnlineTimestamp).withUpdatedAttributes(attributes).withUpdatedAuthor(accountPeer).withUpdatedForwardInfo(forwardInfo)
                 }
+                
+                return (messages, Int32(messages.count), false)
             }
             source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), loadMore: nil)
         } else {
@@ -554,6 +566,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 return false
             }
             if let _ = strongSelf.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
+                return true
+            }
+            var hasChatThemeScreen = false
+            strongSelf.controller?.window?.forEachController { c in
+                if c is ChatThemeScreen {
+                    hasChatThemeScreen = true
+                }
+            }
+            if hasChatThemeScreen {
                 return true
             }
             return false

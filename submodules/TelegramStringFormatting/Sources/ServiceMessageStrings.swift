@@ -531,7 +531,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
             case let .setChatTheme(emoji):
                 if emoji.isEmpty {
-                    if message.author?.id == accountPeerId {
+                    if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
+                        attributedString = NSAttributedString(string: strings.Notification_ChannelDisabledTheme, font: titleFont, textColor: primaryTextColor)
+                    } else if message.author?.id == accountPeerId {
                         attributedString = NSAttributedString(string: strings.Notification_YouDisabledTheme, font: titleFont, textColor: primaryTextColor)
                     } else {
                         let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
@@ -539,7 +541,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
                     }
                 } else {
-                    if message.author?.id == accountPeerId {
+                    if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
+                        attributedString = NSAttributedString(string: strings.Notification_ChannelChangedTheme(emoji).string, font: titleFont, textColor: primaryTextColor)
+                    } else if message.author?.id == accountPeerId {
                         attributedString = NSAttributedString(string: strings.Notification_YouChangedTheme(emoji).string, font: titleFont, textColor: primaryTextColor)
                     } else {
                         let resultTitleString = strings.Notification_ChangedTheme(authorName, emoji)

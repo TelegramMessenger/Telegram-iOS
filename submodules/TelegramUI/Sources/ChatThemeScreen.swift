@@ -440,7 +440,10 @@ final class ChatThemeScreen: ViewController {
                 return
             }
             strongSelf.dismiss()
-            strongSelf.completion(emoticon)
+            if strongSelf.initiallySelectedEmoticon == nil && emoticon == nil {
+            } else {
+                strongSelf.completion(emoticon)
+            }
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -456,6 +459,8 @@ final class ChatThemeScreen: ViewController {
     
     override public func loadView() {
         super.loadView()
+        
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     
     override public func viewDidAppear(_ animated: Bool) {

@@ -4258,7 +4258,7 @@ public final class VoiceChatController: ViewController {
                     childrenSafeInsets.right = childrenSafeInsets.left + (size.width - contentLeftInset)
                 }
             } else if !self.isLandscape, case .fullscreen = effectiveDisplayMode {
-                childrenInsets.bottom += self.effectiveBottomAreaHeight + fullscreenListHeight + 30.0
+                childrenInsets.bottom += self.effectiveBottomAreaHeight + fullscreenListHeight + 36.0
             }
             childrenLayout.safeInsets = childrenSafeInsets
             childrenLayout.intrinsicInsets = childrenInsets

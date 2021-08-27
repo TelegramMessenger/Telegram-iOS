@@ -35,7 +35,7 @@ public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
 public let defaultPresentationTheme = makeDefaultDayPresentationTheme(serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 
-public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: [UInt32], animateBubbleColors: Bool?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
+public func customizeDefaultDayTheme(theme: PresentationTheme, specialMode: Bool = false, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: [UInt32], animateBubbleColors: Bool?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
     if (theme.referenceTheme != .day && theme.referenceTheme != .dayClassic) {
         return theme
     }
@@ -52,24 +52,110 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
     var suggestedWallpaper: TelegramWallpaper?
     
     var bubbleColors = bubbleColors
-    if bubbleColors.isEmpty, editing {
-        if day {
-            let accentColor = accentColor ?? defaultDayAccentColor
-            bubbleColors = [accentColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98).rgb, accentColor.rgb]
-        } else {
-            if let accentColor = accentColor, !accentColor.alpha.isZero {
-                let hsb = accentColor.hsb
-                bubbleColors = [UIColor(hue: hsb.0, saturation: (hsb.1 > 0.0 && hsb.2 > 0.0) ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0).rgb]
-                if accentColor.lightness > 0.705 {
-                    outgoingAccent = UIColor(hue: hsb.0, saturation: min(1.0, hsb.1 * 1.1), brightness: min(hsb.2, 0.6), alpha: 1.0)
-                } else {
-                    outgoingAccent = accentColor
+    if specialMode, bubbleColors.count < 3, let color = bubbleColors.first.flatMap({ UIColor(rgb: $0) }) {
+        let colorHSB = color.hsb
+        if colorHSB.b > 0.9 {
+            let bubbleColor = color.withMultiplied(hue: 0.93, saturation: 1.0, brightness: 1.0)
+            bubbleColors = [bubbleColor.rgb]
+            
+            let colorPairs: [(UInt32, UInt32)] = [
+                (0xe8f9d7, 0x6cd516),
+                (0xe7faff, 0x43b6f9),
+                (0xe3f7f5, 0x4ccbb8),
+                (0xfff3cf, 0xe8b816),
+                (0xfffac9, 0xe2c714),
+                (0xc5a61e, 0xd6b534)
+            ]
+            
+            func generateAccentColor(color: UIColor) -> UIColor {
+                var nearest: (color: (UInt32, UInt32), distance: Int32)?
+                for (sample, accentSample) in colorPairs {
+                    let distance = color.distance(to: UIColor(rgb: sample))
+                    if let currentNearest = nearest {
+                        if distance < currentNearest.distance {
+                            nearest = ((sample, accentSample), distance)
+                        }
+                    } else {
+                        nearest = ((sample, accentSample), distance)
+                    }
                 }
+                
+                if let colors = nearest?.color {
+                    let colorHsb = color.hsb
+                    let similarColorHsb = UIColor(rgb: colors.0).hsb
+                    let complementingColorHsb = UIColor(rgb: colors.1).hsb
+                    
+                    let correction = (similarColorHsb.0 > 0.0 ? colorHsb.0 / similarColorHsb.0 : 1.0, similarColorHsb.1 > 0.0 ? colorHsb.1 / similarColorHsb.1 : 1.0, similarColorHsb.2 > 0.0 ? colorHsb.2 / similarColorHsb.2 : 1.0)
+                    let correctedComplementingColor = UIColor(hue: min(1.0, complementingColorHsb.0 * correction.0), saturation: min(1.0, complementingColorHsb.1 * correction.1), brightness: min(1.0, complementingColorHsb.2 * correction.2), alpha: 1.0)
+                    return correctedComplementingColor
+                } else {
+                    return color
+                }
+            }
+            
+            outgoingAccent = generateAccentColor(color: color)
+//                color.withMultiplied(hue: 1.01, saturation: 7.8, brightness: 0.9)
+        } else {
+            let bubbleColor = color.withMultiplied(hue: 1.014, saturation: 0.12, brightness: 1.29)
+            bubbleColors = [bubbleColor.rgb]
+            
+            outgoingAccent = color
+        }
 
-                suggestedWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: defaultBuiltinWallpaperGradientColors.map(\.rgb), settings: WallpaperSettings()))
+//        float[] colorHsv = getTempHsv(5);
+//               Color.colorToHSV(color, colorHsv);
+//
+//               final float diffH = Math.min(Math.abs(colorHsv[0] - baseHsv[0]), Math.abs(colorHsv[0] - baseHsv[0] - 360f));
+//               if (diffH > 30f) {
+//                   return color;
+//               }
+//
+//               float dist = Math.min(1.5f * colorHsv[1] / baseHsv[1], 1f);
+//
+//               colorHsv[0] = colorHsv[0] + accentHsv[0] - baseHsv[0];
+//               colorHsv[1] = colorHsv[1] * accentHsv[1] / baseHsv[1];
+//               colorHsv[2] = colorHsv[2] * (1f - dist + dist * accentHsv[2] / baseHsv[2]);
+//
+//               int newColor = Color.HSVToColor(Color.alpha(color), colorHsv);
+//
+//               float origBrightness = AndroidUtilities.computePerceivedBrightness(color);
+//               float newBrightness = AndroidUtilities.computePerceivedBrightness(newColor);
+//
+//               // We need to keep colors lighter in dark themes and darker in light themes
+//               boolean needRevertBrightness = isDarkTheme ? origBrightness > newBrightness : origBrightness < newBrightness;
+//
+//               if (needRevertBrightness) {
+//                   float amountOfNew = 0.6f;
+//                   float fallbackAmount = (1f - amountOfNew) * origBrightness / newBrightness + amountOfNew;
+//                   newColor = changeBrightness(newColor, fallbackAmount);
+//               }
+//
+//               return newColor;
+        
+//        outgoingAccent = color.withMultiplied(hue: 1.035, saturation: 4.294, brightness: 1.289)
+//
+//        let bubbleColor = color.withMultiplied(hue: 1.014, saturation: 0.101, brightness: 1.289)
+//        bubbleColors = [bubbleColor.rgb]
+    } else {
+        if bubbleColors.isEmpty, editing {
+            if day {
+                let accentColor = accentColor ?? defaultDayAccentColor
+                bubbleColors = [accentColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98).rgb, accentColor.rgb]
             } else {
-                bubbleColors = [UIColor(rgb: 0xe1ffc7).rgb]
-                suggestedWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: defaultBuiltinWallpaperGradientColors.map(\.rgb), settings: WallpaperSettings()))
+                if let accentColor = accentColor, !accentColor.alpha.isZero {
+                    let hsb = accentColor.hsb
+                    bubbleColors = [UIColor(hue: hsb.0, saturation: (hsb.1 > 0.0 && hsb.2 > 0.0) ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0).rgb]
+                    if accentColor.lightness > 0.705 {
+                        outgoingAccent = UIColor(hue: hsb.0, saturation: min(1.0, hsb.1 * 1.1), brightness: min(hsb.2, 0.6), alpha: 1.0)
+                    } else {
+                        outgoingAccent = accentColor
+                    }
+
+                    suggestedWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: defaultBuiltinWallpaperGradientColors.map(\.rgb), settings: WallpaperSettings()))
+                } else {
+                    bubbleColors = [UIColor(rgb: 0xe1ffc7).rgb]
+                    suggestedWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: defaultBuiltinWallpaperGradientColors.map(\.rgb), settings: WallpaperSettings()))
+                }
             }
         }
     }
@@ -168,7 +254,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                 outgoingLinkTextColor = outgoingAccent
                 outgoingScamColor = UIColor(rgb: 0xff3b30)
                 outgoingControlColor = outgoingAccent
-                outgoingInactiveControlColor = outgoingAccent //1111
+                outgoingInactiveControlColor = outgoingAccent
                 outgoingFileTitleColor = outgoingAccent
                 outgoingPollsProgressColor = accentColor
                 outgoingSelectionColor = outgoingAccent.withMultiplied(hue: 1.0, saturation: 1.292, brightness: 0.871)

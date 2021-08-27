@@ -389,7 +389,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 profileNode.frame = CGRect(origin: CGPoint(), size: extractedRect.size)
                 self.profileNode = profileNode
                 self.contextSourceNode.contentNode.addSubnode(profileNode)
-
+                
                 profileNode.animateIn(from: self, targetRect: extractedRect, transition: transition)
                 var appearenceTransition = transition
                 if transition.isAnimated {
@@ -706,19 +706,27 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                                     audioLevelView.layer.mask = playbackMaskLayer
                                     
                                     audioLevelView.setColor(wavesColor)
-                                    audioLevelView.alpha = strongSelf.isExtracted ? 0.0 : 1.0
                                     
                                     strongSelf.audioLevelView = audioLevelView
                                     strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
-                                    
-                                    if let _ = strongSelf.item, strongSelf.videoNode != nil && !active {
-                                        audioLevelView.alpha = 0.0
-                                    }
                                 }
                                 
                                 let level = min(1.0, max(0.0, CGFloat(value)))
                                 if let audioLevelView = strongSelf.audioLevelView {
                                     audioLevelView.updateLevel(CGFloat(value))
+                                    
+                                    var hasVideo = false
+                                    if let videoNode = strongSelf.videoNode, videoNode.supernode == strongSelf.videoContainerNode, !videoNode.alpha.isZero {
+                                        hasVideo = true
+                                    }
+                                    
+                                    var audioLevelAlpha: CGFloat = 1.0
+                                    if strongSelf.isExtracted {
+                                        audioLevelAlpha = 0.0
+                                    } else {
+                                        audioLevelAlpha = hasVideo ? 0.0 : 1.0
+                                    }
+                                    audioLevelView.alpha = audioLevelAlpha
                                     
                                     let avatarScale: CGFloat
                                     if value > 0.02 {

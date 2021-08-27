@@ -91,6 +91,7 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
+        self.imageNode.contentMode = .scaleAspectFit
         
         self.badgeBackground = ASImageNode()
         self.badgeBackground.displaysAsynchronously = false

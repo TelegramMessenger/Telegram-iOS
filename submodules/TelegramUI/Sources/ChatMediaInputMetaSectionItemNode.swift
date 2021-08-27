@@ -129,6 +129,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
+        self.imageNode.contentMode = .scaleAspectFit
         
         self.textNodeContainer = ASDisplayNode()
         self.textNodeContainer.isUserInteractionEnabled = false
@@ -227,12 +228,6 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                         default:
                             break
                     }
-//                    if emoji == "🥳" {
-//                        if #available(iOSApplicationExtension 12.1, iOS 12.1, *) {
-//                        } else {
-//                            emoji = "🎉"
-//                        }
-//                    }
                     self.imageNode.image = nil
                     
                     if let file = file {
