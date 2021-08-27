@@ -1361,6 +1361,7 @@ private:
     outputDeviceId:(NSString * _Nonnull)outputDeviceId
     videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer
     requestMediaChannelDescriptions:(id<OngoingGroupCallMediaChannelDescriptionTask> _Nonnull (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull, void (^ _Nonnull)(NSArray<OngoingGroupCallMediaChannelDescription *> * _Nonnull)))requestMediaChannelDescriptions
+    requestCurrentTime:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(void (^ _Nonnull)(int64_t)))requestCurrentTime
     requestAudioBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestAudioBroadcastPart
     requestVideoBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, int32_t, OngoingGroupCallRequestedVideoQuality, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestVideoBroadcastPart
     outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit
@@ -1434,6 +1435,12 @@ private:
             .initialInputDeviceId = inputDeviceId.UTF8String,
             .initialOutputDeviceId = outputDeviceId.UTF8String,
             .videoCapture = [_videoCapturer getInterface],
+            .requestCurrentTime = [requestCurrentTime](std::function<void(int64_t)> completion) {
+                id<OngoingGroupCallBroadcastPartTask> task = requestCurrentTime(^(int64_t result) {
+                    completion(result);
+                });
+                return std::make_shared<BroadcastPartTaskImpl>(task);
+            },
             .requestAudioBroadcastPart = [requestAudioBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
                 id<OngoingGroupCallBroadcastPartTask> task = requestAudioBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
                     tgcalls::BroadcastPart parsedPart;

@@ -111,5 +111,13 @@ public extension TelegramEngine {
         public func groupCall(peerId: PeerId, myPeerId: PeerId, id: Int64, accessHash: Int64, state: GroupCallParticipantsContext.State, previousServiceState: GroupCallParticipantsContext.ServiceState?) -> GroupCallParticipantsContext {
             return GroupCallParticipantsContext(account: self.account, peerId: peerId, myPeerId: myPeerId, id: id, accessHash: accessHash, state: state, previousServiceState: previousServiceState)
         }
+
+        public func serverTime() -> Signal<Int64, NoError> {
+            return self.account.network.currentGlobalTime
+            |> map { value -> Int64 in
+                return Int64(value * 1000.0)
+            }
+            |> take(1)
+        }
     }
 }
