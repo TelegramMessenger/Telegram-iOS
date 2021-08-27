@@ -5805,14 +5805,21 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             if let strongSelf = self {
                                 strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
                                 
-                                let ready = Promise<Bool>()
-                                strongSelf.activeActionDisposable.set((ready.get() |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { _ in
-                                    if let peerSelectionController = peerSelectionController {
-                                        peerSelectionController.dismiss()
-                                    }
-                                }))
-                                
-                                (strongSelf.controller?.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                                if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                                    let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId))
+                                    var viewControllers = navigationController.viewControllers
+                                    viewControllers.insert(chatController, at: viewControllers.count - 1)
+                                    navigationController.setViewControllers(viewControllers, animated: false)
+                                    
+                                    strongSelf.activeActionDisposable.set((chatController.ready.get()
+                                    |> filter { $0 }
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { _ in
+                                        if let peerSelectionController = peerSelectionController {
+                                            peerSelectionController.dismiss()
+                                        }
+                                    }))
+                                }
                             }
                         })
                     }

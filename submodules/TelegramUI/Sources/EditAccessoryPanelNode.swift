@@ -68,6 +68,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     var strings: PresentationStrings
     var nameDisplayOrder: PresentationPersonNameOrder
     
+    private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
+    
     init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat) {
         self.context = context
         self.messageId = messageId
@@ -296,7 +298,9 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             }) |> then(updateImageSignal))
         }
         
-        self.setNeedsLayout()
+        if let (size, inset, interfaceState) = self.validLayout {
+            self.updateState(size: size, inset: inset, interfaceState: interfaceState)
+        }
     }
     
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
@@ -316,7 +320,9 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
             
-            self.setNeedsLayout()
+            if let (size, inset, interfaceState) = self.validLayout {
+                self.updateState(size: size, inset: inset, interfaceState: interfaceState)
+            }
         }
     }
     
@@ -325,6 +331,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     }
     
     override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
+        self.validLayout = (size, inset, interfaceState)
+        
         let editMediaReference = interfaceState.editMessageState?.mediaReference
         var updatedEditMedia = false
         if let currentEditMediaReference = self.currentEditMediaReference, let editMediaReference = editMediaReference {

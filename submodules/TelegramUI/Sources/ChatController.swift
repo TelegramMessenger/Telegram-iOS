@@ -11583,21 +11583,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self {
                             strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                             
-                            let ready = Promise<Bool>()
-                            
-                            strongSelf.controllerNavigationDisposable.set((ready.get()
-                            |> SwiftSignalKit.filter { $0 }
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { _ in
-                                if let strongController = controller {
-                                    strongController.dismiss()
-                                }
-                            }))
-                            
+                            let navigationController: NavigationController?
                             if let parentController = strongSelf.parentController {
-                                (parentController.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                                navigationController = (parentController.navigationController as? NavigationController)
                             } else {
-                                strongSelf.effectiveNavigationController?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                                navigationController = strongSelf.effectiveNavigationController
+                            }
+                            
+                            if let navigationController = navigationController {
+                                let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId))
+                                var viewControllers = navigationController.viewControllers
+                                viewControllers.insert(chatController, at: viewControllers.count - 1)
+                                navigationController.setViewControllers(viewControllers, animated: false)
+                                
+                                strongSelf.controllerNavigationDisposable.set((chatController.ready.get()
+                                |> SwiftSignalKit.filter { $0 }
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { _ in
+                                    if let strongController = controller {
+                                        strongController.dismiss()
+                                    }
+                                }))
                             }
                         }
                     })
@@ -11705,16 +11711,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             |> deliverOnMainQueue).start(completed: {
                                                 if let strongSelf = self {
                                                     strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
-                                                    
-                                                    let ready = Promise<Bool>()
-                                                    
-                                                    strongSelf.controllerNavigationDisposable.set((ready.get() |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { _ in
-                                                        if let strongController = controller {
-                                                            strongController.dismiss()
-                                                        }
-                                                    }))
-                                                    
-                                                    strongSelf.effectiveNavigationController?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                                                                                                        
+                                                    if let navigationController = strongSelf.effectiveNavigationController {
+                                                        let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId))
+                                                        var viewControllers = navigationController.viewControllers
+                                                        viewControllers.insert(chatController, at: viewControllers.count - 1)
+                                                        navigationController.setViewControllers(viewControllers, animated: false)
+                                                        
+                                                        strongSelf.controllerNavigationDisposable.set((chatController.ready.get()
+                                                        |> filter { $0 }
+                                                        |> take(1)
+                                                        |> deliverOnMainQueue).start(next: { _ in
+                                                            if let strongController = controller {
+                                                                strongController.dismiss()
+                                                            }
+                                                        }))
+                                                    }
                                                 }
                                             })
                                         }

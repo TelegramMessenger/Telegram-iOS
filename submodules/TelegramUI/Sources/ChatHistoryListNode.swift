@@ -2472,7 +2472,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         let isSelected = (self.controllerInteraction.selectionState?.selectedIds.contains(message.id) ?? false)
                         if state.selecting != isSelected {
                             let messageIds = messages.filter { message -> Bool in
-                                for media in messages {
+                                for media in message.media {
                                     if media is TelegramMediaAction {
                                         return false
                                     }

@@ -27,6 +27,8 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     var theme: PresentationTheme
     var strings: PresentationStrings
     
+    private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
+    
     init(context: AccountContext, url: String, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
         self.url = url
         self.webpage = webpage
@@ -92,7 +94,9 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
             
             self.updateWebpage()
             
-            self.setNeedsLayout()
+            if let (size, inset, interfaceState) = self.validLayout {
+                self.updateState(size: size, inset: inset, interfaceState: interfaceState)
+            }
         }
     }
     
@@ -143,7 +147,9 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         self.titleString = NSAttributedString(string: authorName, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
         self.textString = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
         
-        self.setNeedsLayout()
+        if let (size, inset, interfaceState) = self.validLayout {
+            self.updateState(size: size, inset: inset, interfaceState: interfaceState)
+        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -151,7 +157,9 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     }
     
     override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
-        let bounds = self.bounds
+        self.validLayout = (size, inset, interfaceState)
+        
+        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
         let leftInset: CGFloat = 55.0
         let textLineInset: CGFloat = 10.0
         let rightInset: CGFloat = 55.0

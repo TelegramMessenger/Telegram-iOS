@@ -30,6 +30,8 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     var theme: PresentationTheme
     var strings: PresentationStrings
     
+    private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
+    
     init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat) {
         self.messageId = messageId
         
@@ -204,7 +206,9 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     strongSelf.imageNode.setSignal(updateImageSignal)
                 }
                 
-                strongSelf.setNeedsLayout()
+                if let (size, inset, interfaceState) = strongSelf.validLayout {
+                    strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
+                }
             }
         }))
     }
@@ -236,7 +240,9 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
             
-            self.setNeedsLayout()
+            if let (size, inset, interfaceState) = self.validLayout {
+                self.updateState(size: size, inset: inset, interfaceState: interfaceState)
+            }
         }
     }
     
@@ -245,7 +251,9 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     }
     
     override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
-        let bounds = self.bounds
+        self.validLayout = (size, inset, interfaceState)
+        
+        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
         let leftInset: CGFloat = 55.0
         let textLineInset: CGFloat = 10.0
         let rightInset: CGFloat = 55.0

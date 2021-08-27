@@ -6674,7 +6674,7 @@ Sorry for the inconvenience.";
 "Notification.YouChangedTheme" = "You changed chat theme to %@";
 "Notification.YouDisabledTheme" = "You disabled chat theme";
 
-"Notification.ChannelChangedTheme" = "Channel theme changed to %2$@";
+"Notification.ChannelChangedTheme" = "Channel theme changed to %1$@";
 "Notification.ChannelDisabledTheme" = "Channel theme disabled";
 
 "Appstore.Cloud" = "**Cloud-based**\nUnlimited storage for chats,\nmedia and documents.";
