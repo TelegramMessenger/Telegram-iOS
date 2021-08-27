@@ -319,7 +319,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     }
     
     override func isReorderable(at point: CGPoint) -> Bool {
-        if self.bounds.contains(point) {
+        if self.bounds.inset(by: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -28.0)).contains(point) {
             return true
         }
         return false

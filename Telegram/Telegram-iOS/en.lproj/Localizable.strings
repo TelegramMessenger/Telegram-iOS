@@ -104,6 +104,7 @@
 "PUSH_ALBUM" = "%1$@|sent you an album";
 "PUSH_MESSAGE_FILES_TEXT_1" = "sent you a file";
 "PUSH_MESSAGE_FILES_TEXT_any" = "sent you %d files";
+"PUSH_MESSAGE_THEME" = "%1$@|changed theme to %2$@";
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -176,6 +177,7 @@
 "PUSH_CHAT_ALBUM" = "%2$@|%1$@ sent an album";
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_1" = "{author} sent a file";
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_any" = "{author} sent %d files";
+"PUSH_CHAT_MESSAGE_THEME" = "%1$@|set theme to %3$@ in the group %2$@";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -6708,3 +6710,6 @@ Sorry for the inconvenience.";
 "Appstore.Secure.Chat.Name" = "**Little Sister**";
 
 "Conversation.ReplyMessagePanelTitle" = "Reply to %@";
+
+"Channel.AdminLog.MessageChangedThemeSet" = "%1$@ changed chat theme to %2$@";
+"Channel.AdminLog.MessageChangedThemeRemove" = "%1$@ disabled chat theme";

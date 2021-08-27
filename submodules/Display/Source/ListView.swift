@@ -328,6 +328,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private var reorderInProgress: Bool = false
     private var reorderingItemsCompleted: (() -> Void)?
     private var reorderScrollStartTimestamp: Double?
+    private var reorderLastTimestamp: Double?
     public var reorderedItemHasShadow = true
     
     private let waitingForNodesDisposable = MetaDisposable()
@@ -562,14 +563,23 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             return
         }
         
+        let timestamp = CACurrentMediaTime()
         if let reorderItemNode = reorderNode.itemNode, let reorderItemIndex = reorderItemNode.index, reorderItemNode.supernode == self {
             let verticalOffset = verticalTopOffset
             var closestIndex: (Int, CGFloat)?
             for i in 0 ..< self.itemNodes.count {
                 if let itemNodeIndex = self.itemNodes[i].index, itemNodeIndex != reorderItemIndex {
                     let itemFrame = self.itemNodes[i].apparentContentFrame
-                    let itemOffset = itemFrame.midY
-                    let deltaOffset = itemOffset - verticalOffset
+//                    let itemOffset = itemFrame.midY
+                    let offsetToMin = itemFrame.minY - verticalOffset
+                    let offsetToMax = itemFrame.maxY - verticalOffset
+                    let deltaOffset: CGFloat
+                    if abs(offsetToMin) > abs(offsetToMax) {
+                        deltaOffset = offsetToMax
+                    } else {
+                        deltaOffset = offsetToMin
+                    }
+//                    let deltaOffset = min(itemFrame.minY - verticalOffset, itemFrame.maxY - verticalOffset)
                     if let (_, closestOffset) = closestIndex {
                         if abs(deltaOffset) < abs(closestOffset) {
                             closestIndex = (itemNodeIndex, deltaOffset)
@@ -594,7 +604,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     }
                 }
                 if toIndex != reorderItemNode.index {
+                    if let reorderLastTimestamp = self.reorderLastTimestamp, timestamp < reorderLastTimestamp + 0.1 {
+                        return
+                    }
                     if reorderNode.currentState?.0 != reorderItemIndex || reorderNode.currentState?.1 != toIndex {
+                        self.reorderLastTimestamp = timestamp
+                        
                         reorderNode.currentState = (reorderItemIndex, toIndex)
                         //print("reorder \(reorderItemIndex) to \(toIndex) offset \(offset)")
                         if self.reorderFeedbackDisposable == nil {

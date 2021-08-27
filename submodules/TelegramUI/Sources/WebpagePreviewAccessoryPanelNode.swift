@@ -150,9 +150,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
     
-    override func layout() {
-        super.layout()
-        
+    override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
         let bounds = self.bounds
         let leftInset: CGFloat = 55.0
         let textLineInset: CGFloat = 10.0
@@ -160,12 +158,12 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         let textRightInset: CGFloat = 20.0
         
         let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
-        self.closeButton.frame = CGRect(origin: CGPoint(x: bounds.size.width - closeButtonSize.width, y: 2.0), size: closeButtonSize)
+        self.closeButton.frame = CGRect(origin: CGPoint(x: bounds.size.width - closeButtonSize.width - inset, y: 2.0), size: closeButtonSize)
         
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
         
         if let icon = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 10.0), size: icon.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
         }
         
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
@@ -182,6 +180,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         let _ = titleApply()
         let _ = textApply()
     }
+    
     
     @objc func closePressed() {
         if let dismiss = self.dismiss {

@@ -244,9 +244,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
     
-    override func layout() {
-        super.layout()
-        
+    override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
         let bounds = self.bounds
         let leftInset: CGFloat = 55.0
         let textLineInset: CGFloat = 10.0
@@ -254,7 +252,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         let textRightInset: CGFloat = 20.0
         
         let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
-        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - closeButtonSize.width, y: 2.0), size: closeButtonSize)
+        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - closeButtonSize.width - inset, y: 2.0), size: closeButtonSize)
         self.closeButton.frame = closeButtonFrame
         
         self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
@@ -264,7 +262,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         }
         
         if let icon = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 10.0), size: icon.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
         }
         
         var imageTextInset: CGFloat = 0.0

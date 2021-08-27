@@ -99,7 +99,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     var nameDisplayOrder: PresentationPersonNameOrder
     var forwardOptionsState: ChatInterfaceForwardOptionsState?
     
-    private var validLayout: (size: CGSize, interfaceState: ChatPresentationInterfaceState)?
+    private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
     init(context: AccountContext, messageIds: [MessageId], theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, nameDisplayOrder: PresentationPersonNameOrder, forwardOptionsState: ChatInterfaceForwardOptionsState?) {
         self.context = context
@@ -196,8 +196,8 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                 }
                 strongSelf.actionArea.accessibilityLabel = "\(headerString). From: \(authors).\n\(text)"
 
-                if let (size, interfaceState) = strongSelf.validLayout {
-                    strongSelf.updateState(size: size, interfaceState: interfaceState)
+                if let (size, inset, interfaceState) = strongSelf.validLayout {
+                    strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
                 }
                 
                 let _ = (ApplicationSpecificNotice.getChatForwardOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager)
@@ -206,7 +206,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                         Queue.mainQueue().after(3.0) {
                             if let snapshotView = strongSelf.textNode.view.snapshotContentTree() {
                                 let text: String
-                                if let (size, _) = strongSelf.validLayout, size.width > 320.0 {
+                                if let (size, _, _) = strongSelf.validLayout, size.width > 320.0 {
                                     text = strongSelf.strings.Conversation_ForwardOptions_TapForOptions
                                 } else {
                                     text = strongSelf.strings.Conversation_ForwardOptions_TapForOptionsShort
@@ -216,8 +216,8 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                                 
                                 strongSelf.view.addSubview(snapshotView)
                                 
-                                if let (size, interfaceState) = strongSelf.validLayout {
-                                    strongSelf.updateState(size: size, interfaceState: interfaceState)
+                                if let (size, inset, interfaceState) = strongSelf.validLayout {
+                                    strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
                                 }
                                 
                                 strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
@@ -278,8 +278,8 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
             
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
             
-            if let (size, interfaceState) = self.validLayout {
-                self.updateState(size: size, interfaceState: interfaceState)
+            if let (size, inset, interfaceState) = self.validLayout {
+                self.updateState(size: size, inset: inset, interfaceState: interfaceState)
             }
         }
     }
@@ -288,18 +288,17 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
 
-    override func updateState(size: CGSize, interfaceState: ChatPresentationInterfaceState) {
-        self.validLayout = (size, interfaceState)
+    override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
+        self.validLayout = (size, inset, interfaceState)
 
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
-        let inset: CGFloat = 55.0
-        let leftInset: CGFloat = inset
-        let rightInset: CGFloat = inset
+        let leftInset: CGFloat = 55.0 + inset
+        let rightInset: CGFloat = 55.0 + inset
         let textLineInset: CGFloat = 10.0
         let textRightInset: CGFloat = 20.0
 
         let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
-        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - closeButtonSize.width, y: 2.0), size: closeButtonSize)
+        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - closeButtonSize.width - inset, y: 2.0), size: closeButtonSize)
         self.closeButton.frame = closeButtonFrame
         self.closeButton.isHidden = interfaceState.renderedPeer == nil
 
@@ -308,7 +307,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
 
         if let icon = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 10.0), size: icon.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
         }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset, height: bounds.size.height))
@@ -337,7 +336,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         let alertController = richTextAlertController(context: self.context, title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: self.strings.Conversation_ForwardOptions_ShowOptions, action: { [weak self] in
             if let strongSelf = self {
                 strongSelf.interfaceInteraction?.presentForwardOptions(strongSelf)
-                Queue.mainQueue().after(1.5) {
+                Queue.mainQueue().after(0.5) {
                     strongSelf.updateThemeAndStrings(theme: strongSelf.theme, strings: strongSelf.strings, forwardOptionsState: strongSelf.forwardOptionsState, force: true)
                 }
                 

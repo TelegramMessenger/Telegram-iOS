@@ -960,14 +960,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         let panelHeight: CGFloat
         
         let isExpanded: Bool = true
-//            switch expanded {
-//                case .content:
-                    panelHeight = maximumHeight
-//                case let .search(mode):
-//                    panelHeight = maximumHeight
-//                    displaySearch = true
-//                    searchMode = mode
-//            }
+        panelHeight = maximumHeight
+
         self.stickerPane.collectionListPanelOffset = 0.0
         
         transition.updateFrame(node: self.topPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: topInset + topPanelHeight)))
@@ -1029,7 +1023,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
-        let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0 + 5.0)
+        let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0 + 15.0)
         self.stickerListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight + 31.0, height: width)
         transition.updatePosition(node: self.stickerListView, position: listPosition)
         

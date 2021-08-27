@@ -1050,7 +1050,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let accessoryPanelNode = accessoryPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.accessoryPanelNode, interfaceInteraction: self.interfaceInteraction) {
             accessoryPanelSize = accessoryPanelNode.measure(CGSize(width: layout.size.width, height: layout.size.height))
             
-            accessoryPanelNode.updateState(size: CGSize(width: layout.size.width, height: layout.size.height), interfaceState: self.chatPresentationInterfaceState)
+            accessoryPanelNode.updateState(size: layout.size, inset: layout.safeInsets.left, interfaceState: self.chatPresentationInterfaceState)
             
             if accessoryPanelNode !== self.accessoryPanelNode {
                 dismissedAccessoryPanelNode = self.accessoryPanelNode

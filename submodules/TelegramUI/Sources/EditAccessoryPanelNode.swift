@@ -324,7 +324,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
     
-    override func updateState(size: CGSize, interfaceState: ChatPresentationInterfaceState) {
+    override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
         let editMediaReference = interfaceState.editMessageState?.mediaReference
         var updatedEditMedia = false
         if let currentEditMediaReference = self.currentEditMediaReference, let editMediaReference = editMediaReference {
@@ -342,15 +342,11 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             }
             self.updateMessage(self.currentMessage)
         }
-    }
-    
-    override func layout() {
-        super.layout()
         
-        let bounds = self.bounds
-        let leftInset: CGFloat = 55.0
+        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
         let textLineInset: CGFloat = 10.0
-        let rightInset: CGFloat = 55.0
+        let leftInset: CGFloat = 55.0 + inset
+        let rightInset: CGFloat = 55.0 + inset
         let textRightInset: CGFloat = 20.0
         
         let indicatorSize = CGSize(width: 22.0, height: 22.0)
@@ -358,7 +354,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.statusNode.frame = CGRect(origin: CGPoint(x: 18.0, y: 15.0), size: indicatorSize).insetBy(dx: -2.0, dy: -2.0)
         
         let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
-        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - closeButtonSize.width, y: 2.0), size: closeButtonSize)
+        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - closeButtonSize.width - inset, y: 2.0), size: closeButtonSize)
         self.closeButton.frame = closeButtonFrame
         
         self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
@@ -366,7 +362,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
         
         if let icon = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 10.0), size: icon.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
         }
         
         var imageTextInset: CGFloat = 0.0

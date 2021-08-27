@@ -55,14 +55,14 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, specialMode: Bool
     if specialMode, bubbleColors.count < 3, let color = bubbleColors.first.flatMap({ UIColor(rgb: $0) }) {
         let colorHSB = color.hsb
         if colorHSB.b > 0.9 {
-            let bubbleColor = color.withMultiplied(hue: 0.93, saturation: 1.0, brightness: 1.0)
+            let bubbleColor = color.withMultiplied(hue: 0.9, saturation: 1.3, brightness: 1.0)
             bubbleColors = [bubbleColor.rgb]
             
             let colorPairs: [(UInt32, UInt32)] = [
-                (0xe8f9d7, 0x6cd516),
-                (0xe7faff, 0x43b6f9),
+                (0xe5f9d7, 0x6cd516),
+                (0xe7f5ff, 0x43b6f9),
                 (0xe3f7f5, 0x4ccbb8),
-                (0xfff3cf, 0xe8b816),
+                (0xfff6cf, 0xe8b816),
                 (0xfffac9, 0xe2c714),
                 (0xc5a61e, 0xd6b534)
             ]
@@ -83,10 +83,10 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, specialMode: Bool
                 if let colors = nearest?.color {
                     let colorHsb = color.hsb
                     let similarColorHsb = UIColor(rgb: colors.0).hsb
-                    let complementingColorHsb = UIColor(rgb: colors.1).hsb
+                    let accentColorHsb = UIColor(rgb: colors.1).hsb
                     
                     let correction = (similarColorHsb.0 > 0.0 ? colorHsb.0 / similarColorHsb.0 : 1.0, similarColorHsb.1 > 0.0 ? colorHsb.1 / similarColorHsb.1 : 1.0, similarColorHsb.2 > 0.0 ? colorHsb.2 / similarColorHsb.2 : 1.0)
-                    let correctedComplementingColor = UIColor(hue: min(1.0, complementingColorHsb.0 * correction.0), saturation: min(1.0, complementingColorHsb.1 * correction.1), brightness: min(1.0, complementingColorHsb.2 * correction.2), alpha: 1.0)
+                    let correctedComplementingColor = UIColor(hue: min(1.0, accentColorHsb.0 * correction.0), saturation: min(1.0, accentColorHsb.1 * correction.1), brightness: min(1.0, accentColorHsb.2 * correction.2), alpha: 1.0)
                     return correctedComplementingColor
                 } else {
                     return color
@@ -94,48 +94,12 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, specialMode: Bool
             }
             
             outgoingAccent = generateAccentColor(color: color)
-//                color.withMultiplied(hue: 1.01, saturation: 7.8, brightness: 0.9)
         } else {
             let bubbleColor = color.withMultiplied(hue: 1.014, saturation: 0.12, brightness: 1.29)
             bubbleColors = [bubbleColor.rgb]
             
             outgoingAccent = color
         }
-
-//        float[] colorHsv = getTempHsv(5);
-//               Color.colorToHSV(color, colorHsv);
-//
-//               final float diffH = Math.min(Math.abs(colorHsv[0] - baseHsv[0]), Math.abs(colorHsv[0] - baseHsv[0] - 360f));
-//               if (diffH > 30f) {
-//                   return color;
-//               }
-//
-//               float dist = Math.min(1.5f * colorHsv[1] / baseHsv[1], 1f);
-//
-//               colorHsv[0] = colorHsv[0] + accentHsv[0] - baseHsv[0];
-//               colorHsv[1] = colorHsv[1] * accentHsv[1] / baseHsv[1];
-//               colorHsv[2] = colorHsv[2] * (1f - dist + dist * accentHsv[2] / baseHsv[2]);
-//
-//               int newColor = Color.HSVToColor(Color.alpha(color), colorHsv);
-//
-//               float origBrightness = AndroidUtilities.computePerceivedBrightness(color);
-//               float newBrightness = AndroidUtilities.computePerceivedBrightness(newColor);
-//
-//               // We need to keep colors lighter in dark themes and darker in light themes
-//               boolean needRevertBrightness = isDarkTheme ? origBrightness > newBrightness : origBrightness < newBrightness;
-//
-//               if (needRevertBrightness) {
-//                   float amountOfNew = 0.6f;
-//                   float fallbackAmount = (1f - amountOfNew) * origBrightness / newBrightness + amountOfNew;
-//                   newColor = changeBrightness(newColor, fallbackAmount);
-//               }
-//
-//               return newColor;
-        
-//        outgoingAccent = color.withMultiplied(hue: 1.035, saturation: 4.294, brightness: 1.289)
-//
-//        let bubbleColor = color.withMultiplied(hue: 1.014, saturation: 0.101, brightness: 1.289)
-//        bubbleColors = [bubbleColor.rgb]
     } else {
         if bubbleColors.isEmpty, editing {
             if day {

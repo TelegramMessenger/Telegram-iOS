@@ -454,7 +454,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         if let forwardAccessoryPanelNode = self.forwardAccessoryPanelNode {
             let size = forwardAccessoryPanelNode.calculateSizeThatFits(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: layout.size.height))
-            forwardAccessoryPanelNode.updateState(size: size, interfaceState: self.presentationInterfaceState)
+            forwardAccessoryPanelNode.updateState(size: size, inset: layout.safeInsets.left, interfaceState: self.presentationInterfaceState)
             forwardAccessoryPanelNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, forwardOptionsState: self.presentationInterfaceState.interfaceState.forwardOptionsState)
             let panelFrame = CGRect(x: layout.safeInsets.left, y: layout.size.height - (textPanelHeight ?? 0.0) - size.height, width: size.width - layout.safeInsets.left - layout.safeInsets.right, height: size.height)
             
