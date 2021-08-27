@@ -367,10 +367,20 @@ public struct ChatTextInputStateText: Codable, Equatable {
 }
 
 public enum ChatControllerSubject: Equatable {
+    public struct ForwardOptions: Equatable {
+        public let hideNames: Bool
+        public let hideCaptions: Bool
+        
+        public init(hideNames: Bool, hideCaptions: Bool) {
+            self.hideNames = hideNames
+            self.hideCaptions = hideCaptions
+        }
+    }
+    
     case message(id: EngineMessage.Id, highlight: Bool, timecode: Double?)
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
-    case forwardedMessages(ids: [EngineMessage.Id], hideNames: Signal<Bool, NoError>, hideCaptions: Signal<Bool, NoError>)
+    case forwardedMessages(ids: [EngineMessage.Id], options: Signal<ForwardOptions, NoError>)
     
     public static func ==(lhs: ChatControllerSubject, rhs: ChatControllerSubject) -> Bool {
         switch lhs {
@@ -392,8 +402,8 @@ public enum ChatControllerSubject: Equatable {
             } else {
                 return false
             }
-        case let .forwardedMessages(lhsIds, _, _):
-            if case let .forwardedMessages(rhsIds, _, _) = rhs, lhsIds == rhsIds {
+        case let .forwardedMessages(lhsIds, _):
+            if case let .forwardedMessages(rhsIds, _) = rhs, lhsIds == rhsIds {
                 return true
             } else {
                 return false
