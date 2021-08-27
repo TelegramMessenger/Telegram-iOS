@@ -11320,6 +11320,7 @@ public extension Api {
         case channelAdminLogEventActionExportedInviteEdit(prevInvite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite)
         case channelAdminLogEventActionParticipantVolume(participant: Api.GroupCallParticipant)
         case channelAdminLogEventActionChangeHistoryTTL(prevValue: Int32, newValue: Int32)
+        case channelAdminLogEventActionChangeTheme(prevValue: String, newValue: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11529,6 +11530,13 @@ public extension Api {
                     serializeInt32(prevValue, buffer: buffer, boxed: false)
                     serializeInt32(newValue, buffer: buffer, boxed: false)
                     break
+                case .channelAdminLogEventActionChangeTheme(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(-26672755)
+                    }
+                    serializeString(prevValue, buffer: buffer, boxed: false)
+                    serializeString(newValue, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -11598,6 +11606,8 @@ public extension Api {
                 return ("channelAdminLogEventActionParticipantVolume", [("participant", participant)])
                 case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeHistoryTTL", [("prevValue", prevValue), ("newValue", newValue)])
+                case .channelAdminLogEventActionChangeTheme(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeTheme", [("prevValue", prevValue), ("newValue", newValue)])
     }
     }
     
@@ -12038,6 +12048,20 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeHistoryTTL(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionChangeTheme(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeTheme(prevValue: _1!, newValue: _2!)
             }
             else {
                 return nil
@@ -19218,20 +19242,19 @@ public extension Api {
     
     }
     public enum SponsoredMessage: TypeConstructorDescription {
-        case sponsoredMessage(flags: Int32, randomId: Buffer, peerId: Api.Peer, fromId: Api.Peer, message: String, media: Api.MessageMedia?, entities: [Api.MessageEntity]?)
+        case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer, startParam: String?, message: String, entities: [Api.MessageEntity]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sponsoredMessage(let flags, let randomId, let peerId, let fromId, let message, let media, let entities):
+                case .sponsoredMessage(let flags, let randomId, let fromId, let startParam, let message, let entities):
                     if boxed {
-                        buffer.appendInt32(-160304943)
+                        buffer.appendInt32(708589599)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
-                    peerId.serialize(buffer, true)
                     fromId.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
                     serializeString(message, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {media!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(entities!.count))
                     for item in entities! {
@@ -19243,8 +19266,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sponsoredMessage(let flags, let randomId, let peerId, let fromId, let message, let media, let entities):
-                return ("sponsoredMessage", [("flags", flags), ("randomId", randomId), ("peerId", peerId), ("fromId", fromId), ("message", message), ("media", media), ("entities", entities)])
+                case .sponsoredMessage(let flags, let randomId, let fromId, let startParam, let message, let entities):
+                return ("sponsoredMessage", [("flags", flags), ("randomId", randomId), ("fromId", fromId), ("startParam", startParam), ("message", message), ("entities", entities)])
     }
     }
     
@@ -19257,29 +19280,22 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _4: Api.Peer?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
+            var _4: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
             var _5: String?
             _5 = parseString(reader)
-            var _6: Api.MessageMedia?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.MessageMedia
-            } }
-            var _7: [Api.MessageEntity]?
+            var _6: [Api.MessageEntity]?
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, peerId: _3!, fromId: _4!, message: _5!, media: _6, entities: _7)
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, fromId: _3!, startParam: _4, message: _5!, entities: _6)
             }
             else {
                 return nil

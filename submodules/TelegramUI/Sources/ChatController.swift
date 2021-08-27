@@ -3423,7 +3423,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 .updatedAutoremoveTimeout(autoremoveTimeout)
                         })
 
-                        if let channel = renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
+                        if case .standard(previewing: false) = mode, let channel = renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
                             if strongSelf.nextChannelToReadDisposable == nil {
                                 strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
                                     strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, chatListFilterId: strongSelf.currentChatListFilter, getFilterPredicate: chatListFilterPredicate),

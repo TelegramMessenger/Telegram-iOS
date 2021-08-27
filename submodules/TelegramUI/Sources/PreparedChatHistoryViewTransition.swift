@@ -216,6 +216,17 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     }
                 }
         }
+    } else if case .Initial = reason, scrollToItem == nil {
+        var index = toView.filteredEntries.count - 1
+        for entry in toView.filteredEntries {
+            if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                if let _ = message.adAttribute {
+                    scrollToItem = ListViewScrollToItem(index: index + 1, position: .top(0.0), animated: false, curve: curve, directionHint: .Down)
+                    break
+                }
+            }
+            index -= 1
+        }
     }
     
     if updatedMessageSelection {

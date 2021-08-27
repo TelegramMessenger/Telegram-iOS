@@ -1035,9 +1035,47 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Down, animated: true, highlight: true)
                     scrollAnimationCurve = .Spring(duration: 0.4)
                 }
+
+                var disableAnimations = false
+
+                if let strongSelf = self, updatedScrollPosition == nil, case .InteractiveChanges = reason, case let .known(offset) = strongSelf.visibleContentOffset(), abs(offset) <= 0.9, let previous = previous {
+                    var previousNumAds = 0
+                    for entry in previous.filteredEntries {
+                        if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                            if message.adAttribute != nil {
+                                previousNumAds += 1
+                            }
+                        }
+                    }
+
+                    var updatedNumAds = 0
+                    var firstNonAdIndex: MessageIndex?
+                    for entry in processedView.filteredEntries.reversed() {
+                        if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                            if message.adAttribute != nil {
+                                updatedNumAds += 1
+                            } else {
+                                if firstNonAdIndex == nil {
+                                    firstNonAdIndex = message.index
+                                }
+                            }
+                        }
+                    }
+
+                    if let firstNonAdIndex = firstNonAdIndex, previousNumAds == 0, updatedNumAds != 0 {
+                        updatedScrollPosition = .index(index: .message(firstNonAdIndex), position: .top(0.0), directionHint: .Up, animated: false, highlight: false)
+                        disableAnimations = true
+                    }
+                }
                 
                 let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, scrollAnimationCurve: scrollAnimationCurve, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators, updatedMessageSelection: previousSelectedMessages != selectedMessages, messageTransitionNode: messageTransitionNode(), allUpdated: updateAllOnEachVersion)
-                let mappedTransition = mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, transition: rawTransition)
+                var mappedTransition = mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, transition: rawTransition)
+                if disableAnimations {
+                    mappedTransition.options.remove(.AnimateInsertion)
+                    mappedTransition.options.remove(.AnimateAlpha)
+                    mappedTransition.options.remove(.AnimateTopItemPosition)
+                    mappedTransition.options.remove(.RequestItemInsertionAnimations)
+                }
                 Queue.mainQueue().async {
                     guard let strongSelf = self else {
                         return
@@ -1276,7 +1314,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             let previousType = self.currentOverscrollExpandProgress >= 1.0
             let currentType = expandProgress >= 1.0
 
-            if previousType != currentType {
+            if previousType != currentType, currentType {
                 if self.feedback == nil {
                     self.feedback = HapticFeedback()
                 }
@@ -2168,6 +2206,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 loop: for entry in historyView.filteredEntries.reversed() {
                     if index >= visibleRange.firstIndex && index <= visibleRange.lastIndex {
                         if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                            if message.adAttribute != nil {
+                                continue
+                            }
                             if index != 0 || historyView.originalView.laterId != nil {
                                 currentMessage = message
                             }

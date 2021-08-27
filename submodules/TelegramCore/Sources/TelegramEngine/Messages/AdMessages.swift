@@ -11,6 +11,7 @@ private class AdMessagesHistoryContextImpl {
             case textEntities
             case media
             case authorId
+            case startParam
         }
 
         public let opaqueId: Data
@@ -18,19 +19,22 @@ private class AdMessagesHistoryContextImpl {
         public let textEntities: [MessageTextEntity]
         public let media: [Media]
         public let authorId: PeerId
+        public let startParam: String?
 
         public init(
             opaqueId: Data,
             text: String,
             textEntities: [MessageTextEntity],
             media: [Media],
-            authorId: PeerId
+            authorId: PeerId,
+            startParam: String?
         ) {
             self.opaqueId = opaqueId
             self.text = text
             self.textEntities = textEntities
             self.media = media
             self.authorId = authorId
+            self.startParam = startParam
         }
 
         public init(from decoder: Decoder) throws {
@@ -47,6 +51,8 @@ private class AdMessagesHistoryContextImpl {
             }
 
             self.authorId = try container.decode(PeerId.self, forKey: .authorId)
+
+            self.startParam = try container.decodeIfPresent(String.self, forKey: .startParam)
         }
 
         public func encode(to encoder: Encoder) throws {
@@ -64,6 +70,7 @@ private class AdMessagesHistoryContextImpl {
             try container.encode(mediaData, forKey: .media)
 
             try container.encode(self.authorId, forKey: .authorId)
+            try container.encodeIfPresent(self.startParam, forKey: .startParam)
         }
 
         public static func ==(lhs: CachedMessage, rhs: CachedMessage) -> Bool {
@@ -87,13 +94,16 @@ private class AdMessagesHistoryContextImpl {
             if lhs.authorId != rhs.authorId {
                 return false
             }
+            if lhs.startParam != rhs.startParam {
+                return false
+            }
             return true
         }
 
         func toMessage(peerId: PeerId, transaction: Transaction) -> Message {
             var attributes: [MessageAttribute] = []
 
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId))
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, startParam: self.startParam))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -307,25 +317,27 @@ private class AdMessagesHistoryContextImpl {
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(_, randomId, _, fromId, message, media, entities):
+                            case let .sponsoredMessage(_, randomId, fromId, startParam, message, entities):
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
                                 }
 
-                                var parsedMedia: [Media] = []
-                                if let media = media {
+                                let parsedMedia: [Media] = []
+                                /*if let media = media {
                                     let (mediaValue, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                                     if let mediaValue = mediaValue {
                                         parsedMedia.append(mediaValue)
                                     }
-                                }
+                                }*/
 
                                 parsedMessages.append(CachedMessage(
                                     opaqueId: randomId.makeData(),
                                     text: message,
                                     textEntities: parsedEntities,
-                                    media: parsedMedia, authorId: fromId.peerId
+                                    media: parsedMedia,
+                                    authorId: fromId.peerId,
+                                    startParam: startParam
                                 ))
                             }
                         }
