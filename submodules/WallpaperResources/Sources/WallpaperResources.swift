@@ -1310,7 +1310,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
         themeSignal = .single(makeDefaultPresentationTheme(reference: theme, serviceBackgroundColor: nil))
     } else if case let .cloud(theme) = theme, let settings = theme.theme.settings {
         themeSignal = Signal { subscriber in
-            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
+            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, specialMode: emoticon, preview: false)
             subscriber.putNext(theme)
             subscriber.putCompletion()
             

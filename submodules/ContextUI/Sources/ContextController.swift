@@ -120,6 +120,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private let reactionSelected: (ReactionContextItem.Reaction) -> Void
     private let beganAnimatingOut: () -> Void
     private let attemptTransitionControllerIntoNavigation: () -> Void
+    fileprivate var dismissedForCancel: (() -> Void)?
     private let getController: () -> ContextControllerProtocol?
     private weak var gesture: ContextGesture?
     private var displayTextSelectionTip: Bool
@@ -478,6 +479,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     @objc private func dimNodeTapped() {
+        self.dismissedForCancel?()
         self.beginDismiss(.default)
     }
     
@@ -1817,6 +1819,11 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var reactionSelected: ((ReactionContextItem.Reaction) -> Void)?
     public var dismissed: (() -> Void)?
+    public var dismissedForCancel: (() -> Void)? {
+        didSet {
+            self.controllerNode.dismissedForCancel = self.dismissedForCancel
+        }
+    }
     
     public var useComplexItemsTransitionAnimation = false
     public var immediateItemsTransitionAnimation = false
@@ -1872,7 +1879,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     override public func loadDisplayNode() {
         self.displayNode = ContextControllerNode(account: self.account, controller: self, presentationData: self.presentationData, source: self.source, items: self.items, reactionItems: self.reactionItems, beginDismiss: { [weak self] result in
             self?.dismiss(result: result, completion: nil)
-            }, recognizer: self.recognizer, gesture: self.gesture, reactionSelected: { [weak self] value in
+        }, recognizer: self.recognizer, gesture: self.gesture, reactionSelected: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -1893,7 +1900,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
                 break
             }
         }, displayTextSelectionTip: self.displayTextSelectionTip)
-        
+        self.controllerNode.dismissedForCancel = self.dismissedForCancel
         self.displayNodeDidLoad()
         
         self._ready.set(combineLatest(queue: .mainQueue(), self.controllerNode.itemsReady.get(), self.controllerNode.contentReady.get())

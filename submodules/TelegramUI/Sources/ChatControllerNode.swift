@@ -272,28 +272,43 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if attribute is ReplyMessageAttribute {
                             return false
                         }
+                        if attribute is ReplyMarkupMessageAttribute {
+                            return false
+                        }
                         return true
                     })
                     
                     var messageText = message.text
-                    var forwardInfo = message.forwardInfo
-                    if forwardInfo == nil {
-                        forwardInfo = MessageForwardInfo(author: message.author, source: nil, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
-                    }
+                    var messageMedia = message.media
+                    var hasDice = false
                     if options.hideNames {
-                        forwardInfo = nil
-                    }
-                    
-                    if options.hideNames && options.hideCaptions {
                         for media in message.media {
-                            if media is TelegramMediaImage || media is TelegramMediaFile {
-                                messageText = ""
-                                break
+                            if options.hideCaptions {
+                                if media is TelegramMediaImage || media is TelegramMediaFile {
+                                    messageText = ""
+                                    break
+                                }
+                            }
+                            if let poll = media as? TelegramMediaPoll {
+                                var updatedMedia = message.media.filter { !($0 is TelegramMediaPoll) }
+                                updatedMedia.append(TelegramMediaPoll(pollId: poll.pollId, publicity: poll.publicity, kind: poll.kind, text: poll.text, options: poll.options, correctAnswers: poll.correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil), isClosed: false, deadlineTimeout: nil))
+                                messageMedia = updatedMedia
+                            }
+                            if let _ = media as? TelegramMediaDice {
+                                hasDice = true
                             }
                         }
                     }
                     
-                    return message.withUpdatedFlags(flags).withUpdatedText(messageText).withUpdatedTimestamp(scheduleWhenOnlineTimestamp).withUpdatedAttributes(attributes).withUpdatedAuthor(accountPeer).withUpdatedForwardInfo(forwardInfo)
+                    var forwardInfo = message.forwardInfo
+                    if forwardInfo == nil {
+                        forwardInfo = MessageForwardInfo(author: message.author, source: nil, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
+                    }
+                    if options.hideNames && !hasDice {
+                        forwardInfo = nil
+                    }
+                    
+                    return message.withUpdatedFlags(flags).withUpdatedText(messageText).withUpdatedMedia(messageMedia).withUpdatedTimestamp(scheduleWhenOnlineTimestamp).withUpdatedAttributes(attributes).withUpdatedAuthor(accountPeer).withUpdatedForwardInfo(forwardInfo)
                 }
                 
                 return (messages, Int32(messages.count), false)
