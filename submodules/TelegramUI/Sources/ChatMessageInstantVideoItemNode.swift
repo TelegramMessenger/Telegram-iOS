@@ -694,6 +694,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             if strongSelf.forwardBackgroundNode == nil {
                                 strongSelf.forwardBackgroundNode = updatedForwardBackgroundNode
                                 strongSelf.contextSourceNode.contentNode.addSubnode(updatedForwardBackgroundNode)
+                                
+                                if animation.isAnimated {
+                                    forwardBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
                             }
                         } else if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
                             if animation.isAnimated {
@@ -717,6 +721,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                                         return
                                     }
                                     item.controllerInteraction.displayPsa(type, sourceNode)
+                                }
+                                
+                                if animation.isAnimated {
+                                    forwardInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 }
                             }
                             let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0) : (params.width - params.rightInset - forwardInfoSize.width - layoutConstants.bubble.edgeInset - 12.0)), y: 8.0), size: forwardInfoSize)
