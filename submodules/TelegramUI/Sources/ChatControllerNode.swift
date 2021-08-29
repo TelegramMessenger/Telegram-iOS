@@ -1058,6 +1058,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             accessoryPanelSize = accessoryPanelNode.measure(CGSize(width: layout.size.width, height: layout.size.height))
             
             accessoryPanelNode.updateState(size: layout.size, inset: layout.safeInsets.left, interfaceState: self.chatPresentationInterfaceState)
+            accessoryPanelNode.animateIn()
             
             if accessoryPanelNode !== self.accessoryPanelNode {
                 dismissedAccessoryPanelNode = self.accessoryPanelNode
@@ -1519,6 +1520,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 transitionTargetY = inputPanelFrame.minY
             }
 
+            dismissedAccessoryPanelNode.animateOut()
             dismissedAccessoryPanelNode.originalFrameBeforeDismissed = dismissedAccessoryPanelNode.frame
 
             transition.updateFrame(node: dismissedAccessoryPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: transitionTargetY), size: dismissedAccessoryPanelNode.frame.size), completion: { _ in

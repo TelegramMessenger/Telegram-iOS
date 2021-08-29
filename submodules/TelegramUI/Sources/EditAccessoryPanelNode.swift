@@ -303,6 +303,14 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
+    override func animateIn() {
+        self.iconNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+    }
+    
+    override func animateOut() {
+        self.iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
+    }
+    
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         if self.theme !== theme {
             self.theme = theme

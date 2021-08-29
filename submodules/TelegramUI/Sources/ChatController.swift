@@ -5484,7 +5484,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, updateForwardOptionsState: { [weak self] f in
             if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState(f($0.forwardOptionsState ?? ChatInterfaceForwardOptionsState(deselectedIds: Set(), hideNames: false, hideCaptions: false))) }) })
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState(f($0.forwardOptionsState ?? ChatInterfaceForwardOptionsState(hideNames: false, hideCaptions: false, unhideNamesOnCaptionChange: false))) }) })
             }
         }, presentForwardOptions: { [weak self] sourceNode in
             if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
@@ -5557,6 +5557,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     var updated = current
                                     updated.hideNames = false
                                     updated.hideCaptions = false
+                                    updated.unhideNamesOnCaptionChange = false
                                     return updated
                                 })
                             })))
@@ -5571,6 +5572,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 self?.interfaceInteraction?.updateForwardOptionsState({ current in
                                     var updated = current
                                     updated.hideNames = true
+                                    updated.unhideNamesOnCaptionChange = false
                                     return updated
                                 })
                             })))
@@ -5589,7 +5591,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 self?.interfaceInteraction?.updateForwardOptionsState({ current in
                                     var updated = current
                                     updated.hideCaptions = false
-                                    
+                                    if updated.unhideNamesOnCaptionChange {
+                                        updated.unhideNamesOnCaptionChange = false
+                                        updated.hideNames = false
+                                    }
                                     return updated
                                 })
                             })))
@@ -5604,7 +5609,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 self?.interfaceInteraction?.updateForwardOptionsState({ current in
                                     var updated = current
                                     updated.hideCaptions = true
-                                    updated.hideNames = true
+                                    if !updated.hideNames {
+                                        updated.hideNames = true
+                                        updated.unhideNamesOnCaptionChange = true
+                                    }
                                     return updated
                                 })
                             })))

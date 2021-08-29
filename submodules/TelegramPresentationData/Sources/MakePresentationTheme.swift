@@ -34,7 +34,11 @@ public func customizePresentationTheme(_ theme: PresentationTheme, specialMode: 
 }
 
 public func makePresentationTheme(settings: TelegramThemeSettings, specialMode: Bool = false, title: String? = nil, serviceBackgroundColor: UIColor? = nil) -> PresentationTheme? {
-    let defaultTheme = makeDefaultPresentationTheme(reference: PresentationBuiltinThemeReference(baseTheme: settings.baseTheme), extendingThemeReference: nil, serviceBackgroundColor: serviceBackgroundColor, preview: false)
+    var baseTheme: TelegramBaseTheme = settings.baseTheme
+    if specialMode && baseTheme == .night {
+        baseTheme = .tinted
+    }
+    let defaultTheme = makeDefaultPresentationTheme(reference: PresentationBuiltinThemeReference(baseTheme: baseTheme), extendingThemeReference: nil, serviceBackgroundColor: serviceBackgroundColor, preview: false)
     return customizePresentationTheme(defaultTheme, specialMode: specialMode, editing: true, title: title, accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors, animateBubbleColors: settings.animateMessageColors, wallpaper: settings.wallpaper)
 }
 
