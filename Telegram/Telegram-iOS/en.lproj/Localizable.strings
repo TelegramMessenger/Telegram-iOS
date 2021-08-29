@@ -5719,7 +5719,7 @@ Sorry for the inconvenience.";
 
 "VoiceChat.PanelJoin" = "Join";
 "VoiceChat.Title" = "Voice Chat";
-"VoiceChatChannel.Title" = "Live Stream";
+"VoiceChatChannel.Title" = "Voice Chat";
 
 "VoiceChat.InviteMember" = "Invite Member";
 "VoiceChat.UserInvited" = "You invited **%@** to the voice chat";
