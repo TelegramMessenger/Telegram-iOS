@@ -2141,7 +2141,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         if let accessoryItemNode = node.accessoryItemNode {
             node.layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
         }
-        apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(nodeFrame)))
+        apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(nodeFrame), timestamp: timestamp))
         self.itemNodes.insert(node, at: nodeIndex)
         
         var offsetHeight = node.apparentHeight
@@ -2563,7 +2563,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var apparentFrame = node.apparentFrame
                     apparentFrame.size.height = updatedApparentHeight
                     
-                    apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(apparentFrame)))
+                    apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(apparentFrame), timestamp: timestamp))
                     
                     var offsetRanges = OffsetRanges()
                     

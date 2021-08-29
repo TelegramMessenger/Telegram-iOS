@@ -32,9 +32,11 @@ public struct ListViewItemConfigureNodeFlags: OptionSet {
 
 public struct ListViewItemApply {
     public let isOnScreen: Bool
+    public let timestamp: Double?
     
-    public init(isOnScreen: Bool) {
+    public init(isOnScreen: Bool, timestamp: Double? = nil) {
         self.isOnScreen = isOnScreen
+        self.timestamp = timestamp
     }
 }
 

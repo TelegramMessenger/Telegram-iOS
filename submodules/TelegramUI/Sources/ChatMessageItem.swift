@@ -462,7 +462,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { _ in apply(.None, synchronousLoads) })
+                    return (nil, { _ in apply(.None, ListViewItemApply(isOnScreen: false), synchronousLoads) })
                 })
             }
         }
@@ -522,8 +522,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     
                     let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !self.disableDate)
                     Queue.mainQueue().async {
-                        completion(layout, { _ in
-                            apply(animation, false)
+                        completion(layout, { info in
+                            apply(animation, info, false)
                             if let nodeValue = node() as? ChatMessageItemView {
                                 nodeValue.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
                                 nodeValue.updateSelectionState(animated: false)
