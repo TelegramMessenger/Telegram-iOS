@@ -263,9 +263,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 messages = messages.map { message in
                     var flags = message.flags
                     flags.remove(.Incoming)
+                    flags.remove(.IsIncomingMask)
                     
                     var attributes = message.attributes
-                    attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleWhenOnlineTimestamp))
                     attributes = attributes.filter({ attribute in
                         if attribute is EditedMessageAttribute {
                             return false
@@ -274,6 +274,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             return false
                         }
                         if attribute is ReplyMarkupMessageAttribute {
+                            return false
+                        }
+                        if attribute is ReplyThreadMessageAttribute {
+                            return false
+                        }
+                        if attribute is ViewCountMessageAttribute{
                             return false
                         }
                         return true
@@ -309,7 +315,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         forwardInfo = nil
                     }
                     
-                    return message.withUpdatedFlags(flags).withUpdatedText(messageText).withUpdatedMedia(messageMedia).withUpdatedTimestamp(scheduleWhenOnlineTimestamp).withUpdatedAttributes(attributes).withUpdatedAuthor(accountPeer).withUpdatedForwardInfo(forwardInfo)
+                    return message.withUpdatedFlags(flags).withUpdatedText(messageText).withUpdatedMedia(messageMedia).withUpdatedTimestamp(Int32(context.account.network.context.globalTime())).withUpdatedAttributes(attributes).withUpdatedAuthor(accountPeer).withUpdatedForwardInfo(forwardInfo)
                 }
                 
                 return (messages, Int32(messages.count), false)

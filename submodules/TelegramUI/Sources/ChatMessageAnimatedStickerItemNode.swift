@@ -661,7 +661,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
-            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
             var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
             var isEmoji = false
             if let _ = telegramDice {
@@ -853,10 +853,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var needsReplyBackground = false
             var replyMarkup: ReplyMarkupMessageAttribute?
             
-            var ignoreForward = self.telegramDice == nil
-            
             let availableContentWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
             
+            var ignoreForward = false
             if let forwardInfo = item.message.forwardInfo {
                 if item.message.id.peerId != item.context.account.peerId {
                     for attribute in item.message.attributes {

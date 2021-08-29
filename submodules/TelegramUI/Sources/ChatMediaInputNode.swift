@@ -1274,7 +1274,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     strongSelf.panelFocusScrollToIndex = nil
                     strongSelf.panelFocusInitialPosition = nil
                 }
-                strongSelf.startCollapseTimer(timeout: decelerated ? 0.5 : 1.5)
+                strongSelf.startCollapseTimer(timeout: decelerated ? 0.5 : 2.0)
                 
                 strongSelf.scrollingStickerPacksListPromise.set(false)
             }
@@ -1314,7 +1314,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     strongSelf.panelFocusScrollToIndex = nil
                     strongSelf.panelFocusInitialPosition = nil
                 }
-                strongSelf.startCollapseTimer(timeout: decelerated ? 0.5 : 1.5)
+                strongSelf.startCollapseTimer(timeout: decelerated ? 0.5 : 2.0)
             }
         }
     }
