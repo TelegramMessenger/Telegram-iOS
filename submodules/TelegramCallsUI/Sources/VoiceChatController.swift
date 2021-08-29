@@ -2599,22 +2599,22 @@ public final class VoiceChatController: ViewController {
                                     return
                                 }
 
-                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
-                                    if let strongSelf = self {
-                                        strongSelf.call.setShouldBeRecording(true, title: "", videoOrientation: videoOrientation)
-
-                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
-                                        strongSelf.call.playTone(.recordingStarted)
-                                    }
-                                })
-//                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
-//                                    if let strongSelf = self, let title = title {
-//                                        strongSelf.call.setShouldBeRecording(true, title: title)
+//                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
+//                                    if let strongSelf = self {
+//                                        strongSelf.call.setShouldBeRecording(true, title: "", videoOrientation: videoOrientation)
 //
 //                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
 //                                        strongSelf.call.playTone(.recordingStarted)
 //                                    }
 //                                })
+                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: strongSelf.presentationData.strings.VoiceChat_StartRecordingTitle, text: strongSelf.presentationData.strings.VoiceChat_StartRecordingText, placeholder: strongSelf.presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
+                                    if let strongSelf = self, let title = title {
+                                        strongSelf.call.setShouldBeRecording(true, title: title, videoOrientation: nil)
+
+                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: strongSelf.presentationData.strings.VoiceChat_RecordingStarted), action: { _ in return false })
+                                        strongSelf.call.playTone(.recordingStarted)
+                                    }
+                                })
                                 self?.controller?.present(controller, in: .window(.root))
                             })))
                         }
