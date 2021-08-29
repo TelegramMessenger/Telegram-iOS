@@ -2555,15 +2555,18 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         fileprivate let snapshotTopInset: CGFloat
         fileprivate let snapshotBottomInset: CGFloat
         fileprivate let snapshotView: UIView
+        fileprivate let overscrollView: UIView?
 
         fileprivate init(
             snapshotTopInset: CGFloat,
             snapshotBottomInset: CGFloat,
-            snapshotView: UIView
+            snapshotView: UIView,
+            overscrollView: UIView?
         ) {
             self.snapshotTopInset = snapshotTopInset
             self.snapshotBottomInset = snapshotBottomInset
             self.snapshotView = snapshotView
+            self.overscrollView = overscrollView
         }
     }
 
@@ -2578,21 +2581,34 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 snapshotBottomInset = max(snapshotBottomInset, -itemNode.frame.minY)
             }
         }
-        let snapshotView = self.view.snapshotView(afterScreenUpdates: false)!
 
-        let currentSnapshotView = self.view.snapshotView(afterScreenUpdates: false)!
-        currentSnapshotView.frame = self.view.bounds
+        let overscrollView = self.overscrollView
+        self.overscrollView = nil
+
+        if let overscrollView = overscrollView {
+            self.view.superview?.insertSubview(overscrollView, aboveSubview: self.view)
+        }
+
+        let snapshotView = self.view.snapshotView(afterScreenUpdates: true)!
+
+        snapshotView.frame = self.view.bounds
         if let sublayers = self.layer.sublayers {
             for sublayer in sublayers {
                 sublayer.isHidden = true
             }
         }
-        self.view.addSubview(currentSnapshotView)
+        self.view.addSubview(snapshotView)
+
+        if let overscrollView = overscrollView {
+            overscrollView.alpha = 1.0
+            snapshotView.addSubview(overscrollView)
+        }
 
         return SnapshotState(
             snapshotTopInset: snapshotTopInset,
             snapshotBottomInset: snapshotBottomInset,
-            snapshotView: snapshotView
+            snapshotView: snapshotView,
+            overscrollView: overscrollView
         )
     }
 
