@@ -622,7 +622,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 return .single(false)
             }
             self?.lastReorderItemIndex = toIndex
-            
+                        
             let fromEntry = entries[fromIndex]
             guard case let .stickerPack(_, fromPackInfo, _, _, _) = fromEntry else {
                 return .single(false)
@@ -744,7 +744,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
                 }
                 
-                self?.startCollapseTimer(timeout: 1.0)
+                self?.startCollapseTimer(timeout: 2.0)
             })
         }
         
@@ -1275,7 +1275,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     strongSelf.panelFocusScrollToIndex = nil
                     strongSelf.panelFocusInitialPosition = nil
                 }
-                strongSelf.startCollapseTimer(timeout: decelerated ? 0.5 : 2.0)
+                strongSelf.startCollapseTimer(timeout: decelerated ? 0.5 : 2.5)
                 
                 strongSelf.scrollingStickerPacksListPromise.set(false)
             }
@@ -1315,7 +1315,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     strongSelf.panelFocusScrollToIndex = nil
                     strongSelf.panelFocusInitialPosition = nil
                 }
-                strongSelf.startCollapseTimer(timeout: decelerated ? 0.5 : 2.0)
+                strongSelf.startCollapseTimer(timeout: decelerated ? 0.5 : 2.5)
             }
         }
     }

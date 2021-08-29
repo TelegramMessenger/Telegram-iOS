@@ -328,6 +328,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private var reorderInProgress: Bool = false
     private var reorderingItemsCompleted: (() -> Void)?
     private var reorderScrollStartTimestamp: Double?
+    private var reorderScrollUpdateTimestamp: Double?
     private var reorderLastTimestamp: Double?
     public var reorderedItemHasShadow = true
     
@@ -570,7 +571,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             for i in 0 ..< self.itemNodes.count {
                 if let itemNodeIndex = self.itemNodes[i].index, itemNodeIndex != reorderItemIndex {
                     let itemFrame = self.itemNodes[i].apparentContentFrame
-//                    let itemOffset = itemFrame.midY
+
                     let offsetToMin = itemFrame.minY - verticalOffset
                     let offsetToMax = itemFrame.maxY - verticalOffset
                     let deltaOffset: CGFloat
@@ -579,7 +580,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     } else {
                         deltaOffset = offsetToMin
                     }
-//                    let deltaOffset = min(itemFrame.minY - verticalOffset, itemFrame.maxY - verticalOffset)
                     if let (_, closestOffset) = closestIndex {
                         if abs(deltaOffset) < abs(closestOffset) {
                             closestIndex = (itemNodeIndex, deltaOffset)
@@ -590,7 +590,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             }
             if let (closestIndexValue, offset) = closestIndex {
-                //print("closest \(closestIndexValue) offset \(offset)")
+//                print("closest \(closestIndexValue) offset \(offset)")
                 var toIndex: Int
                 if offset > 0 {
                     toIndex = closestIndexValue
@@ -604,7 +604,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     }
                 }
                 if toIndex != reorderItemNode.index {
-                    if let reorderLastTimestamp = self.reorderLastTimestamp, timestamp < reorderLastTimestamp + 0.3 {
+                    if let reorderLastTimestamp = self.reorderLastTimestamp, timestamp < reorderLastTimestamp + 0.2 {
                         return
                     }
                     if reorderNode.currentState?.0 != reorderItemIndex || reorderNode.currentState?.1 != toIndex {
@@ -4101,7 +4101,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.enqueueUpdateVisibleItems(synchronous: false)
         }
         
-        self.checkItemReordering()
+        if scrollingForReorder {
+            if  let reorderScrollUpdateTimestamp = self.reorderScrollUpdateTimestamp, timestamp < reorderScrollUpdateTimestamp + 0.05 {
+                return
+            }
+            self.reorderScrollUpdateTimestamp = timestamp
+            self.checkItemReordering(force: true)
+        }
     }
     
     override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
