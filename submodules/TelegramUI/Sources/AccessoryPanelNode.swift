@@ -13,4 +13,10 @@ class AccessoryPanelNode: ASDisplayNode {
     
     func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
     }
+    
+    func animateIn() {
+    }
+    
+    func animateOut() {
+    }
 }

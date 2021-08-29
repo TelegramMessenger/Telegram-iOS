@@ -131,39 +131,31 @@ public enum ChatControllerInteractionNavigateToPeer {
 }
 
 public struct ChatInterfaceForwardOptionsState: Codable, Equatable {
-    public var deselectedIds: Set<EngineMessage.Id>
     public var hideNames: Bool
     public var hideCaptions: Bool
+    public var unhideNamesOnCaptionChange: Bool
     
     public static func ==(lhs: ChatInterfaceForwardOptionsState, rhs: ChatInterfaceForwardOptionsState) -> Bool {
-        return lhs.deselectedIds == rhs.deselectedIds && lhs.hideNames == rhs.hideNames && lhs.hideCaptions == rhs.hideCaptions
+        return lhs.hideNames == rhs.hideNames && lhs.hideCaptions == rhs.hideCaptions && lhs.unhideNamesOnCaptionChange == rhs.unhideNamesOnCaptionChange
     }
     
-    public init(deselectedIds: Set<EngineMessage.Id>, hideNames: Bool, hideCaptions: Bool) {
-        self.deselectedIds = deselectedIds
+    public init(hideNames: Bool, hideCaptions: Bool, unhideNamesOnCaptionChange: Bool) {
         self.hideNames = hideNames
         self.hideCaptions = hideCaptions
+        self.unhideNamesOnCaptionChange = unhideNamesOnCaptionChange
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        if let data = try? container.decodeIfPresent(Data.self, forKey: "i") {
-            self.deselectedIds = Set(EngineMessage.Id.decodeArrayFromData(data))
-        } else {
-            self.deselectedIds = Set()
-        }
-        
         self.hideNames = (try? container.decodeIfPresent(Bool.self, forKey: "hn")) ?? false
         self.hideCaptions = (try? container.decodeIfPresent(Bool.self, forKey: "hc")) ?? false
+        self.unhideNamesOnCaptionChange = false
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        let data = EngineMessage.Id.encodeArrayToData(Array(self.deselectedIds))
-
-        try container.encode(data, forKey: "i")
         try container.encode(self.hideNames, forKey: "hn")
         try container.encode(self.hideCaptions, forKey: "hc")
     }
