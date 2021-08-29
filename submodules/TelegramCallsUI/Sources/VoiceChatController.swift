@@ -858,6 +858,8 @@ public final class VoiceChatController: ViewController {
         
         private var currentLoadToken: String?
         
+        private var scrollAtTop = true
+        
         private var effectiveMuteState: GroupCallParticipantsContext.Participant.MuteState? {
             if self.pushingToTalk {
                 return nil
@@ -2154,6 +2156,22 @@ public final class VoiceChatController: ViewController {
                     if !(strongSelf.animatingExpansion || strongSelf.animatingInsertion || strongSelf.animatingAppearance) && (strongSelf.panGestureArguments == nil || strongSelf.isExpanded) {
                         strongSelf.updateDecorationsLayout(transition: transition)
                     }
+                }
+            }
+            
+            self.listNode.visibleContentOffsetChanged = { [weak self] offset in
+                guard let strongSelf = self else {
+                    return
+                }
+                var scrollAtTop = false
+                if case let .known(value) = offset, value < 180.0 {
+                    scrollAtTop = true
+                } else {
+                    scrollAtTop = false
+                }
+                if scrollAtTop != strongSelf.scrollAtTop {
+                    strongSelf.scrollAtTop = scrollAtTop
+                    strongSelf.updateTitle(transition: .immediate)
                 }
             }
             
@@ -3939,8 +3957,15 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            var subtitle = self.currentSpeakingSubtitle ?? self.currentSubtitle
-            var speaking = self.currentSpeakingSubtitle != nil
+            var subtitle = ""
+            var speaking = false
+            if self.scrollAtTop {
+                subtitle = self.currentSubtitle
+                speaking = false
+            } else {
+                subtitle = self.currentSpeakingSubtitle ?? self.currentSubtitle
+                speaking = self.currentSpeakingSubtitle != nil
+            }
             if self.isScheduling {
                 subtitle = ""
                 speaking = false

@@ -203,7 +203,6 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelTrendingGifsIcon(theme)
                     title = "Trending"
                 case let .gifEmoji(emoji, file):
-                    var emoji = emoji
                     switch emoji {
                         case "😡":
                             title = "Angry"

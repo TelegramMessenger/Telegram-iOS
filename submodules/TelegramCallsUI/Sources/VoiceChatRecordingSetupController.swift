@@ -565,23 +565,35 @@ private class PreviewIconNode: ASDisplayNode {
     override init() {
         self.avatar1Node = ASImageNode()
         self.avatar1Node.cornerRadius = 4.0
+        self.avatar1Node.clipsToBounds = true
         self.avatar1Node.displaysAsynchronously = false
         self.avatar1Node.backgroundColor = UIColor(rgb: 0x834fff)
+        self.avatar1Node.image = UIImage(bundleImageName: "Call/Avatar1")
+        self.avatar1Node.contentMode = .bottom
         
         self.avatar2Node = ASImageNode()
         self.avatar2Node.cornerRadius = 4.0
+        self.avatar2Node.clipsToBounds = true
         self.avatar2Node.displaysAsynchronously = false
         self.avatar2Node.backgroundColor = UIColor(rgb: 0x63d5c9)
+        self.avatar2Node.image = UIImage(bundleImageName: "Call/Avatar2")
+        self.avatar2Node.contentMode = .scaleAspectFit
         
         self.avatar3Node = ASImageNode()
         self.avatar3Node.cornerRadius = 4.0
+        self.avatar3Node.clipsToBounds = true
         self.avatar3Node.displaysAsynchronously = false
         self.avatar3Node.backgroundColor = UIColor(rgb: 0xccff60)
+        self.avatar3Node.image = UIImage(bundleImageName: "Call/Avatar3")
+        self.avatar3Node.contentMode = .scaleAspectFit
         
         self.avatar4Node = ASImageNode()
         self.avatar4Node.cornerRadius = 4.0
+        self.avatar4Node.clipsToBounds = true
         self.avatar4Node.displaysAsynchronously = false
         self.avatar4Node.backgroundColor = UIColor(rgb: 0xf5512a)
+        self.avatar4Node.image = UIImage(bundleImageName: "Call/Avatar4")
+        self.avatar4Node.contentMode = .scaleAspectFit
         
         super.init()
         
