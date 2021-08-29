@@ -1292,6 +1292,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 }
                 if let index = index {
                     strongSelf.panelFocusScrollToIndex = index
+                    strongSelf.panelFocusInitialPosition = position
                 }
                 strongSelf.interfaceInteraction?.updateTextInputStateAndMode { inputTextState, inputMode in
                     if case let .media(mode, expanded, _) = inputMode {
@@ -2257,24 +2258,26 @@ final class ChatMediaInputNode: ChatInputNode {
         }
         
         var scrollToItem: ListViewScrollToItem?
-        if let targetIndex = self.panelFocusScrollToIndex, !self.listView.isReordering {
-            var position: ListViewScrollPosition
-            if self.panelIsFocused {
-                if let initialPosition = self.panelFocusInitialPosition {
-                    position = .top(96.0 + (initialPosition.y - self.listView.frame.height / 2.0) * 0.5)
+        if self.paneArrangement.currentIndex == 1 {
+            if let targetIndex = self.panelFocusScrollToIndex, !self.listView.isReordering {
+                var position: ListViewScrollPosition
+                if self.panelIsFocused {
+                    if let initialPosition = self.panelFocusInitialPosition {
+                        position = .top(96.0 + (initialPosition.y - self.listView.frame.height / 2.0) * 0.5)
+                    } else {
+                        position = .top(96.0)
+                    }
                 } else {
-                    position = .top(96.0)
+                    if let initialPosition = self.panelFocusInitialPosition {
+                        position = .top(self.listView.frame.height / 2.0 + 96.0 + (initialPosition.y - self.listView.frame.height / 2.0))
+                    } else {
+                        position = .top(self.listView.frame.height / 2.0 + 96.0)
+                    }
+                    self.panelFocusScrollToIndex = nil
+                    self.panelFocusInitialPosition = nil
                 }
-            } else {
-                if let initialPosition = self.panelFocusInitialPosition {
-                    position = .top(self.listView.frame.height / 2.0 + 96.0 + (initialPosition.y - self.listView.frame.height / 2.0))
-                } else {
-                    position = .top(self.listView.frame.height / 2.0 + 96.0)
-                }
-                self.panelFocusScrollToIndex = nil
-                self.panelFocusInitialPosition = nil
+                scrollToItem = ListViewScrollToItem(index: targetIndex, position: position, animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true)
             }
-            scrollToItem = ListViewScrollToItem(index: targetIndex, position: position, animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true)
         }
         
         self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateOpaqueState: transition.updateOpaqueState, completion: { [weak self] _ in
@@ -2290,9 +2293,37 @@ final class ChatMediaInputNode: ChatInputNode {
     
     private func enqueueGifPanelTransition(_ transition: ChatMediaInputPanelTransition, firstTime: Bool) {
         var options = ListViewDeleteAndInsertOptions()
-        options.insert(.Synchronous)
-        options.insert(.LowLatency)
-        self.gifListView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { _ in
+        if firstTime {
+            options.insert(.Synchronous)
+            options.insert(.LowLatency)
+        } else {
+            options.insert(.AnimateInsertion)
+        }
+        
+        var scrollToItem: ListViewScrollToItem?
+        if self.paneArrangement.currentIndex == 0 {
+            if let targetIndex = self.panelFocusScrollToIndex {
+                var position: ListViewScrollPosition
+                if self.panelIsFocused {
+                    if let initialPosition = self.panelFocusInitialPosition {
+                        position = .top(96.0 + (initialPosition.y - self.gifListView.frame.height / 2.0) * 0.5)
+                    } else {
+                        position = .top(96.0)
+                    }
+                } else {
+                    if let initialPosition = self.panelFocusInitialPosition {
+                        position = .top(self.gifListView.frame.height / 2.0 + 96.0 + (initialPosition.y - self.gifListView.frame.height / 2.0))
+                    } else {
+                        position = .top(self.gifListView.frame.height / 2.0 + 96.0)
+                    }
+                    self.panelFocusScrollToIndex = nil
+                    self.panelFocusInitialPosition = nil
+                }
+                scrollToItem = ListViewScrollToItem(index: targetIndex, position: position, animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true)
+            }
+        }
+        
+        self.gifListView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateOpaqueState: nil, completion: { _ in
         })
     }
     

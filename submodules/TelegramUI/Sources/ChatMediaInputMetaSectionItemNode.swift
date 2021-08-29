@@ -268,7 +268,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         expandTransition.updateTransformScale(node: self.scalingNode, scale: expandScale)
         expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -53.0 : -7.0)))
 
-        let titleSize = self.titleNode.updateLayout(CGSize(width: expandedBoundingSize.width, height: expandedBoundingSize.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: expandedBoundingSize.width + 10.0, height: expandedBoundingSize.height))
         
         let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 6.0), size: titleSize)
         let displayTitleFrame = expanded ? titleFrame : CGRect(origin: CGPoint(x: titleFrame.minX, y: self.imageNode.position.y - titleFrame.size.height), size: titleFrame.size)

@@ -3996,7 +3996,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             
             var offset: CGFloat = 6.0
             if let reorderScrollStartTimestamp = self.reorderScrollStartTimestamp, reorderScrollStartTimestamp + 2.0 < timestamp {
-                offset *= 2.0
+                offset *= 1.5
             }
             if reorderOffset < effectiveInsets.top + 10.0 {
                 if self.itemNodes[0].apparentFrame.minY < effectiveInsets.top {
