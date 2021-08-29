@@ -2587,6 +2587,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
 
     var shouldAllowOverscrollActions: Bool {
+        if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 0.0 {
+            return false
+        }
+        if self.chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState != nil {
+            return false
+        }
         if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             if inputPanelNode.isFocused {
                 return false

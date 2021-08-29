@@ -3920,12 +3920,20 @@ public final class VoiceChatController: ViewController {
             
             var title = self.currentTitle
             if self.isScheduling {
-                title = self.presentationData.strings.ScheduleVoiceChat_Title
+                if let peer = self.peer as? TelegramChannel, case .broadcast = peer.info {
+                    title = self.presentationData.strings.ScheduleVoiceChatChannel_Title
+                } else {
+                    title = self.presentationData.strings.ScheduleVoiceChat_Title
+                }
             } else if case .modal(_, false) = self.displayMode, !self.currentTitleIsCustom {
                 if let navigationController = self.controller?.navigationController as? NavigationController {
                     for controller in navigationController.viewControllers.reversed() {
                         if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation, peerId == self.call.peerId {
-                            title = self.presentationData.strings.VoiceChat_Title
+                            if let peer = self.peer as? TelegramChannel, case .broadcast = peer.info {
+                                title = self.presentationData.strings.VoiceChatChannel_Title
+                            } else {
+                                title = self.presentationData.strings.VoiceChat_Title
+                            }
                         }
                     }
                 }

@@ -5719,6 +5719,7 @@ Sorry for the inconvenience.";
 
 "VoiceChat.PanelJoin" = "Join";
 "VoiceChat.Title" = "Voice Chat";
+"VoiceChatChannel.Title" = "Voice Chat";
 
 "VoiceChat.InviteMember" = "Invite Member";
 "VoiceChat.UserInvited" = "You invited **%@** to the voice chat";
@@ -6365,6 +6366,7 @@ Sorry for the inconvenience.";
 "ChannelInfo.ScheduleVoiceChat" = "Schedule Voice Chat";
 
 "ScheduleVoiceChat.Title" = "Schedule Voice Chat";
+"ScheduleVoiceChatChannel.Title" = "Schedule Voice Chat";
 "ScheduleVoiceChat.GroupText" = "The members of the group will be notified that the voice chat will start in %@.";
 "ScheduleVoiceChat.ChannelText" = "The members of the channel will be notified that the voice chat will start in %@.";
 

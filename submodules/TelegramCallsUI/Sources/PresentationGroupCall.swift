@@ -91,9 +91,10 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
         return self.panelDataPromise.get()
     }
     
-    public init(account: Account, engine: TelegramEngine, peerId: PeerId, call: EngineGroupCallDescription) {
+    public init(account: Account, engine: TelegramEngine, peerId: PeerId, isChannel: Bool, call: EngineGroupCallDescription) {
         self.panelDataPromise.set(.single(GroupCallPanelData(
             peerId: peerId,
+            isChannel: isChannel,
             info: GroupCallInfo(
                 id: call.id,
                 accessHash: call.accessHash,
@@ -113,13 +114,18 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
             activeSpeakers: Set(),
             groupCall: nil
         )))
+
+        let state = engine.calls.getGroupCallParticipants(callId: call.id, accessHash: call.accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: nil)
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
+                return .single(nil)
+            }
         
-        self.disposable = (engine.calls.getGroupCallParticipants(callId: call.id, accessHash: call.accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: nil)
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
-            return .single(nil)
-        }
-        |> deliverOnMainQueue).start(next: { [weak self] state in
+        self.disposable = (combineLatest(queue: .mainQueue(),
+            state,
+            engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] state, peer in
             guard let strongSelf = self, let state = state else {
                 return
             }
@@ -145,8 +151,15 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                     }
                     topParticipants.append(participant)
                 }
+
+                var isChannel = false
+                if let peer = peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                    isChannel = true
+                }
+
                 return GroupCallPanelData(
                     peerId: peerId,
+                    isChannel: isChannel,
                     info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending, defaultParticipantsAreMuted: state.defaultParticipantsAreMuted, isVideoEnabled: state.isVideoEnabled, unmutedVideoLimit: state.unmutedVideoLimit),
                     topParticipants: topParticipants,
                     participantCount: state.totalCount,
@@ -183,12 +196,12 @@ public final class AccountGroupCallContextCacheImpl: AccountGroupCallContextCach
             self.queue = queue
         }
         
-        public func get(account: Account, engine: TelegramEngine, peerId: PeerId, call: EngineGroupCallDescription) -> AccountGroupCallContextImpl.Proxy {
+        public func get(account: Account, engine: TelegramEngine, peerId: PeerId, isChannel: Bool, call: EngineGroupCallDescription) -> AccountGroupCallContextImpl.Proxy {
             let result: Record
             if let current = self.contexts[call.id] {
                 result = current
             } else {
-                let context = AccountGroupCallContextImpl(account: account, engine: engine, peerId: peerId, call: call)
+                let context = AccountGroupCallContextImpl(account: account, engine: engine, peerId: peerId, isChannel: isChannel, call: call)
                 result = Record(context: context)
                 self.contexts[call.id] = result
             }
@@ -624,6 +637,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         initialCall: EngineGroupCallDescription?,
         internalId: CallSessionInternalId,
         peerId: PeerId,
+        isChannel: Bool,
         invite: String?,
         joinAsPeerId: PeerId?
     ) {
@@ -822,7 +836,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         })
         
         if let initialCall = initialCall, let temporaryParticipantsContext = (self.accountContext.cachedGroupCallContexts as? AccountGroupCallContextCacheImpl)?.impl.syncWith({ impl in
-            impl.get(account: accountContext.account, engine: accountContext.engine, peerId: peerId, call: EngineGroupCallDescription(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title, scheduleTimestamp: initialCall.scheduleTimestamp, subscribedToScheduled: initialCall.subscribedToScheduled))
+            impl.get(account: accountContext.account, engine: accountContext.engine, peerId: peerId, isChannel: isChannel, call: EngineGroupCallDescription(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title, scheduleTimestamp: initialCall.scheduleTimestamp, subscribedToScheduled: initialCall.subscribedToScheduled))
         }) {
             self.switchToTemporaryParticipantsContext(sourceContext: temporaryParticipantsContext.context.participantsContext, oldMyPeerId: self.joinAsPeerId)
         } else {

@@ -7465,9 +7465,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     nextFolderId = nil
                 }
 
-                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: false, chatListFilter: nextFolderId, completion: { nextController in
-                    (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
-                }))
+                //Queue.mainQueue().after(1.0, {
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: false, chatListFilter: nextFolderId, completion: { nextController in
+                        (nextController as! ChatControllerImpl).animateFromPreviousController(snapshotState: snapshotState)
+                    }))
+                //})
             }
         }
         
