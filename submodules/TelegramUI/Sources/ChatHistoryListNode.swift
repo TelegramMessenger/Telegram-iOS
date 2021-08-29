@@ -726,7 +726,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     scrollPosition = nil
                 }
                 
-                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tagMask: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore, holeLater: false, isLoading: false), type: .Generic(type: ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version, nil)
+                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tagMask: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore, holeLater: false, isLoading: false), type: .Generic(type: version > 0 ? ViewUpdateType.Generic : ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version, nil)
             }
         } else {
             historyViewUpdate = self.chatHistoryLocationPromise.get()

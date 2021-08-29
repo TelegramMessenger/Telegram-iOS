@@ -5638,7 +5638,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
 
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)), items: items, reactionItems: [])
-                contextController.dismissedForCancel = { [weak self, weak chatController] in
+                contextController.dismissedForCancel = { [weak chatController] in
                     if let selectedMessageIds = (chatController as? ChatControllerImpl)?.selectedMessageIds {
                         var forwardMessageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
                         forwardMessageIds = forwardMessageIds.filter { selectedMessageIds.contains($0) }

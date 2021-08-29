@@ -1166,6 +1166,16 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             strongSelf.forwardBackgroundNode = forwardBackgroundNode
                             strongSelf.contextSourceNode.contentNode.addSubnode(forwardBackgroundNode)
                         }
+                    } else if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
+                        if animation.isAnimated {
+                            strongSelf.forwardBackgroundNode = nil
+                            forwardBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak forwardBackgroundNode] _ in
+                                forwardBackgroundNode?.removeFromSupernode()
+                            })
+                        } else {
+                            forwardBackgroundNode.removeFromSupernode()
+                            strongSelf.forwardBackgroundNode = nil
+                        }
                     }
                     
                     if let (forwardInfoSize, forwardInfoApply) = forwardInfoSizeApply {
@@ -1181,8 +1191,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             forwardBackgroundNode.update(size: forwardBackgroundNode.bounds.size, cornerRadius: 8.0, transition: .immediate)
                         }
                     } else if let forwardInfoNode = strongSelf.forwardInfoNode {
-                        forwardInfoNode.removeFromSupernode()
-                        strongSelf.forwardInfoNode = nil
+                        if animation.isAnimated {
+                            if let forwardInfoNode = strongSelf.forwardInfoNode {
+                                strongSelf.forwardInfoNode = nil
+                                forwardInfoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak forwardInfoNode] _ in
+                                    forwardInfoNode?.removeFromSupernode()
+                                })
+                            }
+                        } else {
+                            forwardInfoNode.removeFromSupernode()
+                            strongSelf.forwardInfoNode = nil
+                        }
                     }
                     
                     if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {

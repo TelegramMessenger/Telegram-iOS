@@ -159,6 +159,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let hapticFeedback = HapticFeedback()
     
+    private var animatedIn = false
     private var isAnimatingOut = false
     
     private let itemsDisposable = MetaDisposable()
@@ -479,6 +480,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     @objc private func dimNodeTapped() {
+        guard self.animatedIn else {
+            return
+        }
         self.dismissedForCancel?()
         self.beginDismiss(.default)
     }
@@ -652,7 +656,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     
                     self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
                     let contentContainerOffset = CGPoint(x: localContentSourceFrame.center.x - self.contentContainerNode.frame.center.x, y: localContentSourceFrame.center.y - self.contentContainerNode.frame.center.y)
-                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { [weak self] _ in
+                        self?.animatedIn = true
+                    })
                 }
             case let .extracted(extracted, keepInPlace):
                 let springDuration: Double = 0.42 * animationDurationFactor
@@ -692,6 +698,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let contentContainerOffset = CGPoint(x: localContentSourceFrame.center.x - self.contentContainerNode.frame.center.x - contentParentNode.contentRect.minX, y: localContentSourceFrame.center.y - self.contentContainerNode.frame.center.y - contentParentNode.contentRect.minY)
                     self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: contentDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { [weak self] _ in
                         self?.clippingNode.view.mask = nil
+                        self?.animatedIn = true
                     })
                     contentParentNode.applyAbsoluteOffsetSpring?(-contentContainerOffset.y, springDuration, springDamping)
                 }
@@ -735,7 +742,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         }
                     }
                     self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
-                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { [weak self] _ in
+                        self?.animatedIn = true
+                    })
                 }
             }
         }

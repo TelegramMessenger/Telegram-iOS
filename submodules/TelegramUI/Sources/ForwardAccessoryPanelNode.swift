@@ -348,8 +348,14 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.interfaceInteraction?.presentController(alertController, nil)
     }
     
+    private var previousTapTimestamp: Double?
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            if let previousTapTimestamp = self.previousTapTimestamp, previousTapTimestamp + 1.0 > timestamp {
+                return
+            }
+            self.previousTapTimestamp = CFAbsoluteTimeGetCurrent()
             self.interfaceInteraction?.presentForwardOptions(self)
             Queue.mainQueue().after(1.5) {
                 self.updateThemeAndStrings(theme: self.theme, strings: self.strings, forwardOptionsState: self.forwardOptionsState, force: true)
