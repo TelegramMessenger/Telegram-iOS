@@ -2696,6 +2696,7 @@ Unused sets are archived when you add more.";
 
 "Conversation.ViewChannel" = "VIEW CHANNEL";
 "Conversation.ViewGroup" = "VIEW GROUP";
+"Conversation.ViewBot" = "VIEW BOT";
 
 "GroupInfo.ActionPromote" = "Promote";
 "GroupInfo.ActionRestrict" = "Restrict";
@@ -5719,7 +5720,7 @@ Sorry for the inconvenience.";
 
 "VoiceChat.PanelJoin" = "Join";
 "VoiceChat.Title" = "Voice Chat";
-"VoiceChatChannel.Title" = "Voice Chat";
+"VoiceChatChannel.Title" = "Live Stream";
 
 "VoiceChat.InviteMember" = "Invite Member";
 "VoiceChat.UserInvited" = "You invited **%@** to the voice chat";
@@ -6715,3 +6716,12 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.MessageChangedThemeSet" = "%1$@ changed chat theme to %2$@";
 "Channel.AdminLog.MessageChangedThemeRemove" = "%1$@ disabled chat theme";
+
+"SponsoredMessageMenu.Info" = "What are sponsored\nmessages?";
+"SponsoredMessageInfo.Text" = "See https://telegram.org";
+"SponsoredMessageInfo.Action" = "Learn More";
+"SponsoredMessageInfo.ActionUrl" = "https://telegram.org";
+
+"Chat.NavigationNoChannels" = "You have no unread channels";
+
+"Message.SponsoredLabel" = "sponsored";
