@@ -40,6 +40,7 @@ public enum GroupCallPanelSource {
 
 public final class GroupCallPanelData {
     public let peerId: PeerId
+    public let isChannel: Bool
     public let info: GroupCallInfo
     public let topParticipants: [GroupCallParticipantsContext.Participant]
     public let participantCount: Int
@@ -48,6 +49,7 @@ public final class GroupCallPanelData {
     
     public init(
         peerId: PeerId,
+        isChannel: Bool,
         info: GroupCallInfo,
         topParticipants: [GroupCallParticipantsContext.Participant],
         participantCount: Int,
@@ -55,6 +57,7 @@ public final class GroupCallPanelData {
         groupCall: PresentationGroupCall?
     ) {
         self.peerId = peerId
+        self.isChannel = isChannel
         self.info = info
         self.topParticipants = topParticipants
         self.participantCount = participantCount
@@ -523,6 +526,9 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         var joinText = self.strings.VoiceChat_PanelJoin
         var title = self.strings.VoiceChat_Title
+        if let currentData = self.currentData, currentData.isChannel {
+            title = self.strings.VoiceChatChannel_Title
+        }
         var text = self.currentText
         var isScheduled = false
         var isLate = false

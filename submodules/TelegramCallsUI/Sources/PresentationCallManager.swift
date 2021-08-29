@@ -650,15 +650,23 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
         |> runOn(Queue.mainQueue())
         
-        return accessEnabledSignal
+        return combineLatest(queue: .mainQueue(),
+            accessEnabledSignal,
+            accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        )
         |> deliverOnMainQueue
-        |> mapToSignal { [weak self] accessEnabled -> Signal<Bool, NoError> in
+        |> mapToSignal { [weak self] accessEnabled, peer -> Signal<Bool, NoError> in
             guard let strongSelf = self else {
                 return .single(false)
             }
             
             if !accessEnabled {
                 return .single(false)
+            }
+
+            var isChannel = false
+            if let peer = peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                isChannel = true
             }
                     
             let call = PresentationGroupCallImpl(
@@ -669,6 +677,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 initialCall: nil,
                 internalId: internalId,
                 peerId: peerId,
+                isChannel: isChannel,
                 invite: nil,
                 joinAsPeerId: nil
             )
@@ -803,15 +812,23 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
         |> runOn(Queue.mainQueue())
         
-        return accessEnabledSignal
+        return combineLatest(queue: .mainQueue(),
+            accessEnabledSignal,
+            accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        )
         |> deliverOnMainQueue
-        |> mapToSignal { [weak self] accessEnabled -> Signal<Bool, NoError> in
+        |> mapToSignal { [weak self] accessEnabled, peer -> Signal<Bool, NoError> in
             guard let strongSelf = self else {
                 return .single(false)
             }
             
             if !accessEnabled {
                 return .single(false)
+            }
+
+            var isChannel = false
+            if let peer = peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                isChannel = true
             }
                     
             let call = PresentationGroupCallImpl(
@@ -822,6 +839,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 initialCall: initialCall,
                 internalId: internalId,
                 peerId: peerId,
+                isChannel: isChannel,
                 invite: invite,
                 joinAsPeerId: joinAsPeerId
             )
