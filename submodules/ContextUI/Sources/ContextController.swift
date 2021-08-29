@@ -1731,7 +1731,15 @@ public final class ContextControllerReferenceViewInfo {
 }
 
 public protocol ContextReferenceContentSource: AnyObject {
+    var shouldBeDismissed: Signal<Bool, NoError> { get }
+    
     func transitionInfo() -> ContextControllerReferenceViewInfo?
+}
+
+public extension ContextReferenceContentSource {
+    var shouldBeDismissed: Signal<Bool, NoError> {
+        return .single(false)
+    }
 }
 
 public final class ContextControllerTakeViewInfo {
@@ -1852,8 +1860,18 @@ public final class ContextController: ViewController, StandalonePresentableContr
         super.init(navigationBarPresentationData: nil)
               
         switch source {
-            case .reference:
+            case let .reference(referenceSource):
                 self.statusBar.statusBarStyle = .Ignore
+                
+                self.shouldBeDismissedDisposable = (referenceSource.shouldBeDismissed
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.dismiss(result: .default, completion: {})
+                })
             case let .extracted(extractedSource):
                 if extractedSource.blurBackground {
                     self.statusBar.statusBarStyle = .Hide
