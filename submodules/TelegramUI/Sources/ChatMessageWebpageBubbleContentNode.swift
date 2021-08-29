@@ -328,8 +328,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
 
                 if let author = item.message.author as? TelegramUser, author.botInfo != nil {
-                    //TODO:localize
-                    actionTitle = "VIEW BOT"
+                    actionTitle = item.presentationData.strings.Conversation_ViewBot
                 } else if let author = item.message.author as? TelegramChannel, case .group = author.info {
                     actionTitle = item.presentationData.strings.Conversation_ViewGroup
                 } else {

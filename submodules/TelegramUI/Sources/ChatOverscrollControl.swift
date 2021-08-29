@@ -494,7 +494,8 @@ final class AvatarComponent: Component {
 
         func update(component: AvatarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             self.avatarNode.frame = CGRect(origin: CGPoint(), size: availableSize)
-            self.avatarNode.setPeer(context: component.context, theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme, peer: component.peer, synchronousLoad: true)
+            let theme = component.context.sharedContext.currentPresentationData.with({ $0 }).theme
+            self.avatarNode.setPeer(context: component.context, theme: theme, peer: component.peer, emptyColor: theme.list.mediaPlaceholderColor, synchronousLoad: true)
 
             if let badge = component.badge {
                 let badgeView: ComponentHostView<Empty>
@@ -858,8 +859,7 @@ final class OverscrollContentsComponent: Component {
             if let peer = component.peer {
                 titleText = peer.compactDisplayTitle
             } else {
-                //TODO:localize
-                titleText = "You have no unread channels"
+                titleText = component.context.sharedContext.currentPresentationData.with({ $0 }).strings.Chat_NavigationNoChannels
             }
             self.titleNode.attributedText = NSAttributedString(string: titleText, font: Font.semibold(13.0), textColor: component.foregroundColor)
             let titleSize = self.titleNode.updateLayout(CGSize(width: availableSize.width - 32.0, height: 100.0))
