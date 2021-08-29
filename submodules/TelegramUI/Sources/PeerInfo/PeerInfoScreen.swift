@@ -3495,7 +3495,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     canChangeColors = false
                 }
                 
-                if canChangeColors {
+                if false, canChangeColors {
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_ChangeColors, icon: { theme in
                         generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, f in

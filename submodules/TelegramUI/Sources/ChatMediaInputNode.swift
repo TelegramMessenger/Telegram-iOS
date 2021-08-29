@@ -162,16 +162,16 @@ func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemColle
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false) -> [ChatMediaInputPanelEntry] {
+func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, strings: PresentationStrings, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     if hasGifs {
-        entries.append(.recentGifs(theme, expanded))
+        entries.append(.recentGifs(theme, strings, expanded))
     }
     if trendingIsDismissed {
-        entries.append(.trending(true, theme, expanded))
+        entries.append(.trending(true, theme, strings, expanded))
     }
     if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
-        entries.append(.savedStickers(theme, expanded))
+        entries.append(.savedStickers(theme, strings, expanded))
     }
     var savedStickerIds = Set<Int64>()
     if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
@@ -192,7 +192,7 @@ func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: Ordere
             }
         }
         if found {
-            entries.append(.recentPacks(theme, expanded))
+            entries.append(.recentPacks(theme, strings, expanded))
         }
     }
     if let peerSpecificPack = peerSpecificPack {
@@ -236,19 +236,19 @@ func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: Ordere
     }
     
     if hasSettings {
-        entries.append(.settings(theme, expanded))
+        entries.append(.settings(theme, strings, expanded))
     }
     return entries
 }
 
-func chatMediaInputPanelGifModeEntries(theme: PresentationTheme, reactions: [String], animatedEmojiStickers: [String: [StickerPackItem]], expanded: Bool) -> [ChatMediaInputPanelEntry] {
+func chatMediaInputPanelGifModeEntries(theme: PresentationTheme, strings: PresentationStrings, reactions: [String], animatedEmojiStickers: [String: [StickerPackItem]], expanded: Bool) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
-    entries.append(.stickersMode(theme, expanded))
-    entries.append(.savedGifs(theme, expanded))
-    entries.append(.trendingGifs(theme, expanded))
+    entries.append(.stickersMode(theme, strings, expanded))
+    entries.append(.savedGifs(theme, strings, expanded))
+    entries.append(.trendingGifs(theme, strings, expanded))
     
     for reaction in reactions {
-        entries.append(.gifEmotion(entries.count, theme, reaction, animatedEmojiStickers[reaction]?.first?.file, expanded))
+        entries.append(.gifEmotion(entries.count, theme, strings, reaction, animatedEmojiStickers[reaction]?.first?.file, expanded))
     }
     
     return entries
@@ -1134,8 +1134,8 @@ final class ChatMediaInputNode: ChatInputNode {
                 trendingIsDismissed = true
             }
                         
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, expanded: panelExpanded)
-            let gifPaneEntries = chatMediaInputPanelGifModeEntries(theme: theme, reactions: reactions, animatedEmojiStickers: animatedEmojiStickers, expanded: panelExpanded)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, expanded: panelExpanded)
+            let gifPaneEntries = chatMediaInputPanelGifModeEntries(theme: theme, strings: strings, reactions: reactions, animatedEmojiStickers: animatedEmojiStickers, expanded: panelExpanded)
             var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, installedPacks: installedPacks, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme)
             
             if view.higher == nil {

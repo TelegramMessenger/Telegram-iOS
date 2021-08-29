@@ -23,6 +23,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     let type: ChatMediaInputMetaSectionItemType
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let expanded: Bool
     let selectedItem: () -> Void
     
@@ -30,12 +31,13 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
         return true
     }
     
-    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, type: ChatMediaInputMetaSectionItemType, theme: PresentationTheme, expanded: Bool, selected: @escaping () -> Void) {
+    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, type: ChatMediaInputMetaSectionItemType, theme: PresentationTheme, strings: PresentationStrings, expanded: Bool, selected: @escaping () -> Void) {
         self.account = account
         self.inputNodeInteraction = inputNodeInteraction
         self.type = type
         self.selectedItem = selected
         self.theme = theme
+        self.strings = strings
         self.expanded = expanded
     }
     
@@ -45,7 +47,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
             Queue.mainQueue().async {
                 node.inputNodeInteraction = self.inputNodeInteraction
                 node.setItem(item: self)
-                node.updateTheme(account: self.account, theme: self.theme, expanded: self.expanded)
+                node.updateTheme(account: self.account, theme: self.theme, strings: self.strings, expanded: self.expanded)
                 node.updateIsHighlighted()
                 node.updateAppearanceTransition(transition: .immediate)
                 
@@ -65,7 +67,7 @@ final class ChatMediaInputMetaSectionItem: ListViewItem {
         Queue.mainQueue().async {
             completion(ListViewItemNodeLayout(contentSize: self.expanded ? expandedBoundingSize : boundingSize, insets: node().insets), { _ in
                 (node() as? ChatMediaInputMetaSectionItemNode)?.setItem(item: self)
-                (node() as? ChatMediaInputMetaSectionItemNode)?.updateTheme(account: self.account, theme: self.theme, expanded: self.expanded)
+                (node() as? ChatMediaInputMetaSectionItemNode)?.updateTheme(account: self.account, theme: self.theme, strings: self.strings, expanded: self.expanded)
             })
         }
     }
@@ -174,7 +176,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         }
     }
     
-    func updateTheme(account: Account, theme: PresentationTheme, expanded: Bool) {
+    func updateTheme(account: Account, theme: PresentationTheme, strings: PresentationStrings, expanded: Bool) {
         let imageSize = CGSize(width: 26.0 * 1.6, height: 26.0 * 1.6)
         self.imageNode.frame = CGRect(origin: CGPoint(x: floor((expandedBoundingSize.width - imageSize.width) / 2.0), y: floor((expandedBoundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
         
@@ -189,48 +191,47 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                 switch item.type {
                 case .savedStickers:
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelSavedStickersIcon(theme)
-                    title = "Favorites"
+                    title = strings.Stickers_Favorites
                 case .recentStickers:
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelRecentStickersIcon(theme)
-                    title = "Recent"
+                    title = strings.Stickers_Recent
                 case .stickersMode:
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelStickersModeIcon(theme)
-                    title = "Stickers"
+                    title = strings.Stickers_Stickers
                 case .savedGifs:
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelRecentStickersIcon(theme)
-                    title = "GIFs"
+                    title = strings.Stickers_Gifs
                 case .trendingGifs:
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelTrendingGifsIcon(theme)
-                    title = "Trending"
+                    title = strings.Stickers_Trending
                 case let .gifEmoji(emoji, file):
                     switch emoji {
                         case "😡":
-                            title = "Angry"
+                            title = strings.Gif_Emotion_Angry
                         case "😮":
-                            title = "Surprised"
+                            title = strings.Gif_Emotion_Surprised
                         case "😂":
-                            title = "Joy"
+                            title = strings.Gif_Emotion_Joy
                         case "😘":
-                            title = "Kiss"
+                            title = strings.Gif_Emotion_Kiss
                         case "😍":
-                            title = "Hearts"
+                            title = strings.Gif_Emotion_Hearts
                         case "👍":
-                            title = "Thumbs Up"
+                            title = strings.Gif_Emotion_ThumbsUp
                         case "👎":
-                            title = "Thumbs Down"
+                            title = strings.Gif_Emotion_ThumbsDown
                         case "🙄":
-                            title = "Roll-eyes"
+                            title = strings.Gif_Emotion_RollEyes
                         case "😎":
-                            title = "Cool"
+                            title = strings.Gif_Emotion_Cool
                         case "🥳":
-                            title = "Party"
+                            title = strings.Gif_Emotion_Party
                         default:
                             break
                     }
                     self.imageNode.image = nil
                     
                     if let file = file {
-                    
                         let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
                         let animatedStickerNode: AnimatedStickerNode
                         if let current = self.animatedStickerNode {

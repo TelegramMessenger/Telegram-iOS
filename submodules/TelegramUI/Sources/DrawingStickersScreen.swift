@@ -589,7 +589,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 installedPacks.insert(info.0)
             }
                         
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, hasGifs: false, hasSettings: false)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, strings: strings, hasGifs: false, hasSettings: false)
             let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: trendingPacks, installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
             
             let (previousPanelEntries, previousGridEntries) = previousStickerEntries.swap((panelEntries, gridEntries))
@@ -624,7 +624,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 installedPacks.insert(info.0)
             }
             
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, hasGifs: false, hasSettings: false)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, strings: strings, hasGifs: false, hasSettings: false)
             let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: [], installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
                         
             let (previousPanelEntries, previousGridEntries) = previousMaskEntries.swap((panelEntries, gridEntries))

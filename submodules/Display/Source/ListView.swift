@@ -604,7 +604,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     }
                 }
                 if toIndex != reorderItemNode.index {
-                    if let reorderLastTimestamp = self.reorderLastTimestamp, timestamp < reorderLastTimestamp + 0.1 {
+                    if let reorderLastTimestamp = self.reorderLastTimestamp, timestamp < reorderLastTimestamp + 0.3 {
                         return
                     }
                     if reorderNode.currentState?.0 != reorderItemIndex || reorderNode.currentState?.1 != toIndex {
