@@ -6791,3 +6791,5 @@ Sorry for the inconvenience.";
 "Gif.Emotion.RollEyes" = "Roll-Eyes";
 "Gif.Emotion.Cool" = "Cool";
 "Gif.Emotion.Party" = "Party";
+
+"Conversation.ForwardFrom" = "From: %@";
