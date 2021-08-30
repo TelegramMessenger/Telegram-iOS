@@ -61,22 +61,22 @@ private enum Entry: Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction) -> ListViewItem {
+    func item(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, isVisible: @escaping () -> Bool) -> ListViewItem {
         switch self {
             case let .stickerPack(index, info, topItem, unread, theme):
                 return FeaturedPackItem(account: account, inputNodeInteraction: inputNodeInteraction, collectionId: info.id, collectionInfo: info, stickerPackItem: topItem, unread: unread, index: index, theme: theme, selected: {
                     inputNodeInteraction.openTrending(info.id)
-                })
+                }, isVisible: isVisible)
         }
     }
 }
 
-private func preparedEntryTransition(account: Account, from fromEntries: [Entry], to toEntries: [Entry], inputNodeInteraction: ChatMediaInputNodeInteraction) -> Transition {
+private func preparedEntryTransition(account: Account, from fromEntries: [Entry], to toEntries: [Entry], inputNodeInteraction: ChatMediaInputNodeInteraction, isVisible: @escaping () -> Bool) -> Transition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inputNodeInteraction: inputNodeInteraction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inputNodeInteraction: inputNodeInteraction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inputNodeInteraction: inputNodeInteraction, isVisible: isVisible), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, inputNodeInteraction: inputNodeInteraction, isVisible: isVisible), directionHint: nil) }
     
     return Transition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -101,12 +101,13 @@ private final class FeaturedPackItem: ListViewItem {
     let selectedItem: () -> Void
     let index: Int
     let theme: PresentationTheme
+    let isVisible: () -> Bool
     
     var selectable: Bool {
         return true
     }
     
-    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo, stickerPackItem: StickerPackItem?, unread: Bool, index: Int, theme: PresentationTheme, selected: @escaping () -> Void) {
+    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo, stickerPackItem: StickerPackItem?, unread: Bool, index: Int, theme: PresentationTheme, selected: @escaping () -> Void, isVisible: @escaping () -> Bool) {
         self.account = account
         self.inputNodeInteraction = inputNodeInteraction
         self.collectionId = collectionId
@@ -116,6 +117,7 @@ private final class FeaturedPackItem: ListViewItem {
         self.index = index
         self.theme = theme
         self.selectedItem = selected
+        self.isVisible = isVisible
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -124,6 +126,7 @@ private final class FeaturedPackItem: ListViewItem {
             node.contentSize = boundingSize
             node.insets = ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)
             node.inputNodeInteraction = self.inputNodeInteraction
+            node.panelIsVisible = self.isVisible
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { _ in
@@ -161,6 +164,10 @@ private final class FeaturedPackItemNode: ListViewItemNode {
     
     private let stickerFetchedDisposable = MetaDisposable()
     
+    var panelIsVisible: () -> Bool = {
+        return true
+    }
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             self.visibilityStatus = self.visibility != .none
@@ -170,10 +177,15 @@ private final class FeaturedPackItemNode: ListViewItemNode {
     var visibilityStatus: Bool = false {
         didSet {
             if self.visibilityStatus != oldValue {
-                let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
-                self.animatedStickerNode?.visibility = self.visibilityStatus && loopAnimatedStickers
+                self.updateVisibility()
             }
         }
+    }
+    
+    func updateVisibility() {
+        let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
+        let panelVisible = self.panelIsVisible()
+        self.animatedStickerNode?.visibility = self.visibilityStatus && loopAnimatedStickers && panelVisible
     }
     
     init() {
@@ -398,6 +410,7 @@ class StickerPaneTrendingListGridItemNode: GridItemNode {
     private var item: StickerPaneTrendingListGridItem?
     private var appliedItem: StickerPaneTrendingListGridItem?
     
+    private var isPanelVisible = false
     override var isVisibleInGrid: Bool {
         didSet {
             self.updateVisibility()
@@ -448,15 +461,32 @@ class StickerPaneTrendingListGridItemNode: GridItemNode {
         self.item = item
         
         let entries = panelEntries(featuredPacks: item.trendingPacks, theme: item.theme)
-        let transition = preparedEntryTransition(account: item.account, from: self.currentEntries, to: entries, inputNodeInteraction: item.inputNodeInteraction)
+        let transition = preparedEntryTransition(account: item.account, from: self.currentEntries, to: entries, inputNodeInteraction: item.inputNodeInteraction, isVisible: { [weak self] in
+            if let strongSelf = self {
+                return strongSelf.isPanelVisible && strongSelf.isVisibleInGrid
+            } else {
+                return false
+            }
+        })
         self.enqueuePanelTransition(transition, firstTime: self.currentEntries.isEmpty)
         self.currentEntries = entries
         
         self.setNeedsLayout()
     }
     
+    func updateIsPanelVisible(_ isPanelVisible: Bool) {
+        if self.isPanelVisible != isPanelVisible {
+            self.isPanelVisible = isPanelVisible
+            self.updateVisibility()
+        }
+    }
+    
     func updateVisibility() {
-        
+        self.listView.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? FeaturedPackItemNode {
+                itemNode.updateVisibility()
+            }
+        }
     }
     
     override func layout() {
