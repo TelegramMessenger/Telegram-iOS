@@ -831,8 +831,13 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
                 ))
             }
-        }, dismissTrendingPacks: { packIds in
-            let _ = ApplicationSpecificNotice.setDismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager, values: packIds.map { $0.id }).start()
+        }, dismissTrendingPacks: { _ in
+            let _ = (context.account.viewTracker.featuredStickerPacks()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { packs in
+                let ids = packs.map { $0.info.id.id }
+                let _ = ApplicationSpecificNotice.setDismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager, values: ids).start()
+            })
         }, toggleSearch: { [weak self] value, searchMode, query in
             if let strongSelf = self {
                 if let searchMode = searchMode, value {
