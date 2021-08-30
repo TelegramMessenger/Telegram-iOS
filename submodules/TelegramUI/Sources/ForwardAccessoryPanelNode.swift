@@ -178,7 +178,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                     text = "\(authors): \(string)"
                 } else {
                     title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitle(Int32(messages.count))
-                    text = strongSelf.strings.Conversation_ForwardFrom(authors)
+                    text = strongSelf.strings.Conversation_ForwardFrom(authors).string
                 }
                 
                 strongSelf.messages = messages
