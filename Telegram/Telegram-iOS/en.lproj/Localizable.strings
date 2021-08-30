@@ -5827,10 +5827,13 @@ Sorry for the inconvenience.";
 "LiveStream.PeerJoinedText" = "%@ joined the live stream";
 
 "VoiceChat.StartRecording" = "Start Recording";
+"LiveStream.StartRecording" = "Start Recording";
 "VoiceChat.StopRecording" = "Stop Recording";
 
 "VoiceChat.StartRecordingTitle" = "Start Recording";
+"LiveStream.StartRecordingTitle" = "Start Recording";
 "VoiceChat.StartRecordingText" = "Do you want to start recording this chat and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
+"LiveStream.StartRecordingText" = "Do you want to start recording this live stream and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "VoiceChat.StartRecordingStart" = "Start";
 
 "VoiceChat.RecordingTitlePlaceholder" = "Audio Title (Optional)";
