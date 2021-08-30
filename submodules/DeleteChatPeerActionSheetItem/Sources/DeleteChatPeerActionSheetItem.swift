@@ -142,7 +142,11 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                     }
                 }
             case .removeFromGroup:
-                text = strings.VoiceChat_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameOrder))
+                if case let .channel(channel) = chatPeer, case .broadcast = channel.info {
+                    text = strings.LiveStream_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameOrder))
+                } else {
+                    text = strings.VoiceChat_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameOrder))
+                }
             case .removeFromChannel:
                 text = strings.VoiceChat_RemovePeerConfirmationChannel(peer.displayTitle(strings: strings, displayOrder: nameOrder))
             default:

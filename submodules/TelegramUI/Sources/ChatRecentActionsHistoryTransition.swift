@@ -714,7 +714,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsersViaLink),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
-                                    (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
+                                    (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageLiveStreams)
                                 ]
                                 prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.broadcastSpecific)
                                 newFlags = newFlags.intersection(TelegramChatAdminRightsFlags.broadcastSpecific)
@@ -1122,9 +1122,17 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 
                 let rawText: PresentationStrings.FormattedString
                 if case .startGroupCall = self.entry.event.action {
-                    rawText = self.presentationData.strings.Channel_AdminLog_StartedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        rawText = self.presentationData.strings.Channel_AdminLog_StartedLiveStream(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    } else {
+                        rawText = self.presentationData.strings.Channel_AdminLog_StartedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    }
                 } else {
-                    rawText = self.presentationData.strings.Channel_AdminLog_EndedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        rawText = self.presentationData.strings.Channel_AdminLog_EndedLiveStream(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    } else {
+                        rawText = self.presentationData.strings.Channel_AdminLog_EndedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    }
                 }
                     
                 appendAttributedText(text: rawText, generateEntities: { index in

@@ -4060,7 +4060,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     case .generic, .scheduledTooLate:
                         text = strongSelf.presentationData.strings.Login_UnknownError
                     case .anonymousNotAllowed:
-                        text = strongSelf.presentationData.strings.VoiceChat_AnonymousDisabledAlertText
+                        if let channel = strongSelf.data?.peer as? TelegramChannel, case .broadcast = channel.info {
+                            text = strongSelf.presentationData.strings.LiveStream_AnonymousDisabledAlertText
+                        } else {
+                            text = strongSelf.presentationData.strings.VoiceChat_AnonymousDisabledAlertText
+                        }
                     }
                     strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }))
@@ -4404,14 +4408,24 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     items.append(.separator)
                 }
             }
+
+            let createVoiceChatTitle: String
+            let scheduleVoiceChatTitle: String
+            if let channel = strongSelf.data?.peer as? TelegramChannel, case .broadcast = channel.info {
+                createVoiceChatTitle = strongSelf.presentationData.strings.ChannelInfo_CreateLiveStream
+                scheduleVoiceChatTitle = strongSelf.presentationData.strings.ChannelInfo_ScheduleLiveStream
+            } else {
+                createVoiceChatTitle = strongSelf.presentationData.strings.ChannelInfo_CreateVoiceChat
+                scheduleVoiceChatTitle = strongSelf.presentationData.strings.ChannelInfo_ScheduleVoiceChat
+            }
             
-            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChannelInfo_CreateVoiceChat, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VoiceChat"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            items.append(.action(ContextMenuActionItem(text: createVoiceChatTitle, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VoiceChat"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.dismissWithoutContent)
                 
                 self?.createAndJoinGroupCall(peerId: peerId, joinAsPeerId: defaultJoinAsPeerId)
             })))
             
-            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChannelInfo_ScheduleVoiceChat, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            items.append(.action(ContextMenuActionItem(text: scheduleVoiceChatTitle, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.dismissWithoutContent)
                 
                 self?.scheduleGroupCall()
