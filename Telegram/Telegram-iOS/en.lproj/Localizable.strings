@@ -6650,6 +6650,8 @@ Sorry for the inconvenience.";
 "Conversation.ForwardOptions.Messages_0" = "%@ messages";
 
 "Activity.ChoosingSticker" = "choosing sticker";
+"DialogList.SingleChoosingStickerSuffix" = "%@ is choosing sticker";
+
 "WallpaperPreview.Animate" = "Animate";
 "WallpaperPreview.AnimateDescription" = "Colors will move when you send messages";
 
