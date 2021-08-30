@@ -3560,7 +3560,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         if let selectionState = item.controllerInteraction.selectionState, canHaveSelection {
             var selected = false
-            var incoming = true
+            let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
             
             switch item.content {
                 case let .message(message, _, _, _):
@@ -3575,8 +3575,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     selected = allSelected
             }
-            
-            incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             
             let offset: CGFloat = incoming ? 42.0 : 0.0
             

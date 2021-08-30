@@ -6768,3 +6768,21 @@ Sorry for the inconvenience.";
 "Chat.NavigationNoChannels" = "You have no unread channels";
 
 "Message.SponsoredLabel" = "sponsored";
+
+"Stickers.Favorites" = "Favorites";
+"Stickers.Recent" = "Recent";
+"Stickers.Stickers" = "Stickers";
+"Stickers.Gifs" = "GIFs";
+"Stickers.Trending" = "Trending";
+"Stickers.Settings" = "Settings";
+
+"Gif.Emotion.Angry" = "Angry";
+"Gif.Emotion.Surprised" = "Surprised";
+"Gif.Emotion.Joy" = "Joy";
+"Gif.Emotion.Kiss" = "Kiss";
+"Gif.Emotion.Hearts" = "Hearts";
+"Gif.Emotion.ThumbsUp" = "Thumbs Up";
+"Gif.Emotion.ThumbsDown" = "Thumbs Down";
+"Gif.Emotion.RollEyes" = "Roll-Eyes";
+"Gif.Emotion.Cool" = "Cool";
+"Gif.Emotion.Party" = "Party";

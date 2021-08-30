@@ -858,6 +858,8 @@ public final class VoiceChatController: ViewController {
         
         private var currentLoadToken: String?
         
+        private var scrollAtTop = true
+        
         private var effectiveMuteState: GroupCallParticipantsContext.Participant.MuteState? {
             if self.pushingToTalk {
                 return nil
@@ -2175,6 +2177,22 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
+            self.listNode.visibleContentOffsetChanged = { [weak self] offset in
+                guard let strongSelf = self else {
+                    return
+                }
+                var scrollAtTop = false
+                if case let .known(value) = offset, value < 180.0 {
+                    scrollAtTop = true
+                } else {
+                    scrollAtTop = false
+                }
+                if scrollAtTop != strongSelf.scrollAtTop {
+                    strongSelf.scrollAtTop = scrollAtTop
+                    strongSelf.updateTitle(transition: .immediate)
+                }
+            }
+            
             self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
                 guard let strongSelf = self else {
                     return
@@ -2613,8 +2631,14 @@ public final class VoiceChatController: ViewController {
                             self?.controller?.present(alertController, in: .window(.root))
                         }), false))
                     } else {
+                        let text: String
+                        if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
+                            text = strongSelf.presentationData.strings.LiveStream_StartRecording
+                        } else {
+                            text = strongSelf.presentationData.strings.VoiceChat_StartRecording
+                        }
                         if strongSelf.callState?.scheduleTimestamp == nil {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_StartRecording, icon: { theme -> UIImage? in
+                            items.append(.action(ContextMenuActionItem(text: text, icon: { theme -> UIImage? in
                                 return generateStartRecordingIcon(color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
                                 f(.dismissWithoutContent)
@@ -2623,9 +2647,28 @@ public final class VoiceChatController: ViewController {
                                     return
                                 }
 
-                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
-                                    if let strongSelf = self {
-                                        strongSelf.call.setShouldBeRecording(true, title: "", videoOrientation: videoOrientation)
+//                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
+//                                    if let strongSelf = self {
+//                                        strongSelf.call.setShouldBeRecording(true, title: "", videoOrientation: videoOrientation)
+//
+//                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: text), action: { _ in return false })
+//                                        strongSelf.call.playTone(.recordingStarted)
+//                                    }
+//                                })
+
+                                let title: String
+                                let text: String
+                                if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
+                                    title = strongSelf.presentationData.strings.LiveStream_StartRecordingTitle
+                                    text = strongSelf.presentationData.strings.LiveStream_StartRecordingText
+                                } else {
+                                    title = strongSelf.presentationData.strings.VoiceChat_StartRecordingTitle
+                                    text = strongSelf.presentationData.strings.VoiceChat_StartRecordingText
+                                }
+
+                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: title, text: text, placeholder: strongSelf.presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
+                                    if let strongSelf = self, let title = title {
+                                        strongSelf.call.setShouldBeRecording(true, title: title, videoOrientation: nil)
 
                                         let text: String
                                         if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
@@ -2638,21 +2681,6 @@ public final class VoiceChatController: ViewController {
                                         strongSelf.call.playTone(.recordingStarted)
                                     }
                                 })
-//                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: presentationData.strings.VoiceChat_StartRecordingTitle, text: presentationData.strings.VoiceChat_StartRecordingText, placeholder: presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
-//                                    if let strongSelf = self, let title = title {
-//                                        strongSelf.call.setShouldBeRecording(true, title: title)
-
-//                                        let text: String
-//                                        if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-//                                            text = strongSelf.presentationData.strings.LiveStream_RecordingStarted
-//                                        } else {
-//                                            text = strongSelf.presentationData.strings.VoiceChat_RecordingStarted
-//                                        }
-//
-//                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: text), action: { _ in return false })
-//                                        strongSelf.call.playTone(.recordingStarted)
-//                                    }
-//                                })
                                 self?.controller?.present(controller, in: .window(.root))
                             })))
                         }
@@ -4046,8 +4074,15 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
-            var subtitle = self.currentSpeakingSubtitle ?? self.currentSubtitle
-            var speaking = self.currentSpeakingSubtitle != nil
+            var subtitle = ""
+            var speaking = false
+            if self.scrollAtTop {
+                subtitle = self.currentSubtitle
+                speaking = false
+            } else {
+                subtitle = self.currentSpeakingSubtitle ?? self.currentSubtitle
+                speaking = self.currentSpeakingSubtitle != nil
+            }
             if self.isScheduling {
                 subtitle = ""
                 speaking = false

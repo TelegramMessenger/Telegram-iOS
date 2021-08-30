@@ -119,6 +119,8 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
             }
             if let itemNode = itemNode as? ChatMediaInputStickerGridItemNode {
                 itemNode.updateIsPanelVisible(strongSelf.isPaneVisible)
+            } else if let itemNode = itemNode as? StickerPaneTrendingListGridItemNode {
+                itemNode.updateIsPanelVisible(strongSelf.isPaneVisible)
             }
         }
         self.gridNode.scrollView.alwaysBounceVertical = true
@@ -182,6 +184,8 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
                     itemNode.updateIsPanelVisible(isVisible)
                 } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                     itemNode.updateCanPlayMedia()
+                } else if let itemNode = itemNode as? StickerPaneTrendingListGridItemNode {
+                    itemNode.updateIsPanelVisible(isVisible)
                 }
             }
         }

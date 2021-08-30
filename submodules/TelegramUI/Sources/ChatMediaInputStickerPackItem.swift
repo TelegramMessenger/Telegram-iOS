@@ -349,7 +349,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                     snapshotImageNode = imageNode
                 case let .animated(resource, _):
                     let animatedStickerNode = AnimatedStickerNode()
-                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 128, height: 128, mode: .direct(cachePathPrefix: nil))
+                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 128, height: 128, mode: .cached)
                     animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                     scalingNode.addSubnode(animatedStickerNode)
                     
