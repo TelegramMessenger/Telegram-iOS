@@ -637,7 +637,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 
                                 if canManageGroupCalls {
-                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatStartNow, action: {
+                                    let text: String
+                                    if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
+                                        text = strongSelf.presentationData.strings.LiveStream_CreateNewVoiceChatText
+                                    } else {
+                                        text = strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatText
+                                    }
+                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatStartNow, action: {
                                         if let strongSelf = self {
                                             var dismissStatus: (() -> Void)?
                                             let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
@@ -666,7 +672,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 case .generic, .scheduledTooLate:
                                                     text = strongSelf.presentationData.strings.Login_UnknownError
                                                 case .anonymousNotAllowed:
-                                                    text = strongSelf.presentationData.strings.VoiceChat_AnonymousDisabledAlertText
+                                                    if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                                                        text = strongSelf.presentationData.strings.LiveStream_AnonymousDisabledAlertText
+                                                    } else {
+                                                        text = strongSelf.presentationData.strings.VoiceChat_AnonymousDisabledAlertText
+                                                    }
                                                 }
                                                 strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                             }, completed: {
@@ -6189,7 +6199,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let rect = strongSelf.chatDisplayNode.frameForInputActionButton()
                 if let rect = rect {
                     strongSelf.mediaRestrictedTooltipController?.dismiss()
-                    let tooltipController = TooltipController(content: .text(strongSelf.presentationInterfaceState.strings.Conversation_VoiceChatMediaRecordingRestricted), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
+                    let text: String
+                    if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
+                        text = strongSelf.presentationInterfaceState.strings.Conversation_LiveStreamMediaRecordingRestricted
+                    } else {
+                        text = strongSelf.presentationInterfaceState.strings.Conversation_VoiceChatMediaRecordingRestricted
+                    }
+                    let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize)
                     strongSelf.mediaRestrictedTooltipController = tooltipController
                     strongSelf.mediaRestrictedTooltipControllerMode = false
                     tooltipController.dismissed = { [weak tooltipController] _ in

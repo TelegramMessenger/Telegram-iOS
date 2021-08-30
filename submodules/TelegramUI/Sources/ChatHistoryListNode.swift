@@ -1303,9 +1303,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 overscrollView = current
             } else {
                 overscrollView = ComponentHostView<Empty>()
-                overscrollView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
                 self.overscrollView = overscrollView
-                self.view.addSubview(overscrollView)
+                self.view.superview?.insertSubview(overscrollView, aboveSubview: self.view)
             }
 
             let expandDistance = max(-offset - 12.0, 0.0)
@@ -1379,7 +1378,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 environment: {},
                 containerSize: CGSize(width: self.bounds.width, height: 200.0)
             )
-            overscrollView.frame = overscrollFrame
+            overscrollView.frame = self.view.convert(overscrollFrame, to: self.view.superview!)
         } else if let overscrollView = self.overscrollView {
             self.overscrollView = nil
             overscrollView.removeFromSuperview()
@@ -2582,14 +2581,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
 
-        let overscrollView = self.overscrollView
-        self.overscrollView = nil
-
-        if let overscrollView = overscrollView {
-            self.view.superview?.insertSubview(overscrollView, aboveSubview: self.view)
-        }
-
-        let snapshotView = self.view.snapshotView(afterScreenUpdates: true)!
+        let snapshotView = self.view.snapshotView(afterScreenUpdates: false)!
 
         snapshotView.frame = self.view.bounds
         if let sublayers = self.layer.sublayers {
@@ -2599,9 +2591,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         self.view.addSubview(snapshotView)
 
+        let overscrollView = self.overscrollView
         if let overscrollView = overscrollView {
-            overscrollView.alpha = 1.0
+            self.overscrollView = nil
+
+            overscrollView.frame = overscrollView.convert(overscrollView.bounds, to: self.view)
             snapshotView.addSubview(overscrollView)
+
+            overscrollView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         }
 
         return SnapshotState(

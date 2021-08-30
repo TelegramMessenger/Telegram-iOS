@@ -398,6 +398,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var initialCall: EngineGroupCallDescription?
     public let internalId: CallSessionInternalId
     public let peerId: PeerId
+    private let isChannel: Bool
     private var invite: String?
     private var joinAsPeerId: PeerId
     private var ignorePreviousJoinAsPeerId: (PeerId, UInt32)?
@@ -650,6 +651,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.initialCall = initialCall
         self.internalId = internalId
         self.peerId = peerId
+        self.isChannel = isChannel
         self.invite = invite
         self.joinAsPeerId = joinAsPeerId ?? accountContext.account.peerId
         self.schedulePending = initialCall == nil
@@ -1524,12 +1526,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                     if case .anonymousNotAllowed = error {
                         let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.VoiceChat_AnonymousDisabledAlertText, actions: [
+                        strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: strongSelf.isChannel ? presentationData.strings.LiveStream_AnonymousDisabledAlertText : presentationData.strings.VoiceChat_AnonymousDisabledAlertText, actions: [
                             TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
                         ]), on: .root, blockInteraction: false, completion: {})
                     } else if case .tooManyParticipants = error {
                         let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.VoiceChat_ChatFullAlertText, actions: [
+                        strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: strongSelf.isChannel ? presentationData.strings.LiveStream_ChatFullAlertText : presentationData.strings.VoiceChat_ChatFullAlertText, actions: [
                             TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
                         ]), on: .root, blockInteraction: false, completion: {})
                     } else if case .invalidJoinAsPeer = error {

@@ -440,7 +440,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case let .groupPhoneCall(_, _, scheduleDate, duration):
                 if let scheduleDate = scheduleDate {
                     if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
-                        let titleString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(dateFormatString: { strings.Notification_VoiceChatScheduledChannel($0) }, tomorrowFormatString: { strings.Notification_VoiceChatScheduledTomorrowChannel($0) }, todayFormatString: { strings.Notification_VoiceChatScheduledTodayChannel($0) }))
+                        let titleString: PresentationStrings.FormattedString
+                        if let channel = message.author as? TelegramChannel, case .broadcast = channel.info {
+                            titleString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(dateFormatString: { strings.Notification_LiveStreamScheduled($0) }, tomorrowFormatString: { strings.Notification_LiveStreamScheduledTomorrow($0) }, todayFormatString: { strings.Notification_LiveStreamScheduledToday($0) }))
+                        } else {
+                            titleString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(dateFormatString: { strings.Notification_VoiceChatScheduledChannel($0) }, tomorrowFormatString: { strings.Notification_VoiceChatScheduledTomorrowChannel($0) }, todayFormatString: { strings.Notification_VoiceChatScheduledTodayChannel($0) }))
+                        }
                         attributedString = NSAttributedString(string: titleString.string, font: titleFont, textColor: primaryTextColor)
                     } else {
                         let titleString = humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: scheduleDate, alwaysShowTime: true, allowYesterday: false, format: HumanReadableStringFormat(dateFormatString: { strings.Notification_VoiceChatScheduled(authorName, $0) }, tomorrowFormatString: { strings.Notification_VoiceChatScheduledTomorrow(authorName, $0) }, todayFormatString: { strings.Notification_VoiceChatScheduledToday(authorName, $0) }))
@@ -449,7 +454,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 } else if let duration = duration {
                     if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
-                        let titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).string
+                        let titleString: String
+                        if let channel = message.author as? TelegramChannel, case .broadcast = channel.info {
+                            titleString = strings.Notification_LiveStreamEnded(callDurationString(strings: strings, value: duration)).string
+                        } else {
+                            titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).string
+                        }
                         attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                     } else {
                         let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
@@ -458,8 +468,13 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 } else {
                     if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
-                        let titleString = strings.Notification_VoiceChatStartedChannel
-                        attributedString =  NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+                        let titleString: String
+                        if let channel = message.author as? TelegramChannel, case .broadcast = channel.info {
+                            titleString = strings.Notification_LiveStreamStarted
+                        } else {
+                            titleString = strings.Notification_VoiceChatStartedChannel
+                        }
+                        attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
                     } else {
                         let attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
                         let titleString = strings.Notification_VoiceChatStarted(authorName)
