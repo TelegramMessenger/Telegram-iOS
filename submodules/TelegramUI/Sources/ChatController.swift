@@ -5514,8 +5514,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peerId), subject: .forwardedMessages(ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], options: forwardOptions), botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
                 
-                let items = combineLatest(forwardOptions, strongSelf.context.account.postbox.messagesAtIds(strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []))
-                |> map { forwardOptions, messages -> [ContextMenuItem] in
+                let messageIds = strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
+                let messagesCount: Signal<Int, NoError>
+                if let chatController = chatController as? ChatControllerImpl, messageIds.count > 1 {
+                    messagesCount = .single(messageIds.count)
+                    |> then(
+                        chatController.presentationInterfaceStatePromise.get()
+                        |> map { state -> Int in
+                            return state.interfaceState.selectionState?.selectedIds.count ?? 1
+                        }
+                    )
+                } else {
+                    messagesCount = .single(1)
+                }
+                
+                let items = combineLatest(forwardOptions, strongSelf.context.account.postbox.messagesAtIds(messageIds), messagesCount)
+                |> map { forwardOptions, messages, messagesCount -> [ContextMenuItem] in
                     var items: [ContextMenuItem] = []
                     
                     var hasCaptions = false
@@ -5637,7 +5651,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         f(.default)
                     })))
                     
-                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_SendMessages, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak self, weak chatController] c, f in
+                    items.append(.action(ContextMenuActionItem(text: messagesCount == 1 ? presentationData.strings.Conversation_ForwardOptions_SendMessage : presentationData.strings.Conversation_ForwardOptions_SendMessages, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak self, weak chatController] c, f in
                         guard let strongSelf = self else {
                             return
                         }
