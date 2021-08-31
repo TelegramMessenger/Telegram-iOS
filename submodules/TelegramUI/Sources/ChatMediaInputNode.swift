@@ -162,7 +162,7 @@ func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemColle
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, strings: PresentationStrings, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false) -> [ChatMediaInputPanelEntry] {
+func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, strings: PresentationStrings, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false, reorderable: Bool = false) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     if hasGifs {
         entries.append(.recentGifs(theme, strings, expanded))
@@ -227,7 +227,7 @@ func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: Ordere
     }
     
     for (_, info, topItem) in sortedPacks {
-        entries.append(.stickerPack(index: index, info: info, topItem: topItem, theme: theme, expanded: expanded))
+        entries.append(.stickerPack(index: index, info: info, topItem: topItem, theme: theme, expanded: expanded, reorderable: reorderable))
         index += 1
     }
   
@@ -624,7 +624,7 @@ final class ChatMediaInputNode: ChatInputNode {
             self?.lastReorderItemIndex = toIndex
                         
             let fromEntry = entries[fromIndex]
-            guard case let .stickerPack(_, fromPackInfo, _, _, _) = fromEntry else {
+            guard case let .stickerPack(_, fromPackInfo, _, _, _, _) = fromEntry else {
                 return .single(false)
             }
             var referenceId: ItemCollectionId?
@@ -632,7 +632,7 @@ final class ChatMediaInputNode: ChatInputNode {
             var afterAll = false
             if toIndex < entries.count {
                 switch entries[toIndex] {
-                    case let .stickerPack(_, toPackInfo, _, _, _):
+                    case let .stickerPack(_, toPackInfo, _, _, _, _):
                         referenceId = toPackInfo.id
                     default:
                         if entries[toIndex] < fromEntry {
@@ -648,7 +648,7 @@ final class ChatMediaInputNode: ChatInputNode {
             var currentIds: [ItemCollectionId] = []
             for entry in entries {
                 switch entry {
-                case let .stickerPack(_, info, _, _, _):
+                case let .stickerPack(_, info, _, _, _, _):
                     currentIds.append(info.id)
                 default:
                     break
@@ -705,7 +705,7 @@ final class ChatMediaInputNode: ChatInputNode {
             var currentIds: [ItemCollectionId] = []
             for entry in entries {
                 switch entry {
-                case let .stickerPack(_, info, _, _, _):
+                case let .stickerPack(_, info, _, _, _, _):
                     currentIds.append(info.id)
                 default:
                     break
@@ -1139,7 +1139,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 trendingIsDismissed = true
             }
                         
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, expanded: panelExpanded)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, expanded: panelExpanded, reorderable: true)
             let gifPaneEntries = chatMediaInputPanelGifModeEntries(theme: theme, strings: strings, reactions: reactions, animatedEmojiStickers: animatedEmojiStickers, expanded: panelExpanded)
             var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, installedPacks: installedPacks, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme)
             
