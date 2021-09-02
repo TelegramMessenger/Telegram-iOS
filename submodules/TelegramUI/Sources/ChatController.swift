@@ -3886,7 +3886,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         |> distinctUntilChanged
         
-        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, context.engine.themes.getChatThemes(accountManager: context.sharedContext.accountManager, onlyCached: false), themeEmoticon, self.themeEmoticonPreviewPromise.get(), self.themeDarkAppearancePreviewPromise.get()).start(next: { [weak self] presentationData, chatThemes, themeEmoticon, themeEmoticonPreview, darkAppearancePreview in
+        let themeSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+        |> map { sharedData -> PresentationThemeSettings in
+            let themeSettings: PresentationThemeSettings
+            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings {
+                themeSettings = current
+            } else {
+                themeSettings = PresentationThemeSettings.defaultSettings
+            }
+            return themeSettings
+        }
+        
+        let accountManager = context.sharedContext.accountManager
+        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, themeSettings, context.engine.themes.getChatThemes(accountManager: accountManager, onlyCached: false), themeEmoticon, self.themeEmoticonPreviewPromise.get(), self.themeDarkAppearancePreviewPromise.get()).start(next: { [weak self] presentationData, themeSettings, chatThemes, themeEmoticon, themeEmoticonPreview, darkAppearancePreview in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
@@ -3914,12 +3926,64 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 } else if let darkAppearancePreview = darkAppearancePreview {
                     let lightTheme: PresentationTheme
-                    let darkTheme: PresentationTheme
+                    let lightWallpaper: TelegramWallpaper
                     
-                    if presentationData.theme.overallDarkAppearance {
+                    let darkTheme: PresentationTheme
+                    let darkWallpaper: TelegramWallpaper
+                    
+                    if presentationData.autoNightModeTriggered {
                         darkTheme = presentationData.theme
+                        darkWallpaper = presentationData.chatWallpaper
+                        
+                        var currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
+                        if let colors = currentColors, colors.baseColor == .theme {
+                            currentColors = nil
+                        }
+                        
+                        let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeSettings.theme, accentColor: currentColors)] ?? themeSettings.themeSpecificChatWallpapers[themeSettings.theme.index])
+                        
+                        if let themeSpecificWallpaper = themeSpecificWallpaper {
+                            lightWallpaper = themeSpecificWallpaper
+                        } else {
+                            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor) ?? defaultPresentationTheme
+                            lightWallpaper = theme.chat.defaultWallpaper
+                        }
+                        
+                        lightTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
                     } else {
                         lightTheme = presentationData.theme
+                        lightWallpaper = presentationData.chatWallpaper
+                        
+                        let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
+                        let effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
+                        let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
+                        
+                        darkTheme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: automaticTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: defaultServiceBackgroundColor) ?? defaultPresentationTheme
+                        
+                        if let themeSpecificWallpaper = themeSpecificWallpaper {
+                            darkWallpaper = themeSpecificWallpaper
+                        } else {
+                            switch lightWallpaper {
+                                case .builtin, .color, .gradient:
+                                    darkWallpaper = darkTheme.chat.defaultWallpaper
+                                case .file:
+                                    if lightWallpaper.isPattern {
+                                        darkWallpaper = darkTheme.chat.defaultWallpaper
+                                    } else {
+                                        darkWallpaper = lightWallpaper
+                                    }
+                                default:
+                                    darkWallpaper = lightWallpaper
+                            }
+                        }
+                    }
+                    
+                    if darkAppearancePreview {
+                        presentationData = presentationData.withUpdated(theme: darkTheme)
+                        presentationData = presentationData.withUpdated(chatWallpaper: darkWallpaper)
+                    } else {
+                        presentationData = presentationData.withUpdated(theme: lightTheme)
+                        presentationData = presentationData.withUpdated(chatWallpaper: lightWallpaper)
                     }
                 }
                 let isFirstTime = !strongSelf.didSetPresentationData
@@ -3928,8 +3992,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if isFirstTime || previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || presentationData.chatWallpaper != previousChatWallpaper {
                     strongSelf.themeAndStringsUpdated()
+                    
+                    strongSelf.presentationDataPromise.set(.single(strongSelf.presentationData))
                 }
-                strongSelf.presentationDataPromise.set(.single(strongSelf.presentationData))
                 strongSelf.presentationReady.set(.single(true))
             }
         })
