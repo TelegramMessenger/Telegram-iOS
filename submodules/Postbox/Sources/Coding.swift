@@ -544,7 +544,8 @@ public final class PostboxEncoder {
         for object in value {
             var length: Int32 = Int32(object.count)
             self.buffer.write(&length, offset: 0, length: 4)
-            object.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            object.withUnsafeBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                 self.buffer.write(bytes, offset: 0, length: Int(length))
             }
         }
@@ -637,7 +638,8 @@ public final class PostboxEncoder {
         self.buffer.write(&type, offset: 0, length: 1)
         var bytesLength: Int32 = Int32(data.count)
         self.buffer.write(&bytesLength, offset: 0, length: 4)
-        data.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+        data.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             self.buffer.write(bytes, offset: 0, length: Int(bytesLength))
         }
     }
@@ -812,7 +814,8 @@ public final class PostboxDecoder {
         
         let keyData = key.data(using: .utf8)!
         
-        return keyData.withUnsafeBytes { (keyBytes: UnsafePointer<UInt8>) -> Bool in
+        return keyData.withUnsafeBytes { rawBytes -> Bool in
+            let keyBytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             let keyLength: Int = keyData.count
             while (offset < maxOffset) {
                 let readKeyLength = bytes[offset]
@@ -1702,7 +1705,8 @@ public final class PostboxDecoder {
             memcpy(&length, self.buffer.memory + self.offset, 4)
             self.offset += 4 + Int(length)
             var result = Data(count: Int(length))
-            result.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            result.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                 memcpy(bytes, self.buffer.memory.advanced(by: self.offset - Int(length)), Int(length))
             }
             return result

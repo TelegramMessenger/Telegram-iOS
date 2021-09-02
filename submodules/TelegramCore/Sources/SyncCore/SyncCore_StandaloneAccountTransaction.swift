@@ -62,7 +62,9 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
             assertionFailure()
             return .nonContact
         }
-    }, additionalChatListIndexNamespace: Namespaces.Message.Cloud, messageNamespacesRequiringGroupStatsValidation: [Namespaces.Message.Cloud], defaultMessageNamespaceReadStates: [Namespaces.Message.Local: .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false)], chatMessagesNamespaces: Set([Namespaces.Message.Cloud, Namespaces.Message.Local, Namespaces.Message.SecretIncoming]), globalNotificationSettingsPreferencesKey: PreferencesKeys.globalNotifications, defaultGlobalNotificationSettings: GlobalNotificationSettings.defaultSettings)
+    }, additionalChatListIndexNamespace: Namespaces.Message.Cloud, messageNamespacesRequiringGroupStatsValidation: [Namespaces.Message.Cloud], defaultMessageNamespaceReadStates: [Namespaces.Message.Local: .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false)], chatMessagesNamespaces: Set([Namespaces.Message.Cloud, Namespaces.Message.Local, Namespaces.Message.SecretIncoming]), globalNotificationSettingsPreferencesKey: { transaction in
+        return transaction.getPreferencesEntry(PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self)
+    }, defaultGlobalNotificationSettings: GlobalNotificationSettings.defaultSettings)
 }()
 
 public enum AccountTransactionError {

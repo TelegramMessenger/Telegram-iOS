@@ -1326,19 +1326,23 @@ public final class SqliteValueBox: ValueBox {
         
         resultStatement.reset()
         
-        collectionId.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        collectionId.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(1, data: bytes, length: collectionId.count)
         }
         
-        itemId.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        itemId.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(2, data: bytes, length: itemId.count)
         }
         
-        contents.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        contents.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(3, data: bytes, length: contents.count)
         }
         
-        tags.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        tags.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(4, data: bytes, length: tags.count)
         }
         
@@ -1361,7 +1365,8 @@ public final class SqliteValueBox: ValueBox {
         
         resultStatement.reset()
         
-        itemId.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        itemId.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(1, data: bytes, length: itemId.count)
         }
         
@@ -1387,7 +1392,8 @@ public final class SqliteValueBox: ValueBox {
         
         resultStatement.reset()
         
-        contents.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        contents.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(1, data: bytes, length: contents.count)
         }
         
@@ -1410,11 +1416,13 @@ public final class SqliteValueBox: ValueBox {
         
         resultStatement.reset()
         
-        contents.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        contents.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(1, data: bytes, length: contents.count)
         }
         
-        collectionId.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        collectionId.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(2, data: bytes, length: collectionId.count)
         }
         
@@ -1437,15 +1445,18 @@ public final class SqliteValueBox: ValueBox {
         
         resultStatement.reset()
         
-        contents.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        contents.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(1, data: bytes, length: contents.count)
         }
         
-        collectionId.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        collectionId.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(2, data: bytes, length: collectionId.count)
         }
         
-        tags.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        tags.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             resultStatement.bindText(3, data: bytes, length: tags.count)
         }
         
@@ -1653,7 +1664,6 @@ public final class SqliteValueBox: ValueBox {
                     hadStop = true
                     return false
                 }
-                return true
             }, limit: limit)
             if let lastKey = lastKey {
                 currentStart = lastKey
@@ -2229,7 +2239,8 @@ public final class SqliteValueBox: ValueBox {
 
 private func hexString(_ data: Data) -> String {
     let hexString = NSMutableString()
-    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+    data.withUnsafeBytes { rawBytes -> Void in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
         for i in 0 ..< data.count {
             hexString.appendFormat("%02x", UInt(bytes.advanced(by: i).pointee))
         }

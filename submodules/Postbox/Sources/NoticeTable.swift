@@ -19,9 +19,9 @@ public struct NoticeEntryKey: Hashable {
     public static func ==(lhs: NoticeEntryKey, rhs: NoticeEntryKey) -> Bool {
         return lhs.combinedKey == rhs.combinedKey
     }
-    
-    public var hashValue: Int {
-        return self.combinedKey.hashValue
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.combinedKey)
     }
 }
 

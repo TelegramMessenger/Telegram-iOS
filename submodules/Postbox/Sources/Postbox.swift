@@ -269,7 +269,7 @@ public final class Transaction {
     public func getGlobalNotificationSettings() -> PostboxGlobalNotificationSettings {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.getGlobalNotificationSettings()
+            return postbox.getGlobalNotificationSettings(transaction: self)
         } else {
             preconditionFailure()
         }
@@ -369,7 +369,7 @@ public final class Transaction {
     public func getUnreadChatListPeerIds(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox, groupId: groupId, filterPredicate: filterPredicate)
+            return postbox.chatListTable.getUnreadChatListPeerIds(postbox: postbox, currentTransaction: self, groupId: groupId, filterPredicate: filterPredicate)
         } else {
             return []
         }
@@ -805,6 +805,11 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.setPreferencesEntry(key: key, value: f(self.postbox?.getPreferencesEntry(key: key)))
     }
+
+    public func globalNotificationSettingsUpdated() {
+        assert(!self.disposed)
+        self.postbox?.globalNotificationSettingsUpdated()
+    }
     
     public func getPinnedItemIds(groupId: PeerGroupId) -> [PinnedItemId] {
         assert(!self.disposed)
@@ -1048,7 +1053,7 @@ public final class Transaction {
     
     public func getRelativeUnreadChatListIndex(filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
         assert(!self.disposed)
-        return self.postbox?.getRelativeUnreadChatListIndex(filtered: filtered, position: position, groupId: groupId)
+        return self.postbox?.getRelativeUnreadChatListIndex(currentTransaction: self, filtered: filtered, position: position, groupId: groupId)
     }
     
     public func getDeviceContactImportInfo(_ identifier: ValueBoxKey) -> PostboxCoding? {
@@ -1110,7 +1115,7 @@ public final class Transaction {
     
     public func reindexUnreadCounters() {
         assert(!self.disposed)
-        self.postbox?.reindexUnreadCounters()
+        self.postbox?.reindexUnreadCounters(currentTransaction: self)
     }
     
     public func searchPeers(query: String) -> [RenderedPeer] {
@@ -1215,7 +1220,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 let userVersion: Int32? = metadataTable.userVersion()
                 let currentUserVersion: Int32 = 25
 
-                postboxLog("openPostbox, current userVersion: \(userVersion ?? nil)")
+                postboxLog("openPostbox, current userVersion: \(String(describing: userVersion ?? nil))")
                 
                 if let userVersion = userVersion {
                     if userVersion != currentUserVersion {
@@ -1607,7 +1612,7 @@ public final class Postbox {
             if !isTemporary && self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
                 self.groupMessageStatsTable.removeAll()
                 let startTime = CFAbsoluteTimeGetCurrent()
-                let (totalStates, summaries) = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self)
+                let (totalStates, summaries) = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self, currentTransaction: transaction)
                 
                 self.messageHistoryMetadataTable.removeAllTotalUnreadStates()
                 for (groupId, state) in totalStates {
@@ -1924,13 +1929,13 @@ public final class Postbox {
         return renderedMessage
     }
     
-    private func afterBegin() {
+    private func afterBegin(transaction: Transaction) {
         let currentTransactionStateVersion = self.metadataTable.transactionStateVersion()
         if currentTransactionStateVersion != self.transactionStateVersion {
             for table in self.tables {
                 table.clearMemoryCache()
             }
-            self.viewTracker.refreshViewsDueToExternalTransaction(postbox: self, fetchUnsentMessageIds: {
+            self.viewTracker.refreshViewsDueToExternalTransaction(postbox: self, currentTransaction: transaction, fetchUnsentMessageIds: {
                 return self.messageHistoryUnsentTable.get()
             }, fetchSynchronizePeerReadStateOperations: {
                 return self.synchronizeReadStateTable.get(getCombinedPeerReadState: { peerId in
@@ -1943,7 +1948,7 @@ public final class Postbox {
         }
     }
     
-    private func beforeCommit() -> (updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
+    private func beforeCommit(currentTransaction: Transaction) -> (updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
         self.chatListTable.replay(historyOperationsByPeerId: self.currentOperationsByPeerId, updatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, updatedChatListInclusions: self.currentUpdatedChatListInclusions, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, operations: &self.currentChatListOperations)
         
         self.peerChatTopTaggedMessageIdsTable.replay(historyOperationsByPeerId: self.currentOperationsByPeerId)
@@ -1969,18 +1974,18 @@ public final class Postbox {
                 }
             }
         }
-        let transactionParticipationInTotalUnreadCountUpdates = self.peerNotificationSettingsTable.transactionParticipationInTotalUnreadCountUpdates(postbox: self)
-        self.chatListIndexTable.commitWithTransaction(postbox: self, alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, updatedPeers: updatedPeers, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, updatedTotalUnreadStates: &self.currentUpdatedTotalUnreadStates, updatedGroupTotalUnreadSummaries: &self.currentUpdatedGroupTotalUnreadSummaries, currentUpdatedGroupSummarySynchronizeOperations: &self.currentUpdatedGroupSummarySynchronizeOperations)
+        let transactionParticipationInTotalUnreadCountUpdates = self.peerNotificationSettingsTable.transactionParticipationInTotalUnreadCountUpdates(postbox: self, transaction: currentTransaction)
+        self.chatListIndexTable.commitWithTransaction(postbox: self, currentTransaction: currentTransaction, alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, updatedPeers: updatedPeers, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, updatedTotalUnreadStates: &self.currentUpdatedTotalUnreadStates, updatedGroupTotalUnreadSummaries: &self.currentUpdatedGroupTotalUnreadSummaries, currentUpdatedGroupSummarySynchronizeOperations: &self.currentUpdatedGroupSummarySynchronizeOperations)
         
         if self.currentNeedsReindexUnreadCounters {
-            self.reindexUnreadCounters()
+            self.reindexUnreadCounters(currentTransaction: currentTransaction)
         }
         
         let transaction = PostboxTransaction(currentUpdatedState: self.currentUpdatedState, currentPeerHoleOperations: self.currentPeerHoleOperations, currentOperationsByPeerId: self.currentOperationsByPeerId, chatListOperations: self.currentChatListOperations, currentUpdatedChatListInclusions: self.currentUpdatedChatListInclusions, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedPeerNotificationBehaviorTimestamps: self.currentUpdatedPeerNotificationBehaviorTimestamps, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadStates: self.currentUpdatedTotalUnreadStates, currentUpdatedTotalUnreadSummaries: self.currentUpdatedGroupTotalUnreadSummaries, alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, currentPeerMergedOperationLogOperations: self.currentPeerMergedOperationLogOperations, currentTimestampBasedMessageAttributesOperations: self.currentTimestampBasedMessageAttributesOperations, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, currentUpdatedGroupSummarySynchronizeOperations: self.currentUpdatedGroupSummarySynchronizeOperations, currentPreferencesOperations: self.currentPreferencesOperations, currentOrderedItemListOperations: self.currentOrderedItemListOperations, currentItemCollectionItemsOperations: self.currentItemCollectionItemsOperations, currentItemCollectionInfosOperations: self.currentItemCollectionInfosOperations, currentUpdatedPeerChatStates: self.currentUpdatedPeerChatStates, currentGlobalTagsOperations: self.currentGlobalTagsOperations, currentLocalTagsOperations: self.currentLocalTagsOperations, updatedMedia: self.currentUpdatedMedia, replaceRemoteContactCount: self.currentReplaceRemoteContactCount, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentPendingMessageActionsOperations: self.currentPendingMessageActionsOperations, currentUpdatedMessageActionsSummaries: self.currentUpdatedMessageActionsSummaries, currentUpdatedMessageTagSummaries: self.currentUpdatedMessageTagSummaries, currentInvalidateMessageTagSummaries: self.currentInvalidateMessageTagSummaries, currentUpdatedPendingPeerNotificationSettings: self.currentUpdatedPendingPeerNotificationSettings, replacedAdditionalChatListItems: self.currentReplacedAdditionalChatListItems, updatedNoticeEntryKeys: self.currentUpdatedNoticeEntryKeys, updatedCacheEntryKeys: self.currentUpdatedCacheEntryKeys, currentUpdatedMasterClientId: currentUpdatedMasterClientId, updatedFailedMessagePeerIds: self.messageHistoryFailedTable.updatedPeerIds, updatedFailedMessageIds: self.messageHistoryFailedTable.updatedMessageIds, updatedGlobalNotificationSettings: self.currentNeedsReindexUnreadCounters)
         var updatedTransactionState: Int64?
         var updatedMasterClientId: Int64?
         if !transaction.isEmpty {
-            self.viewTracker.updateViews(postbox: self, transaction: transaction)
+            self.viewTracker.updateViews(postbox: self, currentTransaction: currentTransaction, transaction: transaction)
             self.transactionStateVersion = self.metadataTable.incrementTransactionStateVersion()
             updatedTransactionState = self.transactionStateVersion
             
@@ -2466,11 +2471,11 @@ public final class Postbox {
     
     private func internalTransaction<T>(_ f: (Transaction) -> T) -> (result: T, updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
         self.valueBox.begin()
-        self.afterBegin()
         let transaction = Transaction(postbox: self)
+        self.afterBegin(transaction: transaction)
         let result = f(transaction)
+        let (updatedTransactionState, updatedMasterClientId) = self.beforeCommit(currentTransaction: transaction)
         transaction.disposed = true
-        let (updatedTransactionState, updatedMasterClientId) = self.beforeCommit()
         self.valueBox.commit()
         
         if let currentUpdatedState = self.currentUpdatedState {
@@ -2889,7 +2894,7 @@ public final class Postbox {
     
     public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents, userInteractive: Bool = false) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return self.transactionSignal(userInteractive: userInteractive, { subscriber, transaction in
-            let mutableView = MutableChatListView(postbox: self, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents)
+            let mutableView = MutableChatListView(postbox: self, currentTransaction: transaction, groupId: groupId, filterPredicate: filterPredicate, aroundIndex: index, count: count, summaryComponents: summaryComponents)
             mutableView.render(postbox: self)
             
             let (index, signal) = self.viewTracker.addChatListView(mutableView)
@@ -3383,15 +3388,11 @@ public final class Postbox {
     }
     
     fileprivate func setPreferencesEntry(key: ValueBoxKey, value: PreferencesEntry?) {
-        if key == self.seedConfiguration.globalNotificationSettingsPreferencesKey {
-            let current = self.getGlobalNotificationSettings()
-            let updated = value as? PostboxGlobalNotificationSettings ?? self.seedConfiguration.defaultGlobalNotificationSettings
-            if !current.isEqualInDefaultPeerInclusion(other: updated) {
-                self.currentNeedsReindexUnreadCounters = true
-            }
-        }
-        
         self.preferencesTable.set(key: key, value: value, operations: &self.currentPreferencesOperations)
+    }
+
+    fileprivate func globalNotificationSettingsUpdated() {
+        self.currentNeedsReindexUnreadCounters = true
     }
     
     fileprivate func replaceOrderedItemListItems(collectionId: Int32, items: [OrderedItemListEntry]) {
@@ -3506,8 +3507,8 @@ public final class Postbox {
         self.invalidatedMessageHistoryTagsSummaryTable.remove(entry, operations: &self.currentInvalidateMessageTagSummaries)
     }
     
-    fileprivate func getRelativeUnreadChatListIndex(filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
-        return self.chatListTable.getRelativeUnreadChatListIndex(postbox: self, filtered: filtered, position: position, groupId: groupId)
+    fileprivate func getRelativeUnreadChatListIndex(currentTransaction: Transaction, filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
+        return self.chatListTable.getRelativeUnreadChatListIndex(postbox: self, currentTransaction: currentTransaction, filtered: filtered, position: position, groupId: groupId)
     }
     
     func getMessage(_ id: MessageId) -> Message? {
@@ -3561,8 +3562,8 @@ public final class Postbox {
         }
     }
     
-    func getGlobalNotificationSettings() -> PostboxGlobalNotificationSettings {
-        return self.preferencesTable.get(key: self.seedConfiguration.globalNotificationSettingsPreferencesKey) as? PostboxGlobalNotificationSettings ?? self.seedConfiguration.defaultGlobalNotificationSettings
+    func getGlobalNotificationSettings(transaction: Transaction) -> PostboxGlobalNotificationSettings {
+        return self.seedConfiguration.getGlobalNotificationSettings(transaction) ?? self.seedConfiguration.defaultGlobalNotificationSettings
     }
     
     public func isMasterClient() -> Signal<Bool, NoError> {
@@ -3611,10 +3612,10 @@ public final class Postbox {
         self.timestampBasedMessageAttributesTable.remove(tag: tag, id: id, operations: &self.currentTimestampBasedMessageAttributesOperations)
     }
     
-    fileprivate func reindexUnreadCounters() {
+    fileprivate func reindexUnreadCounters(currentTransaction: Transaction) {
         self.groupMessageStatsTable.removeAll()
         let _ = CFAbsoluteTimeGetCurrent()
-        let (totalStates, summaries) = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self)
+        let (totalStates, summaries) = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self, currentTransaction: currentTransaction)
         
         self.messageHistoryMetadataTable.removeAllTotalUnreadStates()
         for (groupId, state) in totalStates {

@@ -915,8 +915,9 @@ public final class MediaBox {
                                     case let .data(dataPart):
                                         let file = ManagedFile(queue: strongSelf.dataQueue, path: paths.partial, mode: .append)
                                         let dataCount = dataPart.count
-                                        dataPart.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                                            file?.write(bytes, count: dataCount)
+                                        dataPart.withUnsafeBytes { rawBytes -> Void in
+                                            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                                            let _ = file?.write(bytes, count: dataCount)
                                         }
                                     case .done:
                                         link(paths.partial, paths.complete)

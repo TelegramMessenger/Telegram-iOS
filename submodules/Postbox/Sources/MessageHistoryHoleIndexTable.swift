@@ -296,7 +296,6 @@ final class MessageHistoryHoleIndexTable: Table {
         }
         let clippedRange = clippedLowerBound ... clippedUpperBound
         
-        var removedIndices = IndexSet()
         var insertedIndices = IndexSet()
         var removeKeys: [Int32] = []
         var insertRanges = IndexSet()
@@ -378,8 +377,6 @@ final class MessageHistoryHoleIndexTable: Table {
     }
     
     private func removeInternal(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>, operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
-        var removedIndices = IndexSet()
-        var insertedIndices = IndexSet()
         var removeKeys: [Int32] = []
         var insertRanges = IndexSet()
         

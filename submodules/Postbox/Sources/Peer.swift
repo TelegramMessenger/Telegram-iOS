@@ -154,7 +154,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             let namespaceBits = ((data >> 32) & 0x7)
             self.namespace = Namespace(rawValue: UInt32(namespaceBits))
 
-            let idHighBits = (data >> (32 + 3)) & 0xffffffff
+            //let idHighBits = (data >> (32 + 3)) & 0xffffffff
             //assert(idHighBits == 0)
 
             self.id = Id(rawValue: Int32(bitPattern: UInt32(clamping: idLowBits)))
@@ -260,7 +260,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     }
 }
 
-public protocol Peer: class, PostboxCoding {
+public protocol Peer: AnyObject, PostboxCoding {
     var id: PeerId { get }
     var indexName: PeerIndexNameRepresentation { get }
     var associatedPeerId: PeerId? { get }

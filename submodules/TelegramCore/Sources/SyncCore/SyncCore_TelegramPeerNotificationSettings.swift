@@ -44,14 +44,14 @@ public enum PeerMessageSound: Equatable {
     case bundledModern(id: Int32)
     case bundledClassic(id: Int32)
     
-    static func decodeInline(_ decoder: PostboxDecoder) -> PeerMessageSound {
-        switch decoder.decodeInt32ForKey("s.v", orElse: 0) {
+    static func decodeInline(_ container: KeyedDecodingContainer<StringCodingKey>) throws -> PeerMessageSound {
+        switch try container.decode(Int32.self, forKey: "s.v") {
             case PeerMessageSoundValue.none.rawValue:
                 return .none
             case PeerMessageSoundValue.bundledModern.rawValue:
-                return .bundledModern(id: decoder.decodeInt32ForKey("s.i", orElse: 0))
+                return .bundledModern(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0)
             case PeerMessageSoundValue.bundledClassic.rawValue:
-                return .bundledClassic(id: decoder.decodeInt32ForKey("s.i", orElse: 0))
+                return .bundledClassic(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0)
             case PeerMessageSoundValue.default.rawValue:
                 return .default
             default:
@@ -170,7 +170,7 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
         self.displayPreviews = displayPreviews
     }
     
-    public init(decoder: PostboxDecoder) {
+    public init() {
         self.muteState = PeerMuteState.decodeInline(decoder)
         self.messageSound = PeerMessageSound.decodeInline(decoder)
         self.displayPreviews = PeerNotificationDisplayPreviews.decodeInline(decoder)

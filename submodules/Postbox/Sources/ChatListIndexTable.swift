@@ -170,7 +170,7 @@ final class ChatListIndexTable: Table {
         assert(self.updatedPreviousPeerCachedIndices.isEmpty)
     }
     
-    func commitWithTransaction(postbox: Postbox, alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], updatedPeers: [((Peer, Bool)?, (Peer, Bool))], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), updatedTotalUnreadStates: inout [PeerGroupId: ChatListTotalUnreadState], updatedGroupTotalUnreadSummaries: inout [PeerGroupId: PeerGroupUnreadCountersCombinedSummary], currentUpdatedGroupSummarySynchronizeOperations: inout [PeerGroupAndNamespace: Bool]) {
+    func commitWithTransaction(postbox: Postbox, currentTransaction: Transaction, alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], updatedPeers: [((Peer, Bool)?, (Peer, Bool))], transactionParticipationInTotalUnreadCountUpdates: (added: Set<PeerId>, removed: Set<PeerId>), updatedTotalUnreadStates: inout [PeerGroupId: ChatListTotalUnreadState], updatedGroupTotalUnreadSummaries: inout [PeerGroupId: PeerGroupUnreadCountersCombinedSummary], currentUpdatedGroupSummarySynchronizeOperations: inout [PeerGroupAndNamespace: Bool]) {
         var updatedPeerTags: [PeerId: (previous: PeerSummaryCounterTags, updated: PeerSummaryCounterTags)] = [:]
         for (previous, updated) in updatedPeers {
             let previousTags: PeerSummaryCounterTags
@@ -339,7 +339,7 @@ final class ChatListIndexTable: Table {
             var updatedTotalStates: [PeerGroupId: ChatListTotalUnreadState] = [:]
             var updatedTotalUnreadSummaries: [PeerGroupId: PeerGroupUnreadCountersCombinedSummary] = [:]
             
-            let globalNotificationSettings = postbox.getGlobalNotificationSettings()
+            let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
             
             for peerId in alteredPeerIds {
                 guard let peer = postbox.peerTable.get(peerId) else {
@@ -556,8 +556,8 @@ final class ChatListIndexTable: Table {
         assert(self.updatedPreviousPeerCachedIndices.isEmpty)
     }
     
-    func debugReindexUnreadCounts(postbox: Postbox) -> ([PeerGroupId: ChatListTotalUnreadState], [PeerGroupId: PeerGroupUnreadCountersCombinedSummary]) {
-        let globalNotificationSettings = postbox.getGlobalNotificationSettings()
+    func debugReindexUnreadCounts(postbox: Postbox, currentTransaction: Transaction) -> ([PeerGroupId: ChatListTotalUnreadState], [PeerGroupId: PeerGroupUnreadCountersCombinedSummary]) {
+        let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
         
         var peerIds: [PeerId] = []
         for groupId in postbox.chatListTable.existingGroups() + [.root] {
@@ -575,7 +575,6 @@ final class ChatListIndexTable: Table {
             }
             let isContact = postbox.contactsTable.isContact(peerId: peerId)
             let notificationPeerId: PeerId = peer.associatedPeerId ?? peerId
-            let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationPeerId)
             let inclusion = self.get(peerId: peerId)
             if let (groupId, _) = inclusion.includedIndex(peerId: peerId) {
                 if totalStates[groupId] == nil {

@@ -24,7 +24,7 @@ final class MutablePreferencesView: MutablePostboxView {
                         let currentValue = self.values[key]
                         var updatedValue = false
                         if let value = value, let currentValue = currentValue {
-                            if !value.isEqual(to: currentValue) {
+                            if value != currentValue {
                                 updatedValue = true
                             }
                         } else if (value != nil) != (currentValue != nil) {

@@ -505,7 +505,7 @@ final class MessageHistoryReadStateTable: Table {
     override func beforeCommit() {
         if !self.updatedInitialPeerReadStates.isEmpty {
             let sharedBuffer = WriteBuffer()
-            for (id, initialNamespaces) in self.updatedInitialPeerReadStates {
+            for (id, _) in self.updatedInitialPeerReadStates {
                 if let wrappedStates = self.cachedPeerReadStates[id], let states = wrappedStates {
                     sharedBuffer.reset()
                     var count: Int32 = Int32(states.namespaces.count)

@@ -8,13 +8,14 @@ public final class ItemCacheEntryId: Equatable, Hashable {
         self.collectionId = collectionId
         self.key = key
     }
-    
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.collectionId)
+        hasher.combine(self.key)
+    }
+
     public static func ==(lhs: ItemCacheEntryId, rhs: ItemCacheEntryId) -> Bool {
         return lhs.collectionId == rhs.collectionId && lhs.key == rhs.key
-    }
-    
-    public var hashValue: Int {
-        return self.collectionId.hashValue &* 31 &+ self.key.hashValue
     }
 }
 

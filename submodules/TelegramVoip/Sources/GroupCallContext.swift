@@ -63,7 +63,7 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         if timestampMilliseconds != 0 {
             timestampIdMilliseconds = timestampMilliseconds
         } else {
-            timestampIdMilliseconds = (Int64(Date().timeIntervalSince1970 * 1000.0) / durationMilliseconds) * durationMilliseconds
+            timestampIdMilliseconds = (Int64((Date().timeIntervalSince1970) * 1000.0) / durationMilliseconds) * durationMilliseconds
         }
         
         let dataSource: Signal<AudioBroadcastDataSource?, NoError>

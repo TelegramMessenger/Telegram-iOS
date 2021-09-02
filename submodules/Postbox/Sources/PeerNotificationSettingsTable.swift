@@ -195,7 +195,7 @@ final class PeerNotificationSettingsTable: Table {
         self.updatedInitialSettings.removeAll()
     }
     
-    func transactionParticipationInTotalUnreadCountUpdates(postbox: Postbox) -> (added: Set<PeerId>, removed: Set<PeerId>) {
+    func transactionParticipationInTotalUnreadCountUpdates(postbox: Postbox, transaction: Transaction) -> (added: Set<PeerId>, removed: Set<PeerId>) {
         var added = Set<PeerId>()
         var removed = Set<PeerId>()
         
@@ -210,7 +210,7 @@ final class PeerNotificationSettingsTable: Table {
             if let current = globalNotificationSettings {
                 globalNotificationSettingsValue = current
             } else {
-                globalNotificationSettingsValue = postbox.getGlobalNotificationSettings()
+                globalNotificationSettingsValue = postbox.getGlobalNotificationSettings(transaction: transaction)
                 globalNotificationSettings = globalNotificationSettingsValue
             }
             

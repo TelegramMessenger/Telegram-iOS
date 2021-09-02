@@ -20,7 +20,7 @@ private enum AdjacentEntryGroupInfo {
 
 private func getAdjacentEntryGroupInfo(_ entry: IntermediateMessageHistoryEntry?, key: Int64) -> (IntermediateMessageHistoryEntry?, AdjacentEntryGroupInfo) {
     if let entry = entry {
-        if let groupingKey = entry.message.groupingKey, let groupInfo = entry.message.groupInfo {
+        if let groupingKey = entry.message.groupingKey, let _ = entry.message.groupInfo {
             if groupingKey == key {
                 if let groupInfo = entry.message.groupInfo {
                     return (entry, .sameGroup(groupInfo))
@@ -2515,6 +2515,10 @@ final class MessageHistoryTable: Table {
         var peers = SimpleDictionary<PeerId, Peer>()
         if let authorId = message.author?.id {
             author = peerTable.get(authorId)
+        }
+
+        if let author = author {
+            peers[author.id] = author
         }
         
         if let chatPeer = peerTable.get(message.id.peerId) {

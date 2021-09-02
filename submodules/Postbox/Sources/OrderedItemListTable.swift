@@ -205,7 +205,7 @@ final class OrderedItemListTable: Table {
     
     func remove(collectionId: Int32, itemId: MemoryBuffer, operations: inout [Int32: [OrderedItemListOperation]]) {
         if let index = self.getIndex(collectionId: collectionId, id: itemId) {
-            var orderedIds = self.getItemIds(collectionId: collectionId)
+            let orderedIds = self.getItemIds(collectionId: collectionId)
             
             if !orderedIds.isEmpty {
                 self.valueBox.remove(self.table, key: self.keyIdToIndex(collectionId: collectionId, id: itemId), secure: false)
