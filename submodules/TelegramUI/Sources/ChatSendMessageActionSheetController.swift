@@ -22,6 +22,7 @@ final class ChatSendMessageActionSheetController: ViewController {
     private let sendMessage: (Bool) -> Void
     private let schedule: () -> Void
     
+    private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
     private var didPlayPresentationAnimation = false
@@ -30,7 +31,7 @@ final class ChatSendMessageActionSheetController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
 
-    init(context: AccountContext, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, completion: @escaping () -> Void, sendMessage: @escaping (Bool) -> Void, schedule: @escaping () -> Void) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, completion: @escaping () -> Void, sendMessage: @escaping (Bool) -> Void, schedule: @escaping () -> Void) {
         self.context = context
         self.interfaceState = interfaceState
         self.gesture = gesture
@@ -40,13 +41,16 @@ final class ChatSendMessageActionSheetController: ViewController {
         self.sendMessage = sendMessage
         self.schedule = schedule
         
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        
         super.init(navigationBarPresentationData: nil)
         
         self.blocksBackgroundWhenInOverlay = true
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
+                strongSelf.presentationData = presentationData
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
@@ -78,7 +82,7 @@ final class ChatSendMessageActionSheetController: ViewController {
             canSchedule = !isSecret
         }
         
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
             self?.sendMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in

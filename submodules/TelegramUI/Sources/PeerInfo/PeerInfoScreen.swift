@@ -3585,7 +3585,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             
                             if let strongSelf = self, let peer = strongSelf.data?.peer as? TelegramUser, let phone = peer.phone {
                                 let contact = TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)
-                                let shareController = ShareController(context: strongSelf.context, subject: .media(.standalone(media: contact)))
+                                let shareController = ShareController(context: strongSelf.context, subject: .media(.standalone(media: contact)), updatedPresentationData: strongSelf.controller?.updatedPresentationData)
                                 shareController.completed = { [weak self] peerIds in
                                     if let strongSelf = self {
                                         let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
@@ -3916,7 +3916,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func openUsername(value: String) {
-        let shareController = ShareController(context: self.context, subject: .url("https://t.me/\(value)"))
+        let shareController = ShareController(context: self.context, subject: .url("https://t.me/\(value)"), updatedPresentationData: self.controller?.updatedPresentationData)
         shareController.completed = { [weak self] peerIds in
             if let strongSelf = self {
                 let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
@@ -4588,7 +4588,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 return
             }
             if let peer = peer as? TelegramUser, let username = peer.username {
-                let shareController = ShareController(context: strongSelf.context, subject: .url("https://t.me/\(username)"))
+                let shareController = ShareController(context: strongSelf.context, subject: .url("https://t.me/\(username)"), updatedPresentationData: strongSelf.controller?.updatedPresentationData)
                 shareController.completed = { [weak self] peerIds in
                     if let strongSelf = self {
                         let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
@@ -4776,7 +4776,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [])
         
-        let controller = LocationViewController(context: context, subject: message, params: controllerParams)
+        let controller = LocationViewController(context: context, updatedPresentationData: self.controller?.updatedPresentationData, subject: message, params: controllerParams)
         self.controller?.push(controller)
     }
     
@@ -4785,7 +4785,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return
         }
         
-        let controller = LocationPickerController(context: self.context, mode: .pick, completion: { [weak self] location, address in
+        let controller = LocationPickerController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, mode: .pick, completion: { [weak self] location, address in
             guard let strongSelf = self else {
                 return
             }
@@ -6125,7 +6125,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             
                             let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
                                 return lhs.index < rhs.index
-                            })), externalShare: true, immediateExternalShare: true)
+                            })), externalShare: true, immediateExternalShare: true, updatedPresentationData: strongSelf.controller?.updatedPresentationData)
                             strongSelf.view.endEditing(true)
                             strongSelf.controller?.present(shareController, in: .window(.root))
                         }
@@ -6491,6 +6491,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
 
 public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     private let context: AccountContext
+    fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let peerId: PeerId
     private let avatarInitiallyExpanded: Bool
     private let isOpenedFromChat: Bool
@@ -6523,6 +6524,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, ignoreGroupInCommon: PeerId? = nil) {
         self.context = context
+        self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
         self.avatarInitiallyExpanded = avatarInitiallyExpanded
         self.isOpenedFromChat = isOpenedFromChat

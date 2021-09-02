@@ -39,11 +39,11 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, style: ChatScheduleTimeControllerStyle, currentTime: Int32?, minimalTime: Int32?, dismissByTapOutside: Bool) {
+    init(context: AccountContext, presentationData: PresentationData, mode: ChatScheduleTimeControllerMode, style: ChatScheduleTimeControllerStyle, currentTime: Int32?, minimalTime: Int32?, dismissByTapOutside: Bool) {
         self.context = context
         self.mode = mode
         self.controllerStyle = style
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.dismissByTapOutside = dismissByTapOutside
         self.minimalTime = minimalTime
         
