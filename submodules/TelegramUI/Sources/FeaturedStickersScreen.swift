@@ -769,7 +769,7 @@ final class FeaturedStickersScreen: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        let searchNavigationNode = SearchNavigationContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, cancel: { [weak self] in
+        let searchNavigationNode = SearchNavigationContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, placeholder: { strings in return strings.Stickers_Search }, cancel: { [weak self] in
             self?.dismiss()
         })
         self.searchNavigationNode = searchNavigationNode
@@ -852,15 +852,17 @@ private final class SearchNavigationContentNode: NavigationBarContentNode {
     private let searchBar: SearchBarNode
     
     private var queryUpdated: ((String, String?) -> Void)?
+    private var placeholder: ((PresentationStrings) -> String)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, cancel: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, placeholder: ((PresentationStrings) -> String)? = nil, cancel: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
+        self.placeholder = placeholder
         
         self.cancel = cancel
         
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings, fieldStyle: .modern, cancelText: strings.Common_Done)
-        let placeholderText = strings.Common_Search
+        let placeholderText = placeholder?(strings) ?? strings.Common_Search
         let searchBarFont = Font.regular(17.0)
         
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
@@ -883,7 +885,7 @@ private final class SearchNavigationContentNode: NavigationBarContentNode {
         self.theme = theme
         self.strings = strings
         
-        self.searchBar.updateThemeAndStrings(theme:  SearchBarNodeTheme(theme: theme), strings: strings)
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme), strings: strings)
     }
     
     func setQueryUpdated(_ f: @escaping (String, String?) -> Void) {

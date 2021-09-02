@@ -195,7 +195,7 @@ public struct PresentationResourcesChat {
             return generateImage(CGSize(width: 12.0, height: 12.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setBlendMode(.copy)
-                context.setStrokeColor(theme.chat.inputPanel.panelControlColor.cgColor)
+                context.setStrokeColor(theme.chat.inputPanel.panelControlAccentColor.cgColor)
                 context.setLineWidth(2.0)
                 context.setLineCap(.round)
                 context.move(to: CGPoint(x: 1.0, y: 1.0))
@@ -226,6 +226,30 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatInputPanelForwardIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelForwardIconImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/ForwardIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    public static func chatInputPanelReplyIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelReplyIconImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/ReplyIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    public static func chatInputPanelEditIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelEditIconImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/EditIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
+    public static func chatInputPanelWebpageIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelWebpageIconImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/WebpageIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+        })
+    }
+    
     public static func chatMediaInputPanelHighlightedIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMediaInputPanelHighlightedIconImage.rawValue, { theme in
             return generateStretchableFilledCircleImage(radius: 9.0, color: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor)
@@ -234,7 +258,7 @@ public struct PresentationResourcesChat {
     
     public static func chatInputMediaPanelSavedStickersIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelSavedStickersIconImage.rawValue, { theme in
-            return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
+            return generateImage(CGSize(width: 42.0, height: 42.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/SavedStickersTabIcon"), color: theme.chat.inputMediaPanel.panelIconColor) {
                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
@@ -245,7 +269,7 @@ public struct PresentationResourcesChat {
     
     public static func chatInputMediaPanelStickersModeIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelStickersModeIcon.rawValue, { theme in
-            return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
+            return generateImage(CGSize(width: 42.0, height: 42.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/StickersMode"), color: theme.chat.inputMediaPanel.panelIconColor) {
                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
@@ -256,7 +280,7 @@ public struct PresentationResourcesChat {
     
     public static func chatInputMediaPanelTrendingGifsIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelTrendingGifsIcon.rawValue, { theme in
-            return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
+            return generateImage(CGSize(width: 42.0, height: 42.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/TrendingGifs"), color: theme.chat.inputMediaPanel.panelIconColor) {
                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
@@ -267,7 +291,7 @@ public struct PresentationResourcesChat {
     
     public static func chatInputMediaPanelRecentStickersIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelRecentStickersIconImage.rawValue, { theme in
-            return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
+            return generateImage(CGSize(width: 42.0, height: 42.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/RecentTabIcon"), color: theme.chat.inputMediaPanel.panelIconColor) {
                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
@@ -278,7 +302,7 @@ public struct PresentationResourcesChat {
     
     public static func chatInputMediaPanelRecentGifsIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelRecentGifsIconImage.rawValue, { theme in
-            return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context in
+            return generateImage(CGSize(width: 42.0, height: 42.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/GifsTabIcon"), color: theme.chat.inputMediaPanel.panelIconColor) {
                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))

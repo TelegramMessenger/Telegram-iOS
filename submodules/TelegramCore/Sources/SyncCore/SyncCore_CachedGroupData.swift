@@ -309,6 +309,6 @@ public final class CachedGroupData: CachedPeerData {
     }
     
     public func withUpdatedThemeEmoticon(_ themeEmoticon: String?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo, activeCall: self.activeCall, autoremoveTimeout: self.autoremoveTimeout, callJoinPeerId: callJoinPeerId, themeEmoticon: themeEmoticon)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo, activeCall: self.activeCall, autoremoveTimeout: self.autoremoveTimeout, callJoinPeerId: self.callJoinPeerId, themeEmoticon: themeEmoticon)
     }
 }

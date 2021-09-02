@@ -293,3 +293,22 @@ public final class CachedAnimatedStickerRepresentation: CachedMediaResourceRepre
         }
     }
 }
+
+public final class CachedPreparedPatternWallpaperRepresentation: CachedMediaResourceRepresentation {
+    public let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
+    public var uniqueId: String {
+        return "prepared-pattern-wallpaper"
+    }
+    
+    public init() {
+    }
+    
+    public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if to is CachedPreparedPatternWallpaperRepresentation {
+            return true
+        } else {
+            return false
+        }
+    }
+}

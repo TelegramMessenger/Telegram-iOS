@@ -6,9 +6,9 @@ import Display
 import MergeLists
 import AccountContext
 
-func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, scrollAnimationCurve: ListViewAnimationCurve?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?, flashIndicators: Bool, updatedMessageSelection: Bool, messageTransitionNode: ChatMessageTransitionNode?) -> ChatHistoryViewTransition {
+func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, scrollAnimationCurve: ListViewAnimationCurve?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?, flashIndicators: Bool, updatedMessageSelection: Bool, messageTransitionNode: ChatMessageTransitionNode?, allUpdated: Bool) -> ChatHistoryViewTransition {
     var mergeResult: (deleteIndices: [Int], indicesAndItems: [(Int, ChatHistoryEntry, Int?)], updateIndices: [(Int, ChatHistoryEntry, Int)])
-    let allUpdated = fromView?.associatedData != toView.associatedData
+    let allUpdated = allUpdated || (fromView?.associatedData != toView.associatedData)
     if reverse {
         mergeResult = mergeListsStableWithUpdatesReversed(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries, allUpdated: allUpdated)
     } else {
@@ -215,6 +215,17 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                         index += 1
                     }
                 }
+        }
+    } else if case .Initial = reason, scrollToItem == nil {
+        var index = toView.filteredEntries.count - 1
+        for entry in toView.filteredEntries {
+            if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                if let _ = message.adAttribute {
+                    scrollToItem = ListViewScrollToItem(index: index + 1, position: .top(0.0), animated: false, curve: curve, directionHint: .Down)
+                    break
+                }
+            }
+            index -= 1
         }
     }
     

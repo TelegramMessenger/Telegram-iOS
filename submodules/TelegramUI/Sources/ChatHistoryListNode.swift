@@ -581,7 +581,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let presentationData = updatedPresentationData.initial
         self.currentPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: 1.0)
         
-        self.chatPresentationDataPromise = Promise(self.currentPresentationData)
+        self.chatPresentationDataPromise = Promise()
         
         self.prefetchManager = InChatPrefetchManager(context: context)
 
@@ -705,7 +705,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let historyViewUpdate: Signal<(ChatHistoryViewUpdate, Int, ChatHistoryLocationInput?), NoError>
         var isFirstTime = true
+        var updateAllOnEachVersion = false
         if case let .custom(messages, at, _) = source {
+            updateAllOnEachVersion = true
             historyViewUpdate = messages
             |> map { messages, _, hasMore in
                 let version = currentViewVersion.modify({ value in
@@ -724,7 +726,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     scrollPosition = nil
                 }
                 
-                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tagMask: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore, holeLater: false, isLoading: false), type: .Generic(type: ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version, nil)
+                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tagMask: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore, holeLater: false, isLoading: false), type: .Generic(type: version > 0 ? ViewUpdateType.Generic : ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version, nil)
             }
         } else {
             historyViewUpdate = self.chatHistoryLocationPromise.get()
@@ -1033,9 +1035,47 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Down, animated: true, highlight: true)
                     scrollAnimationCurve = .Spring(duration: 0.4)
                 }
+
+                var disableAnimations = false
+
+                if let strongSelf = self, updatedScrollPosition == nil, case .InteractiveChanges = reason, case let .known(offset) = strongSelf.visibleContentOffset(), abs(offset) <= 0.9, let previous = previous {
+                    var previousNumAds = 0
+                    for entry in previous.filteredEntries {
+                        if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                            if message.adAttribute != nil {
+                                previousNumAds += 1
+                            }
+                        }
+                    }
+
+                    var updatedNumAds = 0
+                    var firstNonAdIndex: MessageIndex?
+                    for entry in processedView.filteredEntries.reversed() {
+                        if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                            if message.adAttribute != nil {
+                                updatedNumAds += 1
+                            } else {
+                                if firstNonAdIndex == nil {
+                                    firstNonAdIndex = message.index
+                                }
+                            }
+                        }
+                    }
+
+                    if let firstNonAdIndex = firstNonAdIndex, previousNumAds == 0, updatedNumAds != 0 {
+                        updatedScrollPosition = .index(index: .message(firstNonAdIndex), position: .top(0.0), directionHint: .Up, animated: false, highlight: false)
+                        disableAnimations = true
+                    }
+                }
                 
-                let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, scrollAnimationCurve: scrollAnimationCurve, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators, updatedMessageSelection: previousSelectedMessages != selectedMessages, messageTransitionNode: messageTransitionNode())
-                let mappedTransition = mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, transition: rawTransition)
+                let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: reverse, chatLocation: chatLocation, controllerInteraction: controllerInteraction, scrollPosition: updatedScrollPosition, scrollAnimationCurve: scrollAnimationCurve, initialData: initialData?.initialData, keyboardButtonsMessage: view.topTaggedMessages.first, cachedData: initialData?.cachedData, cachedDataMessages: initialData?.cachedDataMessages, readStateData: initialData?.readStateData, flashIndicators: flashIndicators, updatedMessageSelection: previousSelectedMessages != selectedMessages, messageTransitionNode: messageTransitionNode(), allUpdated: updateAllOnEachVersion)
+                var mappedTransition = mappedChatHistoryViewListTransition(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, transition: rawTransition)
+                if disableAnimations {
+                    mappedTransition.options.remove(.AnimateInsertion)
+                    mappedTransition.options.remove(.AnimateAlpha)
+                    mappedTransition.options.remove(.AnimateTopItemPosition)
+                    mappedTransition.options.remove(.RequestItemInsertionAnimations)
+                }
                 Queue.mainQueue().async {
                     guard let strongSelf = self else {
                         return
@@ -1129,6 +1169,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
         }
         
+        var didSetPresentationData = false
         self.presentationDataDisposable = (
             combineLatest(queue: .mainQueue(),
                 updatedPresentationData.signal,
@@ -1142,7 +1183,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 let animatedEmojiConfig = ChatHistoryAnimatedEmojiConfiguration.with(appConfiguration: appConfiguration)
                 
-                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousAnimatedEmojiScale != animatedEmojiConfig.scale {
+                if !didSetPresentationData || previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousAnimatedEmojiScale != animatedEmojiConfig.scale {
+                    didSetPresentationData = true
+                    
                     let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
                     let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: animatedEmojiConfig.scale)
                     
@@ -1254,33 +1297,34 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         if self.freezeOverscrollControl {
             return
         }
-        if let offset = offset, offset < 0.0, self.offerNextChannelToRead, let chatControllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, chatControllerNode.shouldAllowOverscrollActions {
+        if let offset = offset, offset < -0.1, self.offerNextChannelToRead, let chatControllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, chatControllerNode.shouldAllowOverscrollActions {
             let overscrollView: ComponentHostView<Empty>
             if let current = self.overscrollView {
                 overscrollView = current
             } else {
                 overscrollView = ComponentHostView<Empty>()
-                overscrollView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
                 self.overscrollView = overscrollView
-                self.view.addSubview(overscrollView)
+                self.view.superview?.insertSubview(overscrollView, aboveSubview: self.view)
             }
 
             let expandDistance = max(-offset - 12.0, 0.0)
-            let expandProgress: CGFloat = min(1.0, expandDistance / 90.0)
+            let expandProgress: CGFloat = min(1.0, expandDistance / 94.0)
 
-            if let _ = nextChannelToRead {
-                let previousType = self.currentOverscrollExpandProgress >= 0.99
-                let currentType = expandProgress >= 0.99
+            let previousType = self.currentOverscrollExpandProgress >= 1.0
+            let currentType = expandProgress >= 1.0
 
-                if previousType != currentType {
-                    if self.feedback == nil {
-                        self.feedback = HapticFeedback()
-                    }
-                    self.feedback?.tap()
+            if previousType != currentType, currentType {
+                if self.feedback == nil {
+                    self.feedback = HapticFeedback()
                 }
-
-                self.currentOverscrollExpandProgress = expandProgress
+                if let _ = nextChannelToRead {
+                    self.feedback?.tap()
+                } else {
+                    self.feedback?.success()
+                }
             }
+
+            self.currentOverscrollExpandProgress = expandProgress
 
             if let nextChannelToRead = self.nextChannelToRead {
                 let swipeText: (String, [(Int, NSRange)])
@@ -1302,7 +1346,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
 
                 if expandProgress < 0.1 {
                     chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: nil)
-                } else if expandProgress >= 0.99 {
+                } else if expandProgress >= 1.0 {
                     if chatControllerNode.inputPanelOverscrollNode?.text.0 != releaseText.0 {
                         chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: releaseText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 1))
                     }
@@ -1334,7 +1378,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 environment: {},
                 containerSize: CGSize(width: self.bounds.width, height: 200.0)
             )
-            overscrollView.frame = overscrollFrame
+            overscrollView.frame = self.view.convert(overscrollFrame, to: self.view.superview!)
         } else if let overscrollView = self.overscrollView {
             self.overscrollView = nil
             overscrollView.removeFromSuperview()
@@ -2161,6 +2205,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 loop: for entry in historyView.filteredEntries.reversed() {
                     if index >= visibleRange.firstIndex && index <= visibleRange.lastIndex {
                         if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                            if message.adAttribute != nil {
+                                continue
+                            }
                             if index != 0 || historyView.originalView.laterId != nil {
                                 currentMessage = message
                             }
@@ -2423,7 +2470,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         updatedToggledMessageIds = state.toggledMessageIds
                         let isSelected = (self.controllerInteraction.selectionState?.selectedIds.contains(message.id) ?? false)
                         if state.selecting != isSelected {
-                            let messageIds = messages.map { $0.id }
+                            let messageIds = messages.filter { message -> Bool in
+                                for media in message.media {
+                                    if media is TelegramMediaAction {
+                                        return false
+                                    }
+                                }
+                                return true
+                            }.map { $0.id }
                             updatedToggledMessageIds.append(messageIds)
                             self.controllerInteraction.toggleMessagesSelection(messageIds, state.selecting)
                         }
@@ -2500,15 +2554,18 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         fileprivate let snapshotTopInset: CGFloat
         fileprivate let snapshotBottomInset: CGFloat
         fileprivate let snapshotView: UIView
+        fileprivate let overscrollView: UIView?
 
         fileprivate init(
             snapshotTopInset: CGFloat,
             snapshotBottomInset: CGFloat,
-            snapshotView: UIView
+            snapshotView: UIView,
+            overscrollView: UIView?
         ) {
             self.snapshotTopInset = snapshotTopInset
             self.snapshotBottomInset = snapshotBottomInset
             self.snapshotView = snapshotView
+            self.overscrollView = overscrollView
         }
     }
 
@@ -2523,21 +2580,32 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 snapshotBottomInset = max(snapshotBottomInset, -itemNode.frame.minY)
             }
         }
+
         let snapshotView = self.view.snapshotView(afterScreenUpdates: false)!
 
-        let currentSnapshotView = self.view.snapshotView(afterScreenUpdates: false)!
-        currentSnapshotView.frame = self.view.bounds
+        snapshotView.frame = self.view.bounds
         if let sublayers = self.layer.sublayers {
             for sublayer in sublayers {
                 sublayer.isHidden = true
             }
         }
-        self.view.addSubview(currentSnapshotView)
+        self.view.addSubview(snapshotView)
+
+        let overscrollView = self.overscrollView
+        if let overscrollView = overscrollView {
+            self.overscrollView = nil
+
+            overscrollView.frame = overscrollView.convert(overscrollView.bounds, to: self.view)
+            snapshotView.addSubview(overscrollView)
+
+            overscrollView.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+        }
 
         return SnapshotState(
             snapshotTopInset: snapshotTopInset,
             snapshotBottomInset: snapshotBottomInset,
-            snapshotView: snapshotView
+            snapshotView: snapshotView,
+            overscrollView: overscrollView
         )
     }
 

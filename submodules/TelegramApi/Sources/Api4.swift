@@ -4447,6 +4447,21 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func getMessageReadParticipants(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int64]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(745510839)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getMessageReadParticipants", parameters: [("peer", peer), ("msgId", msgId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Int64]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Int64]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {

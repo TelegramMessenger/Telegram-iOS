@@ -181,9 +181,9 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         return self.sourceSendButton.view.convert(self.sourceSendButton.bounds, to: nil)
     }
     
-    init(context: AccountContext, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
+    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
         self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.sourceSendButton = sourceSendButton
         self.textFieldFrame = textInputNode.convert(textInputNode.bounds, to: nil)
         self.textInputNode = textInputNode

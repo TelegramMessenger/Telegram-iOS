@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
+import TelegramPresentationData
 
 enum ChatScheduleTimeControllerMode {
     case scheduledMessages(sendWhenOnlineAvailable: Bool)
@@ -33,9 +34,10 @@ final class ChatScheduleTimeController: ViewController {
     private let dismissByTapOutside: Bool
     private let completion: (Int32) -> Void
     
+    private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, peerId: PeerId, mode: ChatScheduleTimeControllerMode, style: ChatScheduleTimeControllerStyle, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, mode: ChatScheduleTimeControllerMode, style: ChatScheduleTimeControllerStyle, currentTime: Int32? = nil, minimalTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode
@@ -45,15 +47,18 @@ final class ChatScheduleTimeController: ViewController {
         self.dismissByTapOutside = dismissByTapOutside
         self.completion = completion
         
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
         
         self.blocksBackgroundWhenInOverlay = true
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
+                strongSelf.presentationData = presentationData
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
@@ -70,7 +75,7 @@ final class ChatScheduleTimeController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatScheduleTimeControllerNode(context: self.context, mode: self.mode, style: self.style, currentTime: self.currentTime, minimalTime: self.minimalTime, dismissByTapOutside: self.dismissByTapOutside)
+        self.displayNode = ChatScheduleTimeControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, style: self.style, currentTime: self.currentTime, minimalTime: self.minimalTime, dismissByTapOutside: self.dismissByTapOutside)
         self.controllerNode.completion = { [weak self] time in
             guard let strongSelf = self else {
                 return

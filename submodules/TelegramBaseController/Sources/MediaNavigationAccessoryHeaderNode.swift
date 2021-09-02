@@ -217,9 +217,11 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         }
     }
     
-    public init(context: AccountContext) {
+    private let dismissedPromise = ValuePromise<Bool>(false)
+    
+    public init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
@@ -437,6 +439,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         guard let (size, _, _) = self.validLayout else {
             return
         }
+        
+        self.dismissedPromise.set(true)
 
         transition.updatePosition(node: self.separatorNode, position: self.separatorNode.position.offsetBy(dx: 0.0, dy: size.height))
     }
@@ -551,7 +555,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             return
         }
         let items: Signal<[ContextMenuItem], NoError> = self.contextMenuSpeedItems()
-        let contextController = ContextController(account: self.context.account, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode)), items: items, reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: self.context.account, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.rateButton.referenceNode, shouldBeDismissed: self.dismissedPromise.get())), items: items, reactionItems: [], gesture: gesture)
+        
         self.presentInGlobalOverlay?(contextController)
     }
     
@@ -766,11 +771,14 @@ private final class HeaderContextReferenceContentSource: ContextReferenceContent
     private let controller: ViewController
     private let sourceNode: ContextReferenceContentNode
 
-    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+    var shouldBeDismissed: Signal<Bool, NoError>
+    
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode, shouldBeDismissed: Signal<Bool, NoError>) {
         self.controller = controller
         self.sourceNode = sourceNode
+        self.shouldBeDismissed = shouldBeDismissed
     }
-
+    
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
     }

@@ -90,10 +90,6 @@ private class ChatChoosingStickerActivityIndicatorNode: ChatTitleActivityIndicat
         
         context.strokeEllipse(in: CGRect(x: rightCenter.x - eyeWidth / 2.0, y: rightCenter.y - eyeHeight / 2.0, width: eyeWidth, height: eyeHeight))
         context.fillEllipse(in: CGRect(x: rightCenter.x - pupilSize / 2.0 + pupilCenter.x * eyeWidth / 4.0, y: rightCenter.y - pupilSize / 2.0, width: pupilSize, height: pupilSize))
-        
-//        context.strokeEllipse(in: CGRect(x: 0.0, y: 0.0, width: 10.0, height: 20.0))
-//        context.fillEllipse(in: CGRect(x: , y: , width: 4.0, height: 4.0))
-      
     }
 }
 
@@ -105,7 +101,7 @@ class ChatChoosingStickerActivityContentNode: ChatTitleActivityContentNode {
         self.indicatorNode = ChatChoosingStickerActivityIndicatorNode(color: color)
         
         var text = text
-        self.advanced = text.string == "choosing sticker"
+        self.advanced = text.string == "choosing a sticker"
         if self.advanced {
             let mutable = text.mutableCopy() as? NSMutableAttributedString
             mutable?.replaceCharacters(in: NSMakeRange(2, 2), with: "     ")
@@ -121,6 +117,7 @@ class ChatChoosingStickerActivityContentNode: ChatTitleActivityContentNode {
     
     override func updateLayout(_ constrainedSize: CGSize, offset: CGFloat, alignment: NSTextAlignment) -> CGSize {
         let size = self.textNode.updateLayout(constrainedSize)
+        let scale = size.height / 15.0
         let indicatorSize = CGSize(width: 24.0, height: 16.0)
         let originX: CGFloat
         let indicatorOriginX: CGFloat
@@ -131,15 +128,30 @@ class ChatChoosingStickerActivityContentNode: ChatTitleActivityContentNode {
                 originX = floorToScreenPixels((indicatorSize.width - size.width) / 2.0)
             }
         } else {
-            originX = indicatorSize.width
+            if self.advanced {
+                originX = 4.0
+            } else {
+                originX = indicatorSize.width * scale - 1.0
+            }
         }
         self.textNode.frame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: size)
         if self.advanced {
-            indicatorOriginX = self.textNode.frame.minX + 14.0 + UIScreenPixel
+            if case .center = alignment {
+                indicatorOriginX = self.textNode.frame.minX + 26.0 + UIScreenPixel
+            } else {
+                var scale = scale
+                if scale > 1.25 {
+                    scale *= 0.95
+                }
+                indicatorOriginX = self.textNode.frame.minX + floorToScreenPixels(26.0 * scale) + UIScreenPixel
+            }
         } else {
-            indicatorOriginX = self.textNode.frame.minX - indicatorSize.width
+            indicatorOriginX = self.textNode.frame.minX - (indicatorSize.width * scale) / 2.0 + 3.0
         }
-        self.indicatorNode.frame = CGRect(origin: CGPoint(x: indicatorOriginX, y: 0.0), size: indicatorSize)
+        self.indicatorNode.bounds = CGRect(origin: CGPoint(), size: indicatorSize)
+        self.indicatorNode.position = CGPoint(x: indicatorOriginX, y: size.height / 2.0)
+        self.indicatorNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
+        
         return CGSize(width: size.width + indicatorSize.width, height: size.height)
     }
 }

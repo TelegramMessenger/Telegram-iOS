@@ -295,11 +295,20 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
         var actions: [ContextMenuItem] = []
-        //TODO:localize
-        actions.append(.action(ContextMenuActionItem(text: "What are sponsored\nmessages?", textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
+        actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
         }, iconSource: nil, action: { _, f in
             f(.default)
+
+            controllerInteraction.presentController(textAlertController(context: context, title: nil, text: presentationData.strings.SponsoredMessageInfo_Text, actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                }),
+                TextAlertAction(type: .defaultAction, title: presentationData.strings.SponsoredMessageInfo_Action, action: {
+                    context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.SponsoredMessageInfo_ActionUrl, forceExternal: true, presentationData: presentationData, navigationController: controllerInteraction.navigationController(), dismissInput: {
+                        controllerInteraction.navigationController()?.view.endEditing(true)
+                    })
+                }),
+            ]), nil)
         })))
 
         actions.append(.separator)

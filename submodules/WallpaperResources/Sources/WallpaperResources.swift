@@ -366,9 +366,10 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
 
     if let targetRepresentation = targetRepresentation {
         let maybeFullSize = combineLatest(
-            accountManager.mediaBox.resourceData(targetRepresentation.representation.resource),
-            account.postbox.mediaBox.resourceData(targetRepresentation.representation.resource)
+            accountManager.mediaBox.cachedResourceRepresentation(targetRepresentation.representation.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true),
+            account.postbox.mediaBox.cachedResourceRepresentation(targetRepresentation.representation.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
         )
+        
         
         let signal = maybeFullSize
         |> take(1)
@@ -387,11 +388,11 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
 
                 let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
                     let fetchedFullSizeDisposable = fetchedFullSize.start()
-                    let fullSizeDisposable = account.postbox.mediaBox.resourceData(targetRepresentation.representation.resource).start(next: { next in
+                    let fullSizeDisposable = account.postbox.mediaBox.cachedResourceRepresentation(targetRepresentation.representation.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true).start(next: { next in
                         subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
                         
                         if next.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
-                            accountManager.mediaBox.storeResourceData(targetRepresentation.representation.resource.id, data: data)
+                            accountManager.mediaBox.storeCachedResourceRepresentation(targetRepresentation.representation.resource, representation: CachedPreparedPatternWallpaperRepresentation(), data: data)
                         }
                     }, error: subscriber.putError, completed: subscriber.putCompletion)
                     
@@ -402,7 +403,7 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
                 }
 
                 let sharedFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
-                    let fullSizeDisposable = accountManager.mediaBox.resourceData(targetRepresentation.representation.resource).start(next: { next in
+                    let fullSizeDisposable = accountManager.mediaBox.cachedResourceRepresentation(targetRepresentation.representation.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true).start(next: { next in
                         subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
                     }, error: subscriber.putError, completed: subscriber.putCompletion)
 
@@ -447,7 +448,11 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
 public func patternWallpaperImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, representations: [ImageRepresentationWithReference], mode: PatternWallpaperDrawMode, autoFetchFullSize: Bool = false) -> Signal<((TransformImageArguments) -> DrawingContext?)?, NoError> {
     return patternWallpaperDatas(account: account, accountManager: accountManager, representations: representations, mode: mode, autoFetchFullSize: autoFetchFullSize)
     |> mapToSignal { fullSizeData, fullSizeComplete in
-        return patternWallpaperImageInternal(fullSizeData: fullSizeData, fullSizeComplete: fullSizeComplete, mode: mode)
+        if !autoFetchFullSize || fullSizeComplete {
+            return patternWallpaperImageInternal(fullSizeData: fullSizeData, fullSizeComplete: fullSizeComplete, mode: mode)
+        } else {
+            return .single(nil)
+        }
     }
 }
 
@@ -522,11 +527,17 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                     let overlayImage = generateImage(arguments.drawingRect.size, rotatedContext: { size, c in
                         c.clear(CGRect(origin: CGPoint(), size: size))
                         var image: UIImage?
-                        if let fullSizeData = fullSizeData, let unpackedData = TGGUnzipData(fullSizeData, 2 * 1024 * 1024) {
-                            image = drawSvgImage(unpackedData, CGSize(width: size.width * context.scale, height: size.height * context.scale), .black, .white)
-                        } else if let fullSizeData = fullSizeData {
-                            image = UIImage(data: fullSizeData)
+                        if let fullSizeData = fullSizeData {
+                            image = renderPreparedImage(fullSizeData, CGSize(width: size.width * context.scale, height: size.height * context.scale))
                         }
+//                        if let fullSizeData = fullSizeData, let unpackedData = TGGUnzipData(fullSizeData, 2 * 1024 * 1024) {
+//                            let preparedData = prepareSvgImage(unpackedData)
+//                            image = renderPreparedImage(preparedData!, CGSize(width: size.width * context.scale, height: size.height * context.scale))
+//
+////                            image = drawSvgImage(unpackedData, CGSize(width: size.width * context.scale, height: size.height * context.scale), .black, .white)
+//                        } else if let fullSizeData = fullSizeData {
+//                            image = UIImage(data: fullSizeData)
+//                        }
 
                         if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {
                             c.setBlendMode(.copy)
@@ -1306,7 +1317,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
         themeSignal = .single(makeDefaultPresentationTheme(reference: theme, serviceBackgroundColor: nil))
     } else if case let .cloud(theme) = theme, let settings = theme.theme.settings {
         themeSignal = Signal { subscriber in
-            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
+            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, specialMode: emoticon, preview: false)
             subscriber.putNext(theme)
             subscriber.putCompletion()
             

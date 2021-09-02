@@ -13,17 +13,19 @@ final class ChatMediaInputTrendingItem: ListViewItem {
     let elevated: Bool
     let expanded: Bool
     let theme: PresentationTheme
+    let strings: PresentationStrings
     
     var selectable: Bool {
         return true
     }
     
-    init(inputNodeInteraction: ChatMediaInputNodeInteraction, elevated: Bool, theme: PresentationTheme, expanded: Bool, selected: @escaping () -> Void) {
+    init(inputNodeInteraction: ChatMediaInputNodeInteraction, elevated: Bool, theme: PresentationTheme, strings: PresentationStrings, expanded: Bool, selected: @escaping () -> Void) {
         self.inputNodeInteraction = inputNodeInteraction
         self.elevated = elevated
         self.selectedItem = selected
         self.expanded = expanded
         self.theme = theme
+        self.strings = strings
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -35,7 +37,7 @@ final class ChatMediaInputTrendingItem: ListViewItem {
             node.updateIsHighlighted()
             node.updateAppearanceTransition(transition: .immediate)
             Queue.mainQueue().async {
-                node.updateTheme(elevated: self.elevated, theme: self.theme, expanded: self.expanded)
+                node.updateTheme(elevated: self.elevated, theme: self.theme, strings: self.strings, expanded: self.expanded)
                 completion(node, {
                     return (nil, { _ in })
                 })
@@ -46,7 +48,7 @@ final class ChatMediaInputTrendingItem: ListViewItem {
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             completion(ListViewItemNodeLayout(contentSize: self.expanded ? expandedBoundingSize : boundingSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), { _ in
-                (node() as? ChatMediaInputTrendingItemNode)?.updateTheme(elevated: self.elevated, theme: self.theme, expanded: self.expanded)
+                (node() as? ChatMediaInputTrendingItemNode)?.updateTheme(elevated: self.elevated, theme: self.theme, strings: self.strings, expanded: self.expanded)
             })
         }
     }
@@ -91,6 +93,7 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
+        self.imageNode.contentMode = .scaleAspectFit
         
         self.badgeBackground = ASImageNode()
         self.badgeBackground.displaysAsynchronously = false
@@ -112,7 +115,7 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
         self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0)
     }
     
-    func updateTheme(elevated: Bool, theme: PresentationTheme, expanded: Bool) {
+    func updateTheme(elevated: Bool, theme: PresentationTheme, strings: PresentationStrings, expanded: Bool) {
         let imageSize = CGSize(width: 26.0 * 1.85, height: 26.0 * 1.85)
         let imageFrame = CGRect(origin: CGPoint(x: floor((expandedBoundingSize.width - imageSize.width) / 2.0), y: floor((expandedBoundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
         self.imageNode.frame = imageFrame
@@ -128,7 +131,7 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
                 self.badgeBackground.frame = CGRect(origin: CGPoint(x: floor(imageFrame.maxX - image.size.width - 7.0), y: 18.0), size: image.size)
             }
             
-            self.titleNode.attributedText = NSAttributedString(string: "Trending", font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: strings.Stickers_Trending, font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
         }
         
         if self.elevated != elevated {

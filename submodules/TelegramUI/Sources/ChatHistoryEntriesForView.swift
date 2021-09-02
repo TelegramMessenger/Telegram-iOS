@@ -6,7 +6,6 @@ import Emoji
 import AccountContext
 import TelegramPresentationData
 
-
 func chatHistoryEntriesForView(
     location: ChatLocation,
     view: MessageHistoryView,

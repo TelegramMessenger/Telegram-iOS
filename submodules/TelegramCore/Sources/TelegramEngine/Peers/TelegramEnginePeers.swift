@@ -549,8 +549,11 @@ public extension TelegramEngine {
                     }
                 }
 
-                guard let peerGroupId = transaction.getPeerChatListIndex(peerId)?.0 else {
-                    return nil
+                let peerGroupId: PeerGroupId
+                if let peerGroupIdValue = transaction.getPeerChatListIndex(peerId)?.0 {
+                    peerGroupId = peerGroupIdValue
+                } else {
+                    peerGroupId = .root
                 }
 
                 if let filterId = chatListFilterId {

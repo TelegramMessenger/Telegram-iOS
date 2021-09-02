@@ -130,6 +130,37 @@ public enum ChatControllerInteractionNavigateToPeer {
     case withBotStartPayload(ChatControllerInitialBotStart)
 }
 
+public struct ChatInterfaceForwardOptionsState: Codable, Equatable {
+    public var hideNames: Bool
+    public var hideCaptions: Bool
+    public var unhideNamesOnCaptionChange: Bool
+    
+    public static func ==(lhs: ChatInterfaceForwardOptionsState, rhs: ChatInterfaceForwardOptionsState) -> Bool {
+        return lhs.hideNames == rhs.hideNames && lhs.hideCaptions == rhs.hideCaptions && lhs.unhideNamesOnCaptionChange == rhs.unhideNamesOnCaptionChange
+    }
+    
+    public init(hideNames: Bool, hideCaptions: Bool, unhideNamesOnCaptionChange: Bool) {
+        self.hideNames = hideNames
+        self.hideCaptions = hideCaptions
+        self.unhideNamesOnCaptionChange = unhideNamesOnCaptionChange
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.hideNames = (try? container.decodeIfPresent(Bool.self, forKey: "hn")) ?? false
+        self.hideCaptions = (try? container.decodeIfPresent(Bool.self, forKey: "hc")) ?? false
+        self.unhideNamesOnCaptionChange = false
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.hideNames, forKey: "hn")
+        try container.encode(self.hideCaptions, forKey: "hc")
+    }
+}
+
 public struct ChatTextInputState: Codable, Equatable {
     public let inputText: NSAttributedString
     public let selectionRange: Range<Int>
@@ -328,9 +359,49 @@ public struct ChatTextInputStateText: Codable, Equatable {
 }
 
 public enum ChatControllerSubject: Equatable {
+    public struct ForwardOptions: Equatable {
+        public let hideNames: Bool
+        public let hideCaptions: Bool
+        
+        public init(hideNames: Bool, hideCaptions: Bool) {
+            self.hideNames = hideNames
+            self.hideCaptions = hideCaptions
+        }
+    }
+    
     case message(id: EngineMessage.Id, highlight: Bool, timecode: Double?)
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
+    case forwardedMessages(ids: [EngineMessage.Id], options: Signal<ForwardOptions, NoError>)
+    
+    public static func ==(lhs: ChatControllerSubject, rhs: ChatControllerSubject) -> Bool {
+        switch lhs {
+        case let .message(lhsId, lhsHighlight, lhsTimecode):
+            if case let .message(rhsId, rhsHighlight, rhsTimecode) = rhs, lhsId == rhsId && lhsHighlight == rhsHighlight && lhsTimecode == rhsTimecode {
+                return true
+            } else {
+                return false
+            }
+        case .scheduledMessages:
+            if case .scheduledMessages = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .pinnedMessages(id):
+            if case .pinnedMessages(id) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .forwardedMessages(lhsIds, _):
+            if case let .forwardedMessages(rhsIds, _) = rhs, lhsIds == rhsIds {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 }
 
 public enum ChatControllerPresentationMode: Equatable {

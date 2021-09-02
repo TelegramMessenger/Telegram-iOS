@@ -265,19 +265,30 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 let availableGroupCall: Signal<GroupCallPanelData?, NoError>
                 if case let .peer(peerId) = groupCallPanelSource {
                     availableGroupCall = context.account.viewTracker.peerView(peerId)
-                    |> map { peerView -> CachedChannelData.ActiveCall? in
+                    |> map { peerView -> (CachedChannelData.ActiveCall?, EnginePeer?) in
+                        let peer = peerView.peers[peerId].flatMap(EnginePeer.init)
                         if let cachedData = peerView.cachedData as? CachedChannelData {
-                            return cachedData.activeCall
+                            return (cachedData.activeCall, peer)
                         } else if let cachedData = peerView.cachedData as? CachedGroupData {
-                            return cachedData.activeCall
+                            return (cachedData.activeCall, peer)
                         } else {
-                            return nil
+                            return (nil, peer)
                         }
                     }
-                    |> distinctUntilChanged
-                    |> mapToSignal { activeCall -> Signal<GroupCallPanelData?, NoError> in
+                    |> distinctUntilChanged(isEqual: { lhs, rhs in
+                        if lhs.0 != rhs.0 {
+                            return false
+                        }
+                        return true
+                    })
+                    |> mapToSignal { activeCall, peer -> Signal<GroupCallPanelData?, NoError> in
                         guard let activeCall = activeCall else {
                             return .single(nil)
+                        }
+
+                        var isChannel = false
+                        if let peer = peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                            isChannel = true
                         }
                         
                         return Signal { [weak context] subscriber in
@@ -288,7 +299,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             let disposable = MetaDisposable()
                             
                             callContextCache.impl.syncWith { impl in
-                                let callContext = impl.get(account: context.account, engine: context.engine, peerId: peerId, call: EngineGroupCallDescription(activeCall))
+                                let callContext = impl.get(account: context.account, engine: context.engine, peerId: peerId, isChannel: isChannel, call: EngineGroupCallDescription(activeCall))
                                 disposable.set((callContext.context.panelData
                                 |> deliverOnMainQueue).start(next: { panelData in
                                     callContext.keep()
@@ -333,7 +344,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             }
         }
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = (self.updatedPresentationData.1
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -348,6 +359,10 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 }
             }
         })
+    }
+    
+    open var updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) {
+        return (self.presentationData, self.context.sharedContext.presentationData)
     }
     
     deinit {
@@ -643,7 +658,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     })
                 }
                 
-                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context)
+                let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context, presentationData: self.updatedPresentationData.0)
                 mediaAccessoryPanel.containerNode.headerNode.displayScrubber = item.playbackData?.type != .instantVideo
                 mediaAccessoryPanel.getController = { [weak self] in
                     return self

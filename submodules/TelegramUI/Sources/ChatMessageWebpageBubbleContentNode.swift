@@ -63,8 +63,14 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         }
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
-                if let _ = item.message.adAttribute, let author = item.message.author {
-                    item.controllerInteraction.openPeer(author.id, .chat(textInputState: nil, subject: nil, peekData: nil), nil)
+                if let adAttribute = item.message.adAttribute, let author = item.message.author {
+                    let navigationData: ChatControllerInteractionNavigateToPeer
+                    if let bot = author as? TelegramUser, bot.botInfo != nil, let startParam = adAttribute.startParam {
+                        navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
+                    } else {
+                        navigationData = .chat(textInputState: nil, subject: nil, peekData: nil)
+                    }
+                    item.controllerInteraction.openPeer(author.id, navigationData, nil)
                 } else {
                     var webPageContent: TelegramMediaWebpageLoadedContent?
                     for media in item.message.media {
@@ -284,7 +290,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         case "telegram_message":
                             actionTitle = item.presentationData.strings.Conversation_ViewMessage
                         case "telegram_voicechat":
-                            title = item.presentationData.strings.Conversation_VoiceChat
+                            if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case let .broadcast = channel.info {
+                                title = item.presentationData.strings.Conversation_LiveStream
+                            } else {
+                                title = item.presentationData.strings.Conversation_VoiceChat
+                            }
                             if webpage.url.contains("voicechat=") {
                                 actionTitle = item.presentationData.strings.Conversation_JoinVoiceChatAsSpeaker
                             } else {
@@ -321,7 +331,9 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
 
-                if let author = item.message.author as? TelegramChannel, case .group = author.info {
+                if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                    actionTitle = item.presentationData.strings.Conversation_ViewBot
+                } else if let author = item.message.author as? TelegramChannel, case .group = author.info {
                     actionTitle = item.presentationData.strings.Conversation_ViewGroup
                 } else {
                     actionTitle = item.presentationData.strings.Conversation_ViewChannel

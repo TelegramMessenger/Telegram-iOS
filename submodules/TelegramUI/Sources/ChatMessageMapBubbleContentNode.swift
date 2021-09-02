@@ -81,7 +81,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     selectedMedia = telegramMap
                     if let liveBroadcastingTimeout = telegramMap.liveBroadcastingTimeout {
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                        if item.message.timestamp + liveBroadcastingTimeout > timestamp {
+                        if item.message.timestamp != scheduleWhenOnlineTimestamp && item.message.timestamp + liveBroadcastingTimeout > timestamp {
                             activeLiveBroadcastingTimeout = liveBroadcastingTimeout
                         }
                     }

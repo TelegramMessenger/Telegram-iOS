@@ -589,8 +589,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 installedPacks.insert(info.0)
             }
                         
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, hasGifs: false, hasSettings: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: trendingPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, strings: strings, hasGifs: false, hasSettings: false)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: trendingPacks, installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
             
             let (previousPanelEntries, previousGridEntries) = previousStickerEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: stickersInputNodeInteraction, scrollToItem: nil), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: stickersInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
@@ -624,8 +624,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 installedPacks.insert(info.0)
             }
             
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, hasGifs: false, hasSettings: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: [], hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, strings: strings, hasGifs: false, hasSettings: false)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: [], installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
                         
             let (previousPanelEntries, previousGridEntries) = previousMaskEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: masksInputNodeInteraction, scrollToItem: nil), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: masksInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
@@ -960,14 +960,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         let panelHeight: CGFloat
         
         let isExpanded: Bool = true
-//            switch expanded {
-//                case .content:
-                    panelHeight = maximumHeight
-//                case let .search(mode):
-//                    panelHeight = maximumHeight
-//                    displaySearch = true
-//                    searchMode = mode
-//            }
+        panelHeight = maximumHeight
+
         self.stickerPane.collectionListPanelOffset = 0.0
         
         transition.updateFrame(node: self.topPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: topInset + topPanelHeight)))
@@ -1029,7 +1023,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
-        let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0 + 5.0)
+        let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0 + 15.0)
         self.stickerListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight + 31.0, height: width)
         transition.updatePosition(node: self.stickerListView, position: listPosition)
         

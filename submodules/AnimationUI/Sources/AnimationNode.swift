@@ -44,8 +44,6 @@ public final class AnimationNode : ASDisplayNode {
                     }
                 }
                 
-                view.logHierarchyKeypaths()
-                
                 return view
             } else {
                 return LOTAnimationView()

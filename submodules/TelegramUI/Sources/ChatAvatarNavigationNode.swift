@@ -54,15 +54,15 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     }
 
     final class SnapshotState {
-        fileprivate let snapshotView: UIView
+        fileprivate let snapshotView: UIView?
 
-        fileprivate init(snapshotView: UIView) {
+        fileprivate init(snapshotView: UIView?) {
             self.snapshotView = snapshotView
         }
     }
 
     func prepareSnapshotState() -> SnapshotState {
-        let snapshotView = self.avatarNode.view.snapshotView(afterScreenUpdates: false)!
+        let snapshotView = self.avatarNode.view.snapshotView(afterScreenUpdates: false)
         return SnapshotState(
             snapshotView: snapshotView
         )
@@ -72,13 +72,14 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         self.avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.avatarNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true)
 
-        snapshotState.snapshotView.frame = self.frame
-        self.containerNode.view.addSubview(snapshotState.snapshotView)
+        if let snapshotView = snapshotState.snapshotView {
+            snapshotView.frame = self.frame
+            self.containerNode.view.addSubview(snapshotView)
 
-        let snapshotView = snapshotState.snapshotView
-        snapshotState.snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-            snapshotView?.removeFromSuperview()
-        })
-        snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+            snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        }
     }
 }

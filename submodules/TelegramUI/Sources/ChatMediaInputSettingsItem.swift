@@ -12,15 +12,17 @@ final class ChatMediaInputSettingsItem: ListViewItem {
     let selectedItem: () -> Void
     let expanded: Bool
     let theme: PresentationTheme
+    let strings: PresentationStrings
     
     var selectable: Bool {
         return true
     }
     
-    init(inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, expanded: Bool, selected: @escaping () -> Void) {
+    init(inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, strings: PresentationStrings, expanded: Bool, selected: @escaping () -> Void) {
         self.inputNodeInteraction = inputNodeInteraction
         self.selectedItem = selected
         self.theme = theme
+        self.strings = strings
         self.expanded = expanded
     }
     
@@ -32,7 +34,7 @@ final class ChatMediaInputSettingsItem: ListViewItem {
             node.inputNodeInteraction = self.inputNodeInteraction
             node.updateAppearanceTransition(transition: .immediate)
             Queue.mainQueue().async {
-                node.updateTheme(theme: self.theme, expanded: self.expanded)
+                node.updateTheme(theme: self.theme, strings: self.strings, expanded: self.expanded)
                 completion(node, {
                     return (nil, { _ in })
                 })
@@ -43,7 +45,7 @@ final class ChatMediaInputSettingsItem: ListViewItem {
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             completion(ListViewItemNodeLayout(contentSize: self.expanded ? expandedBoundingSize : boundingSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), { _ in
-                (node() as? ChatMediaInputSettingsItemNode)?.updateTheme(theme: self.theme, expanded: self.expanded)
+                (node() as? ChatMediaInputSettingsItemNode)?.updateTheme(theme: self.theme, strings: self.strings, expanded: self.expanded)
             })
         }
     }
@@ -82,6 +84,7 @@ final class ChatMediaInputSettingsItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
+        self.imageNode.contentMode = .scaleAspectFit
         
         self.titleNode = ImmediateTextNode()
                 
@@ -95,7 +98,7 @@ final class ChatMediaInputSettingsItemNode: ListViewItemNode {
         self.scalingNode.addSubnode(self.imageNode)
     }
         
-    func updateTheme(theme: PresentationTheme, expanded: Bool) {
+    func updateTheme(theme: PresentationTheme, strings: PresentationStrings, expanded: Bool) {
         let imageSize = CGSize(width: 26.0 * 1.6, height: 26.0 * 1.6)
         self.imageNode.frame = CGRect(origin: CGPoint(x: floor((expandedBoundingSize.width - imageSize.width) / 2.0), y: floor((expandedBoundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
         
@@ -104,7 +107,7 @@ final class ChatMediaInputSettingsItemNode: ListViewItemNode {
             
             self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelSettingsIconImage(theme)
             
-            self.titleNode.attributedText = NSAttributedString(string: "Settings", font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: strings.Stickers_Settings, font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedBoundingSize)

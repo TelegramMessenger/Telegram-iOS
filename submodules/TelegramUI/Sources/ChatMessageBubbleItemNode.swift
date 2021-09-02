@@ -1058,7 +1058,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
     }
     
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
+    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         var currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))))] = []
         for contentNode in self.contentNodes {
             if let message = contentNode.item?.message {
@@ -1115,7 +1115,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         currentItem: ChatMessageItem?,
         currentForwardInfo: (Peer?, String?)?,
         isSelected: Bool?
-    ) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
+    ) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         let isPreview = item.presentationData.isPreview
         let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: isSelected)
         
@@ -1128,7 +1128,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         let content = item.content
         let firstMessage = content.firstMessage
-        let incoming = item.content.effectivelyIncoming(item.context.account.peerId)
+        let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
+        
         let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
         
         var sourceReference: SourceReferenceMessageAttribute?
@@ -1158,7 +1159,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         do {
             let peerId = chatLocationPeerId
-            if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
+            
+            if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                displayAuthorInfo = false
+            } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 if let forwardInfo = item.content.firstMessage.forwardInfo {
                     ignoreForward = true
                     effectiveAuthor = forwardInfo.author
@@ -1683,7 +1687,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: dateReactionCount)
+                let dateFormat: MessageTimestampStatusFormat
+                if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                    dateFormat = .minimal
+                } else {
+                    dateFormat = .regular
+                }
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, reactionCount: dateReactionCount)
                 
                 let statusType: ChatMessageDateAndStatusType
                 if message.effectivelyIncoming(item.context.account.peerId) {
@@ -2183,9 +2193,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
-        return (layout, { animation, synchronousLoads in
+        return (layout, { animation, applyInfo, synchronousLoads in
             return ChatMessageBubbleItemNode.applyLayout(selfReference: selfReference, animation, synchronousLoads,
                 params: params,
+                applyInfo: applyInfo,
                 layout: layout,
                 item: item,
                 forwardSource: forwardSource,
@@ -2226,6 +2237,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     
     private static func applyLayout(selfReference: Weak<ChatMessageBubbleItemNode>, _ animation: ListViewItemUpdateAnimation, _ synchronousLoads: Bool,
         params: ListViewItemLayoutParams,
+        applyInfo: ListViewItemApply,
         layout: ListViewItemNodeLayout,
         item: ChatMessageItem,
         forwardSource: Peer?,
@@ -2275,8 +2287,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         strongSelf.updateAccessibilityData(accessibilityData)
         
         var transition: ContainedViewLayoutTransition = .immediate
+        var useDisplayLinkAnimations = false
         if case let .System(duration) = animation {
             transition = .animated(duration: duration, curve: .spring)
+            
+            if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                useDisplayLinkAnimations = true
+            }
         }
         
         var forceBackgroundSide = false
@@ -2390,6 +2407,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.adminBadgeNode = nil
         }
         
+        let beginAt = applyInfo.timestamp ?? CACurrentMediaTime()
+    
+        let timingFunction = kCAMediaTimingFunctionSpring        
         if let forwardInfoNode = forwardInfoSizeApply.1(bubbleContentWidth) {
             strongSelf.forwardInfoNode = forwardInfoNode
             var animateFrame = true
@@ -2402,17 +2422,42 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     item.controllerInteraction.displayPsa(type, sourceNode)
                 }
-            }
-            let previousForwardInfoNodeFrame = forwardInfoNode.frame
-            forwardInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: CGSize(width: bubbleContentWidth, height: forwardInfoSizeApply.0.height))
-            if case let .System(duration) = animation {
-                if animateFrame {
-                    forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoNode.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                
+                if animation.isAnimated {
+                    forwardInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             }
+            let previousForwardInfoNodeFrame = forwardInfoNode.frame
+            let forwardInfoFrame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: CGSize(width: bubbleContentWidth, height: forwardInfoSizeApply.0.height))
+            if case let .System(duration) = animation {
+                if animateFrame {
+                    if useDisplayLinkAnimations {
+                        let animation = ListViewAnimation(from: previousForwardInfoNodeFrame, to: forwardInfoFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { _, frame in
+                            forwardInfoNode.frame = frame
+                        })
+                        strongSelf.setAnimationForKey("forwardFrame", animation: animation)
+                    } else {
+                        forwardInfoNode.frame = forwardInfoFrame
+                        forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoFrame, duration: duration, timingFunction: timingFunction)
+                    }
+                } else {
+                    forwardInfoNode.frame = forwardInfoFrame
+                }
+            } else {
+                forwardInfoNode.frame = forwardInfoFrame
+            }
         } else {
-            strongSelf.forwardInfoNode?.removeFromSupernode()
-            strongSelf.forwardInfoNode = nil
+            if animation.isAnimated {
+                if let forwardInfoNode = strongSelf.forwardInfoNode {
+                    strongSelf.forwardInfoNode = nil
+                    forwardInfoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak forwardInfoNode] _ in
+                        forwardInfoNode?.removeFromSupernode()
+                    })
+                }
+            } else {
+                strongSelf.forwardInfoNode?.removeFromSupernode()
+                strongSelf.forwardInfoNode = nil
+            }
         }
         
         if let replyInfoNode = replyInfoSizeApply.1() {
@@ -2426,7 +2471,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             replyInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: replyInfoSizeApply.0)
             if case let .System(duration) = animation {
                 if animateFrame {
-                    replyInfoNode.layer.animateFrame(from: previousReplyInfoNodeFrame, to: replyInfoNode.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    replyInfoNode.layer.animateFrame(from: previousReplyInfoNodeFrame, to: replyInfoNode.frame, duration: duration, timingFunction: timingFunction)
                 }
             }
         } else {
@@ -2617,12 +2662,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             
             if let addedContentNodes = addedContentNodes {
-                for (contentNodeMessage, isAttachent, contentNode) in addedContentNodes {
+                for (contentNodeMessage, isAttachment, contentNode) in addedContentNodes {
                     updatedContentNodes.append(contentNode)
                     
                     let contextSourceNode: ContextExtractedContentContainingNode
                     let containerSupernode: ASDisplayNode
-                    if isAttachent {
+                    if isAttachment {
                         contextSourceNode = strongSelf.mainContextSourceNode
                         containerSupernode = strongSelf.clippingNode
                     } else {
@@ -2673,7 +2718,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             let contentNode = strongSelf.contentNodes[contentNodeIndex]
             let contentNodeFrame = relativeFrame.offsetBy(dx: contentOrigin.x, dy: useContentOrigin ? contentOrigin.y : 0.0)
             let previousContentNodeFrame = contentNode.frame
-            contentNode.frame = contentNodeFrame
                         
             if case let .System(duration) = animation {
                 var animateFrame = false
@@ -2689,13 +2733,26 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 if animateFrame {
-                    contentNode.layer.animateFrame(from: previousContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    if useDisplayLinkAnimations {
+                        let animation = ListViewAnimation(from: previousContentNodeFrame, to: contentNodeFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { _, frame in
+                            contentNode.frame = frame
+                        })
+                        strongSelf.setAnimationForKey("contentNode\(contentNodeIndex)Frame", animation: animation)
+                    } else {
+                        contentNode.frame = contentNodeFrame
+                        contentNode.layer.animateFrame(from: previousContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: timingFunction)
+                    }
                 } else if animateAlpha {
+                    contentNode.frame = contentNodeFrame
                     contentNode.animateInsertionIntoBubble(duration)
                     var previousAlignedContentNodeFrame = contentNodeFrame
                     previousAlignedContentNodeFrame.origin.x += backgroundFrame.size.width - strongSelf.backgroundNode.frame.size.width
-                    contentNode.layer.animateFrame(from: previousAlignedContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    contentNode.layer.animateFrame(from: previousAlignedContentNodeFrame, to: contentNodeFrame, duration: duration, timingFunction: timingFunction)
+                } else {
+                    contentNode.frame = contentNodeFrame
                 }
+            } else {
+                contentNode.frame = contentNodeFrame
             }
             contentNodeIndex += 1
         }
@@ -2799,7 +2856,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 strongSelf.insertSubnode(actionButtonsNode, belowSubnode: strongSelf.messageAccessibilityArea)
             } else {
                 if case let .System(duration) = animation {
-                    actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                    actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: timingFunction)
                 }
             }
         } else if let actionButtonsNode = strongSelf.actionButtonsNode {
@@ -3321,17 +3378,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             return parent
         } else if let parent = parent as? GridMessageSelectionNode, parent.bounds.contains(point) {
             return parent
-        } else {
-            if let parentSubnodes = parent.subnodes {
-                for subnode in parentSubnodes {
-                    let subnodeFrame = subnode.frame
-                    if let result = traceSelectionNodes(parent: subnode, point: point.offsetBy(dx: -subnodeFrame.minX, dy: -subnodeFrame.minY)) {
-                        return result
-                    }
+        } else if let parentSubnodes = parent.subnodes {
+            for subnode in parentSubnodes {
+                if let result = traceSelectionNodes(parent: subnode, point: point.offsetBy(dx: -subnode.frame.minX + subnode.bounds.minX, dy: -subnode.frame.minY + subnode.bounds.minY)) {
+                    return result
                 }
             }
-            return nil
         }
+        return nil
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -3506,7 +3560,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         if let selectionState = item.controllerInteraction.selectionState, canHaveSelection {
             var selected = false
-            var incoming = true
+            let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
             
             switch item.content {
                 case let .message(message, _, _, _):
@@ -3521,8 +3575,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     selected = allSelected
             }
-            
-            incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             
             let offset: CGFloat = incoming ? 42.0 : 0.0
             

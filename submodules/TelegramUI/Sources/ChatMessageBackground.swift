@@ -101,6 +101,7 @@ class ChatMessageBackground: ASDisplayNode {
     
     func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition, backgroundNode: WallpaperBackgroundNode?) {
         let previousType = self.type
+        let previousHighlighted = self.currentHighlighted
         if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, backgroundNode === self.backgroundNode, self.maskMode == maskMode, self.hasWallpaper == hasWallpaper {
             return
         }
@@ -228,11 +229,11 @@ class ChatMessageBackground: ASDisplayNode {
                 })
             }
         } else if transition.isAnimated {
-//            if let previousContents = self.imageNode.layer.contents, let image = image {
-//                if (previousContents as AnyObject) !== image.cgImage {
-//                    self.imageNode.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
-//                }
-//            }
+            if let previousContents = self.imageNode.layer.contents, let image = image {
+                if (previousContents as AnyObject) !== image.cgImage {
+                    self.imageNode.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
+                }
+            }
         }
         
         self.imageNode.image = image

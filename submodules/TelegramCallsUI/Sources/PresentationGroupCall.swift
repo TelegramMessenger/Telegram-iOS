@@ -91,9 +91,10 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
         return self.panelDataPromise.get()
     }
     
-    public init(account: Account, engine: TelegramEngine, peerId: PeerId, call: EngineGroupCallDescription) {
+    public init(account: Account, engine: TelegramEngine, peerId: PeerId, isChannel: Bool, call: EngineGroupCallDescription) {
         self.panelDataPromise.set(.single(GroupCallPanelData(
             peerId: peerId,
+            isChannel: isChannel,
             info: GroupCallInfo(
                 id: call.id,
                 accessHash: call.accessHash,
@@ -113,13 +114,18 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
             activeSpeakers: Set(),
             groupCall: nil
         )))
+
+        let state = engine.calls.getGroupCallParticipants(callId: call.id, accessHash: call.accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: nil)
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
+                return .single(nil)
+            }
         
-        self.disposable = (engine.calls.getGroupCallParticipants(callId: call.id, accessHash: call.accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: nil)
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
-            return .single(nil)
-        }
-        |> deliverOnMainQueue).start(next: { [weak self] state in
+        self.disposable = (combineLatest(queue: .mainQueue(),
+            state,
+            engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] state, peer in
             guard let strongSelf = self, let state = state else {
                 return
             }
@@ -145,8 +151,15 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                     }
                     topParticipants.append(participant)
                 }
+
+                var isChannel = false
+                if let peer = peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                    isChannel = true
+                }
+
                 return GroupCallPanelData(
                     peerId: peerId,
+                    isChannel: isChannel,
                     info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending, defaultParticipantsAreMuted: state.defaultParticipantsAreMuted, isVideoEnabled: state.isVideoEnabled, unmutedVideoLimit: state.unmutedVideoLimit),
                     topParticipants: topParticipants,
                     participantCount: state.totalCount,
@@ -183,12 +196,12 @@ public final class AccountGroupCallContextCacheImpl: AccountGroupCallContextCach
             self.queue = queue
         }
         
-        public func get(account: Account, engine: TelegramEngine, peerId: PeerId, call: EngineGroupCallDescription) -> AccountGroupCallContextImpl.Proxy {
+        public func get(account: Account, engine: TelegramEngine, peerId: PeerId, isChannel: Bool, call: EngineGroupCallDescription) -> AccountGroupCallContextImpl.Proxy {
             let result: Record
             if let current = self.contexts[call.id] {
                 result = current
             } else {
-                let context = AccountGroupCallContextImpl(account: account, engine: engine, peerId: peerId, call: call)
+                let context = AccountGroupCallContextImpl(account: account, engine: engine, peerId: peerId, isChannel: isChannel, call: call)
                 result = Record(context: context)
                 self.contexts[call.id] = result
             }
@@ -385,6 +398,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var initialCall: EngineGroupCallDescription?
     public let internalId: CallSessionInternalId
     public let peerId: PeerId
+    private let isChannel: Bool
     private var invite: String?
     private var joinAsPeerId: PeerId
     private var ignorePreviousJoinAsPeerId: (PeerId, UInt32)?
@@ -624,6 +638,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         initialCall: EngineGroupCallDescription?,
         internalId: CallSessionInternalId,
         peerId: PeerId,
+        isChannel: Bool,
         invite: String?,
         joinAsPeerId: PeerId?
     ) {
@@ -636,6 +651,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.initialCall = initialCall
         self.internalId = internalId
         self.peerId = peerId
+        self.isChannel = isChannel
         self.invite = invite
         self.joinAsPeerId = joinAsPeerId ?? accountContext.account.peerId
         self.schedulePending = initialCall == nil
@@ -822,7 +838,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         })
         
         if let initialCall = initialCall, let temporaryParticipantsContext = (self.accountContext.cachedGroupCallContexts as? AccountGroupCallContextCacheImpl)?.impl.syncWith({ impl in
-            impl.get(account: accountContext.account, engine: accountContext.engine, peerId: peerId, call: EngineGroupCallDescription(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title, scheduleTimestamp: initialCall.scheduleTimestamp, subscribedToScheduled: initialCall.subscribedToScheduled))
+            impl.get(account: accountContext.account, engine: accountContext.engine, peerId: peerId, isChannel: isChannel, call: EngineGroupCallDescription(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title, scheduleTimestamp: initialCall.scheduleTimestamp, subscribedToScheduled: initialCall.subscribedToScheduled))
         }) {
             self.switchToTemporaryParticipantsContext(sourceContext: temporaryParticipantsContext.context.participantsContext, oldMyPeerId: self.joinAsPeerId)
         } else {
@@ -1510,12 +1526,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                     if case .anonymousNotAllowed = error {
                         let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.VoiceChat_AnonymousDisabledAlertText, actions: [
+                        strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: strongSelf.isChannel ? presentationData.strings.LiveStream_AnonymousDisabledAlertText : presentationData.strings.VoiceChat_AnonymousDisabledAlertText, actions: [
                             TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
                         ]), on: .root, blockInteraction: false, completion: {})
                     } else if case .tooManyParticipants = error {
                         let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.VoiceChat_ChatFullAlertText, actions: [
+                        strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: strongSelf.isChannel ? presentationData.strings.LiveStream_ChatFullAlertText : presentationData.strings.VoiceChat_ChatFullAlertText, actions: [
                             TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
                         ]), on: .root, blockInteraction: false, completion: {})
                     } else if case .invalidJoinAsPeer = error {

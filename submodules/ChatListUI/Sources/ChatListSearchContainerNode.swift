@@ -891,7 +891,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }).start()
             
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true))
-            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, hideSendersNames in
+            peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, forwardOptions in
                 guard let strongSelf = self, let strongController = peerSelectionController else {
                     return
                 }
@@ -913,9 +913,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 }
                 
                 var attributes: [MessageAttribute] = []
-                if hideSendersNames {
-                    attributes.append(ForwardHideSendersNamesMessageAttribute())
-                }
+                attributes.append(ForwardOptionsMessageAttribute(hideNames: forwardOptions?.hideNames == true, hideCaptions: forwardOptions?.hideCaptions == true))
                 
                 result.append(contentsOf: messageIds.map { messageId -> EnqueueMessage in
                     return .forward(source: messageId, grouping: .auto, attributes: attributes, correlationId: nil)

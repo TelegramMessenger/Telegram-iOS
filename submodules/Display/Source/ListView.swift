@@ -328,6 +328,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private var reorderInProgress: Bool = false
     private var reorderingItemsCompleted: (() -> Void)?
     private var reorderScrollStartTimestamp: Double?
+    private var reorderScrollUpdateTimestamp: Double?
+    private var reorderLastTimestamp: Double?
     public var reorderedItemHasShadow = true
     
     private let waitingForNodesDisposable = MetaDisposable()
@@ -562,14 +564,22 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             return
         }
         
+        let timestamp = CACurrentMediaTime()
         if let reorderItemNode = reorderNode.itemNode, let reorderItemIndex = reorderItemNode.index, reorderItemNode.supernode == self {
             let verticalOffset = verticalTopOffset
             var closestIndex: (Int, CGFloat)?
             for i in 0 ..< self.itemNodes.count {
                 if let itemNodeIndex = self.itemNodes[i].index, itemNodeIndex != reorderItemIndex {
                     let itemFrame = self.itemNodes[i].apparentContentFrame
-                    let itemOffset = itemFrame.midY
-                    let deltaOffset = itemOffset - verticalOffset
+
+                    let offsetToMin = itemFrame.minY - verticalOffset
+                    let offsetToMax = itemFrame.maxY - verticalOffset
+                    let deltaOffset: CGFloat
+                    if abs(offsetToMin) > abs(offsetToMax) {
+                        deltaOffset = offsetToMax
+                    } else {
+                        deltaOffset = offsetToMin
+                    }
                     if let (_, closestOffset) = closestIndex {
                         if abs(deltaOffset) < abs(closestOffset) {
                             closestIndex = (itemNodeIndex, deltaOffset)
@@ -580,7 +590,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             }
             if let (closestIndexValue, offset) = closestIndex {
-                //print("closest \(closestIndexValue) offset \(offset)")
+//                print("closest \(closestIndexValue) offset \(offset)")
                 var toIndex: Int
                 if offset > 0 {
                     toIndex = closestIndexValue
@@ -594,7 +604,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     }
                 }
                 if toIndex != reorderItemNode.index {
+                    if let reorderLastTimestamp = self.reorderLastTimestamp, timestamp < reorderLastTimestamp + 0.2 {
+                        return
+                    }
                     if reorderNode.currentState?.0 != reorderItemIndex || reorderNode.currentState?.1 != toIndex {
+                        self.reorderLastTimestamp = timestamp
+                        
                         reorderNode.currentState = (reorderItemIndex, toIndex)
                         //print("reorder \(reorderItemIndex) to \(toIndex) offset \(offset)")
                         if self.reorderFeedbackDisposable == nil {
@@ -2126,7 +2141,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         if let accessoryItemNode = node.accessoryItemNode {
             node.layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
         }
-        apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(nodeFrame)))
+        apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(nodeFrame), timestamp: timestamp))
         self.itemNodes.insert(node, at: nodeIndex)
         
         var offsetHeight = node.apparentHeight
@@ -2548,7 +2563,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var apparentFrame = node.apparentFrame
                     apparentFrame.size.height = updatedApparentHeight
                     
-                    apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(apparentFrame)))
+                    apply().1(ListViewItemApply(isOnScreen: visibleBounds.intersects(apparentFrame), timestamp: timestamp))
                     
                     var offsetRanges = OffsetRanges()
                     
@@ -3981,7 +3996,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             
             var offset: CGFloat = 6.0
             if let reorderScrollStartTimestamp = self.reorderScrollStartTimestamp, reorderScrollStartTimestamp + 2.0 < timestamp {
-                offset *= 2.0
+                offset *= 1.5
             }
             if reorderOffset < effectiveInsets.top + 10.0 {
                 if self.itemNodes[0].apparentFrame.minY < effectiveInsets.top {
@@ -4086,7 +4101,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.enqueueUpdateVisibleItems(synchronous: false)
         }
         
-        self.checkItemReordering()
+        if scrollingForReorder {
+            if  let reorderScrollUpdateTimestamp = self.reorderScrollUpdateTimestamp, timestamp < reorderScrollUpdateTimestamp + 0.05 {
+                return
+            }
+            self.reorderScrollUpdateTimestamp = timestamp
+            self.checkItemReordering(force: true)
+        }
     }
     
     override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {

@@ -2429,7 +2429,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 buttonText = presentationData.strings.PeerInfo_ButtonVideoCall
                 buttonIcon = .videoCall
             case .voiceChat:
-                buttonText = presentationData.strings.PeerInfo_ButtonVoiceChat
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    buttonText = presentationData.strings.PeerInfo_ButtonLiveStream
+                } else {
+                    buttonText = presentationData.strings.PeerInfo_ButtonVoiceChat
+                }
                 buttonIcon = .voiceChat
             case .mute:
                 if let notificationSettings = notificationSettings, case .muted = notificationSettings.muteState {

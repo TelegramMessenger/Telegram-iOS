@@ -34,6 +34,7 @@ private enum BroadcastPartSubject {
 }
 
 private protocol BroadcastPartSource: AnyObject {
+    func requestTime(completion: @escaping (Int64) -> Void) -> Disposable
     func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, subject: BroadcastPartSubject, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable
 }
 
@@ -50,7 +51,13 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         self.callId = callId
         self.accessHash = accessHash
     }
-    
+
+    func requestTime(completion: @escaping (Int64) -> Void) -> Disposable {
+        return engine.calls.serverTime().start(next: { result in
+            completion(result)
+        })
+    }
+
     func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, subject: BroadcastPartSubject, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
         let timestampIdMilliseconds: Int64
         if timestampMilliseconds != 0 {
@@ -422,6 +429,15 @@ public final class OngoingGroupCallContext {
                     })
 
                     return OngoingGroupCallMediaChannelDescriptionTaskImpl(disposable: disposable)
+                },
+                requestCurrentTime: { completion in
+                    let disposable = MetaDisposable()
+
+                    queue.async {
+                        disposable.set(broadcastPartsSource?.requestTime(completion: completion))
+                    }
+
+                    return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
                 },
                 requestAudioBroadcastPart: { timestampMilliseconds, durationMilliseconds, completion in
                     let disposable = MetaDisposable()

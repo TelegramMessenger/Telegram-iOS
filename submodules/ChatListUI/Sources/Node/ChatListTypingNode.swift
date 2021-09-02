@@ -104,7 +104,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 case .typingText:
                                     text = strings.DialogList_SingleTypingSuffix(peerTitle).string
                                 case .choosingSticker:
-                                    text = ""
+                                    text = strings.DialogList_SingleChoosingStickerSuffix(peerTitle).string
                                 case .speakingInGroupCall:
                                     text = ""
                             }
