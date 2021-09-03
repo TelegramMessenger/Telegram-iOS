@@ -4356,9 +4356,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let statsController: ViewController
         if let channel = peer as? TelegramChannel, case .group = channel.info {
-            statsController = groupStatsController(context: self.context, peerId: peer.id, cachedPeerData: cachedData)
+            statsController = groupStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, cachedPeerData: cachedData)
         } else {
-            statsController = channelStatsController(context: self.context, peerId: peer.id, cachedPeerData: cachedData)
+            statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, cachedPeerData: cachedData)
         }
         controller.push(statsController)
     }
@@ -4706,15 +4706,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         switch section {
         case .members:
-            self.controller?.push(channelMembersController(context: self.context, peerId: self.peerId))
+            self.controller?.push(channelMembersController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId))
         case .admins:
             if peer is TelegramGroup {
-                self.controller?.push(channelAdminsController(context: self.context, peerId: self.peerId))
+                self.controller?.push(channelAdminsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId))
             } else if peer is TelegramChannel {
-                self.controller?.push(channelAdminsController(context: self.context, peerId: self.peerId))
+                self.controller?.push(channelAdminsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId))
             }
         case .banned:
-            self.controller?.push(channelBlacklistController(context: self.context, peerId: self.peerId))
+            self.controller?.push(channelBlacklistController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId))
         }
     }
     
@@ -4723,7 +4723,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return
         }
         var upgradedToSupergroupImpl: (() -> Void)?
-        let controller = groupPreHistorySetupController(context: self.context, peerId: peer.id, upgradedToSupergroup: { _, f in
+        let controller = groupPreHistorySetupController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, upgradedToSupergroup: { _, f in
             upgradedToSupergroupImpl?()
             f()
         })
@@ -4741,7 +4741,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return
         }
         
-        let controller = peerAutoremoveSetupScreen(context: self.context, peerId: peer.id)
+        let controller = peerAutoremoveSetupScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id)
         self.controller?.push(controller)
     }
     
@@ -4749,14 +4749,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         guard let data = self.data, let peer = data.peer else {
             return
         }
-        self.controller?.push(channelPermissionsController(context: self.context, peerId: peer.id))
+        self.controller?.push(channelPermissionsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id))
     }
     
     private func editingOpenStickerPackSetup() {
         guard let data = self.data, let peer = data.peer, let cachedData = data.cachedData as? CachedChannelData else {
             return
         }
-        self.controller?.push(groupStickerPackSetupController(context: self.context, peerId: peer.id, currentPackInfo: cachedData.stickerPack))
+        self.controller?.push(groupStickerPackSetupController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, currentPackInfo: cachedData.stickerPack))
     }
     
     private func openLocation() {
@@ -4830,12 +4830,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         switch action {
         case .promote:
             if case let .channelMember(channelMember) = member {
-                self.controller?.push(channelAdminController(context: self.context, peerId: peer.id, adminId: member.id, initialParticipant: channelMember.participant, updated: { _ in
+                self.controller?.push(channelAdminController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, adminId: member.id, initialParticipant: channelMember.participant, updated: { _ in
                 }, upgradedToSupergroup: { _, f in f() }, transferedOwnership: { _ in }))
             }
         case .restrict:
             if case let .channelMember(channelMember) = member {
-                self.controller?.push(channelBannedMemberController(context: self.context, peerId: peer.id, memberId: member.id, initialParticipant: channelMember.participant, updated: { _ in
+                self.controller?.push(channelBannedMemberController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, memberId: member.id, initialParticipant: channelMember.participant, updated: { _ in
                 }, upgradedToSupergroup: { _, f in f() }))
             }
         case .remove:

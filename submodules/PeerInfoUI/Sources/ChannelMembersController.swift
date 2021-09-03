@@ -291,7 +291,7 @@ private func channelMembersControllerEntries(context: AccountContext, presentati
     return entries
 }
 
-public func channelMembersController(context: AccountContext, peerId: PeerId) -> ViewController {
+public func channelMembersController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(ChannelMembersControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelMembersControllerState())
     let updateState: ((ChannelMembersControllerState) -> ChannelMembersControllerState) -> Void = { f in
@@ -442,7 +442,8 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
     
     var previousPeers: [RenderedChannelParticipant]?
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView, peersPromise.get())
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(queue: .mainQueue(), presentationData, statePromise.get(), peerView, peersPromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state, view, peers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var isGroup = true
