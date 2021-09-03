@@ -139,7 +139,10 @@ private final class InnerActionsContainerNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            let actionNode = strongSelf.actionNode(at: point)
+            var actionNode = strongSelf.actionNode(at: point)
+            if let actionNodeValue = actionNode, !actionNodeValue.isActionEnabled {
+                actionNode = nil
+            }
             if actionNode !== strongSelf.currentHighlightedActionNode {
                 if actionNode != nil, moved {
                     strongSelf.feedbackTap()

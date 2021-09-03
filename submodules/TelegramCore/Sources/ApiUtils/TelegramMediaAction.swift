@@ -8,23 +8,23 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         case let .messageActionChannelCreate(title):
             return TelegramMediaAction(action: .groupCreated(title: title))
         case let .messageActionChannelMigrateFrom(title, chatId):
-            return TelegramMediaAction(action: .channelMigratedFromGroup(title: title, groupId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))))
+            return TelegramMediaAction(action: .channelMigratedFromGroup(title: title, groupId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))))
         case let .messageActionChatAddUser(users):
-            return TelegramMediaAction(action: .addedMembers(peerIds: users.map({ PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value($0)) })))
+            return TelegramMediaAction(action: .addedMembers(peerIds: users.map({ PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) })))
         case let .messageActionChatCreate(title, _):
             return TelegramMediaAction(action: .groupCreated(title: title))
         case .messageActionChatDeletePhoto:
             return TelegramMediaAction(action: .photoUpdated(image: nil))
         case let .messageActionChatDeleteUser(userId):
-            return TelegramMediaAction(action: .removedMembers(peerIds: [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))]))
+            return TelegramMediaAction(action: .removedMembers(peerIds: [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))]))
         case let .messageActionChatEditPhoto(photo):
             return TelegramMediaAction(action: .photoUpdated(image: telegramMediaImageFromApiPhoto(photo)))
         case let .messageActionChatEditTitle(title):
             return TelegramMediaAction(action: .titleUpdated(title: title))
         case let .messageActionChatJoinedByLink(inviterId):
-            return TelegramMediaAction(action: .joinedByLink(inviter: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(inviterId))))
+            return TelegramMediaAction(action: .joinedByLink(inviter: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(inviterId))))
         case let .messageActionChatMigrateTo(channelId):
-            return TelegramMediaAction(action: .groupMigratedToChannel(channelId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))))
+            return TelegramMediaAction(action: .groupMigratedToChannel(channelId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))))
         case .messageActionHistoryClear:
             return TelegramMediaAction(action: .historyCleared)
         case .messageActionPinMessage:
@@ -67,7 +67,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             switch call {
             case let .inputGroupCall(id, accessHash):
                 return TelegramMediaAction(action: .inviteToGroupPhoneCall(callId: id, accessHash: accessHash, peerIds: userIds.map { userId in
-                    PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
+                    PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                 }))
             }
         case let .messageActionSetMessagesTTL(period):

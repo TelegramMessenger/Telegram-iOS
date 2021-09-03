@@ -17,7 +17,7 @@ func _internal_unregisterNotificationToken(account: Account, token: Data, type: 
         case .voip:
             mappedType = 9
     }
-    return account.network.request(Api.functions.account.unregisterDevice(tokenType: mappedType, token: hexString(token), otherUids: otherAccountUserIds.map({ $0._internalGetInt32Value() })))
+    return account.network.request(Api.functions.account.unregisterDevice(tokenType: mappedType, token: hexString(token), otherUids: otherAccountUserIds.map({ $0._internalGetInt64Value() })))
     |> retryRequest
     |> ignoreValues
 }
@@ -41,7 +41,7 @@ func _internal_registerNotificationToken(account: Account, token: Data, type: No
         if excludeMutedChats {
             flags |= 1 << 0
         }
-        return account.network.request(Api.functions.account.registerDevice(flags: flags, tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds.map({ $0._internalGetInt32Value() })))
+        return account.network.request(Api.functions.account.registerDevice(flags: flags, tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds.map({ $0._internalGetInt64Value() })))
         |> retryRequest
         |> ignoreValues
     }

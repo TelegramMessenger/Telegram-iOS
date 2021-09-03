@@ -62,10 +62,10 @@ final class LegacyPeerAvatarPlaceholderDataSource: TGImageDataSource {
                 
                 var peerId = PeerId(0)
                 
-                if let uid = args["uid"] as? String, let nUid = Int32(uid) {
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(nUid))
-                } else if let cid = args["cid"] as? String, let nCid = Int32(cid) {
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(nCid))
+                if let uid = args["uid"] as? String, let nUid = Int64(uid) {
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(nUid))
+                } else if let cid = args["cid"] as? String, let nCid = Int64(cid) {
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(nCid))
                 }
                 
                 let image = generateImage(CGSize(width: CGFloat(width), height: CGFloat(height)), rotatedContext: { size, context in
@@ -76,10 +76,10 @@ final class LegacyPeerAvatarPlaceholderDataSource: TGImageDataSource {
                     context.clip()
                     
                     let colorIndex: Int
-                    if peerId.id._internalGetInt32Value() == 0 {
+                    if peerId.id._internalGetInt64Value() == 0 {
                         colorIndex = -1
                     } else {
-                        colorIndex = abs(Int(account.peerId.id._internalGetInt32Value() &+ peerId.id._internalGetInt32Value()))
+                        colorIndex = abs(Int(clamping: account.peerId.id._internalGetInt64Value() &+ peerId.id._internalGetInt64Value()))
                     }
                     
                     let colorsArray: NSArray

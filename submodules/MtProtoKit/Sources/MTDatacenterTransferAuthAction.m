@@ -116,7 +116,7 @@
     [requestService addRequest:request];
 }
 
-- (void)beginTransferWithId:(int32_t)dataId data:(NSData *)authData
+- (void)beginTransferWithId:(int64_t)dataId data:(NSData *)authData
 {
     [_sourceDatacenterMtProto stop];
     _sourceDatacenterMtProto = nil;

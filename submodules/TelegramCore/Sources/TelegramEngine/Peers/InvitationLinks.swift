@@ -651,12 +651,12 @@ final class CachedPeerInvitationImporters: PostboxCoding {
         self.peerIds = decoder.decodeInt64ArrayForKey("peerIds").map(PeerId.init)
         
         var dates: [PeerId: Int32] = [:]
-        let datesArray = decoder.decodeInt32ArrayForKey("dates")
+        let datesArray = decoder.decodeInt64ArrayForKey("dates")
         for index in stride(from: 0, to: datesArray.endIndex, by: 2) {
             let userId = datesArray[index]
             let date = datesArray[index + 1]
-            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
-            dates[peerId] = date
+            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+            dates[peerId] = Int32(clamping: date)
         }
         self.dates = dates
         
@@ -666,12 +666,12 @@ final class CachedPeerInvitationImporters: PostboxCoding {
     func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64Array(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
         
-        var dates: [Int32] = []
+        var dates: [Int64] = []
         for (peerId, date) in self.dates {
-            dates.append(peerId.id._internalGetInt32Value())
-            dates.append(date)
+            dates.append(peerId.id._internalGetInt64Value())
+            dates.append(Int64(date))
         }
-        encoder.encodeInt32Array(dates, forKey: "dates")
+        encoder.encodeInt64Array(dates, forKey: "dates")
         
         encoder.encodeInt32(self.count, forKey: "count")
     }
@@ -788,7 +788,7 @@ private final class PeerInvitationImportersContextImpl {
                                 let date: Int32
                                 switch importer {
                                     case let .chatInviteImporter(userId, dateValue):
-                                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
+                                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                         date = dateValue
                                 }
                                 if let peer = transaction.getPeer(peerId) {
@@ -908,7 +908,7 @@ func _internal_peerExportedInvitationsCreators(account: Account, peerId: PeerId)
                             for admin in admins {
                                 switch admin {
                                 case let .chatAdminWithInvites(adminId, invitesCount, revokedInvitesCount):
-                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(adminId))
+                                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(adminId))
                                     if let peer = peersMap[peerId], peerId != account.peerId {
                                         creators.append(ExportedInvitationCreator(peer: RenderedPeer(peer: peer), count: invitesCount, revokedCount: revokedInvitesCount))
                                     }

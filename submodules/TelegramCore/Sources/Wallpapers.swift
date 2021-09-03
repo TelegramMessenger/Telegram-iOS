@@ -5,10 +5,10 @@ import TelegramApi
 
 
 public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: Bool = false) -> Signal<[TelegramWallpaper], NoError> {
-    let fetch: ([TelegramWallpaper]?, Int32?) -> Signal<[TelegramWallpaper], NoError> = { current, hash in
+    let fetch: ([TelegramWallpaper]?, Int64?) -> Signal<[TelegramWallpaper], NoError> = { current, hash in
         network.request(Api.functions.account.getWallPapers(hash: 0))
         |> retryRequest
-        |> mapToSignal { result -> Signal<([TelegramWallpaper], Int32), NoError> in
+        |> mapToSignal { result -> Signal<([TelegramWallpaper], Int64), NoError> in
             switch result {
                 case let .wallPapers(hash, wallpapers):
                     var items: [TelegramWallpaper] = []
@@ -55,7 +55,7 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
     if forceUpdate {
         return fetch(nil, nil)
     } else {
-        return postbox.transaction { transaction -> ([TelegramWallpaper], Int32?) in
+        return postbox.transaction { transaction -> ([TelegramWallpaper], Int64?) in
             let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0))) as? CachedWallpapersConfiguration
             let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers)
             if items.count == 0 {

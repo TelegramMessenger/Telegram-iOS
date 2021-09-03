@@ -210,7 +210,7 @@ public class BoxedMessage: NSObject {
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
-        return 132
+        return 133
     }
     
     public func parseMessage(_ data: Data!) -> Any! {
@@ -236,7 +236,7 @@ public class Serialization: NSObject, MTSerialization {
         }
     }
     
-    public func importAuthorization(_ authId: Int32, bytes: Data!) -> Data! {
+    public func importAuthorization(_ authId: Int64, bytes: Data!) -> Data! {
         return Api.functions.auth.importAuthorization(id: authId, bytes: Buffer(data: bytes)).1.makeData()
     }
     

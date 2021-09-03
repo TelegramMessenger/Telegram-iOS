@@ -17,7 +17,7 @@ func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId
     return account.postbox.transaction { transaction -> Signal<Void, AddGroupMemberError> in
         if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
             if let group = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.addChatUser(chatId: group.id.id._internalGetInt32Value(), userId: inputUser, fwdLimit: 100))
+                return account.network.request(Api.functions.messages.addChatUser(chatId: group.id.id._internalGetInt64Value(), userId: inputUser, fwdLimit: 100))
                 |> mapError { error -> AddGroupMemberError in
                     switch error.errorDescription {
                     case "USERS_TOO_MUCH":

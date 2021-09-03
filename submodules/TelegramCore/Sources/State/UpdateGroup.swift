@@ -9,7 +9,7 @@ enum UpdateGroup {
     case withDate(updates: [Api.Update], date: Int32, users: [Api.User], chats: [Api.Chat])
     case reset
     case updatePts(pts: Int32, ptsCount: Int32)
-    case updateChannelPts(channelId: Int32, pts: Int32, ptsCount: Int32)
+    case updateChannelPts(channelId: Int64, pts: Int32, ptsCount: Int32)
     case ensurePeerHasLocalState(id: PeerId)
     
     var updates: [Api.Update] {
