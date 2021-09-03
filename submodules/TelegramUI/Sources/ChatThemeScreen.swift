@@ -628,12 +628,12 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.backgroundNode.addSubnode(self.contentBackgroundNode)
         self.contentContainerNode.addSubnode(self.titleNode)
         self.contentContainerNode.addSubnode(self.textNode)
-        self.contentContainerNode.addSubnode(self.cancelButton)
         self.contentContainerNode.addSubnode(self.doneButton)
         
         self.topContentContainerNode.addSubnode(self.animationNode)
         self.topContentContainerNode.addSubnode(self.switchThemeButton)
         self.topContentContainerNode.addSubnode(self.listNode)
+        self.topContentContainerNode.addSubnode(self.cancelButton)
         
         self.switchThemeButton.addTarget(self, action: #selector(self.switchThemePressed), forControlEvents: .touchUpInside)
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
@@ -808,6 +808,15 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         if let snapshotView = self.contentContainerNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.contentContainerNode.frame
             self.contentContainerNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.contentContainerNode.view)
+            
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+        }
+        
+        if animateBackground, let snapshotView = self.cancelButton.view.snapshotView(afterScreenUpdates: false) {
+            snapshotView.frame = self.cancelButton.frame
+            self.cancelButton.view.superview?.insertSubview(snapshotView, aboveSubview: self.cancelButton.view)
             
             snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()

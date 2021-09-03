@@ -3,7 +3,7 @@
 @implementation Serialization
 
 - (NSUInteger)currentLayer {
-    return 132;
+    return 133;
 }
 
 - (id _Nullable)parseMessage:(NSData * _Nullable)data {
@@ -16,7 +16,7 @@
     };
 }
 
-- (NSData * _Nonnull)importAuthorization:(int32_t)authId bytes:(NSData * _Nonnull)bytes {
+- (NSData * _Nonnull)importAuthorization:(int64_t)authId bytes:(NSData * _Nonnull)bytes {
     return [NSData data];
 }
 

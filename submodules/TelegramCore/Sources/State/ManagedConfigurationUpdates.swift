@@ -35,13 +35,10 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                         
                         let blockedMode = (config.flags & 8) != 0
                         
-                        let defaultEnableTempKeys = (config.flags & (1 << 13)) != 0
-                        
                         updateNetworkSettingsInteractively(transaction: transaction, network: network, { settings in
                             var settings = settings
                             settings.reducedBackupDiscoveryTimeout = blockedMode
                             settings.applicationUpdateUrlPrefix = config.autoupdateUrlPrefix
-                            settings.defaultEnableTempKeys = defaultEnableTempKeys
                             return settings
                         })
                         
@@ -49,12 +46,12 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                         
                         transaction.updatePreferencesEntry(key: PreferencesKeys.suggestedLocalization, { entry in
                             var currentLanguageCode: String?
-                            if let entry = entry as? SuggestedLocalizationEntry {
+                            if let entry = entry?.get(SuggestedLocalizationEntry.self) {
                                 currentLanguageCode = entry.languageCode
                             }
                             if currentLanguageCode != config.suggestedLangCode {
                                 if let suggestedLangCode = config.suggestedLangCode {
-                                    return SuggestedLocalizationEntry(languageCode: suggestedLangCode, isSeen: false)
+                                    return PreferencesEntry(SuggestedLocalizationEntry(languageCode: suggestedLangCode, isSeen: false))
                                 } else {
                                     return nil
                                 }

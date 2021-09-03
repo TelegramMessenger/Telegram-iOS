@@ -35,7 +35,7 @@ extension TelegramMediaPollResults {
                 }
                 
                 self.init(voters: results.flatMap({ $0.map(TelegramMediaPollOptionVoters.init(apiVoters:)) }), totalVoters: totalVoters, recentVoters: recentVoters.flatMap { recentVoters in
-                    return recentVoters.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value($0)) }
+                    return recentVoters.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }
                     } ?? [], solution: parsedSolution)
         }
     }

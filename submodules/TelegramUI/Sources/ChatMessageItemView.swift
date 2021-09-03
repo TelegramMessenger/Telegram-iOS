@@ -610,8 +610,8 @@ final class ChatMessageAccessibilityData {
                     replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyToYourMessage
                 }
                 
-                let (replyMessageLabel, replyMessageValue) = dataForMessage(replyMessage, true)
-                replyLabel += "\(replyLabel): \(replyMessageLabel), \(replyMessageValue)"
+//                let (replyMessageLabel, replyMessageValue) = dataForMessage(replyMessage, true)
+//                replyLabel += "\(replyLabel): \(replyMessageLabel), \(replyMessageValue)"
                 
                 label = "\(replyLabel) . \(label)"
             }

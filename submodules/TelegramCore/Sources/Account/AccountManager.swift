@@ -130,7 +130,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CloudChatRemoveMessagesOperation.self, f: { CloudChatRemoveMessagesOperation(decoder: $0) })
     declareEncodable(AutoremoveTimeoutMessageAttribute.self, f: { AutoremoveTimeoutMessageAttribute(decoder: $0) })
     declareEncodable(AutoclearTimeoutMessageAttribute.self, f: { AutoclearTimeoutMessageAttribute(decoder: $0) })
-    declareEncodable(GlobalNotificationSettings.self, f: { GlobalNotificationSettings(decoder: $0) })
+    //declareEncodable(GlobalNotificationSettings.self, f: { GlobalNotificationSettings(decoder: $0) })
     declareEncodable(CloudChatRemoveChatOperation.self, f: { CloudChatRemoveChatOperation(decoder: $0) })
     declareEncodable(SynchronizePinnedChatsOperation.self, f: { SynchronizePinnedChatsOperation(decoder: $0) })
     declareEncodable(SynchronizeConsumeMessageContentsOperation.self, f: { SynchronizeConsumeMessageContentsOperation(decoder: $0) })
@@ -223,8 +223,8 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedChatContextResult.self, f: { CachedChatContextResult(decoder: $0) })
     declareEncodable(PeerAccessRestrictionInfo.self, f: { PeerAccessRestrictionInfo(decoder: $0) })
     declareEncodable(TelegramMediaImage.VideoRepresentation.self, f: { TelegramMediaImage.VideoRepresentation(decoder: $0) })
-    declareEncodable(Country.self, f: { Country(decoder: $0) })
-    declareEncodable(Country.CountryCode.self, f: { Country.CountryCode(decoder: $0) })
+    //declareEncodable(Country.self, f: { Country(decoder: $0) })
+    //declareEncodable(Country.CountryCode.self, f: { Country.CountryCode(decoder: $0) })
     //declareEncodable(CountriesList.self, f: { CountriesList(decoder: $0) })
     declareEncodable(ValidationMessageAttribute.self, f: { ValidationMessageAttribute(decoder: $0) })
     declareEncodable(EmojiSearchQueryMessageAttribute.self, f: { EmojiSearchQueryMessageAttribute(decoder: $0) })
@@ -235,7 +235,7 @@ private var declaredEncodables: Void = {
     //declareEncodable(WallpapersState.self, f: { WallpapersState(decoder: $0) })
     declareEncodable(WallpaperDataResource.self, f: { WallpaperDataResource(decoder: $0) })
     declareEncodable(ForwardOptionsMessageAttribute.self, f: { ForwardOptionsMessageAttribute(decoder: $0) })
-    declareEncodable(ChatTheme.self, f: { ChatTheme(decoder: $0) })
+    //declareEncodable(ChatTheme.self, f: { ChatTheme(decoder: $0) })
     //declareEncodable(ChatThemes.self, f: { ChatThemes(decoder: $0) })
     
     return

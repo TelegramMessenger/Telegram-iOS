@@ -170,7 +170,7 @@ public final class TelegramPeerNotificationSettings: PeerNotificationSettings, E
         self.displayPreviews = displayPreviews
     }
     
-    public init() {
+    public init(decoder: PostboxDecoder) {
         self.muteState = PeerMuteState.decodeInline(decoder)
         self.messageSound = PeerMessageSound.decodeInline(decoder)
         self.displayPreviews = PeerNotificationDisplayPreviews.decodeInline(decoder)

@@ -7,12 +7,12 @@ public func updateCacheStorageSettingsInteractively(accountManager: AccountManag
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(SharedDataKeys.cacheStorageSettings, { entry in
             let currentSettings: CacheStorageSettings
-            if let entry = entry as? CacheStorageSettings {
+            if let entry = entry?.get(CacheStorageSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = CacheStorageSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

@@ -12,10 +12,10 @@ let telegramThemeFileExtension = "tgios-theme"
 #endif
 
 public func telegramThemes(postbox: Postbox, network: Network, accountManager: AccountManager<TelegramAccountManagerTypes>?, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
-    let fetch: ([TelegramTheme]?, Int32?) -> Signal<[TelegramTheme], NoError> = { current, hash in
+    let fetch: ([TelegramTheme]?, Int64?) -> Signal<[TelegramTheme], NoError> = { current, hash in
         network.request(Api.functions.account.getThemes(format: telegramThemeFormat, hash: hash ?? 0))
         |> retryRequest
-        |> mapToSignal { result -> Signal<([TelegramTheme], Int32), NoError> in
+        |> mapToSignal { result -> Signal<([TelegramTheme], Int64), NoError> in
             switch result {
                 case let .themes(hash, themes):
                     let result = themes.compactMap { TelegramTheme(apiTheme: $0) }
@@ -32,14 +32,14 @@ public func telegramThemes(postbox: Postbox, network: Network, accountManager: A
             if let accountManager = accountManager {
                 let _ = accountManager.transaction { transaction in
                     transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
-                        var updated = current as? ThemeSettings ?? ThemeSettings(currentTheme: nil)
+                        var updated = current?.get(ThemeSettings.self) ?? ThemeSettings(currentTheme: nil)
                         for theme in items {
                             if theme.id == updated.currentTheme?.id {
                                 updated = ThemeSettings(currentTheme: theme)
                                 break
                             }
                         }
-                        return updated
+                        return PreferencesEntry(updated)
                     })
                 }.start()
             }
@@ -70,7 +70,7 @@ public func telegramThemes(postbox: Postbox, network: Network, accountManager: A
     if forceUpdate {
         return fetch(nil, nil)
     } else {
-        return postbox.transaction { transaction -> ([TelegramTheme], Int32?) in
+        return postbox.transaction { transaction -> ([TelegramTheme], Int64?) in
             let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedThemesConfiguration, key: ValueBoxKey(length: 0))) as? CachedThemesConfiguration
             let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
             return (items.map { $0.contents as! TelegramTheme }, configuration?.hash)
@@ -219,7 +219,7 @@ private func uploadTheme(account: Account, resource: MediaResource, thumbnailDat
     let uploadedThumbnail: Signal<UploadedThemeData?, UploadThemeError>
     if let thumbnailData = thumbnailData {
         uploadedThumbnail = uploadedThemeThumbnail(postbox: account.postbox, network: account.network, data: thumbnailData)
-        |> mapError { _ -> UploadThemeError in return .generic }
+        |> mapError { _ -> UploadThemeError in }
         |> map(Optional.init)
     } else {
         uploadedThumbnail = .single(nil)
@@ -228,7 +228,7 @@ private func uploadTheme(account: Account, resource: MediaResource, thumbnailDat
     return uploadedThumbnail
     |> mapToSignal { thumbnailResult -> Signal<UploadThemeResult, UploadThemeError> in
         return uploadedTheme(postbox: account.postbox, network: account.network, resource: resource)
-        |> mapError { _ -> UploadThemeError in return .generic }
+        |> mapError { _ -> UploadThemeError in }
         |> mapToSignal { result -> Signal<UploadThemeResult, UploadThemeError> in
             switch result.content {
                 case .error:
@@ -419,11 +419,11 @@ public func updateTheme(account: Account, accountManager: AccountManager<Telegra
 
             let _ = accountManager.transaction { transaction in
                 transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
-                    var updated = current as? ThemeSettings ?? ThemeSettings(currentTheme: nil)
+                    var updated = current?.get(ThemeSettings.self) ?? ThemeSettings(currentTheme: nil)
                     if updatedTheme.id == updated.currentTheme?.id {
                         updated = ThemeSettings(currentTheme: updatedTheme)
                     }
-                    return updated
+                    return PreferencesEntry(updated)
                 })
             }.start()
             return account.postbox.transaction { transaction -> CreateThemeResult in
@@ -461,7 +461,7 @@ public func deleteThemeInteractively(account: Account, accountManager: AccountMa
 public func applyTheme(accountManager: AccountManager<TelegramAccountManagerTypes>, account: Account, theme: TelegramTheme?, autoNight: Bool = false) -> Signal<Never, NoError> {
     return accountManager.transaction { transaction -> Signal<Never, NoError> in
         transaction.updateSharedData(SharedDataKeys.themeSettings, { _ in
-            return ThemeSettings(currentTheme: theme)
+            return PreferencesEntry(ThemeSettings(currentTheme: theme))
         })
         
         if let theme = theme {
@@ -477,7 +477,7 @@ func managedThemesUpdates(accountManager: AccountManager<TelegramAccountManagerT
     let currentTheme = Atomic<TelegramTheme?>(value: nil)
     return accountManager.sharedData(keys: [SharedDataKeys.themeSettings])
     |> map { sharedData -> TelegramTheme? in
-        let themeSettings = (sharedData.entries[SharedDataKeys.themeSettings] as? ThemeSettings) ?? ThemeSettings(currentTheme: nil)
+        let themeSettings = sharedData.entries[SharedDataKeys.themeSettings]?.get(ThemeSettings.self) ?? ThemeSettings(currentTheme: nil)
         return themeSettings.currentTheme
     }
     |> filter { theme in
@@ -493,7 +493,7 @@ func managedThemesUpdates(accountManager: AccountManager<TelegramAccountManagerT
                         let _ = currentTheme.swap(theme)
                         let _ = accountManager.transaction { transaction in
                             transaction.updateSharedData(SharedDataKeys.themeSettings, { _ in
-                                return ThemeSettings(currentTheme: updatedTheme)
+                                return PreferencesEntry(ThemeSettings(currentTheme: updatedTheme))
                             })
                         }.start()
                         let _ = postbox.transaction { transaction in
@@ -545,7 +545,7 @@ public func actualizedTheme(account: Account, accountManager: AccountManager<Tel
     var currentTheme = theme
     return accountManager.sharedData(keys: [SharedDataKeys.themeSettings])
     |> mapToSignal { sharedData -> Signal<TelegramTheme, NoError> in
-        let themeSettings = (sharedData.entries[SharedDataKeys.themeSettings] as? ThemeSettings) ?? ThemeSettings(currentTheme: nil)
+        let themeSettings = sharedData.entries[SharedDataKeys.themeSettings]?.get(ThemeSettings.self) ?? ThemeSettings(currentTheme: nil)
         if let updatedTheme = themeSettings.currentTheme, updatedTheme.id == theme.id {
             if !areThemesEqual(updatedTheme, currentTheme) {
                 currentTheme = updatedTheme

@@ -85,12 +85,12 @@ public final class LocationViewController: ViewController {
     
     private var rightBarButtonAction: LocationViewRightBarButton = .none
 
-    public init(context: AccountContext, subject: Message, params: LocationViewParams) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: Message, params: LocationViewParams) {
         self.context = context
         self.subject = subject
         self.showAll = params.showAll
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                      
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(.clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
@@ -99,7 +99,7 @@ public final class LocationViewController: ViewController {
         self.title = self.presentationData.strings.Map_LocationTitle
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             guard let strongSelf = self, strongSelf.presentationData.theme !== presentationData.theme else {
                 return

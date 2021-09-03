@@ -24,14 +24,15 @@ public struct MessageNotificationSettings: Codable {
         self.sound = PeerMessageSound.decodeInline(container)
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
+
         encoder.encodeInt32(self.enabled ? 1 : 0, forKey: "e")
         encoder.encodeInt32(self.displayPreviews ? 1 : 0, forKey: "p")
         self.sound.encodeInline(encoder)
     }
 }
 
-public struct GlobalNotificationSettingsSet: Codable {
+public struct GlobalNotificationSettingsSet: Codable, Equatable {
     public var privateChats: MessageNotificationSettings
     public var groupChats: MessageNotificationSettings
     public var channels: MessageNotificationSettings
@@ -57,7 +58,8 @@ public struct GlobalNotificationSettingsSet: Codable {
         self.contactsJoined = decoder.decodeInt32ForKey("contactsJoined", orElse: 1) != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
+
         encoder.encodeObject(self.privateChats, forKey: "p")
         encoder.encodeObject(self.groupChats, forKey: "g")
         encoder.encodeObject(self.channels, forKey: "c")

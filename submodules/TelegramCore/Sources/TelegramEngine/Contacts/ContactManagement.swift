@@ -10,7 +10,7 @@ private func md5(_ data: Data) -> Data {
     }
 }
 
-private func updatedRemoteContactPeers(network: Network, hash: Int32) -> Signal<([Peer], [PeerId: PeerPresence], Int32)?, NoError> {
+private func updatedRemoteContactPeers(network: Network, hash: Int64) -> Signal<([Peer], [PeerId: PeerPresence], Int32)?, NoError> {
     return network.request(Api.functions.contacts.getContacts(hash: hash), automaticFloodWait: false)
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.contacts.Contacts?, NoError> in
@@ -38,24 +38,23 @@ private func updatedRemoteContactPeers(network: Network, hash: Int32) -> Signal<
     }
 }
 
-private func hashForCountAndIds(count: Int32, ids: [Int32]) -> Int32 {
-    var acc: Int64 = 0
+private func hashForCountAndIds(count: Int32, ids: [Int64]) -> Int64 {
+    var acc: UInt64 = 0
     
-    acc = (acc &* 20261) &+ Int64(count)
+    combineInt64Hash(&acc, with: UInt64(count))
     
     for id in ids {
-        acc = (acc &* 20261) &+ Int64(id)
-        acc = acc & Int64(0x7FFFFFFF)
+        combineInt64Hash(&acc, with: UInt64(bitPattern: id))
     }
-    return Int32(acc & Int64(0x7FFFFFFF))
+    return finalizeInt64Hash(acc)
 }
 
 func syncContactsOnce(network: Network, postbox: Postbox, accountPeerId: PeerId) -> Signal<Never, NoError> {
-    let initialContactPeerIdsHash = postbox.transaction { transaction -> Int32 in
+    let initialContactPeerIdsHash = postbox.transaction { transaction -> Int64 in
         let contactPeerIds = transaction.getContactPeerIds()
         let totalCount = transaction.getRemoteContactCount()
         let peerIds = Set(contactPeerIds.filter({ $0.namespace == Namespaces.Peer.CloudUser }))
-        return hashForCountAndIds(count: totalCount, ids: peerIds.map({ $0.id._internalGetInt32Value() }).sorted())
+        return hashForCountAndIds(count: totalCount, ids: peerIds.map({ $0.id._internalGetInt64Value() }).sorted())
     }
 
     let updatedPeers = initialContactPeerIdsHash

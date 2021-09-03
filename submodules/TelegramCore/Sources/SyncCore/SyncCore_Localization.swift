@@ -45,7 +45,7 @@ private func writeString(_ buffer: WriteBuffer, _ string: String) {
     }
 }
 
-public final class Localization: PostboxCoding, Equatable {
+public final class Localization: Codable, Equatable {
     public let version: Int32
     public let entries: [LocalizationEntry]
     
@@ -54,11 +54,16 @@ public final class Localization: PostboxCoding, Equatable {
         self.entries = entries
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.version = decoder.decodeInt32ForKey("v", orElse: 0)
-        let count = decoder.decodeInt32ForKey("c", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.version = (try? container.decode(Int32.self, forKey: "v")) ?? 0
+
+        let count = (try? container.decode(Int32.self, forKey: "c")) ?? 0
         var entries: [LocalizationEntry] = []
-        if let data = decoder.decodeBytesForKey("d") {
+        if let rawData = try? container.decodeIfPresent(Data.self, forKey: "d") {
+            let data = ReadBuffer(data: rawData)
+
             for _ in 0 ..< count {
                 var flagsValue: Int8 = 0
                 data.read(&flagsValue, offset: 0, length: 1)
@@ -150,9 +155,11 @@ public final class Localization: PostboxCoding, Equatable {
         self.entries = entries
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.version, forKey: "v")
-        encoder.encodeInt32(Int32(self.entries.count), forKey: "c")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.version, forKey: "v")
+        try container.encode(Int32(self.entries.count), forKey: "c")
         
         let buffer = WriteBuffer()
         for entry in self.entries {
@@ -205,7 +212,7 @@ public final class Localization: PostboxCoding, Equatable {
                     writeString(buffer, other)
             }
         }
-        encoder.encodeBytes(buffer, forKey: "d")
+        try container.encode(buffer.makeData(), forKey: "d")
     }
     
     public static func ==(lhs: Localization, rhs: Localization) -> Bool {

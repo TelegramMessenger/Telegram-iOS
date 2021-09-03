@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 public enum TelegramBaseTheme: Int32 {
@@ -13,7 +14,7 @@ public extension UInt32 {
     }
 }
 
-public final class TelegramThemeSettings: PostboxCoding, Equatable {
+public final class TelegramThemeSettings: PostboxCoding, Codable, Equatable {
     public static func == (lhs: TelegramThemeSettings, rhs: TelegramThemeSettings) -> Bool {
         if lhs.baseTheme != rhs.baseTheme {
             return false
@@ -63,6 +64,21 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
         self.animateMessageColors = decoder.decodeInt32ForKey("animateMessageColors", orElse: 0) != 0
         self.wallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.baseTheme = TelegramBaseTheme(rawValue: try container.decode(Int32.self, forKey: "baseTheme")) ?? .classic
+        self.accentColor = UInt32(bitPattern: try container.decode(Int32.self, forKey: "accent"))
+        self.messageColors = (try container.decode([Int32].self, forKey: "messageColors")).map(UInt32.init(bitPattern:))
+        self.animateMessageColors = (try container.decode(Int32.self, forKey: "animateMessageColors")) != 0
+
+        if let wallpaperData = try container.decodeIfPresent(Data.self, forKey: "wallpaper") {
+            self.wallpaper = TelegramWallpaper(decoder: PostboxDecoder(buffer: MemoryBuffer(data: wallpaperData)))
+        } else {
+            self.wallpaper = nil
+        }
+    }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.baseTheme.rawValue, forKey: "baseTheme")
@@ -75,9 +91,26 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
             encoder.encodeNil(forKey: "wallpaper")
         }
     }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.baseTheme.rawValue, forKey: "baseTheme")
+        try container.encode(Int32(bitPattern: self.accentColor), forKey: "accent")
+        try container.encode(self.messageColors.map(Int32.init(bitPattern:)), forKey: "messageColors")
+        try container.encode((self.animateMessageColors ? 1 : 0) as Int32, forKey: "animateMessageColors")
+
+        if let wallpaper = self.wallpaper {
+            let innerEncoder = PostboxEncoder()
+            wallpaper.encode(innerEncoder)
+            try container.encode(innerEncoder.makeData(), forKey: "wallpaper")
+        } else {
+            try container.encodeNil(forKey: "wallpaper")
+        }
+    }
 }
 
-public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
+public final class TelegramTheme: Codable, OrderedItemListEntryContents, Equatable {
     public let id: Int64
     public let accessHash: Int64
     public let slug: String
@@ -111,6 +144,27 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         self.isDefault = decoder.decodeInt32ForKey("isDefault", orElse: 0) != 0
         self.installCount = decoder.decodeOptionalInt32ForKey("installCount")
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.id = try container.decode(Int64.self, forKey: "id")
+        self.accessHash = try container.decode(Int64.self, forKey: "accessHash")
+        self.slug = try container.decode(String.self, forKey: "slug")
+        self.title = try container.decode(String.self, forKey: "title")
+
+        if let fileData = try container.decodeIfPresent(Data.self, forKey: "file") {
+            self.file = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: fileData)))
+        } else {
+            self.file = nil
+        }
+
+        self.settings = try container.decodeIfPresent(TelegramThemeSettings.self, forKey: "settings")
+
+        self.isCreator = (try container.decode(Int32.self, forKey: "isCreator")) != 0
+        self.isDefault = (try container.decode(Int32.self, forKey: "isDefault")) != 0
+        self.installCount = try container.decodeIfPresent(Int32.self, forKey: "installCount")
+    }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.id, forKey: "id")
@@ -134,6 +188,26 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         } else {
             encoder.encodeNil(forKey: "installCount")
         }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.id, forKey: "id")
+        try container.encode(self.accessHash, forKey: "accessHash")
+        try container.encode(self.slug, forKey: "slug")
+        try container.encode(self.title, forKey: "title")
+        if let file = self.file {
+            let innerEncoder = PostboxEncoder()
+            file.encode(innerEncoder)
+            try container.encode(innerEncoder.makeData(), forKey: "file")
+        } else {
+            try container.encodeNil(forKey: "file")
+        }
+        try container.encodeIfPresent(self.settings, forKey: "settings")
+        try container.encode((self.isCreator ? 1 : 0) as Int32, forKey: "isCreator")
+        try container.encode((self.isDefault ? 1 : 0) as Int32, forKey: "isDefault")
+        try container.encodeIfPresent(self.installCount, forKey: "installCount")
     }
     
     public static func ==(lhs: TelegramTheme, rhs: TelegramTheme) -> Bool {

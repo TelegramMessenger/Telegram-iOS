@@ -1,14 +1,6 @@
 import Foundation
 
-public class PeerNotificationSettingsDecodeHelper {
-    public let decode: (_ data: Data) -> PeerNotificationSettings?
-
-    public init(decode: @escaping (_ data: Data) -> PeerNotificationSettings?) {
-        self.decode = decode
-    }
-}
-
-public enum PeerNotificationSettingsBehavior {
+public enum PeerNotificationSettingsBehavior: PostboxCoding {
     enum CodingKeys: String, CodingKey {
         case _case = "_v"
         case toValue
@@ -18,14 +10,12 @@ public enum PeerNotificationSettingsBehavior {
     case none
     case reset(atTimestamp: Int32, toValue: PeerNotificationSettings)
     
-    public init(from decoder: Decoder, helper: PeerNotificationSettingsDecodeHelper) throws {
-        let container = try decoder.container(keyedBy: StringCodingKey.self)
-
+    public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_v", orElse: 0) {
             case 0:
                 self = .none
             case 1:
-                if let toValue = helper.decode(PeerNotificationSettings.self, forKey: "toValue") {
+                if let toValue = decoder.decodeObjectForKey("toValue") as? PeerNotificationSettings {
                     self = .reset(atTimestamp: decoder.decodeInt32ForKey("atTimestamp", orElse: 0), toValue: toValue)
                 } else {
                     assertionFailure()
@@ -44,15 +34,17 @@ public enum PeerNotificationSettingsBehavior {
             case let .reset(atTimestamp, toValue):
                 encoder.encodeInt32(1, forKey: "_v")
                 encoder.encodeInt32(atTimestamp, forKey: "atTimestamp")
-                encoder.encode(toValue, forKey: "toValue")
+                encoder.encodeObject(toValue, forKey: "toValue")
         }
     }
 }
 
-public protocol PeerNotificationSettings: Codable {
+public protocol PeerNotificationSettings: PostboxCoding {
     func isRemovedFromTotalUnreadCount(`default`: Bool) -> Bool
 
     var behavior: PeerNotificationSettingsBehavior { get }
+
+    func isEqual(to other: PeerNotificationSettings) -> Bool
 }
 
 public final class PostboxGlobalNotificationSettings {

@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-public struct ChatTheme: PostboxCoding, Equatable {
+public struct ChatTheme: Codable, Equatable {
     public static func == (lhs: ChatTheme, rhs: ChatTheme) -> Bool {
         return lhs.emoji == rhs.emoji && lhs.theme == rhs.theme && lhs.darkTheme == rhs.darkTheme
     }
@@ -18,21 +18,24 @@ public struct ChatTheme: PostboxCoding, Equatable {
         self.darkTheme = darkTheme
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.emoji = decoder.decodeStringForKey("e", orElse: "")
-        self.theme = decoder.decodeObjectForKey("t") as! TelegramTheme
-        self.darkTheme = decoder.decodeObjectForKey("dt") as! TelegramTheme
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.emoji = try container.decode(String.self, forKey: "e")
+        self.theme = try container.decode(TelegramTheme.self, forKey: "t")
+        self.darkTheme = try container.decode(TelegramTheme.self, forKey: "dt")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.emoji, forKey: "e")
-        encoder.encodeObject(self.theme, forKey: "t")
-        encoder.encodeObject(self.darkTheme, forKey: "dt")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.emoji, forKey: "e")
+        try container.encode(self.theme, forKey: "t")
+        try container.encode(self.darkTheme, forKey: "dt")
     }
 }
 
-
-public final class ChatThemes: PreferencesEntry, Equatable {
+public final class ChatThemes: Codable, Equatable {
     public let chatThemes: [ChatTheme]
     public let hash: Int32
  
@@ -41,22 +44,18 @@ public final class ChatThemes: PreferencesEntry, Equatable {
         self.hash = hash
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.chatThemes = decoder.decodeObjectArrayForKey("c").map { $0 as! ChatTheme }
-        self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.chatThemes = try container.decode([ChatTheme].self, forKey: "c")
+        self.hash = try container.decode(Int32.self, forKey: "h")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObjectArray(self.chatThemes, forKey: "c")
-        encoder.encodeInt32(self.hash, forKey: "h")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? ChatThemes {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.chatThemes, forKey: "c")
+        try container.encode(self.hash, forKey: "h")
     }
     
     public static func ==(lhs: ChatThemes, rhs: ChatThemes) -> Bool {
@@ -77,7 +76,7 @@ func _internal_getChatThemes(accountManager: AccountManager<TelegramAccountManag
                     } else {
                         let _ = accountManager.transaction { transaction in
                             transaction.updateSharedData(SharedDataKeys.chatThemes, { _ in
-                                return ChatThemes(chatThemes: result, hash: hash)
+                                return PreferencesEntry(ChatThemes(chatThemes: result, hash: hash))
                             })
                         }.start()
                         return .single(result)
@@ -94,7 +93,7 @@ func _internal_getChatThemes(accountManager: AccountManager<TelegramAccountManag
         return accountManager.sharedData(keys: [SharedDataKeys.chatThemes])
         |> take(1)
         |> map { sharedData -> ([ChatTheme], Int32) in
-            if let chatThemes = sharedData.entries[SharedDataKeys.chatThemes] as? ChatThemes {
+            if let chatThemes = sharedData.entries[SharedDataKeys.chatThemes]?.get(ChatThemes.self) {
                 return (chatThemes.chatThemes, chatThemes.hash)
             } else {
                 return ([], 0)

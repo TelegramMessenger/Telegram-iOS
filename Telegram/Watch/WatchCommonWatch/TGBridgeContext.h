@@ -3,7 +3,7 @@
 @interface TGBridgeContext : NSObject
 
 @property (nonatomic, readonly) bool authorized;
-@property (nonatomic, readonly) int32_t userId;
+@property (nonatomic, readonly) int64_t userId;
 @property (nonatomic, readonly) bool micAccessAllowed;
 @property (nonatomic, readonly) NSDictionary *preheatData;
 @property (nonatomic, readonly) NSInteger preheatVersion;

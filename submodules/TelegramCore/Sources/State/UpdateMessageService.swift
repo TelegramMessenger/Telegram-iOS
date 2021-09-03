@@ -67,7 +67,7 @@ class UpdateMessageService: NSObject, MTMessageService {
             case let .updateShortMessage(flags, id, userId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities, ttlPeriod):
                 let generatedFromId: Api.Peer
                 if (Int(flags) & 1 << 1) != 0 {
-                    generatedFromId = Api.Peer.peerUser(userId: self.peerId.id._internalGetInt32Value())
+                    generatedFromId = Api.Peer.peerUser(userId: self.peerId.id._internalGetInt64Value())
                 } else {
                     generatedFromId = Api.Peer.peerUser(userId: userId)
                 }

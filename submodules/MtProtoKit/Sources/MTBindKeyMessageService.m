@@ -10,6 +10,8 @@
 #import <MtProtoKit/MTMessageTransaction.h>
 #import <MtProtoKit/MTDatacenterSaltInfo.h>
 #import <MtProtoKit/MTSessionInfo.h>
+#import <MtProtoKit/MTRpcError.h>
+#import <MtProtoKit/MTLogging.h>
 #import "MTInternalMessageParser.h"
 #import "MTRpcResultMessage.h"
 #import "MTBuffer.h"
@@ -142,6 +144,14 @@
             if (rpcResultMessage.data.length >= 4) {
                 uint32_t signature = 0;
                 [rpcResultMessage.data getBytes:&signature range:NSMakeRange(0, 4)];
+
+                id parsedMessage = [MTInternalMessageParser parseMessage:rpcResultMessage.data];
+                if ([parsedMessage isKindOfClass:[MTRpcError class]]) {
+                    if (MTLogEnabled()) {
+                        MTRpcError *rpcError = (MTRpcError *)parsedMessage;
+                        MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is error: %d: %@]", self, _currentMessageId, (int)rpcError.errorCode, rpcError.errorDescription);
+                    }
+                }
                 
                 //boolTrue#997275b5 = Bool;
                 if (signature == 0x997275b5U) {

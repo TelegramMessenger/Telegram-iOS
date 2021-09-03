@@ -7,7 +7,7 @@ public enum VoiceCallP2PMode: Int32 {
     case always = 2
 }
 
-public struct VoipConfiguration: PreferencesEntry, Equatable {
+public struct VoipConfiguration: Codable, Equatable {
     public var serializedData: String?
     
     public static var defaultValue: VoipConfiguration {
@@ -18,22 +18,15 @@ public struct VoipConfiguration: PreferencesEntry, Equatable {
         self.serializedData = serializedData
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.serializedData = decoder.decodeOptionalStringForKey("serializedData")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.serializedData = try container.decodeIfPresent(String.self, forKey: "serializedData")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        if let serializedData = self.serializedData {
-            encoder.encodeString(serializedData, forKey: "serializedData")
-        } else {
-            encoder.encodeNil(forKey: "serializedData")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? VoipConfiguration else {
-            return false
-        }
-        return self == to
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encodeIfPresent(self.serializedData, forKey: "serializedData")
     }
 }

@@ -382,13 +382,14 @@ final class HistoryViewStateValidationContexts {
     }
 }
 
-private func hashForScheduledMessages(_ messages: [Message]) -> Int32 {
-    var acc: UInt32 = 0
+private func hashForScheduledMessages(_ messages: [Message]) -> Int64 {
+    var acc: UInt64 = 0
     
     let sorted = messages.sorted(by: { $0.timestamp > $1.timestamp })
     
     for message in sorted {
-        acc = (acc &* 20261) &+ UInt32(message.id.id)
+        combineInt64Hash(&acc, with: UInt64(message.id.id))
+
         var editTimestamp: Int32 = 0
         inner: for attribute in message.attributes {
             if let attribute = attribute as? EditedMessageAttribute {
@@ -396,23 +397,40 @@ private func hashForScheduledMessages(_ messages: [Message]) -> Int32 {
                 break inner
             }
         }
-        acc = (acc &* 20261) &+ UInt32(editTimestamp)
-        acc = (acc &* 20261) &+ UInt32(message.timestamp)
+        combineInt64Hash(&acc, with: UInt64(editTimestamp))
+        combineInt64Hash(&acc, with: UInt64(message.timestamp))
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+    return finalizeInt64Hash(acc)
 }
 
-private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int32 {
-    var acc: UInt32 = 0
+public func combineInt64Hash(_ acc: inout UInt64, with value: UInt64) {
+    acc ^= (acc >> 21)
+    acc ^= (acc << 35)
+    acc ^= (acc >> 4)
+    acc = acc &+ value
+}
+
+public func combineInt64Hash(_ acc: inout UInt64, with peerId: PeerId) {
+    let value = UInt64(bitPattern: peerId.id._internalGetInt64Value())
+    combineInt64Hash(&acc, with: value)
+}
+
+public func finalizeInt64Hash(_ acc: UInt64) -> Int64 {
+    return Int64(bitPattern: acc)
+}
+
+private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int64 {
+    var acc: UInt64 = 0
     
     let sorted = messages.sorted(by: { $0.index > $1.index })
     
     for message in sorted {
         if withChannelIds {
-            acc = (acc &* 20261) &+ UInt32(message.id.peerId.id._internalGetInt32Value())
+            combineInt64Hash(&acc, with: message.id.peerId)
         }
-        
-        acc = (acc &* 20261) &+ UInt32(message.id.id)
+
+        combineInt64Hash(&acc, with: UInt64(message.id.id))
+
         var timestamp = message.timestamp
         inner: for attribute in message.attributes {
             if let attribute = attribute as? EditedMessageAttribute {
@@ -421,22 +439,22 @@ private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int
             }
         }
         if message.tags.contains(.pinned) {
-            acc = (acc &* 20261) &+ UInt32(1)
+            combineInt64Hash(&acc, with: UInt64(1))
         }
-        acc = (acc &* 20261) &+ UInt32(timestamp)
+        combineInt64Hash(&acc, with: UInt64(timestamp))
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+    return finalizeInt64Hash(acc)
 }
 
-private func hashForMessages(_ messages: [StoreMessage], withChannelIds: Bool) -> Int32 {
-    var acc: UInt32 = 0
+private func hashForMessages(_ messages: [StoreMessage], withChannelIds: Bool) -> Int64 {
+    var acc: UInt64 = 0
     
     for message in messages {
         if case let .Id(id) = message.id {
             if withChannelIds {
-                acc = (acc &* 20261) &+ UInt32(id.peerId.id._internalGetInt32Value())
+                combineInt64Hash(&acc, with: id.peerId)
             }
-            acc = (acc &* 20261) &+ UInt32(id.id)
+            combineInt64Hash(&acc, with: UInt64(id.id))
             var timestamp = message.timestamp
             inner: for attribute in message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
@@ -444,10 +462,10 @@ private func hashForMessages(_ messages: [StoreMessage], withChannelIds: Bool) -
                     break inner
                 }
             }
-            acc = (acc &* 20261) &+ UInt32(timestamp)
+            combineInt64Hash(&acc, with: UInt64(timestamp))
         }
     }
-    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+    return finalizeInt64Hash(acc)
 }
 
 private enum ValidatedMessages {

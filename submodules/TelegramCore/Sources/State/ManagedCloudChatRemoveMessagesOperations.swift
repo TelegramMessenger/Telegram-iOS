@@ -176,7 +176,7 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
                     if let result = result {
                         switch result {
                         case let .affectedMessages(pts, ptsCount):
-                            stateManager.addUpdateGroups([.updateChannelPts(channelId: peer.id.id._internalGetInt32Value(), pts: pts, ptsCount: ptsCount)])
+                            stateManager.addUpdateGroups([.updateChannelPts(channelId: peer.id.id._internalGetInt64Value(), pts: pts, ptsCount: ptsCount)])
                         }
                     }
                     return .complete()
@@ -266,7 +266,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
     } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
         let deleteUser: Signal<Void, NoError>
         if operation.deleteGloballyIfPossible {
-            deleteUser = network.request(Api.functions.messages.deleteChat(chatId: peer.id.id._internalGetInt32Value()))
+            deleteUser = network.request(Api.functions.messages.deleteChat(chatId: peer.id.id._internalGetInt64Value()))
             |> `catch` { _ in
                 return .single(.boolFalse)
             }
@@ -274,7 +274,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
                 return .complete()
             }
         } else {
-            deleteUser = network.request(Api.functions.messages.deleteChatUser(flags: 0, chatId: peer.id.id._internalGetInt32Value(), userId: Api.InputUser.inputUserSelf))
+            deleteUser = network.request(Api.functions.messages.deleteChatUser(flags: 0, chatId: peer.id.id._internalGetInt64Value(), userId: Api.InputUser.inputUserSelf))
                 |> map { result -> Api.Updates? in
                     return result
                 }

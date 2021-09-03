@@ -2,7 +2,7 @@
 
 @implementation MTExportedAuthorizationData
 
-- (instancetype)initWithAuthorizationBytes:(NSData *)authorizationBytes authorizationId:(int32_t)authorizationId
+- (instancetype)initWithAuthorizationBytes:(NSData *)authorizationBytes authorizationId:(int64_t)authorizationId
 {
     self = [super init];
     if (self != nil)

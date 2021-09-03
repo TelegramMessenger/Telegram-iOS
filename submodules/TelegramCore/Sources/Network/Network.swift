@@ -473,16 +473,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 }
             }
             
-            let useTempAuthKeys: Bool
-            if let networkSettings = networkSettings {
-                if let userEnableTempKeys = networkSettings.userEnableTempKeys {
-                    useTempAuthKeys = userEnableTempKeys
-                } else {
-                    useTempAuthKeys = networkSettings.defaultEnableTempKeys
-                }
-            } else {
-                useTempAuthKeys = true
-            }
+            let useTempAuthKeys: Bool = true
             
             var contextValue: MTContext?
             sharedContexts.with { store in
@@ -506,7 +497,8 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             if testingEnvironment {
                 seedAddressList = [
                     1: ["149.154.175.10"],
-                    2: ["149.154.167.40"]
+                    2: ["149.154.167.40"],
+                    3: ["149.154.175.117"]
                 ]
             } else {
                 seedAddressList = [

@@ -165,7 +165,7 @@ private func callWithTelegramMessage(_ telegramMessage: Message, account: Accoun
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 private func messageWithTelegramMessage(_ telegramMessage: Message) -> INMessage? {
-    guard let author = telegramMessage.author, let user = telegramMessage.peers[author.id] as? TelegramUser, user.id.id._internalGetInt32Value() != 777000 else {
+    guard let author = telegramMessage.author, let user = telegramMessage.peers[author.id] as? TelegramUser, user.id.id._internalGetInt64Value() != 777000 else {
         return nil
     }
     

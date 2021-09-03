@@ -3,7 +3,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-public struct ExperimentalUISettings: Equatable, PreferencesEntry {
+public struct ExperimentalUISettings: Equatable, Codable {
     public var keepChatNavigationStack: Bool
     public var skipReadHistory: Bool
     public var crashOnLongQueries: Bool
@@ -70,7 +70,9 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.enableDebugDataDisplay = enableDebugDataDisplay
     }
     
-    public init(decoder: PostboxDecoder) {
+    public init(from decoder: Decoder) throws {
+
+
         self.keepChatNavigationStack = decoder.decodeInt32ForKey("keepChatNavigationStack", orElse: 0) != 0
         self.skipReadHistory = decoder.decodeInt32ForKey("skipReadHistory", orElse: 0) != 0
         self.crashOnLongQueries = decoder.decodeInt32ForKey("crashOnLongQueries", orElse: 0) != 0
@@ -87,7 +89,8 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.enableDebugDataDisplay = decoder.decodeInt32ForKey("enableDebugDataDisplay", orElse: 0) != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
+
         encoder.encodeInt32(self.keepChatNavigationStack ? 1 : 0, forKey: "keepChatNavigationStack")
         encoder.encodeInt32(self.skipReadHistory ? 1 : 0, forKey: "skipReadHistory")
         encoder.encodeInt32(self.crashOnLongQueries ? 1 : 0, forKey: "crashOnLongQueries")

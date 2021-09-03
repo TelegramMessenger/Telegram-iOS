@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public struct AppConfiguration: Codable {
+public struct AppConfiguration: Codable, Equatable {
     public var data: JSON?
     
     public static var defaultValue: AppConfiguration {
