@@ -483,7 +483,7 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
     return entries
 }
 
-public func createPollController(context: AccountContext, peer: EnginePeer, isQuiz: Bool? = nil, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
+public func createPollController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, isQuiz: Bool? = nil, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
     var initialState = CreatePollControllerState()
     if let isQuiz = isQuiz {
         initialState.isQuiz = isQuiz
@@ -697,7 +697,7 @@ public func createPollController(context: AccountContext, peer: EnginePeer, isQu
         }
     }, displayMultipleChoiceDisabled: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CreatePoll_MultipleChoiceQuizAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.CreatePoll_MultipleChoiceQuizAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
     }, updateQuiz: { value in
         if !value {
             displayQuizTooltipImpl?(value)
@@ -743,8 +743,9 @@ public func createPollController(context: AccountContext, peer: EnginePeer, isQu
     
     let previousOptionIds = Atomic<[Int]?>(value: nil)
 
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(queue: .mainQueue(),
-        context.sharedContext.presentationData,
+        presentationData,
         statePromise.get(),
         context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.Limits())
     )
@@ -1095,7 +1096,7 @@ public func createPollController(context: AccountContext, peer: EnginePeer, isQu
         }
         if hasNonEmptyOptions || !state.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CreatePoll_CancelConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.CreatePoll_CancelConfirmation, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
                 dismissImpl?()
             })]), nil)
             return false

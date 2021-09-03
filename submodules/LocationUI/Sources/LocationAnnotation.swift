@@ -707,7 +707,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         
         var arguments: VenueIconArguments?
         if let annotation = self.annotation as? LocationPinAnnotation {
-            arguments = VenueIconArguments(defaultForegroundColor: annotation.theme.chat.inputPanel.actionControlForegroundColor)
+            arguments = VenueIconArguments(defaultBackgroundColor: annotation.theme.chat.inputPanel.actionControlFillColor, defaultForegroundColor: annotation.theme.chat.inputPanel.actionControlForegroundColor)
         }
         
         let iconLayout = self.iconNode.asyncLayout()

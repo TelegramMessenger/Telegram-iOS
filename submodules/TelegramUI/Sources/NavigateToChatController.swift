@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import SwiftSignalKit
 import TelegramCore
 import Postbox
 import AccountContext
@@ -120,7 +121,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
             controller.activateInput()
         }
         if params.changeColors {
-            controller.presentThemeSelection()
+            Queue.mainQueue().after(0.1) {
+                controller.presentThemeSelection()
+            }
         }
     }
     

@@ -426,7 +426,7 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
             guard let defaultBannedRights = channel.defaultBannedRights else {
                 return
             }
-            let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let text: String
             if channel.hasPermission(.banMembers) {
                 if defaultBannedRights.flags.contains(right) {
@@ -437,7 +437,7 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
             } else {
                 text = presentationData.strings.GroupPermission_EditingDisabled
             }
-            presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
         })
     }, openTimeout: {
         let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -467,7 +467,7 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
         }))
         items.append(ActionSheetButtonItem(title: presentationData.strings.MessageTimer_Custom, color: .accent, action: { [weak actionSheet] in
             actionSheet?.dismissAnimated()
-            presentControllerImpl?(PeerBanTimeoutController(context: context, currentValue: Int32(Date().timeIntervalSince1970), applyValue: { value in
+            presentControllerImpl?(PeerBanTimeoutController(context: context, updatedPresentationData: updatedPresentationData, currentValue: Int32(Date().timeIntervalSince1970), applyValue: { value in
                 applyValue(value)
             }), nil)
         }))
@@ -639,7 +639,7 @@ public func channelBannedMemberController(context: AccountContext, updatedPresen
                                         switch error {
                                         case .tooManyChannels:
                                             Queue.mainQueue().async {
-                                                pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
+                                                pushControllerImpl?(oldChannelsController(context: context, updatedPresentationData: updatedPresentationData, intent: .upgrade))
                                             }
                                         default:
                                             break

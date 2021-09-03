@@ -65,13 +65,11 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     var dismiss: (() -> Void)?
     
     private var presentationData: PresentationData
-    private var presentationDataDisposable: Disposable?
     
-    init(navigationBar: NavigationBar?, context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
+    init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter]) {
         self.navigationBar = navigationBar
         
         self.context = context
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
         
         var placeholder: String
@@ -224,28 +222,15 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.tokenListNode.textReturned = { [weak self] in
             self?.complete?()
         }
-        
-        self.presentationDataDisposable = (context.sharedContext.presentationData
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-            if let strongSelf = self {
-                let previousTheme = strongSelf.presentationData.theme
-                let previousStrings = strongSelf.presentationData.strings
-                
-                strongSelf.presentationData = presentationData
-                
-                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
-                    strongSelf.updateThemeAndStrings()
-                }
-            }
-        })
     }
     
     deinit {
         self.searchResultsReadyDisposable.dispose()
     }
     
-    private func updateThemeAndStrings() {
-        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        self.backgroundColor = presentationData.theme.chatList.backgroundColor
     }
     
     func scrollToTop() {

@@ -154,14 +154,17 @@ public func venueIconColor(type: String) -> UIColor {
 }
 
 public struct VenueIconArguments: TransformImageCustomArguments {
+    let defaultBackgroundColor: UIColor
     let defaultForegroundColor: UIColor
     
-    public init(defaultForegroundColor: UIColor) {
+    public init(defaultBackgroundColor: UIColor, defaultForegroundColor: UIColor) {
+        self.defaultBackgroundColor = defaultBackgroundColor
         self.defaultForegroundColor = defaultForegroundColor
     }
     
     public func serialized() -> NSArray {
         let array = NSMutableArray()
+        array.add(self.defaultBackgroundColor)
         array.add(self.defaultForegroundColor)
         return array
     }
@@ -179,11 +182,13 @@ public func venueIcon(postbox: Postbox, type: String, background: Bool) -> Signa
                 iconImage = image
             }
             
-            let backgroundColor = venueIconColor(type: type)
+            let backgroundColor: UIColor
             let foregroundColor: UIColor
             if type.isEmpty, let customArguments = arguments.custom as? VenueIconArguments {
+                backgroundColor = customArguments.defaultBackgroundColor
                 foregroundColor = customArguments.defaultForegroundColor
             } else {
+                backgroundColor = venueIconColor(type: type)
                 foregroundColor = UIColor.white
             }
                 

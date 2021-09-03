@@ -406,7 +406,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                                 updatedState.updating = false
                                 return updatedState
                             }
-                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                         })
                     })
                 ]),
@@ -456,7 +456,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                         updatedState.updating = false
                         return updatedState
                     }
-                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 })
             } else if let invite = invite {
                 let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: invite.link, expireDate: expireDate, usageLimit: usageLimit)
@@ -470,7 +470,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                         updatedState.updating = false
                         return updatedState
                     }
-                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 })
             }
         })

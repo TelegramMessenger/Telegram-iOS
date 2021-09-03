@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Postbox
+import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
 import Display
@@ -11,6 +12,7 @@ import ReactionSelectionNode
 import ContextUI
 import ChatInterfaceState
 import UndoUI
+import TelegramPresentationData
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
@@ -138,6 +140,7 @@ public final class ChatControllerInteraction {
     var searchTextHighightState: (String, [MessageIndex])?
     var seenOneTimeAnimatedMedia = Set<MessageId>()
     var currentMessageWithLoadingReplyThread: MessageId?
+    var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     let presentationContext: ChatPresentationContext
     
     init(

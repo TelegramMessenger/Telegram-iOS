@@ -116,7 +116,7 @@ public final class AccountWithInfo: Equatable {
 
 public enum OpenURLContext {
     case generic
-    case chat
+    case chat(updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?)
 }
 
 public struct ChatAvailableMessageActionOptions: OptionSet {
@@ -471,6 +471,7 @@ public enum ContactListPeer: Equatable {
 
 public final class ContactSelectionControllerParams {
     public let context: AccountContext
+    public let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let autoDismiss: Bool
     public let title: (PresentationStrings) -> String
     public let options: [ContactListAdditionalOption]
@@ -479,8 +480,9 @@ public final class ContactSelectionControllerParams {
     public let multipleSelection: Bool
     public let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
     
-    public init(context: AccountContext, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, displayCallIcons: Bool = false, multipleSelection: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, displayCallIcons: Bool = false, multipleSelection: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
         self.context = context
+        self.updatedPresentationData = updatedPresentationData
         self.autoDismiss = autoDismiss
         self.title = title
         self.options = options

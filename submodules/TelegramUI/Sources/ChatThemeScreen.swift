@@ -13,6 +13,7 @@ import TelegramNotices
 import PresentationDataUtils
 import AnimationUI
 import MergeLists
+import MediaResources
 import WallpaperResources
 import TooltipUI
 
@@ -649,6 +650,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 return
             }
             
+            let isFirstTime = strongSelf.entries == nil
             let presentationData = strongSelf.presentationData
                 
             var entries: [ThemeSettingsThemeEntry] = []
@@ -676,6 +678,37 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             strongSelf.enqueueTransition(transition)
             
             strongSelf.entries = entries
+            
+            if isFirstTime {
+                for theme in themes {
+                    if let wallpaper = theme.theme.settings?.wallpaper, case let .file(file) = wallpaper {
+                        let account = strongSelf.context.account
+                        let accountManager = strongSelf.context.sharedContext.accountManager
+                        let path = accountManager.mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: CachedPreparedPatternWallpaperRepresentation())
+                        if !FileManager.default.fileExists(atPath: path) {
+                            let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
+                                let accountResource = account.postbox.mediaBox.cachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true)
+                                
+                                let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .media(media: .standalone(media: file.file), resource: file.file.resource))
+                                let fetchedFullSizeDisposable = fetchedFullSize.start()
+                                let fullSizeDisposable = accountResource.start(next: { next in
+                                    subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
+                                    
+                                    if next.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
+                                        accountManager.mediaBox.storeCachedResourceRepresentation(file.file.resource, representation: CachedPreparedPatternWallpaperRepresentation(), data: data)
+                                    }
+                                }, error: subscriber.putError, completed: subscriber.putCompletion)
+                                
+                                return ActionDisposable {
+                                    fetchedFullSizeDisposable.dispose()
+                                    fullSizeDisposable.dispose()
+                                }
+                            }
+                            let _ = accountFullSizeData.start()
+                        }
+                    }
+                }
+            }
         }))
         
         self.switchThemeButton.highligthedChanged = { [weak self] highlighted in
@@ -785,7 +818,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     }
     
     private func animateCrossfade(animateBackground: Bool = true, updateSunIcon: Bool = false) {
-        let delay: Double = animateBackground ? 0.0 : 0.1
+        let delay: Double = animateBackground ? 0.0 : 0.2
         
         if let snapshotView = self.animationNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.animationNode.frame

@@ -600,7 +600,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
                                         }
                                     }
                                     if !canUnban {
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Members_AddAdminErrorBlacklisted, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_Members_AddAdminErrorBlacklisted, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                         return
                                     }
                                 }
