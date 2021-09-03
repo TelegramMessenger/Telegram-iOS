@@ -300,7 +300,7 @@ private func groupStickerPackSetupControllerEntries(presentationData: Presentati
     return entries
 }
 
-public func groupStickerPackSetupController(context: AccountContext, peerId: PeerId, currentPackInfo: StickerPackCollectionInfo?) -> ViewController {
+public func groupStickerPackSetupController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, currentPackInfo: StickerPackCollectionInfo?) -> ViewController {
     let initialState = GroupStickerPackSetupControllerState(isSaving: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -402,7 +402,8 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     
     let previousHadData = Atomic<Bool>(value: false)
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
     |> map { presentationData, state, initialData, view, searchState, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var stickerSettings = StickerSettings.defaultSettings
         if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {

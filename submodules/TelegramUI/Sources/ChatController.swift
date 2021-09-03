@@ -357,12 +357,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var themeEmoticonPreviewPromise = ValuePromise<String?>(nil)
     private var themeDarkAppearancePreviewPromise = ValuePromise<Bool?>(nil)
     private var didSetPresentationData = false
-    private var presentationDataPromise = Promise<PresentationData>()
     private var presentationData: PresentationData
-    private var presentationDataDisposable: Disposable?
+    private var presentationDataPromise = Promise<PresentationData>()
     override public var updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) {
         return (self.presentationData, self.presentationDataPromise.get())
     }
+    private var presentationDataDisposable: Disposable?
     
     private var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     private var automaticMediaDownloadSettingsDisposable: Disposable?
@@ -2956,9 +2956,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 
                                 let statsController: ViewController
                                 if let channel = peer as? TelegramChannel, case .group = channel.info {
-                                    statsController = groupStatsController(context: context, peerId: peer.id, cachedPeerData: cachedData)
+                                    statsController = groupStatsController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, cachedPeerData: cachedData)
                                 } else {
-                                    statsController = channelStatsController(context: context, peerId: peer.id, cachedPeerData: cachedData)
+                                    statsController = channelStatsController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, cachedPeerData: cachedData)
                                 }
                                 strongSelf.push(statsController)
                             })))
@@ -3898,7 +3898,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let accountManager = context.sharedContext.accountManager
-        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, themeSettings, context.engine.themes.getChatThemes(accountManager: accountManager, onlyCached: false), themeEmoticon, self.themeEmoticonPreviewPromise.get(), self.themeDarkAppearancePreviewPromise.get()).start(next: { [weak self] presentationData, themeSettings, chatThemes, themeEmoticon, themeEmoticonPreview, darkAppearancePreview in
+        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, themeSettings, context.engine.themes.getChatThemes(accountManager: accountManager, onlyCached: true), themeEmoticon, self.themeEmoticonPreviewPromise.get(), self.themeDarkAppearancePreviewPromise.get()).start(next: { [weak self] presentationData, themeSettings, chatThemes, themeEmoticon, themeEmoticonPreview, darkAppearancePreview in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
@@ -3915,11 +3915,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 
                 var presentationData = presentationData
                 if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoji == themeEmoticon }) {
-                    var isDarkAppearance = presentationData.theme.overallDarkAppearance
+                    var useDarkAppearance = presentationData.autoNightModeTriggered
                     if let darkAppearancePreview = darkAppearancePreview {
-                        isDarkAppearance = darkAppearancePreview
+                        useDarkAppearance = darkAppearancePreview
                     }
-                    let customTheme = isDarkAppearance ? theme.darkTheme : theme.theme
+                    let customTheme = useDarkAppearance ? theme.darkTheme : theme.theme
                     if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings, specialMode: true) {
                         presentationData = presentationData.withUpdated(theme: theme)
                         presentationData = presentationData.withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
@@ -13282,7 +13282,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         
-        let controller = peerAutoremoveSetupScreen(context: self.context, peerId: peer.id, completion: { [weak self] updatedValue in
+        let controller = peerAutoremoveSetupScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peerId: peer.id, completion: { [weak self] updatedValue in
             if case let .updated(value) = updatedValue {
                 guard let strongSelf = self else {
                     return

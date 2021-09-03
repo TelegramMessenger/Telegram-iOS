@@ -267,7 +267,7 @@ private func channelBlacklistControllerEntries(presentationData: PresentationDat
     return entries
 }
 
-public func channelBlacklistController(context: AccountContext, peerId: PeerId) -> ViewController {
+public func channelBlacklistController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(ChannelBlacklistControllerState(referenceTimestamp: Int32(Date().timeIntervalSince1970)), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelBlacklistControllerState(referenceTimestamp: Int32(Date().timeIntervalSince1970)))
     let updateState: ((ChannelBlacklistControllerState) -> ChannelBlacklistControllerState) -> Void = { f in
@@ -435,7 +435,8 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
     
     let previousParticipantsValue = Atomic<[RenderedChannelParticipant]?>(value: nil)
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView.get(), blacklistPromise.get())
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(queue: .mainQueue(), presentationData, statePromise.get(), peerView.get(), blacklistPromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state, view, participants -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?

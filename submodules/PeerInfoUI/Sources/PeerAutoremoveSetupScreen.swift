@@ -143,7 +143,7 @@ public enum PeerAutoremoveSetupScreenResult {
     case updated(Updated)
 }
 
-public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, completion: @escaping (PeerAutoremoveSetupScreenResult) -> Void = { _ in }) -> ViewController {
+public func peerAutoremoveSetupScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, completion: @escaping (PeerAutoremoveSetupScreenResult) -> Void = { _ in }) -> ViewController {
     let statePromise = ValuePromise(PeerAutoremoveSetupState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PeerAutoremoveSetupState())
     let updateState: ((PeerAutoremoveSetupState) -> PeerAutoremoveSetupState) -> Void = { f in
@@ -165,7 +165,8 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
         }
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
     |> deliverOnMainQueue
     |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var defaultValue: Int32 = Int32.max

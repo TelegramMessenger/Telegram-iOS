@@ -321,7 +321,7 @@ private struct InviteLinkEditControllerState: Equatable {
     var updating = false
 }
 
-public func inviteLinkEditController(context: AccountContext, peerId: PeerId, invite: ExportedInvitation?, completion: ((ExportedInvitation?) -> Void)? = nil) -> ViewController {
+public func inviteLinkEditController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, invite: ExportedInvitation?, completion: ((ExportedInvitation?) -> Void)? = nil) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     let actionsDisposable = DisposableSet()
 
@@ -374,7 +374,7 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
             } else {
                 isGroup = true
             }
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
             let controller = ActionSheetController(presentationData: presentationData)
             let dismissAction: () -> Void = { [weak controller] in
                 controller?.dismissAnimated()
@@ -416,8 +416,10 @@ public func inviteLinkEditController(context: AccountContext, peerId: PeerId, in
         })
     })
     
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    
     let previousState = Atomic<InviteLinkEditControllerState?>(value: nil)
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
+    let signal = combineLatest(presentationData, statePromise.get())
     |> deliverOnMainQueue
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
