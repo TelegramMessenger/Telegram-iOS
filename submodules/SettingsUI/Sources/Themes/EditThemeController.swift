@@ -20,12 +20,14 @@ private final class EditThemeControllerArguments {
     let updateState: ((EditThemeControllerState) -> EditThemeControllerState) -> Void
     let openColors: () -> Void
     let openFile: () -> Void
+    let toggleDark: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((EditThemeControllerState) -> EditThemeControllerState) -> Void, openColors: @escaping () -> Void, openFile: @escaping () -> Void) {
+    init(context: AccountContext, updateState: @escaping ((EditThemeControllerState) -> EditThemeControllerState) -> Void, openColors: @escaping () -> Void, openFile: @escaping () -> Void, toggleDark: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
         self.openColors = openColors
         self.openFile = openFile
+        self.toggleDark = toggleDark
     }
 }
 
@@ -54,6 +56,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
     case chatPreviewHeader(PresentationTheme, String)
     case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationChatBubbleCorners, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, [ChatPreviewMessageItem])
     case changeColors(PresentationTheme, String)
+    case toggleDark(PresentationTheme, String)
     case uploadTheme(PresentationTheme, String)
     case uploadInfo(PresentationTheme, String)
     
@@ -61,7 +64,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
         switch self {
             case .title, .slug, .slugInfo:
                 return EditThemeControllerSection.info.rawValue
-            case .chatPreviewHeader, .chatPreview, .changeColors, .uploadTheme, .uploadInfo:
+            case .chatPreviewHeader, .chatPreview, .changeColors, .toggleDark, .uploadTheme, .uploadInfo:
                 return EditThemeControllerSection.chatPreview.rawValue
         }
     }
@@ -80,10 +83,12 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                 return 4
             case .changeColors:
                 return 5
-            case .uploadTheme:
+            case .toggleDark:
                 return 6
-            case .uploadInfo:
+            case .uploadTheme:
                 return 7
+            case .uploadInfo:
+                return 8
         }
     }
     
@@ -121,6 +126,12 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                 }
             case let .changeColors(lhsTheme, lhsText):
                 if case let .changeColors(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .toggleDark(lhsTheme, lhsText):
+                if case let .toggleDark(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -176,6 +187,10 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
             case let .changeColors(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.openColors()
+                })
+            case let .toggleDark(_, text):
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.toggleDark()
                 })
             case let .uploadTheme(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -255,7 +270,11 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
     entries.append(.chatPreview(presentationData.theme, previewTheme, previewTheme.chat.defaultWallpaper, presentationData.chatFontSize, presentationData.chatBubbleCorners, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (previewIncomingReplyName, previewIncomingReplyText), text: previewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: previewOutgoingText)]))
     
     entries.append(.changeColors(presentationData.theme, presentationData.strings.EditTheme_ChangeColors))
-    if !hasSettings {
+    if hasSettings {
+        if previewTheme.overallDarkAppearance {
+            entries.append(.toggleDark(presentationData.theme, "Toggle Base Theme"))
+        }
+    } else {
         entries.append(.uploadTheme(presentationData.theme, uploadText))
         entries.append(.uploadInfo(presentationData.theme, uploadInfo))
     }
@@ -278,6 +297,11 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 wallpaper = theme.chat.defaultWallpaper
                 settingsPromise.set(.single(settings))
                 hasSettings = settings != nil
+            } else if let settings = settings {
+                theme = makePresentationTheme(settings: settings) ?? presentationData.theme
+                wallpaper = theme.chat.defaultWallpaper
+                settingsPromise.set(.single(settings))
+                hasSettings = true
             } else {
                 theme = presentationData.theme
                 wallpaper = presentationData.chatWallpaper
@@ -333,6 +357,10 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
         let _ = (combineLatest(queue: Queue.mainQueue(), previewThemePromise.get(), settingsPromise.get())
         |> take(1)).start(next: { theme, previousSettings in
             var controllerDismissImpl: (() -> Void)?
+            var generalThemeReference = generalThemeReference
+            if let settings = previousSettings {
+                generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
+            }
             let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: nil, generalThemeReference: generalThemeReference, defaultThemeReference: nil, create: false, completion: { updatedTheme, settings in
                 updateState { current in
                     var state = current
@@ -398,6 +426,37 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
             }
         })
         presentControllerImpl?(controller, nil)
+    }, toggleDark: {
+        let _ = (combineLatest(queue: Queue.mainQueue(), previewThemePromise.get(), settingsPromise.get())
+        |> take(1)).start(next: { theme, previousSettings in
+            var updatedTheme = theme
+            var updatedSettings: TelegramThemeSettings?
+            
+            if let themeSettings = previousSettings {
+                if updatedTheme.referenceTheme == .night {
+                    updatedTheme = updatedTheme.withUpdated(referenceTheme: .nightAccent)
+                    updatedSettings = TelegramThemeSettings(baseTheme: .tinted, accentColor: themeSettings.accentColor, outgoingAccentColor: themeSettings.outgoingAccentColor, messageColors: themeSettings.messageColors, animateMessageColors: themeSettings.animateMessageColors, wallpaper: themeSettings.wallpaper)
+                    if let settings = updatedSettings, let theme = makePresentationTheme(settings: settings) {
+                        updatedTheme = theme
+                    }
+                } else if updatedTheme.referenceTheme == .nightAccent {
+                    updatedSettings = TelegramThemeSettings(baseTheme: .night, accentColor: themeSettings.accentColor, outgoingAccentColor: themeSettings.outgoingAccentColor, messageColors: themeSettings.messageColors, animateMessageColors: themeSettings.animateMessageColors, wallpaper: themeSettings.wallpaper)
+                    if let settings = updatedSettings, let theme = makePresentationTheme(settings: settings) {
+                        updatedTheme = theme
+                    }
+                }
+            }
+            
+            updateState { current in
+                var state = current
+                previewThemePromise.set(.single(updatedTheme))
+                state.updatedTheme = updatedTheme
+                return state
+            }
+            if previousSettings != nil {
+                settingsPromise.set(.single(updatedSettings))
+            }
+        })
     })
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), previewThemePromise.get())

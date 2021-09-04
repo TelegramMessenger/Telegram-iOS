@@ -28,7 +28,7 @@ public final class AnimatedStickerResourceSource: AnimatedStickerNodeSource {
     }
     
     public func directDataPath() -> Signal<String, NoError> {
-        return self.account.postbox.mediaBox.resourceData(resource)
+        return self.account.postbox.mediaBox.resourceData(self.resource)
         |> filter { data in
             return data.complete
         }

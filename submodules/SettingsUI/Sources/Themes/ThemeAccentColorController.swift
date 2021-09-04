@@ -432,15 +432,24 @@ final class ThemeAccentColorController: ViewController {
                 
                 if case let .colors(initialThemeReference, true) = strongSelf.mode {
                     let themeSpecificAccentColor = settings.themeSpecificAccentColors[themeReference.index]
-                    accentColor = themeSpecificAccentColor?.color ?? defaultDayAccentColor
-
+                    var customAccentColor: UIColor?
+                    if let color = themeSpecificAccentColor?.color {
+                        accentColor = color
+                        customAccentColor = accentColor
+                    } else if case let .cloud(cloudTheme) = initialThemeReference, let settings = cloudTheme.theme.settings {
+                        accentColor = UIColor(rgb: settings.accentColor)
+                        customAccentColor = accentColor
+                    } else {
+                        accentColor = defaultDayAccentColor
+                    }
+                    
                     var referenceTheme: PresentationTheme?
                     if let accentColor = themeSpecificAccentColor, let customWallpaper = settings.themeSpecificChatWallpapers[coloredThemeIndex(reference: themeReference, accentColor: accentColor)] {
                         wallpaper = customWallpaper
                     } else if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {
                         wallpaper = customWallpaper
                     } else {
-                        let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: themeSpecificAccentColor?.color, wallpaper: themeSpecificAccentColor?.wallpaper, baseColor: themeSpecificAccentColor?.baseColor) ?? defaultPresentationTheme
+                        let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: customAccentColor, wallpaper: themeSpecificAccentColor?.wallpaper, baseColor: themeSpecificAccentColor?.baseColor) ?? defaultPresentationTheme
                         referenceTheme = theme
                         wallpaper = theme.chat.defaultWallpaper
                     }
