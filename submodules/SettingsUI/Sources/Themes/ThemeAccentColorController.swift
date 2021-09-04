@@ -14,8 +14,8 @@ import MediaResources
 private let randomBackgroundColors: [Int32] = [0x007aff, 0x00c2ed, 0x29b327, 0xeb6ca4, 0xf08200, 0x9472ee, 0xd33213, 0xedb400, 0x6d839e]
 
 extension TelegramThemeSettings {
-    convenience init(baseTheme: TelegramBaseTheme, accentColor: UIColor, messageColors: [UInt32], animateMessageColors: Bool, wallpaper: TelegramWallpaper?) {
-        self.init(baseTheme: baseTheme, accentColor: accentColor.argb, messageColors: messageColors, animateMessageColors: animateMessageColors, wallpaper: wallpaper)
+    convenience init(baseTheme: TelegramBaseTheme, accentColor: UIColor, outgoingAccentColor: UIColor?, messageColors: [UInt32], animateMessageColors: Bool, wallpaper: TelegramWallpaper?) {
+        self.init(baseTheme: baseTheme, accentColor: accentColor.argb, outgoingAccentColor: outgoingAccentColor?.argb, messageColors: messageColors, animateMessageColors: animateMessageColors, wallpaper: wallpaper)
     }
 }
 
@@ -201,13 +201,13 @@ final class ThemeAccentColorController: ViewController {
                         }
                         
                         if let themeReference = generalThemeReference {
-                            updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: state.accentColor.color, backgroundColors: state.backgroundColors.map { $0.rgb }, bubbleColors: state.messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors, wallpaper: coloredWallpaper ?? state.initialWallpaper, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
+                            updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: state.accentColor.color, outgoingAccentColor: state.outgoingAccentColor?.color, backgroundColors: state.backgroundColors.map { $0.rgb }, bubbleColors: state.messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors, wallpaper: coloredWallpaper ?? state.initialWallpaper, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
                         } else {
-                            updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: state.accentColor.color, backgroundColors: state.backgroundColors.map { $0.rgb }, bubbleColors: state.messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors, wallpaper: state.initialWallpaper ?? coloredWallpaper)
+                            updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: state.accentColor.color, outgoingAccentColor: state.outgoingAccentColor?.color, backgroundColors: state.backgroundColors.map { $0.rgb }, bubbleColors: state.messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors, wallpaper: state.initialWallpaper ?? coloredWallpaper)
                         }
                         
                         if hasSettings, let baseTheme = baseTheme {
-                            settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor.color, messageColors: state.messagesColors.map { $0.rgb }, animateMessageColors: state.animateMessageColors, wallpaper: coloredWallpaper)
+                            settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor.color, outgoingAccentColor: state.outgoingAccentColor?.color, messageColors: state.messagesColors.map { $0.rgb }, animateMessageColors: state.animateMessageColors, wallpaper: coloredWallpaper)
                         }
                         
                         completion(updatedTheme, settings)
@@ -226,7 +226,7 @@ final class ThemeAccentColorController: ViewController {
                     
                     let wallpaper = coloredWallpaper ?? state.initialWallpaper
                     
-                    let settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor.rgb, messageColors: state.messagesColors.map { $0.rgb }, animateMessageColors: state.animateMessageColors, wallpaper: wallpaper)
+                    let settings = TelegramThemeSettings(baseTheme: baseTheme, accentColor: state.accentColor.rgb, outgoingAccentColor: state.outgoingAccentColor?.rgb, messageColors: state.messagesColors.map { $0.rgb }, animateMessageColors: state.animateMessageColors, wallpaper: wallpaper)
                     let baseThemeReference = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: baseTheme))
                     
                     let apply: Signal<Void, CreateThemeError>
@@ -371,6 +371,7 @@ final class ThemeAccentColorController: ViewController {
             let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
                 
             let accentColor: UIColor
+            let outgoingAccentColor: UIColor?
             var initialWallpaper: TelegramWallpaper?
             var backgroundColors: [UInt32] = []
             var patternWallpaper: TelegramWallpaper?
@@ -446,10 +447,13 @@ final class ThemeAccentColorController: ViewController {
                     
                     if case let .cloud(cloudTheme) = initialThemeReference, let settings = cloudTheme.theme.settings {
                         animateMessageColors = settings.animateMessageColors
+                        outgoingAccentColor = settings.outgoingAccentColor.flatMap { UIColor(rgb: $0) }
                     } else if let referenceTheme = referenceTheme {
                         animateMessageColors = referenceTheme.chat.animateMessageColors
+                        outgoingAccentColor = nil
                     } else {
                         animateMessageColors = false
+                        outgoingAccentColor = nil
                     }
                     
                     extractBuiltinWallpaper(wallpaper)
@@ -497,6 +501,7 @@ final class ThemeAccentColorController: ViewController {
                         }
                         
                         animateMessageColors = themeSettings.animateMessageColors
+                        outgoingAccentColor = themeSettings.outgoingAccentColor.flatMap { UIColor(rgb: $0) }
                     } else if case .builtin = themeReference {
                          let themeSpecificAccentColor = settings.themeSpecificAccentColors[themeReference.index]
                          accentColor = themeSpecificAccentColor?.color ?? defaultDayAccentColor
@@ -533,10 +538,12 @@ final class ThemeAccentColorController: ViewController {
                          }
                         
                         animateMessageColors = false
+                        outgoingAccentColor = nil
                     } else {
                         let theme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference)!
                         
                         accentColor = theme.rootController.navigationBar.accentTextColor
+                        outgoingAccentColor = nil
                         
                         let wallpaper = theme.chat.defaultWallpaper
                         extractWallpaperParameters(wallpaper)
@@ -552,6 +559,7 @@ final class ThemeAccentColorController: ViewController {
                 }
             } else if case let .edit(theme, wallpaper, _, _, _, _) = strongSelf.mode {
                 accentColor = theme.rootController.navigationBar.accentTextColor
+                outgoingAccentColor = nil
                 
                 let wallpaper = wallpaper ?? theme.chat.defaultWallpaper
                 extractWallpaperParameters(wallpaper)
@@ -565,13 +573,14 @@ final class ThemeAccentColorController: ViewController {
                 animateMessageColors = theme.chat.animateMessageColors
             } else {
                 accentColor = defaultDayAccentColor
+                outgoingAccentColor = nil
                 backgroundColors = []
                 messageColors = []
                 
                 animateMessageColors = false
             }
             
-            let initialState = ThemeColorState(section: strongSelf.section, accentColor: HSBColor(color: accentColor), initialWallpaper: initialWallpaper, backgroundColors: backgroundColors.map { HSBColor(rgb: $0) }, patternWallpaper: patternWallpaper, patternIntensity: patternIntensity, animateMessageColors: animateMessageColors, defaultMessagesColor: defaultMessagesColor.flatMap { HSBColor(color: $0) }, messagesColors: messageColors.map { HSBColor(rgb: $0) }, selectedColor: 0, rotation: rotation)
+            let initialState = ThemeColorState(section: strongSelf.section, accentColor: HSBColor(color: accentColor), outgoingAccentColor: outgoingAccentColor.flatMap { HSBColor(color: $0) }, initialWallpaper: initialWallpaper, backgroundColors: backgroundColors.map { HSBColor(rgb: $0) }, patternWallpaper: patternWallpaper, patternIntensity: patternIntensity, animateMessageColors: animateMessageColors, defaultMessagesColor: defaultMessagesColor.flatMap { HSBColor(color: $0) }, messagesColors: messageColors.map { HSBColor(rgb: $0) }, selectedColor: 0, rotation: rotation)
             
             strongSelf.controllerNode.updateState({ _ in
                 return initialState

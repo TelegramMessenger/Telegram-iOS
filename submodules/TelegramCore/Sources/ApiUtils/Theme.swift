@@ -46,8 +46,8 @@ extension TelegramBaseTheme {
 extension TelegramThemeSettings {
     convenience init?(apiThemeSettings: Api.ThemeSettings) {
         switch apiThemeSettings {
-            case let .themeSettings(flags, baseTheme, accentColor, messageColors, wallpaper):
-                self.init(baseTheme: TelegramBaseTheme(apiBaseTheme: baseTheme), accentColor: UInt32(bitPattern: accentColor), messageColors: messageColors?.map(UInt32.init(bitPattern:)) ?? [], animateMessageColors: (flags & 1 << 2) != 0, wallpaper: wallpaper.flatMap(TelegramWallpaper.init(apiWallpaper:)))
+            case let .themeSettings(flags, baseTheme, accentColor, outboxAccentColor, messageColors, wallpaper):
+                self.init(baseTheme: TelegramBaseTheme(apiBaseTheme: baseTheme), accentColor: UInt32(bitPattern: accentColor), outgoingAccentColor: outboxAccentColor.flatMap { UInt32(bitPattern: $0) }, messageColors: messageColors?.map(UInt32.init(bitPattern:)) ?? [], animateMessageColors: (flags & 1 << 2) != 0, wallpaper: wallpaper.flatMap(TelegramWallpaper.init(apiWallpaper:)))
         }
     }
     
@@ -61,6 +61,10 @@ extension TelegramThemeSettings {
             flags |= 1 << 2
         }
         
+        if let _ = self.outgoingAccentColor {
+            flags |= 1 << 3
+        }
+        
         var inputWallpaper: Api.InputWallPaper?
         var inputWallpaperSettings: Api.WallPaperSettings?
         if let wallpaper = self.wallpaper, let inputWallpaperAndSettings = wallpaper.apiInputWallpaperAndSettings {
@@ -69,6 +73,6 @@ extension TelegramThemeSettings {
             flags |= 1 << 1
         }
         
-        return .inputThemeSettings(flags: flags, baseTheme: self.baseTheme.apiBaseTheme, accentColor: Int32(bitPattern: self.accentColor), messageColors: self.messageColors.isEmpty ? nil : self.messageColors.map(Int32.init(bitPattern:)), wallpaper: inputWallpaper, wallpaperSettings: inputWallpaperSettings)
+        return .inputThemeSettings(flags: flags, baseTheme: self.baseTheme.apiBaseTheme, accentColor: Int32(bitPattern: self.accentColor), outboxAccentColor: self.outgoingAccentColor.flatMap { Int32(bitPattern: $0) }, messageColors: self.messageColors.isEmpty ? nil : self.messageColors.map(Int32.init(bitPattern:)), wallpaper: inputWallpaper, wallpaperSettings: inputWallpaperSettings)
     }
 }
