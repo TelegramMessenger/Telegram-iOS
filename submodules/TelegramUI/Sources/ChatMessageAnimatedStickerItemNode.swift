@@ -22,6 +22,7 @@ import SlotMachineAnimationNode
 import UniversalMediaPlayer
 import ShimmerEffect
 import WallpaperBackgroundNode
+import AppBundle
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -165,6 +166,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
     private(set) var placeholderNode: StickerShimmerEffectNode
     private(set) var animationNode: GenericAnimatedStickerNode?
+    private var animationSize: CGSize?
+    private var additionalAnimationNodes: [AnimatedStickerNode] = []
     private var didSetUpAnimationNode = false
     private var isPlaying = false
   
@@ -575,7 +578,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         
                         let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
                         let mode: AnimatedStickerMode = .direct(cachePathPrefix: pathPrefix)
-                        
+                        self.animationSize = fittedSize
                         animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: mode)
                     }
                 }
@@ -1286,6 +1289,28 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
+    private func playAdditionalAnimation(_ name: String) {
+        guard let path = getAppBundle().path(forResource: name, ofType: "tgs"), let animationSize = self.animationSize, let animationNode = self.animationNode, self.additionalAnimationNodes.count < 4 else {
+            return
+        }
+        self.supernode?.view.bringSubviewToFront(self.view)
+        
+        let source = AnimatedStickerNodeLocalFileSource(path: path)
+        
+        let additionalAnimationNode = AnimatedStickerNode()
+        additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 3.0), height: Int(animationSize.height * 3.0), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+        additionalAnimationNode.completed = { [weak self, weak additionalAnimationNode] _ in
+            self?.additionalAnimationNodes.removeAll(where: { $0 === additionalAnimationNode })
+            additionalAnimationNode?.removeFromSupernode()
+        }
+        additionalAnimationNode.frame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
+        self.addSubnode(additionalAnimationNode)
+        
+        self.additionalAnimationNodes.append(additionalAnimationNode)
+        
+        additionalAnimationNode.play()
+    }
+    
     private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {
         switch gesture {
         case .tap:
@@ -1384,6 +1409,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let heart = 0x2764
                         let peach = 0x1F351
                         let coffin = 0x26B0
+                        let fireworks = 0x1F386
                         
                         let appConfiguration = item.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
                         |> take(1)
@@ -1398,6 +1424,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 firstScalar = UnicodeScalar(heart)!
                             }
                             return .optionalAction({
+                                if firstScalar.value == heart {
+                                    self.playAdditionalAnimation("TestHearts")
+                                } else if firstScalar.value == fireworks {
+                                    self.playAdditionalAnimation("TestFireworks")
+                                }
+                                
                                 if shouldPlay {
                                     let _ = (appConfiguration
                                     |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] appConfiguration in

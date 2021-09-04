@@ -3487,8 +3487,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 let filteredButtons = allHeaderButtons.subtracting(headerButtons)
                 
                 var canChangeColors = true
+//                if let peer = peer as? TelegramUser, self.data?.encryptionKeyFingerprint == nil {
+//                    canChangeColors = true
+//                }
                 if let peer = peer as? TelegramChannel {
-                    canChangeColors = peer.hasPermission(.changeInfo)
+                    if case .broadcast = peer.info {
+                        canChangeColors = false
+                    } else {
+                        canChangeColors = peer.hasPermission(.changeInfo)
+                    }
                 } else if let peer = peer as? TelegramGroup, case .member = peer.role {
                     canChangeColors = !peer.hasBannedPermission(.banChangeInfo)
                 } else if self.data?.encryptionKeyFingerprint != nil {
