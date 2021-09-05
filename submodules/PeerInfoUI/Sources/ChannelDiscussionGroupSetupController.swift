@@ -142,7 +142,7 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 } else {
                     text = presentationData.strings.Channel_CommentsGroup_Header
                 }
-                return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: text, animation: .discussionGroupSetup, sectionId: self.section)
+                return ChatListFilterSettingsHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animation: .discussionGroupSetup, sectionId: self.section)
             case let .create(theme, text):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.createGroup()

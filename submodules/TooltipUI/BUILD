@@ -15,9 +15,11 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AppBundle:AppBundle",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/TextFormat:TextFormat",
         "//submodules/UrlEscaping:UrlEscaping",
+        "//submodules/AccountContext:AccountContext",
     ],
     visibility = [
         "//visibility:public",

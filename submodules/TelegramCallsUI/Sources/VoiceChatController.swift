@@ -2264,7 +2264,7 @@ public final class VoiceChatController: ViewController {
                             } else {
                                 text = presentationData.strings.VoiceChat_RecordingInProgress
                             }
-                            strongSelf.controller?.present(TooltipScreen(text: text, icon: nil, location: .point(location.offsetBy(dx: 1.0, dy: 0.0), .top), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+                            strongSelf.controller?.present(TooltipScreen(account: strongSelf.context.account, text: text, icon: nil, location: .point(location.offsetBy(dx: 1.0, dy: 0.0), .top), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
                                 return .dismiss(consume: true)
                             }), in: .window(.root))
                         }
@@ -3437,7 +3437,7 @@ public final class VoiceChatController: ViewController {
                                 if !callState.subscribedToScheduled {
                                     let location = self.actionButton.view.convert(self.actionButton.bounds, to: self.view).center
                                     let point = CGRect(origin: CGPoint(x: location.x - 5.0, y: location.y - 5.0 - 68.0), size: CGSize(width: 10.0, height: 10.0))
-                                    self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_ReminderNotify, style: .gradient(UIColor(rgb: 0x262c5a), UIColor(rgb: 0x5d2835)), icon: nil, location: .point(point, .bottom), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+                                    self.controller?.present(TooltipScreen(account: self.context.account, text: self.presentationData.strings.VoiceChat_ReminderNotify, style: .gradient(UIColor(rgb: 0x262c5a), UIColor(rgb: 0x5d2835)), icon: nil, location: .point(point, .bottom), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
                                         return .dismiss(consume: false)
                                     }), in: .window(.root))
                                 }
@@ -6323,7 +6323,7 @@ public final class VoiceChatController: ViewController {
                     point.origin.y += 32.0
                 }
             }
-            self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_UnmuteSuggestion, style: .gradient(UIColor(rgb: 0x1d446c), UIColor(rgb: 0x193e63)), icon: nil, location: .point(point, position), displayDuration: .custom(8.0), shouldDismissOnTouch: { _ in
+            self.controller?.present(TooltipScreen(account: self.context.account, text: self.presentationData.strings.VoiceChat_UnmuteSuggestion, style: .gradient(UIColor(rgb: 0x1d446c), UIColor(rgb: 0x193e63)), icon: nil, location: .point(point, position), displayDuration: .custom(8.0), shouldDismissOnTouch: { _ in
                 return .dismiss(consume: false)
             }), in: .window(.root))
         }

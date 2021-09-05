@@ -11,9 +11,11 @@ import AccountContext
 import ChatListFilterSettingsHeaderItem
 
 private final class PeerAutoremoveSetupArguments {
+    let context: AccountContext
     let updateValue: (Int32) -> Void
     
-    init(updateValue: @escaping (Int32) -> Void) {
+    init(context: AccountContext, updateValue: @escaping (Int32) -> Void) {
+        self.context = context
         self.updateValue = updateValue
     }
 }
@@ -86,7 +88,7 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
         let arguments = arguments as! PeerAutoremoveSetupArguments
         switch self {
         case .header:
-            return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: "", animation: .autoRemove, sectionId: self.section)
+            return ChatListFilterSettingsHeaderItem(context: arguments.context, theme: presentationData.theme, text: "", animation: .autoRemove, sectionId: self.section)
         case let .timeHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .timeValue(value, availableValues):
@@ -157,7 +159,7 @@ public func peerAutoremoveSetupScreen(context: AccountContext, updatedPresentati
     let applyDisposable = MetaDisposable()
     actionsDisposable.add(applyDisposable)
     
-    let arguments = PeerAutoremoveSetupArguments(updateValue: { value in
+    let arguments = PeerAutoremoveSetupArguments(context: context, updateValue: { value in
         updateState { state in
             var state = state
             state.changedValue = value

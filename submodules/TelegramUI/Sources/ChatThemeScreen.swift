@@ -895,7 +895,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             if let strongSelf = self, count < 3 {
                 Queue.mainQueue().after(1.0) {
                     if !strongSelf.animatedOut {
-                        strongSelf.present?(TooltipScreen(text: strongSelf.presentationData.theme.overallDarkAppearance ? strongSelf.presentationData.strings.Conversation_Theme_SwitchToLight : strongSelf.presentationData.strings.Conversation_Theme_SwitchToDark, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 3.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
+                        strongSelf.present?(TooltipScreen(account: strongSelf.context.account, text: strongSelf.presentationData.theme.overallDarkAppearance ? strongSelf.presentationData.strings.Conversation_Theme_SwitchToLight : strongSelf.presentationData.strings.Conversation_Theme_SwitchToDark, style: .default, icon: nil, location: .point(frame.offsetBy(dx: 3.0, dy: 6.0), .bottom), displayDuration: .custom(3.0), inset: 3.0, shouldDismissOnTouch: { _ in
                             return .dismiss(consume: false)
                         }))
                         

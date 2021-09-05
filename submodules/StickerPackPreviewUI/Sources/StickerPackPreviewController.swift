@@ -292,7 +292,7 @@ public func preloadedStickerPackThumbnail(account: Account, info: StickerPackCol
             let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)).start()
             let dataDisposable: Disposable
             if info.flags.contains(.isAnimated) {
-                dataDisposable = chatMessageAnimationData(postbox: account.postbox, resource: thumbnail.resource, width: 80, height: 80, synchronousLoad: false).start(next: { data in
+                dataDisposable = chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: thumbnail.resource, width: 80, height: 80, synchronousLoad: false).start(next: { data in
                     if data.complete {
                         subscriber.putNext(true)
                         subscriber.putCompletion()

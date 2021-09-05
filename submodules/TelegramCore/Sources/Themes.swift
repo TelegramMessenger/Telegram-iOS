@@ -357,7 +357,7 @@ public func createTheme(account: Account, title: String, resource: MediaResource
     }
 }
 
-public func updateTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil, settings: TelegramThemeSettings?) -> Signal<CreateThemeResult, CreateThemeError> {
+public func updateTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil, settings: TelegramThemeSettings?, resetFile: Bool = false) -> Signal<CreateThemeResult, CreateThemeError> {
     guard title != nil || slug != nil || resource != nil else {
         return .complete()
     }
@@ -369,6 +369,8 @@ public func updateTheme(account: Account, accountManager: AccountManager<Telegra
         flags |= 1 << 1
     }
     if let _ = resource {
+        flags |= 1 << 2
+    } else if resetFile {
         flags |= 1 << 2
     }
     var inputSettings: Api.InputThemeSettings?
@@ -389,7 +391,9 @@ public func updateTheme(account: Account, accountManager: AccountManager<Telegra
     }
     |> mapToSignal { result -> Signal<CreateThemeResult, CreateThemeError> in
         let inputDocument: Api.InputDocument?
-        if let status = result {
+        if resetFile {
+            inputDocument = .inputDocumentEmpty
+        } else if let status = result {
             switch status {
                 case let .complete(file):
                     if let resource = file.resource as? CloudDocumentMediaResource {

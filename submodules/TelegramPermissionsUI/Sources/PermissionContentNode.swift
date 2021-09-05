@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import TelegramCore
 import TelegramPresentationData
 import TextFormat
 import TelegramPermissions
@@ -10,7 +11,9 @@ import SolidRoundedButtonNode
 import PresentationDataUtils
 import Markdown
 import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import AppBundle
+import AccountContext
 
 public enum PermissionContentIcon: Equatable {
     case image(UIImage?)
@@ -52,7 +55,7 @@ public final class PermissionContentNode: ASDisplayNode {
     
     public var validLayout: (CGSize, UIEdgeInsets)?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, kind: Int32, icon: PermissionContentIcon, title: String, subtitle: String? = nil, text: String, buttonTitle: String, secondaryButtonTitle: String? = nil, footerText: String? = nil, buttonAction: @escaping () -> Void, openPrivacyPolicy: (() -> Void)?) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, kind: Int32, icon: PermissionContentIcon, title: String, subtitle: String? = nil, text: String, buttonTitle: String, secondaryButtonTitle: String? = nil, footerText: String? = nil, buttonAction: @escaping () -> Void, openPrivacyPolicy: (() -> Void)?) {
         self.theme = theme
         self.kind = kind
         
@@ -70,10 +73,10 @@ public final class PermissionContentNode: ASDisplayNode {
         
         if case let .animation(animation) = icon {
             self.animationNode = AnimatedStickerNode()
-            if let path = getAppBundle().path(forResource: animation, ofType: "tgs") {
-                self.animationNode?.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 320, height: 320, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                self.animationNode?.visibility = true
-            }
+            
+            self.animationNode?.setup(source: AnimatedStickerNodeLocalFileSource(name: animation), width: 320, height: 320, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            self.animationNode?.visibility = true
+            
             self.nearbyIconNode = nil
         } else if kind == PermissionKind.nearbyLocation.rawValue {
             self.nearbyIconNode = PeersNearbyIconNode(theme: theme)

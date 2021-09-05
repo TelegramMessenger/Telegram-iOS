@@ -9,6 +9,7 @@ import QrCode
 import AccountContext
 import SolidRoundedButtonNode
 import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import TelegramCore
 
 private func shareQrCode(context: AccountContext, link: String, view: UIView) {
@@ -226,10 +227,9 @@ public final class InviteLinkQRCodeController: ViewController {
             self.qrImageNode.cornerRadius = 16.0
             
             self.qrIconNode = AnimatedStickerNode()
-            if let path = getAppBundle().path(forResource: "PlaneLogo", ofType: "tgs") {
-                self.qrIconNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 240, height: 240, mode: .direct(cachePathPrefix: nil))
-                self.qrIconNode.visibility = true
-            }
+            
+            self.qrIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogo"), width: 240, height: 240, mode: .direct(cachePathPrefix: nil))
+            self.qrIconNode.visibility = true
             
             super.init()
             

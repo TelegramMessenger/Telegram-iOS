@@ -14,6 +14,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/StickerResources:StickerResources",
         "//submodules/MediaResources:MediaResources",
+        "//submodules/LocalMediaResources:LocalMediaResources",
         "//submodules/Tuples:Tuples",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/rlottie:RLottieBinding",

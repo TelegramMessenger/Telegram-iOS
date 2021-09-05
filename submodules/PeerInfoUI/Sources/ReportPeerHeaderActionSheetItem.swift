@@ -7,7 +7,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import AnimatedStickerNode
-import AppBundle
+import TelegramAnimatedStickerNode
 
 public final class ReportPeerHeaderActionSheetItem: ActionSheetItem {
     let context: AccountContext
@@ -40,10 +40,8 @@ private final class ReportPeerHeaderActionSheetItemNode: ActionSheetItemNode {
         let textFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
         
         self.animationNode = AnimatedStickerNode()
-        if let path = getAppBundle().path(forResource: "Cop", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .count(2), mode: .direct(cachePathPrefix: nil))
-            self.animationNode.visibility = true
-        }
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Cop"), width: 192, height: 192, playbackMode: .count(2), mode: .direct(cachePathPrefix: nil))
+        self.animationNode.visibility = true
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false

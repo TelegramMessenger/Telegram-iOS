@@ -228,6 +228,7 @@ private struct EditThemeControllerState: Equatable {
     var slug: String
     var updatedTheme: PresentationTheme?
     var updating: Bool
+    var converting: Bool
 }
 
 private func editThemeControllerEntries(presentationData: PresentationData, state: EditThemeControllerState, previewTheme: PresentationTheme, hasSettings: Bool) -> [EditThemeControllerEntry] {
@@ -326,7 +327,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 settingsPromise.set(.single(nil))
                 hasSettings = false
             }
-            initialState = EditThemeControllerState(mode: mode, title: generateThemeName(accentColor: theme.rootController.navigationBar.buttonColor), slug: "", updatedTheme: nil, updating: false)
+            initialState = EditThemeControllerState(mode: mode, title: generateThemeName(accentColor: theme.rootController.navigationBar.buttonColor), slug: "", updatedTheme: nil, updating: false, converting: false)
             previewThemePromise.set(.single(theme.withUpdated(name: "", defaultWallpaper: wallpaper)))
         case let .edit(info):
             hasSettings = info.theme.settings != nil
@@ -348,7 +349,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 previewThemePromise.set(.single(presentationData.theme.withUpdated(name: "", defaultWallpaper: presentationData.chatWallpaper)))
                 
             }
-            initialState = EditThemeControllerState(mode: mode, title: info.theme.title, slug: info.theme.slug, updatedTheme: nil, updating: false)
+            initialState = EditThemeControllerState(mode: mode, title: info.theme.title, slug: info.theme.slug, updatedTheme: nil, updating: false, converting: false)
     }
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -484,6 +485,11 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
             }
             let settings = TelegramThemeSettings(baseTheme: theme.referenceTheme.baseTheme, accentColor: theme.rootController.navigationBar.accentTextColor, outgoingAccentColor: outgoingAccentColor, messageColors: theme.chat.message.outgoing.bubble.withWallpaper.fill.map { $0.argb }, animateMessageColors: theme.chat.animateMessageColors, wallpaper: theme.chat.defaultWallpaper)
             settingsPromise.set(.single(settings))
+            updateState { current in
+                var state = current
+                state.converting = true
+                return state
+            }
         })
     })
     
@@ -657,7 +663,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                 })
                             }
                         case let .edit(info):
-                            let _ = (prepare |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme, title: state.title, slug: state.slug, resource: themeResource, settings: settings)
+                            let _ = (prepare |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme, title: state.title, slug: state.slug, resource: state.converting ? nil : themeResource, settings: settings, resetFile: state.converting ? true : false)
                             |> deliverOnMainQueue)).start(next: { next in
                                 if case let .result(resultTheme) = next {
                                     let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()

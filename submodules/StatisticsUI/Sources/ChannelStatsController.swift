@@ -468,7 +468,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if data == nil {
             if longLoading {
-                emptyStateItem = StatsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
+                emptyStateItem = StatsEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings)
             } else {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }

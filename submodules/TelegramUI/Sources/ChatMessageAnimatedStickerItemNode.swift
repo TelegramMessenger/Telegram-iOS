@@ -22,6 +22,7 @@ import SlotMachineAnimationNode
 import UniversalMediaPlayer
 import ShimmerEffect
 import WallpaperBackgroundNode
+import LocalMediaResources
 import AppBundle
 
 private let nameFont = Font.medium(14.0)
@@ -407,7 +408,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let telegramDice = self.telegramDice {
             if telegramDice.emoji == "🎰" {
-                let animationNode = SlotMachineAnimationNode()
+                let animationNode = SlotMachineAnimationNode(account: item.context.account)
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     animationNode.success = { [weak self] onlyHaptic in
                         if let strongSelf = self, let item = strongSelf.item {
@@ -1290,20 +1291,28 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     private func playAdditionalAnimation(_ name: String) {
-        guard let path = getAppBundle().path(forResource: name, ofType: "tgs"), let animationSize = self.animationSize, let animationNode = self.animationNode, self.additionalAnimationNodes.count < 4 else {
+        let source = AnimatedStickerNodeLocalFileSource(name: name)
+        guard let item = self.item, let path = source.path, let animationSize = self.animationSize, let animationNode = self.animationNode, self.additionalAnimationNodes.count < 4 else {
             return
         }
+        let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+        
         self.supernode?.view.bringSubviewToFront(self.view)
         
-        let source = AnimatedStickerNodeLocalFileSource(path: path)
+        let resource = BundleResource(name: name, path: path)
+        let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
         
         let additionalAnimationNode = AnimatedStickerNode()
-        additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 3.0), height: Int(animationSize.height * 3.0), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+        additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 3.0), height: Int(animationSize.height * 3.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
         additionalAnimationNode.completed = { [weak self, weak additionalAnimationNode] _ in
             self?.additionalAnimationNodes.removeAll(where: { $0 === additionalAnimationNode })
             additionalAnimationNode?.removeFromSupernode()
         }
         additionalAnimationNode.frame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
+//            .offsetBy(dx: incoming ? animationNode.frame.width : -animationNode.frame.width, dy: 0.0)
+        if incoming {
+            additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+        }
         self.addSubnode(additionalAnimationNode)
         
         self.additionalAnimationNodes.append(additionalAnimationNode)
@@ -1638,11 +1647,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let selectionState = item.controllerInteraction.selectionState {
-            var selected = false
-            var incoming = true
-            
-            selected = selectionState.selectedIds.contains(item.message.id)
-            incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            let selected = selectionState.selectedIds.contains(item.message.id)
+            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             
             let offset: CGFloat = incoming ? 42.0 : 0.0
             
