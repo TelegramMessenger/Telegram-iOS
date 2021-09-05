@@ -413,8 +413,8 @@ public final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     }
 }
 
-private func commitChannelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+private func commitChannelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
+    let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: (() -> Void)?
     var proceedImpl: (() -> Void)?
@@ -434,7 +434,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
     }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
-    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
+    let presentationDataDisposable = (updatedPresentationData?.signal ?? context.sharedContext.presentationData).start(next: { [weak controller, weak contentNode] presentationData in
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
         contentNode?.inputFieldNode.updateTheme(presentationData.theme)
     })
@@ -528,8 +528,8 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
     return controller
 }
 
-private func confirmChannelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+private func confirmChannelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, member: TelegramUser, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
+    let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     
     var isGroup = true
@@ -559,8 +559,8 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
     return controller
 }
 
-func channelOwnershipTransferController(context: AccountContext, peer: Peer, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+func channelOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, member: TelegramUser, initialError: ChannelOwnershipTransferError, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (PeerId?) -> Void) -> ViewController {
+    let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     
     var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.medium(presentationData.listsFontSize.itemListBaseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center)
@@ -575,7 +575,7 @@ func channelOwnershipTransferController(context: AccountContext, peer: Peer, mem
     
     switch initialError {
         case .requestPassword:
-            return confirmChannelOwnershipTransferController(context: context, peer: peer, member: member, present: present, completion: completion)
+            return confirmChannelOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, peer: peer, member: member, present: present, completion: completion)
         case .twoStepAuthTooFresh, .authSessionTooFresh:
             text = text + presentationData.strings.OwnershipTransfer_ComeBackLater
             actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]

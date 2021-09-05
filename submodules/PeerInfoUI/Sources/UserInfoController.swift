@@ -43,7 +43,7 @@ private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<(Peer?, Cac
     }
 }
 
-public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func openAddPersonContactImpl(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
     |> deliverOnMainQueue).start(next: { peer, cachedData in
         guard let user = peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: user) else {
@@ -55,7 +55,7 @@ public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, pu
             shareViaException = peerStatusSettings.contains(.addExceptionWhenAddingContact)
         }
         
-        pushController(deviceContactInfoController(context: context, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
+        pushController(deviceContactInfoController(context: context, updatedPresentationData: updatedPresentationData, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
             if let peer = peer as? TelegramUser {
                 if let phone = peer.phone, !phone.isEmpty {
                 }

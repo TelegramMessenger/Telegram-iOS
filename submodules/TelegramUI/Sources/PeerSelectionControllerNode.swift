@@ -68,7 +68,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return self.readyValue.get()
     }
     
-    init(context: AccountContext, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
@@ -77,7 +77,6 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.hasGlobalSearch = hasGlobalSearch
         self.forwardedMessageIds = forwardedMessageIds
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(PeerId(0)), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)

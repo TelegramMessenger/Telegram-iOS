@@ -3,6 +3,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 public struct ChatListNodePeersFilter: OptionSet {
     public var rawValue: Int32
@@ -32,6 +33,7 @@ public struct ChatListNodePeersFilter: OptionSet {
 
 public final class PeerSelectionControllerParams {
     public let context: AccountContext
+    public let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let filter: ChatListNodePeersFilter
     public let hasChatListSelector: Bool
     public let hasContactSelector: Bool
@@ -43,8 +45,9 @@ public final class PeerSelectionControllerParams {
     public let multipleSelection: Bool
     public let forwardedMessageIds: [EngineMessage.Id]
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessageIds: [EngineMessage.Id] = []) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessageIds: [EngineMessage.Id] = []) {
         self.context = context
+        self.updatedPresentationData = updatedPresentationData
         self.filter = filter
         self.hasChatListSelector = hasChatListSelector
         self.hasContactSelector = hasContactSelector

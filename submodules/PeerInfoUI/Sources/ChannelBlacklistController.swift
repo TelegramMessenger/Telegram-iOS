@@ -301,7 +301,7 @@ public func channelBlacklistController(context: AccountContext, updatedPresentat
         }
     }, addPeer: {
         var dismissController: (() -> Void)?
-        let controller = ChannelMembersSearchController(context: context, peerId: peerId, mode: .ban, openPeer: { peer, participant in
+        let controller = ChannelMembersSearchController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, mode: .ban, openPeer: { peer, participant in
             if let participant = participant {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 switch participant.participant {
@@ -309,7 +309,7 @@ public func channelBlacklistController(context: AccountContext, updatedPresentat
                         return
                     case let .member(_, _, adminInfo, _, _):
                         if let adminInfo = adminInfo, adminInfo.promotedBy != context.account.peerId {
-                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             return
                         }
                 }

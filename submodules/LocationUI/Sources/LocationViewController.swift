@@ -166,7 +166,7 @@ public final class LocationViewController: ViewController {
                 return
             }
             if let location = getLocation(from: strongSelf.subject) {
-                strongSelf.present(OpenInActionSheetController(context: context, item: .location(location: location, withDirections: true), additionalAction: nil, openUrl: params.openUrl), in: .window(.root), with: nil)
+                strongSelf.present(OpenInActionSheetController(context: context, updatedPresentationData: updatedPresentationData, item: .location(location: location, withDirections: true), additionalAction: nil, openUrl: params.openUrl), in: .window(.root), with: nil)
             }
         }, share: { [weak self] in
             guard let strongSelf = self else {
@@ -176,7 +176,7 @@ public final class LocationViewController: ViewController {
                 let shareAction = OpenInControllerAction(title: strongSelf.presentationData.strings.Conversation_ContextMenuShare, action: {
                     strongSelf.present(ShareController(context: context, subject: .mapMedia(location), externalShare: true), in: .window(.root), with: nil)
                 })
-                strongSelf.present(OpenInActionSheetController(context: context, item: .location(location: location, withDirections: false), additionalAction: shareAction, openUrl: params.openUrl), in: .window(.root), with: nil)
+                strongSelf.present(OpenInActionSheetController(context: context, updatedPresentationData: updatedPresentationData, item: .location(location: location, withDirections: false), additionalAction: shareAction, openUrl: params.openUrl), in: .window(.root), with: nil)
             }
         }, setupProximityNotification: { [weak self] reset, messageId in
             guard let strongSelf = self else {
@@ -298,7 +298,7 @@ public final class LocationViewController: ViewController {
                                     in: .current
                                 )
                             } else {
-                                strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: {
+                                strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: updatedPresentationData, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: {
                                     completion()
                                     strongSelf.interaction?.sendLiveLocation(distance)
                                 }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))

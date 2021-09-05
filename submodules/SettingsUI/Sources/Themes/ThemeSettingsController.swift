@@ -713,7 +713,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         let _ = (resolvedWallpaper
                         |> deliverOnMainQueue).start(next: { wallpaper in
                             let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: wallpaper, generalThemeReference: reference.generalThemeReference, defaultThemeReference: nil, create: true, completion: { result, settings in
-                                let controller = editThemeController(context: context, mode: .create(result, nil), navigateToChat: { peerId in
+                                let controller = editThemeController(context: context, mode: .create(result, settings
+                                ), navigateToChat: { peerId in
                                     if let navigationController = getNavigationControllerImpl?() {
                                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                                     }
@@ -929,7 +930,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         })))
                     } else {
                         items.append(.action(ContextMenuActionItem(text: strings.Theme_Context_ChangeColors, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
-                            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, preview: false) else {
+                            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: effectiveThemeReference, preview: false) else {
                                 return
                             }
                             
@@ -945,8 +946,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                             
                             let _ = (resolvedWallpaper
                             |> deliverOnMainQueue).start(next: { wallpaper in
-                                let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: wallpaper, generalThemeReference: reference.generalThemeReference, defaultThemeReference: nil, create: true, completion: { result, settings in
-                                    let controller = editThemeController(context: context, mode: .create(result, nil), navigateToChat: { peerId in
+                                var hasSettings = false
+                                if case let .cloud(cloudTheme) = effectiveThemeReference, cloudTheme.theme.settings != nil {
+                                    hasSettings = true
+                                }
+                                let controller = ThemeAccentColorController(context: context, mode: .edit(theme: theme, wallpaper: wallpaper, generalThemeReference: effectiveThemeReference.generalThemeReference, defaultThemeReference: nil, create: true, completion: { result, settings in
+                                    let controller = editThemeController(context: context, mode: .create(hasSettings ? nil : result, hasSettings ? settings : nil), navigateToChat: { peerId in
                                         if let navigationController = getNavigationControllerImpl?() {
                                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                                         }

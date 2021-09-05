@@ -43,6 +43,7 @@ public final class InviteLinkQRCodeController: ViewController {
     private let invite: ExportedInvitation
     private let isGroup: Bool
 
+    private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
     private var initialBrightness: CGFloat?
@@ -52,10 +53,12 @@ public final class InviteLinkQRCodeController: ViewController {
     
     private let idleTimerExtensionDisposable = MetaDisposable()
     
-    public init(context: AccountContext, invite: ExportedInvitation, isGroup: Bool) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, invite: ExportedInvitation, isGroup: Bool) {
         self.context = context
         self.invite = invite
         self.isGroup = isGroup
+        
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
         
@@ -63,9 +66,10 @@ public final class InviteLinkQRCodeController: ViewController {
         
         self.blocksBackgroundWhenInOverlay = true
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
+                strongSelf.presentationData = presentationData
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
@@ -91,7 +95,7 @@ public final class InviteLinkQRCodeController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, invite: self.invite, isGroup: self.isGroup)
+        self.displayNode = Node(context: self.context, presentationData: self.presentationData, invite: self.invite, isGroup: self.isGroup)
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
@@ -173,10 +177,10 @@ public final class InviteLinkQRCodeController: ViewController {
         var dismiss: (() -> Void)?
         var cancel: (() -> Void)?
         
-        init(context: AccountContext, invite: ExportedInvitation, isGroup: Bool) {
+        init(context: AccountContext, presentationData: PresentationData, invite: ExportedInvitation, isGroup: Bool) {
             self.context = context
             self.invite = invite
-            self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            self.presentationData = presentationData
 
             self.wrappingScrollNode = ASScrollNode()
             self.wrappingScrollNode.view.alwaysBounceVertical = true

@@ -649,7 +649,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                             return
                         case let .member(_, _, adminInfo, _, _):
                             if let adminInfo = adminInfo, adminInfo.promotedBy != context.account.peerId {
-                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 return
                             }
                     }
@@ -725,7 +725,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                     } else {
                         text = presentationData.strings.GroupPermission_NotAvailableInPublicGroups
                     }
-                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     break
                 }
             }

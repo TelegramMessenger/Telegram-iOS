@@ -256,7 +256,7 @@ public final class LocationPickerController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            let controller = textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Map_HomeAndWorkTitle, text: strongSelf.presentationData.strings.Map_HomeAndWorkInfo, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})])
+            let controller = textAlertController(context: strongSelf.context, updatedPresentationData: updatedPresentationData, title: strongSelf.presentationData.strings.Map_HomeAndWorkTitle, text: strongSelf.presentationData.strings.Map_HomeAndWorkInfo, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})])
             strongSelf.present(controller, in: .window(.root))
         }, showPlacesInThisArea: { [weak self] in
             guard let strongSelf = self else {

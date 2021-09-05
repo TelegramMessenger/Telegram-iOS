@@ -53,7 +53,7 @@ final class ChatRecentActionsController: TelegramBaseController {
                 } else {
                     text = strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertText
                 }
-                self?.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                self?.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
         })
         
@@ -177,7 +177,7 @@ final class ChatRecentActionsController: TelegramBaseController {
                 
                 var presentationData = presentationData
                 if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoji == themeEmoticon }) {
-                    let useDarkAppearance = presentationData.autoNightModeTriggered
+                    let useDarkAppearance = presentationData.theme.overallDarkAppearance
                     let customTheme = useDarkAppearance ? theme.darkTheme : theme.theme
                     if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings, specialMode: true) {
                         presentationData = presentationData.withUpdated(theme: theme)
