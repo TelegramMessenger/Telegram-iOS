@@ -563,8 +563,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 
                 if self.activeAccountsValue!.primary == nil && self.activeAccountsValue!.currentAuth == nil {
-                    //TODO:change to production after merging
-                    self.beginNewAuth(testingEnvironment: true)
+                    self.beginNewAuth(testingEnvironment: false)
                 }
             }))
         })
