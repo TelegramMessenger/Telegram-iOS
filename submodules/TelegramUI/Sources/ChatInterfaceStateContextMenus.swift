@@ -1053,28 +1053,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             clearCacheAsDelete = true
         }
-        
-        if !isPinnedMessages, !isReplyThreadHead, data.canSelect {
-            if !selectAll || messages.count == 1 {
-                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelect, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id], { transition in
-                        f(.custom(transition))
-                    })
-                })))
-            }
-            
-            if messages.count > 1 {
-                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelectAll(Int32(messages.count)), icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SelectAll"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    interfaceInteraction.beginMessageSelection(messages.map { $0.id }, { transition in
-                        f(.custom(transition))
-                    })
-                })))
-            }
-        }
 
         if !isReplyThreadHead, (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) {
             var autoremoveDeadline: Int32?
@@ -1102,10 +1080,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
 
             if let autoremoveDeadline = autoremoveDeadline, !isEditing, !isSending {
-                if !actions.isEmpty {
-                    actions.append(.separator)
-                }
-
                 actions.append(.custom(ChatDeleteMessageContextItem(timestamp: Double(autoremoveDeadline), action: { controller, f in
                     if isEditing {
                         context.account.pendingUpdateMessageManager.cancel(messageId: message.id)
@@ -1115,10 +1089,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }), false))
             } else if !isUnremovableAction {
-                if !actions.isEmpty {
-                    actions.append(.separator)
-                }
-
                 actions.append(.action(ContextMenuActionItem(text: title, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
                 }, action: { controller, f in
@@ -1128,6 +1098,32 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     } else {
                         interfaceInteraction.deleteMessages(selectAll ? messages : [message], controller, f)
                     }
+                })))
+            }
+        }
+
+        if !isPinnedMessages, !isReplyThreadHead, data.canSelect {
+            if !selectAll || messages.count == 1 {
+                if !actions.isEmpty {
+                    actions.append(.separator)
+                }
+
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelect, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id], { transition in
+                        f(.custom(transition))
+                    })
+                })))
+            }
+
+            if messages.count > 1 {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelectAll(Int32(messages.count)), icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SelectAll"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.beginMessageSelection(messages.map { $0.id }, { transition in
+                        f(.custom(transition))
+                    })
                 })))
             }
         }
@@ -1759,7 +1755,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         self.buttonNode.accessibilityLabel = presentationData.strings.VoiceChat_StopRecording
 
         self.iconNode = ASImageNode()
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: presentationData.theme.actionSheet.primaryTextColor)
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Read"), color: presentationData.theme.actionSheet.primaryTextColor)
 
         self.avatarsNode = AnimatedAvatarSetNode()
         self.avatarsContext = AnimatedAvatarSetContext()
@@ -1887,7 +1883,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             transition.updateAlpha(node: self.shimmerNode, alpha: self.currentStats == nil ? 1.0 : 0.0)
 
             if !iconSize.width.isZero {
-                transition.updateFrameAdditive(node: self.iconNode, frame: CGRect(origin: CGPoint(x: sideInset - 2.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
+                transition.updateFrameAdditive(node: self.iconNode, frame: CGRect(origin: CGPoint(x: sideInset + 1.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
             }
 
             let avatarsContent: AnimatedAvatarSetContext.Content
@@ -1903,7 +1899,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             placeholderAvatarsContent = self.avatarsContext.updatePlaceholder(color: shimmeringForegroundColor, count: 3, animated: false)
 
             let avatarsSize = self.avatarsNode.update(context: self.item.context, content: avatarsContent, itemSize: CGSize(width: 24.0, height: 24.0), customSpacing: 10.0, animated: false, synchronousLoad: true)
-            self.avatarsNode.frame = CGRect(origin: CGPoint(x: size.width - sideInset - 8.0 - avatarsSize.width, y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize)
+            self.avatarsNode.frame = CGRect(origin: CGPoint(x: size.width - sideInset - 12.0 - avatarsSize.width, y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize)
             transition.updateAlpha(node: self.avatarsNode, alpha: self.currentStats == nil ? 0.0 : 1.0)
 
             let placeholderAvatarsSize = self.placeholderAvatarsNode.update(context: self.item.context, content: placeholderAvatarsContent, itemSize: CGSize(width: 24.0, height: 24.0), customSpacing: 10.0, animated: false, synchronousLoad: true)
