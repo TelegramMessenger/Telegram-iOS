@@ -316,7 +316,6 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             self.theme = theme
             
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
-            
             self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
             self.iconNode.image = PresentationResourcesChat.chatInputPanelEditIconImage(theme)
             

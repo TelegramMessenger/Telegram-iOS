@@ -101,25 +101,25 @@ public struct PresentationResourcesChat {
     
     public static func chatBubbleVerticalLineIncomingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleVerticalLineIncomingImage.rawValue, { theme in
-            return generateLineImage(color: theme.chat.message.incoming.accentControlColor)
+            return generateLineImage(color: theme.chat.message.incoming.accentTextColor)
         })
     }
     
     public static func chatBubbleVerticalLineOutgoingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleVerticalLineOutgoingImage.rawValue, { theme in
-            return generateLineImage(color: theme.chat.message.outgoing.accentControlColor)
+            return generateLineImage(color: theme.chat.message.outgoing.accentTextColor)
         })
     }
     
     public static func chatBubbleConsumableContentIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleConsumableContentIncomingIcon.rawValue, { theme in
-            return generateFilledCircleImage(diameter: 4.0, color: theme.chat.message.incoming.accentControlColor)
+            return generateFilledCircleImage(diameter: 4.0, color: theme.chat.message.incoming.accentTextColor)
         })
     }
     
     public static func chatBubbleConsumableContentOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleConsumableContentOutgoingIcon.rawValue, { theme in
-            return generateFilledCircleImage(diameter: 4.0, color: theme.chat.message.outgoing.accentControlColor)
+            return generateFilledCircleImage(diameter: 4.0, color: theme.chat.message.outgoing.accentTextColor)
         })
     }
     

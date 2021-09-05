@@ -219,13 +219,13 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, specialMode: Bool
             let hueFactor: CGFloat = 0.75
             let saturationFactor: CGFloat = 1.1
             outgoingPrimaryTextColor = UIColor(rgb: 0x000000)
-            outgoingSecondaryTextColor = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.549).withAlphaComponent(0.8)
             
             if let outgoingAccent = outgoingAccent {
+                outgoingSecondaryTextColor = outgoingAccent
                 outgoingAccentTextColor = outgoingAccent
                 outgoingLinkTextColor = outgoingAccent
                 outgoingScamColor = UIColor(rgb: 0xff3b30)
-                outgoingControlColor = outgoingAccent.withMultiplied(hue: 0.983, saturation: 0.7, brightness: 1.169)
+                outgoingControlColor = outgoingAccent
                 outgoingInactiveControlColor = outgoingAccent
                 outgoingFileTitleColor = outgoingAccent
                 outgoingPollsProgressColor = outgoingControlColor
@@ -234,7 +234,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, specialMode: Bool
                 outgoingCheckColor = outgoingAccent
             } else {
                 let outgoingBubbleMixedColor = lightnessColor
-                
+                outgoingSecondaryTextColor = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.549).withAlphaComponent(0.8)
                 outgoingAccentTextColor = outgoingBubbleMixedColor.withMultiplied(hue: 1.302 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.655)
                 outgoingLinkTextColor = UIColor(rgb: 0x004bad)
                 outgoingScamColor = UIColor(rgb: 0xff3b30)
