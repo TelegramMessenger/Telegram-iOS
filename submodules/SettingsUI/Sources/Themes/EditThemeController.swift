@@ -21,13 +21,15 @@ private final class EditThemeControllerArguments {
     let openColors: () -> Void
     let openFile: () -> Void
     let toggleDark: () -> Void
+    let convertToPresetTheme: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((EditThemeControllerState) -> EditThemeControllerState) -> Void, openColors: @escaping () -> Void, openFile: @escaping () -> Void, toggleDark: @escaping () -> Void) {
+    init(context: AccountContext, updateState: @escaping ((EditThemeControllerState) -> EditThemeControllerState) -> Void, openColors: @escaping () -> Void, openFile: @escaping () -> Void, toggleDark: @escaping () -> Void, convertToPresetTheme: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
         self.openColors = openColors
         self.openFile = openFile
         self.toggleDark = toggleDark
+        self.convertToPresetTheme = convertToPresetTheme
     }
 }
 
@@ -57,6 +59,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
     case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationChatBubbleCorners, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, [ChatPreviewMessageItem])
     case changeColors(PresentationTheme, String)
     case toggleDark(PresentationTheme, String)
+    case convertToPresetTheme(PresentationTheme, String)
     case uploadTheme(PresentationTheme, String)
     case uploadInfo(PresentationTheme, String)
     
@@ -64,7 +67,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
         switch self {
             case .title, .slug, .slugInfo:
                 return EditThemeControllerSection.info.rawValue
-            case .chatPreviewHeader, .chatPreview, .changeColors, .toggleDark, .uploadTheme, .uploadInfo:
+            case .chatPreviewHeader, .chatPreview, .changeColors, .toggleDark, .convertToPresetTheme, .uploadTheme, .uploadInfo:
                 return EditThemeControllerSection.chatPreview.rawValue
         }
     }
@@ -85,10 +88,12 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                 return 5
             case .toggleDark:
                 return 6
-            case .uploadTheme:
+            case .convertToPresetTheme:
                 return 7
-            case .uploadInfo:
+            case .uploadTheme:
                 return 8
+            case .uploadInfo:
+                return 9
         }
     }
     
@@ -132,6 +137,12 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                 }
             case let .toggleDark(lhsTheme, lhsText):
                 if case let .toggleDark(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .convertToPresetTheme(lhsTheme, lhsText):
+                if case let .convertToPresetTheme(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -191,6 +202,10 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
             case let .toggleDark(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.toggleDark()
+                })
+            case let .convertToPresetTheme(_, text):
+                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.convertToPresetTheme()
                 })
             case let .uploadTheme(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -275,6 +290,9 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
             entries.append(.toggleDark(presentationData.theme, "Toggle Base Theme"))
         }
     } else {
+        if !isCreate {
+            entries.append(.convertToPresetTheme(presentationData.theme, "Convert to Preset Theme"))
+        }
         entries.append(.uploadTheme(presentationData.theme, uploadText))
         entries.append(.uploadInfo(presentationData.theme, uploadInfo))
     }
@@ -457,10 +475,20 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 settingsPromise.set(.single(updatedSettings))
             }
         })
+    }, convertToPresetTheme: {
+        let _ = (previewThemePromise.get()
+        |> take(1)).start(next: { theme in
+            var outgoingAccentColor: UIColor?
+            if case .classic = theme.referenceTheme.baseTheme {
+                outgoingAccentColor = theme.chat.message.outgoing.accentTextColor
+            }
+            let settings = TelegramThemeSettings(baseTheme: theme.referenceTheme.baseTheme, accentColor: theme.rootController.navigationBar.accentTextColor, outgoingAccentColor: outgoingAccentColor, messageColors: theme.chat.message.outgoing.bubble.withWallpaper.fill.map { $0.argb }, animateMessageColors: theme.chat.animateMessageColors, wallpaper: theme.chat.defaultWallpaper)
+            settingsPromise.set(.single(settings))
+        })
     })
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), previewThemePromise.get())
-    |> map { presentationData, state, previewTheme -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), previewThemePromise.get(), settingsPromise.get())
+    |> map { presentationData, state, previewTheme, currentSettings -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
@@ -691,6 +719,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     title = presentationData.strings.EditTheme_EditTitle
                 }
         }
+        let hasSettings = hasSettings || currentSettings != nil
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: editThemeControllerEntries(presentationData: presentationData, state: state, previewTheme: previewTheme, hasSettings: hasSettings), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: nil, animateChanges: false)
         
