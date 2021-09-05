@@ -772,7 +772,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
                     strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), peekData: peekData, animated: true))
                 } else {
-                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                         strongSelf.pushController(infoController)
                     }
                 }
@@ -781,13 +781,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     private func openPeerMention(_ name: String) {
-        let postbox = self.context.account.postbox
         self.navigationActionDisposable.set((self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
                 if let peer = peer {
-                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                         strongSelf.pushController(infoController)
                     }
                 }

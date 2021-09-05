@@ -6,8 +6,26 @@ import Emoji
 import AccountContext
 import TelegramPresentationData
 
-
-func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData, historyAppearsCleared: Bool, pendingUnpinnedAllMessages: Bool, pendingRemovedMessages: Set<MessageId>, associatedData: ChatMessageItemAssociatedData, updatingMedia: [MessageId: ChatUpdatingMessageMedia], customChannelDiscussionReadState: MessageId?, customThreadOutgoingReadState: MessageId?) -> [ChatHistoryEntry] {
+func chatHistoryEntriesForView(
+    location: ChatLocation,
+    view: MessageHistoryView,
+    includeUnreadEntry: Bool,
+    includeEmptyEntry: Bool,
+    includeChatInfoEntry: Bool,
+    includeSearchEntry: Bool,
+    reverse: Bool,
+    groupMessages: Bool,
+    selectedMessages: Set<MessageId>?,
+    presentationData: ChatPresentationData,
+    historyAppearsCleared: Bool,
+    pendingUnpinnedAllMessages: Bool,
+    pendingRemovedMessages: Set<MessageId>,
+    associatedData: ChatMessageItemAssociatedData,
+    updatingMedia: [MessageId: ChatUpdatingMessageMedia],
+    customChannelDiscussionReadState: MessageId?,
+    customThreadOutgoingReadState: MessageId?,
+    adMessages: [Message]
+) -> [ChatHistoryEntry] {
     if historyAppearsCleared {
         return []
     }
@@ -235,6 +253,39 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 }
                 if isEmpty {
                     entries.removeAll()
+                }
+            }
+        }
+
+        if view.laterId == nil && !view.isLoading {
+            if !entries.isEmpty, case let .MessageEntry(lastMessage, _, _, _, _, _) = entries[entries.count - 1], !adMessages.isEmpty {
+
+                var nextAdMessageId: Int32 = 1
+                for message in adMessages {
+                    let updatedMessage = Message(
+                        stableId: UInt32.max - 1 - UInt32(nextAdMessageId),
+                        stableVersion: message.stableVersion,
+                        id: MessageId(peerId: message.id.peerId, namespace: message.id.namespace, id: nextAdMessageId),
+                        globallyUniqueId: nil,
+                        groupingKey: nil,
+                        groupInfo: nil,
+                        threadId: nil,
+                        timestamp: lastMessage.timestamp,
+                        flags: message.flags,
+                        tags: message.tags,
+                        globalTags: message.globalTags,
+                        localTags: message.localTags,
+                        forwardInfo: message.forwardInfo,
+                        author: message.author,
+                        text: message.text,
+                        attributes: message.attributes,
+                        media: message.media,
+                        peers: message.peers,
+                        associatedMessages: message.associatedMessages,
+                        associatedMessageIds: message.associatedMessageIds
+                    )
+                    nextAdMessageId += 1
+                    entries.append(.MessageEntry(updatedMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false)))
                 }
             }
         }

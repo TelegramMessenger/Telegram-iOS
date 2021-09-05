@@ -406,9 +406,6 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                                     state.searching = false
                                     return state
                                 }
-                            case .hasNotPermissions:
-                                //TODO process error
-                                break
                             case .groupHistoryIsCurrentlyPrivate:
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_DiscussionGroup_MakeHistoryPublic, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_DiscussionGroup_MakeHistoryPublicProceed, action: {

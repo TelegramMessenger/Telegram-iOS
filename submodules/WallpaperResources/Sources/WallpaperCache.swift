@@ -48,8 +48,8 @@ public func cachedWallpaper(account: Account, slug: String, settings: WallpaperS
                     let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, key: key)
                     if var wallpaper = wallpaper {
                         switch wallpaper {
-                        case let .file(id, accessHash, isCreator, isDefault, isPattern, isDark, slug, file, settings):
-                            wallpaper = .file(id: id, accessHash: accessHash, isCreator: isCreator, isDefault: isDefault, isPattern: isPattern, isDark: isDark, slug: slug, file: file.withUpdatedResource(WallpaperDataResource(slug: slug)), settings: settings)
+                        case let .file(file):
+                            wallpaper = .file(TelegramWallpaper.File(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file.withUpdatedResource(WallpaperDataResource(slug: slug)), settings: file.settings))
                         default:
                             break
                         }

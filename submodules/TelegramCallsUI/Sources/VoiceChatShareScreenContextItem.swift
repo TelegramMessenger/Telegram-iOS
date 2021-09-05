@@ -160,7 +160,6 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
         self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
-        let subtextFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
         
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
     }

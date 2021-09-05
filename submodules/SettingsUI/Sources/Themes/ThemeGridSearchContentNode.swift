@@ -180,32 +180,6 @@ final class ThemeGridSearchInteraction {
 private enum ThemeGridRecentEntryStableId: Hashable {
     case colors
     case query(String)
-    
-    static func ==(lhs: ThemeGridRecentEntryStableId, rhs: ThemeGridRecentEntryStableId) -> Bool {
-        switch lhs {
-            case .colors:
-                if case .colors = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .query(query):
-                if case .query(query) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case .colors:
-                return 0
-            case let .query(query):
-                return query.hashValue
-        }
-    }
 }
 
 private enum ThemeGridRecentEntry: Comparable, Identifiable {

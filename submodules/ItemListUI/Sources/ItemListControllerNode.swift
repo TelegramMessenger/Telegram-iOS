@@ -7,7 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import MergeLists
 
-public protocol ItemListHeaderItemNode: class {
+public protocol ItemListHeaderItemNode: AnyObject {
     func updateTheme(theme: PresentationTheme)
 }
 
@@ -352,7 +352,7 @@ open class ItemListControllerNode: ASDisplayNode {
             }
         }
         
-        self.listNode.didEndScrolling = { [weak self] in
+        self.listNode.didEndScrolling = { [weak self] _ in
             if let strongSelf = self {
                 let _ = strongSelf.contentScrollingEnded?(strongSelf.listNode)
             }

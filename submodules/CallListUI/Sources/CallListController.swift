@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -205,10 +204,11 @@ public final class CallListController: TelegramBaseController {
             }
         }, openInfo: { [weak self] peerId, messages in
             if let strongSelf = self {
-                let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
-                |> take(1)
+                let _ = (strongSelf.context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )
                 |> deliverOnMainQueue).start(next: { peer in
-                    if let strongSelf = self, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .calls(messages: messages), avatarInitiallyExpanded: false, fromChat: false) {
+                    if let strongSelf = self, let peer = peer, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .calls(messages: messages.map({ $0._asMessage() })), avatarInitiallyExpanded: false, fromChat: false) {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                     }
                 })
@@ -436,7 +436,7 @@ public final class CallListController: TelegramBaseController {
         }
     }
     
-    private func call(_ peerId: PeerId, isVideo: Bool, began: (() -> Void)? = nil) {
+    private func call(_ peerId: EnginePeer.Id, isVideo: Bool, began: (() -> Void)? = nil) {
         self.peerViewDisposable.set((self.context.account.viewTracker.peerView(peerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] view in

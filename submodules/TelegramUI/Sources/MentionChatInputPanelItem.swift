@@ -200,7 +200,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
                     strongSelf.backgroundColor = item.presentationData.theme.list.plainBackgroundColor
                     strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     
-                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.peer), emptyColor: item.presentationData.theme.list.mediaPlaceholderColor)
                     
                     let _ = textApply()
                     
@@ -228,7 +228,7 @@ final class MentionChatInputPanelItemNode: ListViewItemNode {
     }
     
     func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
-        if let (size, leftInset, _) = self.validLayout {
+        if let (_, leftInset, _) = self.validLayout {
             transition.updateFrameAdditive(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: min(offset, 0.0) + 12.0 + leftInset, y: self.avatarNode.frame.minY), size: self.avatarNode.frame.size))
             transition.updateFrameAdditive(node: self.textNode, frame: CGRect(origin: CGPoint(x: min(offset, 0.0) + 55.0 + leftInset, y: self.textNode.frame.minY), size: self.textNode.frame.size))
         }

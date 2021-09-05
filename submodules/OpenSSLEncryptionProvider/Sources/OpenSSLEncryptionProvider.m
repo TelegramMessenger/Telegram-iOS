@@ -90,70 +90,70 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (id<MTBignum>)clone:(id<MTBignum>)other {
     assert([other isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *otherImpl = other;
+    MTBignumImpl *otherImpl = (MTBignumImpl *)other;
     return [otherImpl copy];
 }
 
 - (void)setConstantTime:(id<MTBignum>)other {
     assert([other isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *otherImpl = other;
     #ifndef TELEGRAM_USE_BORINGSSL
+    MTBignumImpl *otherImpl = (MTBignumImpl *)other;
     BN_set_flags(otherImpl->_value, BN_FLG_CONSTTIME);
     #endif
 }
 
 - (void)assignWordTo:(id<MTBignum>)bignum value:(unsigned long)value {
     assert([bignum isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *bignumImpl = bignum;
+    MTBignumImpl *bignumImpl = (MTBignumImpl *)bignum;
     
     BN_set_word(bignumImpl->_value, value);
 }
 
 - (void)assignHexTo:(id<MTBignum>)bignum value:(NSString *)value {
     assert([bignum isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *bignumImpl = bignum;
+    MTBignumImpl *bignumImpl = (MTBignumImpl *)bignum;
     
     BN_hex2bn(&bignumImpl->_value, [value UTF8String]);
 }
 
 - (void)assignBinTo:(id<MTBignum>)bignum value:(NSData *)value {
     assert([bignum isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *bignumImpl = bignum;
+    MTBignumImpl *bignumImpl = (MTBignumImpl *)bignum;
     
     BN_bin2bn(value.bytes, value.length, bignumImpl->_value);
 }
 
 - (void)assignOneTo:(id<MTBignum>)bignum {
     assert([bignum isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *bignumImpl = bignum;
+    MTBignumImpl *bignumImpl = (MTBignumImpl *)bignum;
     
     BN_one(bignumImpl->_value);
 }
 
 - (void)assignZeroTo:(id<MTBignum>)bignum {
     assert([bignum isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *bignumImpl = bignum;
+    MTBignumImpl *bignumImpl = (MTBignumImpl *)bignum;
     
     BN_zero(bignumImpl->_value);
 }
 
 - (bool)isOne:(id<MTBignum>)bignum {
     assert([bignum isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *bignumImpl = bignum;
+    MTBignumImpl *bignumImpl = (MTBignumImpl *)bignum;
     
     return BN_is_one(bignumImpl->_value);
 }
 
 - (bool)isZero:(id<MTBignum>)bignum {
     assert([bignum isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *bignumImpl = bignum;
+    MTBignumImpl *bignumImpl = (MTBignumImpl *)bignum;
     
     return BN_is_zero(bignumImpl->_value);
 }
 
 - (NSData *)getBin:(id<MTBignum>)bignum {
     assert([bignum isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *bignumImpl = bignum;
+    MTBignumImpl *bignumImpl = (MTBignumImpl *)bignum;
     
     int numBytes = BN_num_bytes(bignumImpl->_value);
     NSMutableData *data = [[NSMutableData alloc] initWithLength:numBytes];
@@ -164,7 +164,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (int)isPrime:(id<MTBignum>)bignum numberOfChecks:(int)numberOfChecks {
     assert([bignum isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *bignumImpl = bignum;
+    MTBignumImpl *bignumImpl = (MTBignumImpl *)bignum;
     
     return BN_is_prime_ex(bignumImpl->_value, numberOfChecks, _context, NULL);
 }
@@ -172,8 +172,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (int)compare:(id<MTBignum>)a with:(id<MTBignum>)b {
     assert([a isKindOfClass:[MTBignumImpl class]]);
     assert([b isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *aImpl = a;
-    MTBignumImpl *bImpl = b;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
+    MTBignumImpl *bImpl = (MTBignumImpl *)b;
     
     return BN_cmp(aImpl->_value, bImpl->_value);
 }
@@ -183,10 +183,10 @@ NS_ASSUME_NONNULL_BEGIN
     assert([a isKindOfClass:[MTBignumImpl class]]);
     assert([b isKindOfClass:[MTBignumImpl class]]);
     assert([mod isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *resultImpl = result;
-    MTBignumImpl *aImpl = a;
-    MTBignumImpl *bImpl = b;
-    MTBignumImpl *modImpl = mod;
+    MTBignumImpl *resultImpl = (MTBignumImpl *)result;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
+    MTBignumImpl *bImpl = (MTBignumImpl *)b;
+    MTBignumImpl *modImpl = (MTBignumImpl *)mod;
     
     return BN_mod_add(resultImpl->_value, aImpl->_value, bImpl->_value, modImpl->_value, _context) != 0;
 }
@@ -196,10 +196,10 @@ NS_ASSUME_NONNULL_BEGIN
     assert([a isKindOfClass:[MTBignumImpl class]]);
     assert([b isKindOfClass:[MTBignumImpl class]]);
     assert([mod isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *resultImpl = result;
-    MTBignumImpl *aImpl = a;
-    MTBignumImpl *bImpl = b;
-    MTBignumImpl *modImpl = mod;
+    MTBignumImpl *resultImpl = (MTBignumImpl *)result;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
+    MTBignumImpl *bImpl = (MTBignumImpl *)b;
+    MTBignumImpl *modImpl = (MTBignumImpl *)mod;
     
     return BN_mod_sub(resultImpl->_value, aImpl->_value, bImpl->_value, modImpl->_value, _context) != 0;
 }
@@ -209,10 +209,10 @@ NS_ASSUME_NONNULL_BEGIN
     assert([a isKindOfClass:[MTBignumImpl class]]);
     assert([b isKindOfClass:[MTBignumImpl class]]);
     assert([mod isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *resultImpl = result;
-    MTBignumImpl *aImpl = a;
-    MTBignumImpl *bImpl = b;
-    MTBignumImpl *modImpl = mod;
+    MTBignumImpl *resultImpl = (MTBignumImpl *)result;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
+    MTBignumImpl *bImpl = (MTBignumImpl *)b;
+    MTBignumImpl *modImpl = (MTBignumImpl *)mod;
     
     return BN_mod_mul(resultImpl->_value, aImpl->_value, bImpl->_value, modImpl->_value, _context) != 0;
 }
@@ -222,10 +222,10 @@ NS_ASSUME_NONNULL_BEGIN
     assert([a isKindOfClass:[MTBignumImpl class]]);
     assert([b isKindOfClass:[MTBignumImpl class]]);
     assert([mod isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *resultImpl = result;
-    MTBignumImpl *aImpl = a;
-    MTBignumImpl *bImpl = b;
-    MTBignumImpl *modImpl = mod;
+    MTBignumImpl *resultImpl = (MTBignumImpl *)result;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
+    MTBignumImpl *bImpl = (MTBignumImpl *)b;
+    MTBignumImpl *modImpl = (MTBignumImpl *)mod;
     
     return BN_mod_exp(resultImpl->_value, aImpl->_value, bImpl->_value, modImpl->_value, _context) != 0;
 }
@@ -234,9 +234,9 @@ NS_ASSUME_NONNULL_BEGIN
     assert([result isKindOfClass:[MTBignumImpl class]]);
     assert([a isKindOfClass:[MTBignumImpl class]]);
     assert([b isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *resultImpl = result;
-    MTBignumImpl *aImpl = a;
-    MTBignumImpl *bImpl = b;
+    MTBignumImpl *resultImpl = (MTBignumImpl *)result;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
+    MTBignumImpl *bImpl = (MTBignumImpl *)b;
     
     return BN_add(resultImpl->_value, aImpl->_value, bImpl->_value) != 0;
 }
@@ -245,9 +245,9 @@ NS_ASSUME_NONNULL_BEGIN
     assert([result isKindOfClass:[MTBignumImpl class]]);
     assert([a isKindOfClass:[MTBignumImpl class]]);
     assert([b isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *resultImpl = result;
-    MTBignumImpl *aImpl = a;
-    MTBignumImpl *bImpl = b;
+    MTBignumImpl *resultImpl = (MTBignumImpl *)result;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
+    MTBignumImpl *bImpl = (MTBignumImpl *)b;
     
     return BN_sub(resultImpl->_value, aImpl->_value, bImpl->_value) != 0;
 }
@@ -256,9 +256,9 @@ NS_ASSUME_NONNULL_BEGIN
     assert([result isKindOfClass:[MTBignumImpl class]]);
     assert([a isKindOfClass:[MTBignumImpl class]]);
     assert([b isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *resultImpl = result;
-    MTBignumImpl *aImpl = a;
-    MTBignumImpl *bImpl = b;
+    MTBignumImpl *resultImpl = (MTBignumImpl *)result;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
+    MTBignumImpl *bImpl = (MTBignumImpl *)b;
     
     return BN_mul(resultImpl->_value, aImpl->_value, bImpl->_value, _context) != 0;
 }
@@ -267,9 +267,9 @@ NS_ASSUME_NONNULL_BEGIN
     assert([result isKindOfClass:[MTBignumImpl class]]);
     assert([a isKindOfClass:[MTBignumImpl class]]);
     assert([b isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *resultImpl = result;
-    MTBignumImpl *aImpl = a;
-    MTBignumImpl *bImpl = b;
+    MTBignumImpl *resultImpl = (MTBignumImpl *)result;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
+    MTBignumImpl *bImpl = (MTBignumImpl *)b;
     
     return BN_exp(resultImpl->_value, aImpl->_value, bImpl->_value, _context) != 0;
 }
@@ -278,16 +278,16 @@ NS_ASSUME_NONNULL_BEGIN
     assert([result isKindOfClass:[MTBignumImpl class]]);
     assert([a isKindOfClass:[MTBignumImpl class]]);
     assert([mod isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *resultImpl = result;
-    MTBignumImpl *aImpl = a;
-    MTBignumImpl *modImpl = mod;
+    MTBignumImpl *resultImpl = (MTBignumImpl *)result;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
+    MTBignumImpl *modImpl = (MTBignumImpl *)mod;
     
     return BN_mod_inverse(resultImpl->_value, aImpl->_value, modImpl->_value, _context) != 0;
 }
 
 - (unsigned long)modWord:(id<MTBignum>)a mod:(unsigned long)mod {
     assert([a isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *aImpl = a;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
     
     return BN_mod_word(aImpl->_value, mod);
 }
@@ -295,8 +295,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (bool)rightShift1Bit:(id<MTBignum>)result a:(id<MTBignum>)a {
     assert([result isKindOfClass:[MTBignumImpl class]]);
     assert([a isKindOfClass:[MTBignumImpl class]]);
-    MTBignumImpl *resultImpl = result;
-    MTBignumImpl *aImpl = a;
+    MTBignumImpl *resultImpl = (MTBignumImpl *)result;
+    MTBignumImpl *aImpl = (MTBignumImpl *)a;
     return BN_rshift1(resultImpl->_value, aImpl->_value);
 }
 
@@ -328,10 +328,10 @@ NS_ASSUME_NONNULL_BEGIN
     
     MTBignumContextImpl *context = [[MTBignumContextImpl alloc] init];
     
-    MTBignumImpl *a = [context create];
+    MTBignumImpl *a = (MTBignumImpl *)[context create];
     [context assignBinTo:a value:data];
     
-    MTBignumImpl *r = [context create];
+    MTBignumImpl *r = (MTBignumImpl *)[context create];
     [context modExpInto:r a:a b:[context rsaGetE:rsaKey] mod:[context rsaGetN:rsaKey]];
      
     return [context getBin:r];
@@ -388,7 +388,7 @@ NS_ASSUME_NONNULL_BEGIN
     BN_mod_exp(r, a, RSA_get0_e(rsaKey), RSA_get0_n(rsaKey), ctx);
     
     unsigned char *res = malloc((size_t)BN_num_bytes(r));
-    int resLen = BN_bn2bin(r, res);
+    int resLen = (int)(BN_bn2bin(r, res));
     
     BN_CTX_free(ctx);
     BN_free(a);

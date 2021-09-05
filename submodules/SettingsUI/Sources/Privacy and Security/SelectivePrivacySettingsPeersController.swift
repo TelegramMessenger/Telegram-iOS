@@ -37,32 +37,6 @@ private enum SelectivePrivacyPeersSection: Int32 {
 private enum SelectivePrivacyPeersEntryStableId: Hashable {
     case add
     case peer(PeerId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .peer(peerId):
-                return peerId.hashValue
-            case .add:
-                return 1
-        }
-    }
-    
-    static func ==(lhs: SelectivePrivacyPeersEntryStableId, rhs: SelectivePrivacyPeersEntryStableId) -> Bool {
-        switch lhs {
-            case let .peer(peerId):
-                if case .peer(peerId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .add:
-                if case .add = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
@@ -150,7 +124,7 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! SelectivePrivacyPeersControllerArguments
         switch self {
-            case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, editing, enabled):
+            case let .peerItem(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, editing, enabled):
                 var text: ItemListPeerItemText = .none
                 if let group = peer.peer as? TelegramGroup {
                     text = .text(strings.Conversation_StatusMembers(Int32(group.participantCount)), .secondary)
@@ -345,7 +319,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             return transaction.getPeer(peerId)
         }
         |> deliverOnMainQueue).start(next: { peer in
-            guard let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) else {
+            guard let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) else {
                 return
             }
             pushControllerImpl?(controller)

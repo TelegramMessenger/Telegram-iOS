@@ -130,7 +130,7 @@
 {
     [super loadView];
     
-    if (iosMajorVersion() >= 11) {
+    if (@available(iOS 11.0, *)) {
         self.navigationBar.prefersLargeTitles = false;
     }
     
@@ -493,7 +493,7 @@
 {
     UIBarStyle barStyle = UIBarStyleDefault;
     bool navigationBarShouldBeHidden = false;
-    UIStatusBarStyle statusBarStyle = UIStatusBarStyleBlackOpaque;
+    UIStatusBarStyle statusBarStyle = UIStatusBarStyleLightContent;
     bool statusBarShouldBeHidden = false;
     
     if ([viewController conformsToProtocol:@protocol(TGViewControllerNavigationBarAppearance)])
@@ -830,7 +830,7 @@ TGNavigationController *findNavigationController()
     return self.topViewController.preferredStatusBarStyle;
 }
 
-- (void)dismissViewControllerAnimated:(BOOL)flag completion:(void (^)())completion {
+- (void)dismissViewControllerAnimated:(BOOL)flag completion:(void (^)(void))completion {
     if (_customDismissSelf) {
         _customDismissSelf();
         if (completion) {

@@ -18,8 +18,9 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     private var previousMediaReference: AnyMediaReference?
     
-    let closeButton: ASButtonNode
+    let closeButton: HighlightableButtonNode
     let lineNode: ASImageNode
+    let iconNode: ASImageNode
     let titleNode: ImmediateTextNode
     let textNode: ImmediateTextNode
     let imageNode: TransformImageNode
@@ -27,13 +28,17 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let actionArea: AccessibilityAreaNode
     
     var theme: PresentationTheme
+    var strings: PresentationStrings
+    
+    private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
     init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat) {
         self.messageId = messageId
         
         self.theme = theme
+        self.strings = strings
         
-        self.closeButton = ASButtonNode()
+        self.closeButton = HighlightableButtonNode()
         self.closeButton.accessibilityLabel = strings.VoiceOver_DiscardPreparedContent
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
@@ -43,6 +48,11 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.displayWithoutProcessing = true
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.displayWithoutProcessing = false
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.image = PresentationResourcesChat.chatInputPanelReplyIconImage(theme)
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
@@ -66,6 +76,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.closeButton)
         
         self.addSubnode(self.lineNode)
+        self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.imageNode)
@@ -171,7 +182,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     isMedia = false
                 }
                 
-                strongSelf.titleNode.attributedText = NSAttributedString(string: authorName, font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string, font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
                 strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
                 
                 let headerString: String
@@ -195,7 +206,9 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     strongSelf.imageNode.setSignal(updateImageSignal)
                 }
                 
-                strongSelf.setNeedsLayout()
+                if let (size, inset, interfaceState) = strongSelf.validLayout {
+                    strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
+                }
             }
         }))
     }
@@ -210,6 +223,14 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
+    override func animateIn() {
+        self.iconNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+    }
+    
+    override func animateOut() {
+        self.iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
+    }
+    
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         if self.theme !== theme {
             self.theme = theme
@@ -217,6 +238,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
             
             self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+            self.iconNode.image = PresentationResourcesChat.chatInputPanelReplyIconImage(theme)
             
             if let text = self.titleNode.attributedText?.string {
                 self.titleNode.attributedText = NSAttributedString(string: text, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
@@ -226,7 +248,9 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
             }
             
-            self.setNeedsLayout()
+            if let (size, inset, interfaceState) = self.validLayout {
+                self.updateState(size: size, inset: inset, interfaceState: interfaceState)
+            }
         }
     }
     
@@ -234,23 +258,27 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
     
-    override func layout() {
-        super.layout()
+    override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
+        self.validLayout = (size, inset, interfaceState)
         
-        let bounds = self.bounds
+        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
         let leftInset: CGFloat = 55.0
         let textLineInset: CGFloat = 10.0
         let rightInset: CGFloat = 55.0
         let textRightInset: CGFloat = 20.0
         
         let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
-        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - rightInset - closeButtonSize.width + 16.0, y: 2.0), size: closeButtonSize)
+        let closeButtonFrame = CGRect(origin: CGPoint(x: bounds.width - closeButtonSize.width - inset, y: 2.0), size: closeButtonSize)
         self.closeButton.frame = closeButtonFrame
         
         self.actionArea.frame = CGRect(origin: CGPoint(x: leftInset, y: 2.0), size: CGSize(width: closeButtonFrame.minX - leftInset, height: bounds.height))
 
         if self.lineNode.supernode == self {
             self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
+        }
+        
+        if let icon = self.iconNode.image {
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
         }
         
         var imageTextInset: CGFloat = 0.0

@@ -77,7 +77,7 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                                 case .None:
                                     colors = chatPresentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper
                                 }
-                                if colors.fill == colors.stroke || colors.stroke.alpha.isZero {
+                                if colors.fill[0] == colors.stroke || colors.stroke.alpha.isZero {
                                     bubbleInsets = UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
                                 } else {
                                     bubbleInsets = layoutConstants.bubble.strokeInsets
@@ -110,7 +110,7 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                         if case .color = chatPresentationData.theme.wallpaper {
                             let colors: PresentationThemeBubbleColorComponents
                             colors = chatPresentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper
-                            if colors.fill == colors.stroke || colors.stroke.alpha.isZero {
+                            if colors.fill[0] == colors.stroke || colors.stroke.alpha.isZero {
                                 bubbleInsets = UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
                             } else {
                                 bubbleInsets = layoutConstants.bubble.strokeInsets
@@ -135,7 +135,7 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                         if case .color = chatPresentationData.theme.wallpaper {
                             let colors: PresentationThemeBubbleColorComponents
                             colors = chatPresentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper
-                            if colors.fill == colors.stroke || colors.stroke.alpha.isZero {
+                            if colors.fill[0] == colors.stroke || colors.stroke.alpha.isZero {
                                 bubbleInsets = UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
                             } else {
                                 bubbleInsets = layoutConstants.bubble.strokeInsets

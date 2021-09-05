@@ -428,7 +428,7 @@ final class SetupTwoStepVerificationControllerNode: ViewControllerTracingNode {
                         return
                     }
                     var inplicitelyActivateNextAction = false
-                    if case let .confirmEmail(confirmEmail)? = strongSelf.innerState.data.state, let codeLength = confirmEmail.codeLength, confirmEmail.code.count != codeLength, text.count == codeLength {
+                    if case let .confirmEmail(_, _, codeLength?, code)? = strongSelf.innerState.data.state, code.count != codeLength, text.count == codeLength {
                         inplicitelyActivateNextAction = true
                     }
                     strongSelf.updateState({ state in

@@ -224,7 +224,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     titleColor = item.presentationData.theme.theme.chat.message.incoming.accentTextColor
                     
                     let bubbleColors = bubbleColorComponents(theme: item.presentationData.theme.theme, incoming: true, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
-                    titleHighlightedColor = bubbleColors.fill
+                    titleHighlightedColor = bubbleColors.fill[0]
                     avatarPlaceholderColor = item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor
                 } else {
                     buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(item.presentationData.theme.theme)!
@@ -232,7 +232,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     titleColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     
                     let bubbleColors = bubbleColorComponents(theme: item.presentationData.theme.theme, incoming: false, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
-                    titleHighlightedColor = bubbleColors.fill
+                    titleHighlightedColor = bubbleColors.fill[0]
                     avatarPlaceholderColor = item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
                 }
                 
@@ -322,7 +322,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             if let peerId = selectedContact?.peerId, let peer = item.message.peers[peerId] {
-                                strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme.theme, peer: peer, emptyColor: avatarPlaceholderColor, synchronousLoad: synchronousLoads)
+                                strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme.theme, peer: EnginePeer(peer), emptyColor: avatarPlaceholderColor, synchronousLoad: synchronousLoads)
                             } else {
                                 strongSelf.avatarNode.setCustomLetters(customLetters)
                             }

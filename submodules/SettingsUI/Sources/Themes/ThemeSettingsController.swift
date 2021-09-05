@@ -214,8 +214,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .accentColor(lhsTheme, lhsGeneralTheme, lhsCurrentTheme, lhsThemes, lhsColor):
-                if case let .accentColor(rhsTheme, rhsGeneralTheme, rhsCurrentTheme, rhsThemes, rhsColor) = rhs, lhsTheme === rhsTheme, lhsCurrentTheme == rhsCurrentTheme, lhsThemes == rhsThemes, lhsColor == rhsColor {
+            case let .accentColor(lhsTheme, _, lhsCurrentTheme, lhsThemes, lhsColor):
+                if case let .accentColor(rhsTheme, _, rhsCurrentTheme, rhsThemes, rhsColor) = rhs, lhsTheme === rhsTheme, lhsCurrentTheme == rhsCurrentTheme, lhsThemes == rhsThemes, lhsColor == rhsColor {
                     return true
                 } else {
                     return false
@@ -308,7 +308,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ThemeSettingsControllerArguments
         switch self {
-            case let .fontSizeHeader(theme, text):
+            case let .fontSizeHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .fontSize(theme, fontSize):
                 return ThemeSettingsFontSizeItem(theme: theme, fontSize: fontSize, sectionId: self.section, updated: { value in
@@ -316,7 +316,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 }, tag: ThemeSettingsEntryTag.fontSize)
             case let .chatPreview(theme, wallpaper, fontSize, chatBubbleCorners, strings, dateTimeFormat, nameDisplayOrder, items):
                 return ThemeSettingsChatPreviewItem(context: arguments.context, theme: theme, componentTheme: theme, strings: strings, sectionId: self.section, fontSize: fontSize, chatBubbleCorners: chatBubbleCorners, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, messageItems: items)
-            case let .wallpaper(theme, text):
+            case let .wallpaper(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openWallpaperSettings()
                 })
@@ -403,19 +403,19 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 }, openColorPicker: { create in
                     arguments.openAccentColorPicker(currentTheme, create)
                 }, tag: ThemeSettingsEntryTag.accentColor)
-            case let .autoNightTheme(theme, text, value):
+            case let .autoNightTheme(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openAutoNightTheme()
                 })
-            case let .textSize(theme, text, value):
+            case let .textSize(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openTextSize()
                 })
-            case let .bubbleSettings(theme, text, value):
+            case let .bubbleSettings(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                     arguments.openBubbleSettings()
                 })
-            case let .themeListHeader(theme, text):
+            case let .themeListHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .themeItem(theme, strings, themes, allThemes, currentTheme, themeSpecificAccentColors, themeSpecificChatWallpapers, _):
                 return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, allThemes: allThemes, displayUnsupported: true, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, currentTheme: currentTheme, updatedTheme: { theme in
@@ -429,23 +429,23 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 }, contextAction: { theme, node, gesture in
                     arguments.themeContextAction(theme.index == currentTheme.index, theme, node, gesture)
                 }, tag: ThemeSettingsEntryTag.theme)
-            case let .iconHeader(theme, text):
+            case let .iconHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .iconItem(theme, strings, icons, value):
                 return ThemeSettingsAppIconItem(theme: theme, strings: strings, sectionId: self.section, icons: icons, currentIconName: value, updated: { iconName in
                     arguments.selectAppIcon(iconName)
                 })
-            case let .otherHeader(theme, text):
+            case let .otherHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .largeEmoji(theme, title, value):
+            case let .largeEmoji(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleLargeEmoji(value)
                 }, tag: ThemeSettingsEntryTag.largeEmoji)
-            case let .animations(theme, title, value):
+            case let .animations(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.disableAnimations(value)
                 }, tag: ThemeSettingsEntryTag.animations)
-            case let .animationsInfo(theme, text):
+            case let .animationsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -486,7 +486,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
         }
         
         var colorOption: ThemeSettingsColorOption?
-        if case let .builtin(theme) = themeReference {
+        if case .builtin = themeReference {
             colorOption = presentationThemeSettings.themeSpecificAccentColors[themeReference.index].flatMap { .accentColor($0) }
         } else {
             colorOption = .theme(themeReference)
@@ -647,7 +647,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             if let wallpaper = wallpaper {
                 effectiveWallpaper = wallpaper
             } else {
-                let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper)
+                let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors ?? [], wallpaper: accentColor?.wallpaper)
                 effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
             }
             return (accentColor, effectiveWallpaper)
@@ -656,7 +656,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             if case let .file(file) = wallpaper, file.id == 0 {
                 return cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
                 |> map { cachedWallpaper in
-                    if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
+                    if let wallpaper = cachedWallpaper?.wallpaper, case .file = wallpaper {
                         return (accentColor, wallpaper)
                     } else {
                         return (accentColor, .builtin(WallpaperSettings()))
@@ -669,7 +669,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         |> mapToSignal { accentColor, wallpaper -> Signal<(PresentationTheme?, TelegramWallpaper?), NoError> in
             return chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox)
             |> map { serviceBackgroundColor in
-                return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors, serviceBackgroundColor: serviceBackgroundColor), wallpaper)
+                return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors ?? [], serviceBackgroundColor: serviceBackgroundColor), wallpaper)
             }
         }
         |> deliverOnMainQueue).start(next: { theme, wallpaper in
@@ -826,7 +826,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             return (accentColor, wallpaper)
         } |> mapToSignal { accentColor, wallpaper -> Signal<(PresentationTheme?, PresentationThemeReference, Bool, TelegramWallpaper?), NoError> in
             let generalThemeReference: PresentationThemeReference
-            if let accentColor = accentColor, case let .cloud(theme) = reference, let settings = theme.theme.settings {
+            if let _ = accentColor, case let .cloud(theme) = reference, let settings = theme.theme.settings {
                 generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
             } else {
                 generalThemeReference = reference
@@ -854,7 +854,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     default:
                         break
                     }
-                    theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors, wallpaper: accentColor?.wallpaper, baseColor: baseColor)
+                    theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors ?? [], wallpaper: accentColor?.wallpaper, baseColor: baseColor)
                 }
                 effectiveWallpaper = theme?.chat.defaultWallpaper ?? .builtin(WallpaperSettings())
             }
@@ -880,7 +880,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 if let accentColor = accentColor, case let .theme(themeReference) = accentColor {
                     return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, serviceBackgroundColor: serviceBackgroundColor), effectiveThemeReference, wallpaper)
                 } else {
-                    return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors, serviceBackgroundColor: serviceBackgroundColor), effectiveThemeReference, wallpaper)
+                    return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.accentColor, bubbleColors: accentColor?.customBubbleColors ?? [], serviceBackgroundColor: serviceBackgroundColor), effectiveThemeReference, wallpaper)
                 }
             }
             |> mapToSignal { theme, reference, wallpaper in
@@ -998,7 +998,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                                         
                                         if isCurrent, let settings = cloudTheme.theme.settings {
                                             let colorThemes = themes.filter { theme in
-                                                if let settings = theme.settings {
+                                                if let _ = theme.settings {
                                                     return true
                                                 } else {
                                                     return false
@@ -1007,7 +1007,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                                             
                                             if let currentThemeIndex = colorThemes.firstIndex(where: { $0.id == cloudTheme.theme.id }) {
                                                 let previousThemeIndex = themes.prefix(upTo: currentThemeIndex).reversed().firstIndex(where: { $0.file != nil })
-                                                let newTheme: PresentationThemeReference
                                                 if let previousThemeIndex = previousThemeIndex {
                                                     let theme = themes[themes.index(before: previousThemeIndex.base)]
                                                     selectThemeImpl?(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: theme.isCreator ? context.account.id : nil)))
@@ -1254,8 +1253,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             wallpaperSignal = cachedWallpaper(account: context.account, slug: file.slug, settings: colorWallpaper.settings)
             |> mapToSignal { cachedWallpaper in
                 if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
-                    let resource = file.file.resource
-                            
                     let _ = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start()
 
                     return .single(wallpaper)
@@ -1292,7 +1289,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     updatedTheme = generalThemeReference
                 }
                 
-                guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.color, wallpaper: presetWallpaper, baseColor: accentColor?.baseColor) else {
+                guard let _ = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.color, wallpaper: presetWallpaper, baseColor: accentColor?.baseColor) else {
                     return current
                 }
                 
@@ -1300,7 +1297,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 var themeSpecificAccentColors = current.themeSpecificAccentColors
                 themeSpecificAccentColors[generalThemeReference.index] = accentColor?.withUpdatedWallpaper(presetWallpaper)
                 
-                if case let .builtin(theme) = generalThemeReference {
+                if case .builtin = generalThemeReference {
                     let index = coloredThemeIndex(reference: currentTheme, accentColor: accentColor)
                     if let wallpaper = current.themeSpecificChatWallpapers[index] {
                         if wallpaper.isColorOrGradient || wallpaper.isPattern || wallpaper.isBuiltin {

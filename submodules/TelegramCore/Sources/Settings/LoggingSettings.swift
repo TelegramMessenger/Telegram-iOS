@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
-public func updateLoggingSettings(accountManager: AccountManager, _ f: @escaping (LoggingSettings) -> LoggingSettings) -> Signal<Void, NoError> {
+public func updateLoggingSettings(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (LoggingSettings) -> LoggingSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         var updated: LoggingSettings?
         transaction.updateSharedData(SharedDataKeys.loggingSettings, { current in

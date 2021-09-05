@@ -15,8 +15,9 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private(set) var webpage: TelegramMediaWebpage
     private(set) var url: String
     
-    let closeButton: ASButtonNode
+    let closeButton: HighlightableButtonNode
     let lineNode: ASImageNode
+    let iconNode: ASImageNode
     let titleNode: TextNode
     private var titleString: NSAttributedString?
     
@@ -26,13 +27,15 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     var theme: PresentationTheme
     var strings: PresentationStrings
     
+    private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
+    
     init(context: AccountContext, url: String, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
         self.url = url
         self.webpage = webpage
         self.theme = theme
         self.strings = strings
         
-        self.closeButton = ASButtonNode()
+        self.closeButton = HighlightableButtonNode()
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
@@ -41,6 +44,11 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.displayWithoutProcessing = true
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.displayWithoutProcessing = false
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.image = PresentationResourcesChat.chatInputPanelWebpageIconImage(theme)
         
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
@@ -64,6 +72,14 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         self.webpageDisposable.dispose()
     }
     
+    override func animateIn() {
+        self.iconNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+    }
+    
+    override func animateOut() {
+        self.iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
+    }
+    
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         if self.theme !== theme || self.strings !== strings {
             self.strings = strings
@@ -73,6 +89,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                 
                 self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
                 self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+                self.iconNode.image = PresentationResourcesChat.chatInputPanelWebpageIconImage(theme)
             }
             
             if let text = self.titleString?.string {
@@ -85,7 +102,9 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
             
             self.updateWebpage()
             
-            self.setNeedsLayout()
+            if let (size, inset, interfaceState) = self.validLayout {
+                self.updateState(size: size, inset: inset, interfaceState: interfaceState)
+            }
         }
     }
     
@@ -136,26 +155,32 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         self.titleString = NSAttributedString(string: authorName, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
         self.textString = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
         
-        self.setNeedsLayout()
+        if let (size, inset, interfaceState) = self.validLayout {
+            self.updateState(size: size, inset: inset, interfaceState: interfaceState)
+        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
     
-    override func layout() {
-        super.layout()
+    override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
+        self.validLayout = (size, inset, interfaceState)
         
-        let bounds = self.bounds
+        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
         let leftInset: CGFloat = 55.0
         let textLineInset: CGFloat = 10.0
         let rightInset: CGFloat = 55.0
         let textRightInset: CGFloat = 20.0
         
-        let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        self.closeButton.frame = CGRect(origin: CGPoint(x: bounds.size.width - rightInset - closeButtonSize.width, y: 19.0), size: closeButtonSize)
+        let closeButtonSize = CGSize(width: 44.0, height: bounds.height)
+        self.closeButton.frame = CGRect(origin: CGPoint(x: bounds.size.width - closeButtonSize.width - inset, y: 2.0), size: closeButtonSize)
         
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
+        
+        if let icon = self.iconNode.image {
+            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
+        }
         
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
@@ -171,6 +196,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         let _ = titleApply()
         let _ = textApply()
     }
+    
     
     @objc func closePressed() {
         if let dismiss = self.dismiss {

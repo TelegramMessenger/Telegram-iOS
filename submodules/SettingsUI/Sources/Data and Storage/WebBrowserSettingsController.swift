@@ -68,9 +68,9 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! WebBrowserSettingsControllerArguments
         switch self {
-            case let .browserHeader(theme, text):
+            case let .browserHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .browser(theme, title, application, identifier, selected, _):
+            case let .browser(_, title, application, identifier, selected, _):
                 return WebBrowserItem(account: arguments.context.account, presentationData: presentationData, title: title, application: application, checked: selected, sectionId: self.section) {
                     arguments.updateDefaultBrowser(identifier)
                 }
@@ -96,10 +96,6 @@ private func webBrowserSettingsControllerEntries(context: AccountContext, presen
 }
 
 public func webBrowserSettingsController(context: AccountContext) -> ViewController {
-    var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController) -> Void)?
-    
-    let updateDisposable = MetaDisposable()
     let arguments = WebBrowserSettingsControllerArguments(context: context, updateDefaultBrowser: { identifier in
         let _ = updateWebBrowserSettingsInteractively(accountManager: context.sharedContext.accountManager, { $0.withUpdatedDefaultWebBrowser(identifier) }).start()
     })
@@ -116,11 +112,5 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
     }
     
     let controller = ItemListController(context: context, state: signal)
-    pushControllerImpl = { [weak controller] c in
-        (controller?.navigationController as? NavigationController)?.pushViewController(c)
-    }
-    presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window(.root))
-    }
     return controller
 }

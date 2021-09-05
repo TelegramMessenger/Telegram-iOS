@@ -130,7 +130,6 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 return
             }
             
-            let account = strongSelf.context.account
             strongSelf.openMentionDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: mention)
             |> mapToSignal { peer -> Signal<Peer?, NoError> in
                 if let peer = peer {

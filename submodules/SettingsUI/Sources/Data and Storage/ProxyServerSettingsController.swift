@@ -116,13 +116,13 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! proxyServerSettingsControllerArguments
         switch self {
-            case let .usePasteboardSettings(theme, title):
+            case let .usePasteboardSettings(_, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.usePasteboardSettings()
                 })
-            case let .usePasteboardInfo(theme, text):
+            case let .usePasteboardInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .modeSocks5(theme, text, value):
+            case let .modeSocks5(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateState { state in
                         var state = state
@@ -130,7 +130,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                         return state
                     }
                 })
-            case let .modeMtp(theme, text, value):
+            case let .modeMtp(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateState { state in
                         var state = state
@@ -138,9 +138,9 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                         return state
                     }
                 })
-            case let .connectionHeader(theme, text):
+            case let .connectionHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .connectionServer(theme, strings, placeholder, text):
+            case let .connectionServer(_, _, placeholder, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
@@ -148,7 +148,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                         return state
                     }
                 }, action: {})
-            case let .connectionPort(theme, strings, placeholder, text):
+            case let .connectionPort(_, _, placeholder, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: text, placeholder: placeholder, type: .number, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
@@ -156,9 +156,9 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                         return state
                     }
                 }, action: {})
-            case let .credentialsHeader(theme, text):
+            case let .credentialsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .credentialsUsername(theme, strings, placeholder, text):
+            case let .credentialsUsername(_, _, placeholder, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: text, placeholder: placeholder, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
@@ -166,7 +166,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                         return state
                     }
                 }, action: {})
-            case let .credentialsPassword(theme, strings, placeholder, text):
+            case let .credentialsPassword(_, _, placeholder, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: text, placeholder: placeholder, type: .password, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
@@ -174,7 +174,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                         return state
                     }
                 }, action: {})
-            case let .credentialsSecret(theme, strings, placeholder, text):
+            case let .credentialsSecret(_, _, placeholder, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: text, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
@@ -182,7 +182,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
                         return state
                     }
                 }, action: {})
-            case let .share(theme, text, enabled):
+            case let .share(_, text, enabled):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.share()
                 })
@@ -269,7 +269,7 @@ public func proxyServerSettingsController(context: AccountContext, currentSettin
     return proxyServerSettingsController(context: context, presentationData: presentationData, updatedPresentationData: context.sharedContext.presentationData, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, currentSettings: currentSettings)
 }
 
-func proxyServerSettingsController(context: AccountContext? = nil, presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>, accountManager: AccountManager, postbox: Postbox, network: Network, currentSettings: ProxyServerSettings?) -> ViewController {
+func proxyServerSettingsController(context: AccountContext? = nil, presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>, accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network, currentSettings: ProxyServerSettings?) -> ViewController {
     var currentMode: ProxyServerSettingsControllerMode = .socks5
     var currentUsername: String?
     var currentPassword: String?

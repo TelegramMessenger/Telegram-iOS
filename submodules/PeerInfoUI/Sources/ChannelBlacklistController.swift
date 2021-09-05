@@ -324,9 +324,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                 let progress = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 presentControllerImpl?(progress, nil)
                 removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: context.engine, peerId: peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
-                    |> deliverOnMainQueue).start(error: { [weak progress] _ in
-                        progress?.dismiss()
-                        dismissController?()
+                    |> deliverOnMainQueue).start(error: { _ in
                     }, completed: { [weak progress] in 
                         progress?.dismiss()
                         dismissController?()
@@ -343,9 +341,6 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
         }
         
         removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: context.engine, peerId: peerId, memberId: memberId, bannedRights: nil)  |> deliverOnMainQueue).start(error: { _ in
-            updateState {
-                return $0.withUpdatedRemovingPeerId(nil)
-            }
         }, completed: {
             updateState {
                 return $0.withUpdatedRemovingPeerId(nil)
@@ -376,7 +371,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                     if let navigationController = getNavigationControllerImpl?() {
                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(participant.peer.id)))
                     }
-                } else if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: participant.peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                } else if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: participant.peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                     pushControllerImpl?(infoController)
                 }
             }))
@@ -392,7 +387,6 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                     |> then(
                         context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: peerId, memberId: memberId)
                         |> map { _ -> Void in
-                            return Void()
                         }
                         |> `catch` { _ -> Signal<Void, NoError> in
                             return .complete()
@@ -400,9 +394,6 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                         |> ignoreValues
                     )
                     removePeerDisposable.set((signal |> deliverOnMainQueue).start(error: { _ in
-                        updateState {
-                            return $0.withUpdatedRemovingPeerId(nil)
-                        }
                     }, completed: {
                         updateState {
                             return $0.withUpdatedRemovingPeerId(nil)
@@ -418,9 +409,6 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                 }
                 
                 removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: context.engine, peerId: peerId, memberId: memberId, bannedRights: nil)  |> deliverOnMainQueue).start(error: { _ in
-                    updateState {
-                        return $0.withUpdatedRemovingPeerId(nil)
-                    }
                 }, completed: {
                     updateState {
                         return $0.withUpdatedRemovingPeerId(nil)

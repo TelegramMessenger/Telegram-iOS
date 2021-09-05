@@ -285,6 +285,9 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                             }
                         }
                     }
+
+                    let _ = download
+                    let _ = failed
                     
                     if let position = position {
                         if self.ignoreEarlierTimestamps {

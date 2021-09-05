@@ -117,7 +117,7 @@
                 
                 if (request.requestContext.messageId != 0) {
                     if (MTLogEnabled()) {
-                        MTLog(@"[MTRequestMessageService#%x drop %" PRId64 "]", (int)self, request.requestContext.messageId);
+                        MTLog(@"[MTRequestMessageService#%" PRIxPTR " drop %" PRId64 "]", (intptr_t)self, request.requestContext.messageId);
                     }
                 }
                 
@@ -933,8 +933,8 @@
                 request.requestContext.responseMessageId = responseMessageId;
                 return true;
             } else {
-                MTLog(@"[MTRequestMessageService#%x will not request message %" PRId64 " (transaction was not completed)]", (int)self, messageId);
-                MTLog(@"[MTRequestMessageService#%x but today it will]", (int)self);
+                MTLog(@"[MTRequestMessageService#%" PRIxPTR " will not request message %" PRId64 " (transaction was not completed)]", (intptr_t)self, messageId);
+                MTLog(@"[MTRequestMessageService#%" PRIxPTR " but today it will]", (intptr_t)self);
                 return true;
             }
         }

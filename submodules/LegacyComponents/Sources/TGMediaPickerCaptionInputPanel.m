@@ -92,14 +92,20 @@ static void setViewFrame(UIView *view, CGRect frame)
             localizationPlaceholderText = TGLocalized(@"MediaPicker.AddCaption");
             NSString *placeholderText = TGLocalized(@"MediaPicker.AddCaption");
             UIFont *placeholderFont = TGSystemFontOfSize(17);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             CGSize placeholderSize = [placeholderText sizeWithFont:placeholderFont];
+#pragma clang diagnostic pop
             placeholderSize.width += 2.0f;
             placeholderSize.height += 2.0f;
             
             UIGraphicsBeginImageContextWithOptions(placeholderSize, false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
             CGContextSetFillColorWithColor(context, UIColorRGB(0xffffff).CGColor);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             [placeholderText drawAtPoint:CGPointMake(1.0f, 1.0f) withFont:placeholderFont];
+#pragma clang diagnostic pop
             placeholderImage = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
         }

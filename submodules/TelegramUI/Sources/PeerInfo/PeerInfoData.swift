@@ -417,7 +417,6 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
             
             let proxySettings: ProxySettings = sharedPreferences.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
             let inAppNotificationSettings: InAppNotificationSettings = sharedPreferences.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
-            let experimentalUISettings: ExperimentalUISettings = sharedPreferences.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
             
             let unreadTrendingStickerPacks = featuredStickerPacks.reduce(0, { count, item -> Int in
                 return item.unread ? count + 1 : count
@@ -659,7 +658,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 if currentInvitationsContext == nil {
                     var canManageInvitations = false
-                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
+                    if let channel = peerViewMainPeer(peerView) as? TelegramChannel, let _ = peerView.cachedData as? CachedChannelData, channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                         canManageInvitations = true
                     }
                     if canManageInvitations {
@@ -739,7 +738,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                         for participant in participants.participants {
                             if let presence = peerView.peerPresences[participant.peerId] as? TelegramUserPresence {
-                                let relativeStatus = relativeUserPresenceStatus(presence, relativeTo: Int32(timestamp))
+                                let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(presence), relativeTo: Int32(timestamp))
                                 switch relativeStatus {
                                 case .online:
                                     onlineCount += 1
@@ -1078,11 +1077,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             result.append(.more)
         }
     } else if let group = peer as? TelegramGroup {
-        var canEditGroupInfo = false
-        var canEditMembers = false
         var canAddMembers = false
-        var isPublic = false
-        var isCreator = false
         var hasVoiceChat = false
         var canStartVoiceChat = false
         
@@ -1096,20 +1091,12 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
                 canStartVoiceChat = true
             }
         }
-        
-        if case .creator = group.role {
-            isCreator = true
-        }
+
         switch group.role {
             case .admin, .creator:
-                canEditGroupInfo = true
-                canEditMembers = true
                 canAddMembers = true
             case .member:
                 break
-        }
-        if !group.hasBannedPermission(.banChangeInfo) {
-            canEditGroupInfo = true
         }
         if !group.hasBannedPermission(.banAddMembers) {
             canAddMembers = true

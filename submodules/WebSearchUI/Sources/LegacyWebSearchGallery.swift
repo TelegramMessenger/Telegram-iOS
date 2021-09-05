@@ -55,8 +55,8 @@ class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem 
     func thumbnailImageSignal() -> SSignal! {
         return SSignal(generator: { subscriber -> SDisposable? in
             let disposable = self.thumbnailImage.start(next: { image in
-                subscriber?.putNext(image)
-                subscriber?.putCompletion()
+                subscriber.putNext(image)
+                subscriber.putCompletion()
             })
             
             return SBlockDisposable(block: {
@@ -69,17 +69,17 @@ class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem 
         return SSignal { subscriber in
             let imageDisposable = self.originalImage.start(next: { image in
                 if !image.degraded() {
-                    subscriber?.putNext(1.0)
+                    subscriber.putNext(1.0)
                 }
-                subscriber?.putNext(image)
+                subscriber.putNext(image)
                 if !image.degraded() {
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 }
             })
             
             let progressDisposable = (self.progress
             |> deliverOnMainQueue).start(next: { next in
-                subscriber?.putNext(next)
+                subscriber.putNext(next)
             })
             
             return SBlockDisposable {
@@ -96,9 +96,9 @@ class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem 
     func originalImageSignal(_ position: TimeInterval) -> SSignal! {
         return SSignal(generator: { subscriber -> SDisposable? in
             let disposable = self.originalImage.start(next: { image in
-                subscriber?.putNext(image)
+                subscriber.putNext(image)
                 if !image.degraded() {
-                    subscriber?.putCompletion()
+                    subscriber.putCompletion()
                 }
             })
             
@@ -149,7 +149,7 @@ private class LegacyWebSearchGalleryItem: TGModernGalleryImageItem, TGModernGall
 }
 
 private class LegacyWebSearchGalleryItemView: TGModernGalleryImageItemView, TGModernGalleryEditableItemView {
-    private let readyForTransition = SVariable()!
+    private let readyForTransition = SVariable()
     
     @objc func setHiddenAsBeingEdited(_ hidden: Bool) {
         self.imageView.isHidden = hidden
@@ -162,7 +162,7 @@ private class LegacyWebSearchGalleryItemView: TGModernGalleryImageItemView, TGMo
     }
     
     override func readyForTransitionIn() -> SSignal! {
-        return self.readyForTransition.signal()!.take(1)
+        return self.readyForTransition.signal().take(1)
     }
     
     override func setItem(_ item: TGModernGalleryItem!, synchronously: Bool) {
@@ -170,7 +170,7 @@ private class LegacyWebSearchGalleryItemView: TGModernGalleryImageItemView, TGMo
             self._setItem(item)
             self.imageSize = TGFitSize(item.editableMediaItem().originalSize!, CGSize(width: 1600, height: 1600))
             
-            let signal = item.editingContext.imageSignal(for: item.editableMediaItem())?.map(toSignal: { result -> SSignal? in
+            let signal = item.editingContext.imageSignal(for: item.editableMediaItem())?.map(toSignal: { result -> SSignal in
                 if let image = result as? UIImage {
                     return SSignal.single(image)
                 } else if result == nil, let mediaItem = item.editableMediaItem() as? LegacyWebSearchItem {
@@ -180,7 +180,7 @@ private class LegacyWebSearchGalleryItemView: TGModernGalleryImageItemView, TGMo
                 }
             })
             
-            self.imageView.setSignal(signal?.deliver(on: SQueue.main())?.afterNext({ [weak self] next in
+            self.imageView.setSignal(signal?.deliver(on: SQueue.main()).afterNext({ [weak self] next in
                 if let strongSelf = self, let image = next as? UIImage {
                     strongSelf.imageSize = image.size
                     strongSelf.reset()

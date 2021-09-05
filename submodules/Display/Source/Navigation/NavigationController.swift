@@ -107,7 +107,7 @@ private final class NavigationControllerNode: ASDisplayNode {
     }
 }
 
-public protocol NavigationControllerDropContentItem: class {
+public protocol NavigationControllerDropContentItem: AnyObject {
 }
 
 public final class NavigationControllerDropContent {
@@ -406,7 +406,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             globalScrollToTopNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: CGSize(width: layout.size.width, height: 1.0))
         }
         
-        var overlayContainerLayout = layout
+        let overlayContainerLayout = layout
         
         if let inCallStatusBar = self.inCallStatusBar {
             var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(40.0, layout.safeInsets.top))))

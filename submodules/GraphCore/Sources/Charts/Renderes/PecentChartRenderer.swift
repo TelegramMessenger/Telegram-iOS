@@ -52,7 +52,7 @@ class PecentChartRenderer: BaseChartRenderer {
         
         let range = renderRange(bounds: bounds, chartFrame: chartFrame)
         
-        var paths: [CGMutablePath] = percentageData.components.map { _ in CGMutablePath() }
+        let paths: [CGMutablePath] = percentageData.components.map { _ in CGMutablePath() }
         var vertices: [CGFloat] = Array<CGFloat>(repeating: 0, count: percentageData.components.count)
 
         if var locationIndex = percentageData.locations.firstIndex(where: { $0 > range.lowerBound }) {

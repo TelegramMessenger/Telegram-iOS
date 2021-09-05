@@ -418,7 +418,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             return .openMessage
         }
         
-        if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point.offsetBy(dx: 0.0, dy: -10.0)) {
+        if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {
             return .openMessage
         } else {
             return .none

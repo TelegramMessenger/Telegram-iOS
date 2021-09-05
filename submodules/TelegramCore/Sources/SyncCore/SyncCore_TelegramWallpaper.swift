@@ -69,11 +69,61 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
 }
 
 public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
+    public struct Gradient: Equatable {
+        public var id: Int64?
+        public var colors: [UInt32]
+        public var settings: WallpaperSettings
+
+        public init(
+            id: Int64?,
+            colors: [UInt32],
+            settings: WallpaperSettings
+        ) {
+            self.id = id
+            self.colors = colors
+            self.settings = settings
+        }
+    }
+
+    public struct File: Equatable {
+        public var id: Int64
+        public var accessHash: Int64
+        public var isCreator: Bool
+        public var isDefault: Bool
+        public var isPattern: Bool
+        public var isDark: Bool
+        public var slug: String
+        public var file: TelegramMediaFile
+        public var settings: WallpaperSettings
+
+        public init(
+            id: Int64,
+            accessHash: Int64,
+            isCreator: Bool,
+            isDefault: Bool,
+            isPattern: Bool,
+            isDark: Bool,
+            slug: String,
+            file: TelegramMediaFile,
+            settings: WallpaperSettings
+        ) {
+            self.id = id
+            self.accessHash = accessHash
+            self.isCreator = isCreator
+            self.isDefault = isDefault
+            self.isPattern = isPattern
+            self.isDark = isDark
+            self.slug = slug
+            self.file = file
+            self.settings = settings
+        }
+    }
+
     case builtin(WallpaperSettings)
     case color(UInt32)
-    case gradient(Int64?, [UInt32], WallpaperSettings)
+    case gradient(Gradient)
     case image([TelegramMediaImageRepresentation], WallpaperSettings)
-    case file(id: Int64, accessHash: Int64, isCreator: Bool, isDefault: Bool, isPattern: Bool, isDark: Bool, slug: String, file: TelegramMediaFile, settings: WallpaperSettings)
+    case file(File)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -88,7 +138,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
         case 3:
             let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
             if let file = decoder.decodeObjectForKey("file", decoder: { TelegramMediaFile(decoder: $0) }) as? TelegramMediaFile {
-                self = .file(id: decoder.decodeInt64ForKey("id", orElse: 0), accessHash: decoder.decodeInt64ForKey("accessHash", orElse: 0), isCreator: decoder.decodeInt32ForKey("isCreator", orElse: 0) != 0, isDefault: decoder.decodeInt32ForKey("isDefault", orElse: 0) != 0, isPattern: decoder.decodeInt32ForKey("isPattern", orElse: 0) != 0, isDark: decoder.decodeInt32ForKey("isDark", orElse: 0) != 0, slug: decoder.decodeStringForKey("slug", orElse: ""), file: file, settings: settings)
+                self = .file(File(id: decoder.decodeInt64ForKey("id", orElse: 0), accessHash: decoder.decodeInt64ForKey("accessHash", orElse: 0), isCreator: decoder.decodeInt32ForKey("isCreator", orElse: 0) != 0, isDefault: decoder.decodeInt32ForKey("isDefault", orElse: 0) != 0, isPattern: decoder.decodeInt32ForKey("isPattern", orElse: 0) != 0, isDark: decoder.decodeInt32ForKey("isDark", orElse: 0) != 0, slug: decoder.decodeStringForKey("slug", orElse: ""), file: file, settings: settings))
             } else {
                 self = .color(0xffffff)
             }
@@ -106,7 +156,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 colors = decoder.decodeInt32ArrayForKey("colors").map(UInt32.init(bitPattern:))
             }
 
-            self = .gradient(decoder.decodeOptionalInt64ForKey("id"), colors, settings)
+            self = .gradient(Gradient(id: decoder.decodeOptionalInt64ForKey("id"), colors: colors, settings: settings))
         default:
             assertionFailure()
             self = .color(0xffffff)
@@ -130,30 +180,30 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
             case let .color(color):
                 encoder.encodeInt32(1, forKey: "v")
                 encoder.encodeInt32(Int32(bitPattern: color), forKey: "c")
-            case let .gradient(id, colors, settings):
+            case let .gradient(gradient):
                 encoder.encodeInt32(4, forKey: "v")
-                if let id = id {
+                if let id = gradient.id {
                     encoder.encodeInt64(id, forKey: "id")
                 } else {
                     encoder.encodeNil(forKey: "id")
                 }
-                encoder.encodeInt32Array(colors.map(Int32.init(bitPattern:)), forKey: "colors")
-                encoder.encodeObject(settings, forKey: "settings")
+                encoder.encodeInt32Array(gradient.colors.map(Int32.init(bitPattern:)), forKey: "colors")
+                encoder.encodeObject(gradient.settings, forKey: "settings")
             case let .image(representations, settings):
                 encoder.encodeInt32(2, forKey: "v")
                 encoder.encodeObjectArray(representations, forKey: "i")
                 encoder.encodeObject(settings, forKey: "settings")
-            case let .file(id, accessHash, isCreator, isDefault, isPattern, isDark, slug, file, settings):
+            case let .file(file):
                 encoder.encodeInt32(3, forKey: "v")
-                encoder.encodeInt64(id, forKey: "id")
-                encoder.encodeInt64(accessHash, forKey: "accessHash")
-                encoder.encodeInt32(isCreator ? 1 : 0, forKey: "isCreator")
-                encoder.encodeInt32(isDefault ? 1 : 0, forKey: "isDefault")
-                encoder.encodeInt32(isPattern ? 1 : 0, forKey: "isPattern")
-                encoder.encodeInt32(isDark ? 1 : 0, forKey: "isDark")
-                encoder.encodeString(slug, forKey: "slug")
-                encoder.encodeObject(file, forKey: "file")
-                encoder.encodeObject(settings, forKey: "settings")
+                encoder.encodeInt64(file.id, forKey: "id")
+                encoder.encodeInt64(file.accessHash, forKey: "accessHash")
+                encoder.encodeInt32(file.isCreator ? 1 : 0, forKey: "isCreator")
+                encoder.encodeInt32(file.isDefault ? 1 : 0, forKey: "isDefault")
+                encoder.encodeInt32(file.isPattern ? 1 : 0, forKey: "isPattern")
+                encoder.encodeInt32(file.isDark ? 1 : 0, forKey: "isDark")
+                encoder.encodeString(file.slug, forKey: "slug")
+                encoder.encodeObject(file.file, forKey: "file")
+                encoder.encodeObject(file.settings, forKey: "settings")
         }
     }
     
@@ -171,8 +221,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 } else {
                     return false
                 }
-            case let .gradient(id, colors, settings):
-                if case .gradient(id, colors, settings) = rhs {
+            case let .gradient(gradient):
+                if case .gradient(gradient) = rhs {
                     return true
                 } else {
                     return false
@@ -183,8 +233,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 } else {
                     return false
             }
-            case let .file(lhsId, _, lhsIsCreator, lhsIsDefault, lhsIsPattern, lhsIsDark, lhsSlug, lhsFile, lhsSettings):
-                if case let .file(rhsId, _, rhsIsCreator, rhsIsDefault, rhsIsPattern, rhsIsDark, rhsSlug, rhsFile, rhsSettings) = rhs, lhsId == rhsId, lhsIsCreator == rhsIsCreator, lhsIsDefault == rhsIsDefault, lhsIsPattern == rhsIsPattern, lhsIsDark == rhsIsDark, lhsSlug == rhsSlug, lhsFile.id == rhsFile.id, lhsSettings == rhsSettings {
+            case let .file(file):
+                if case .file(file) = rhs {
                     return true
                 } else {
                     return false
@@ -206,8 +256,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 } else {
                     return false
                 }
-            case let .gradient(_, colors, _):
-                if case .gradient(_, colors, _) = wallpaper {
+            case let .gradient(lhsGradient):
+                if case let .gradient(rhsGradient) = wallpaper, lhsGradient.colors == rhsGradient.colors {
                     return true
                 } else {
                     return false
@@ -218,8 +268,8 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
                 } else {
                     return false
                 }
-            case let .file(_, _, _, _, _, _, lhsSlug, _, lhsSettings):
-                if case let .file(_, _, _, _, _, _, rhsSlug, _, rhsSettings) = wallpaper, lhsSlug == rhsSlug, lhsSettings.colors == rhsSettings.colors && lhsSettings.intensity == rhsSettings.intensity {
+            case let .file(lhsFile):
+                if case let .file(rhsFile) = wallpaper, lhsFile.slug == rhsFile.slug, lhsFile.settings.colors == rhsFile.settings.colors, lhsFile.settings.intensity == rhsFile.settings.intensity {
                     return true
                 } else {
                     return false
@@ -229,25 +279,31 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     
     public var settings: WallpaperSettings? {
         switch self {
-            case let .builtin(settings), let .gradient(_, _, settings), let .image(_, settings), let .file(_, _, _, _, _, _, _, _, settings):
-                return settings
-            default:
-                return nil
+        case let .builtin(settings), let .image(_, settings):
+            return settings
+        case let .file(file):
+            return file.settings
+        case let .gradient(gradient):
+            return gradient.settings
+        default:
+            return nil
         }
     }
     
     public func withUpdatedSettings(_ settings: WallpaperSettings) -> TelegramWallpaper {
         switch self {
-            case .builtin:
-                return .builtin(settings)
-            case .color:
-                return self
-            case let .gradient(id, colors, _):
-                return .gradient(id, colors, settings)
-            case let .image(representations, _):
-                return .image(representations, settings)
-            case let .file(id, accessHash, isCreator, isDefault, isPattern, isDark, slug, file, _):
-                return .file(id: id, accessHash: accessHash, isCreator: isCreator, isDefault: isDefault, isPattern: isPattern, isDark: isDark, slug: slug, file: file, settings: settings)
+        case .builtin:
+            return .builtin(settings)
+        case .color:
+            return self
+        case var .gradient(gradient):
+            gradient.settings = settings
+            return .gradient(gradient)
+        case let .image(representations, _):
+            return .image(representations, settings)
+        case var .file(file):
+            file.settings = settings
+            return .file(file)
         }
     }
 }

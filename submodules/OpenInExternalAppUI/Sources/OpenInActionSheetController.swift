@@ -136,7 +136,6 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
         self.strings = strings
         
         let titleFont = Font.medium(floor(theme.baseFontSize * 20.0 / 17.0))
-        let textFont = Font.regular(floor(theme.baseFontSize * 11.0 / 17.0))
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false

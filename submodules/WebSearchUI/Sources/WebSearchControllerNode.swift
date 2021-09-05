@@ -73,14 +73,6 @@ private func gridNodeLayoutForContainerLayout(size: CGSize) -> GridNodeLayoutTyp
 
 private struct WebSearchRecentQueryStableId: Hashable {
     let query: String
-    
-    var hashValue: Int {
-        return query.hashValue
-    }
-    
-    static func ==(lhs: WebSearchRecentQueryStableId, rhs: WebSearchRecentQueryStableId) -> Bool {
-        return lhs.query == rhs.query
-    }
 }
 
 private struct WebSearchRecentQueryEntry: Comparable, Identifiable {

@@ -384,7 +384,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
             animation.applyAt(timestamp)
             
             if animation.completeAt(timestamp) {
-                animations.remove(at: i)
+                self.animations.remove(at: i)
                 animationCount -= 1
                 i -= 1
             } else {

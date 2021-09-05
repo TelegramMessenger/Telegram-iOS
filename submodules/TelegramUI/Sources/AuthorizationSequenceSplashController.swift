@@ -15,7 +15,7 @@ final class AuthorizationSequenceSplashController: ViewController {
         return self.displayNode as! AuthorizationSequenceSplashControllerNode
     }
     
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let account: UnauthorizedAccount
     private let theme: PresentationTheme
     
@@ -28,7 +28,7 @@ final class AuthorizationSequenceSplashController: ViewController {
     private let suggestedLocalization = Promise<SuggestedLocalizationInfo?>()
     private let activateLocalizationDisposable = MetaDisposable()
     
-    init(accountManager: AccountManager, account: UnauthorizedAccount, theme: PresentationTheme) {
+    init(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, theme: PresentationTheme) {
         self.accountManager = accountManager
         self.account = account
         self.theme = theme
@@ -57,10 +57,10 @@ final class AuthorizationSequenceSplashController: ViewController {
                 
                 if let available = localization.availableLocalizations.first, available.languageCode != "en" {
                     let value = TGSuggestedLocalization(info: TGAvailableLocalization(title: available.title, localizedTitle: available.localizedTitle, code: available.languageCode), continueWithLanguageString: continueWithLanguageString, chooseLanguageString: "Choose Language", chooseLanguageOtherString: "Choose Language", englishLanguageNameString: "English")
-                    subscriber?.putNext(value)
+                    subscriber.putNext(value)
                 }
             }, completed: {
-                subscriber?.putCompletion()
+                subscriber.putCompletion()
             })
             
             return SBlockDisposable(block: {

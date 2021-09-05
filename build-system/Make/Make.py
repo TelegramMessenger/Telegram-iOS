@@ -249,6 +249,9 @@ class BazelCommandLine:
                 '--disk_cache={path}'.format(path=self.cache_dir)
             ]
 
+        if self.continue_on_error:
+            combined_arguments += ['--keep_going']
+
         return combined_arguments
 
     def get_additional_build_arguments(self):
@@ -365,6 +368,8 @@ def generate_project(arguments):
     elif arguments.cacheHost is not None:
         bazel_command_line.add_remote_cache(arguments.cacheHost)
 
+    bazel_command_line.set_continue_on_error(arguments.continueOnError)
+
     resolve_configuration(bazel_command_line, arguments)
 
     bazel_command_line.set_build_number(arguments.buildNumber)
@@ -388,7 +393,7 @@ def generate_project(arguments):
         disable_provisioning_profiles=disable_provisioning_profiles,
         generate_dsym=generate_dsym,
         configuration_path=bazel_command_line.configuration_path,
-        bazel_app_arguments=bazel_command_line.get_project_generation_arguments()
+        bazel_app_arguments=bazel_command_line.get_project_generation_arguments(),
     )
 
 
@@ -526,6 +531,13 @@ if __name__ == '__main__':
             The generated project will not include app extensions.
             This allows Xcode to properly index the source code.
             '''
+    )
+
+    generateProjectParser.add_argument(
+        '--continueOnError',
+        action='store_true',
+        default=False,
+        help='Continue build process after an error.',
     )
 
     generateProjectParser.add_argument(

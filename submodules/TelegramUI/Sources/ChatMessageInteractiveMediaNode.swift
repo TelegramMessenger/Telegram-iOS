@@ -1249,8 +1249,17 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 automaticPlayback = false
             }
             
-            if let actualFetchStatus = self.actualFetchStatus, automaticPlayback || message.forwardInfo != nil {
-                fetchStatus = actualFetchStatus
+            if let actualFetchStatus = self.actualFetchStatus {
+                if automaticPlayback || message.forwardInfo != nil {
+                    fetchStatus = actualFetchStatus
+                } else {
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? ForwardOptionsMessageAttribute, attribute.hideNames {
+                            fetchStatus = actualFetchStatus
+                            break
+                        }
+                    }
+                }
             }
             
             let gifTitle = game != nil ? strings.Message_Game.uppercased() : strings.Message_Animation.uppercased()

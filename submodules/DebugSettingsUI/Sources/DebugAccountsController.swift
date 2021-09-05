@@ -30,7 +30,7 @@ private enum DebugAccountsControllerSection: Int32 {
 }
 
 private enum DebugAccountsControllerEntry: ItemListNodeEntry {
-    case record(PresentationTheme, AccountRecord, Bool)
+    case record(PresentationTheme, AccountRecord<TelegramAccountManagerTypes.Attribute>, Bool)
     case loginNewAccount(PresentationTheme)
     
     var section: ItemListSectionId {
@@ -75,11 +75,11 @@ private enum DebugAccountsControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! DebugAccountsControllerArguments
         switch self {
-            case let .record(theme, record, current):
+            case let .record(_, record, current):
                 return ItemListCheckboxItem(presentationData: presentationData, title: "\(UInt64(bitPattern: record.id.int64))", style: .left, checked: current, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.switchAccount(record.id)
                 })
-            case let .loginNewAccount(theme):
+            case .loginNewAccount:
                 return ItemListActionItem(presentationData: presentationData, title: "Login to another account", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.loginNewAccount()
                 })
@@ -87,7 +87,7 @@ private enum DebugAccountsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func debugAccountsControllerEntries(view: AccountRecordsView, presentationData: PresentationData) -> [DebugAccountsControllerEntry] {
+private func debugAccountsControllerEntries(view: AccountRecordsView<TelegramAccountManagerTypes>, presentationData: PresentationData) -> [DebugAccountsControllerEntry] {
     var entries: [DebugAccountsControllerEntry] = []
     
     for entry in view.records.sorted(by: {
@@ -101,7 +101,7 @@ private func debugAccountsControllerEntries(view: AccountRecordsView, presentati
     return entries
 }
 
-public func debugAccountsController(context: AccountContext, accountManager: AccountManager) -> ViewController {
+public func debugAccountsController(context: AccountContext, accountManager: AccountManager<TelegramAccountManagerTypes>) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     
     let arguments = DebugAccountsControllerArguments(context: context, presentController: { controller, arguments in

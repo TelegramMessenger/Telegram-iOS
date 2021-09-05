@@ -514,7 +514,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         entries.append(.attribution(presentationData.theme, attribution))
                     }
                 } else {
-                    for i in 0 ..< 8 {
+                    for _ in 0 ..< 8 {
                         entries.append(.venue(presentationData.theme, nil, index))
                         index += 1
                     }

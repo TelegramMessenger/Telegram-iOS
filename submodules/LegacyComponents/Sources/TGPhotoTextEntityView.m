@@ -640,7 +640,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
     _path = nil;
     [self.rectArray removeAllObjects];
     
-    [self enumerateLineFragmentsForGlyphRange:NSMakeRange(0, self.textStorage.string) usingBlock:^(CGRect rect, CGRect usedRect, NSTextContainer * _Nonnull textContainer, NSRange glyphRange, BOOL * _Nonnull stop) {
+    [self enumerateLineFragmentsForGlyphRange:NSMakeRange(0, self.textStorage.string.length) usingBlock:^(CGRect rect, CGRect usedRect, NSTextContainer * _Nonnull textContainer, NSRange glyphRange, BOOL * _Nonnull stop) {
         bool ignoreRange = false;
         NSRange characterRange = [self characterRangeForGlyphRange:glyphRange actualGlyphRange:nil];
         NSString *substring = [[self.textStorage string] substringWithRange:characterRange];
@@ -662,9 +662,6 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
 //    [super drawBackgroundForGlyphRange:glyphsToShow atPoint:origin];
     
     if (self.frameColor != nil) {
-        NSRange range = [self characterRangeForGlyphRange:glyphsToShow actualGlyphRange:NULL];
-        NSRange glyphRange = [self glyphRangeForCharacterRange:range actualCharacterRange:NULL];
-        
         CGContextRef context = UIGraphicsGetCurrentContext();
         CGContextSaveGState(context);
         CGContextTranslateCTM(context, origin.x, origin.y);

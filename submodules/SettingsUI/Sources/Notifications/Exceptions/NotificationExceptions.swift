@@ -142,7 +142,7 @@ public class NotificationExceptionsController: ViewController {
             }
         }
         
-        self.controllerNode.listNode.didEndScrolling = { [weak self] in
+        self.controllerNode.listNode.didEndScrolling = { [weak self] _ in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
                 let _ = fixNavigationSearchableListNodeScrolling(strongSelf.controllerNode.listNode, searchNode: searchContentNode)
             }

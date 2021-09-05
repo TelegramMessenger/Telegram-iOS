@@ -63,8 +63,15 @@ final class WallpaperOptionButtonNode: HighlightTrackingButtonNode {
         }
     }
     
+    var title: String {
+        didSet {
+            self.textNode.attributedText = NSAttributedString(string: title, font: Font.medium(13), textColor: .white)
+        }
+    }
+    
     init(title: String, value: WallpaperOptionButtonValue) {
         self._value = value
+        self.title = title
         
         self.backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.3))
         self.backgroundNode.cornerRadius = 14.0

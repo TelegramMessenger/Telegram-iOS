@@ -104,6 +104,7 @@
 "PUSH_ALBUM" = "%1$@|sent you an album";
 "PUSH_MESSAGE_FILES_TEXT_1" = "sent you a file";
 "PUSH_MESSAGE_FILES_TEXT_any" = "sent you %d files";
+"PUSH_MESSAGE_THEME" = "%1$@|changed theme to %2$@";
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -176,6 +177,7 @@
 "PUSH_CHAT_ALBUM" = "%2$@|%1$@ sent an album";
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_1" = "{author} sent a file";
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_any" = "{author} sent %d files";
+"PUSH_CHAT_MESSAGE_THEME" = "%1$@|set theme to %3$@ in the group %2$@";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -2478,11 +2480,15 @@ Unused sets are archived when you add more.";
 "Call.CallInProgressTitle" = "Call in Progress";
 "Call.CallInProgressMessage" = "Finish call with %1$@ and start a new one with %2$@?";
 "Call.CallInProgressVoiceChatMessage" = "Finish call with %1$@ and start a voice chat with %2$@?";
+"Call.CallInProgressLiveStreamMessage" = "Finish call with %1$@ and start a live stream with %2$@?";
 "Call.ExternalCallInProgressMessage" = "Please finish the current call first.";
 
 "Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
+"Call.LiveStreamInProgressTitle" = "Live Stream in Progress";
 "Call.VoiceChatInProgressMessage" = "Leave voice chat in %1$@ and start a new one with %2$@?";
+"Call.LiveStreamInProgressMessage" = "Leave live stream in %1$@ and start a new one with %2$@?";
 "Call.VoiceChatInProgressCallMessage" = "Leave voice chat in %1$@ and start a call with %2$@?";
+"Call.LiveStreamInProgressCallMessage" = "Leave live stream in %1$@ and start a call with %2$@?";
 
 "Call.Message" = "Message";
 
@@ -2616,6 +2622,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanBeAnonymous" = "Remain Anonymous";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
 "Channel.AdminLog.CanManageCalls" = "Manage Voice Chats";
+"Channel.AdminLog.CanManageLiveStreams" = "Manage Live Streams";
 
 "Channel.AdminLog.MessageToggleInvitesOn" = "%@ enabled group invites";
 "Channel.AdminLog.MessageToggleInvitesOff" = "%@ disabled group invites";
@@ -2674,6 +2681,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLogFilter.EventsPinned" = "Pinned Messages";
 "Channel.AdminLogFilter.EventsLeaving" = "Members Removed";
 "Channel.AdminLogFilter.EventsCalls" = "Voice Chats";
+"Channel.AdminLogFilter.EventsLiveStreams" = "Live Streams";
 "Channel.AdminLogFilter.EventsInviteLinks" = "Invite Links";
 "Channel.AdminLogFilter.AdminsTitle" = "ADMINS";
 "Channel.AdminLogFilter.AdminsAll" = "All Admins";
@@ -2694,6 +2702,7 @@ Unused sets are archived when you add more.";
 
 "Conversation.ViewChannel" = "VIEW CHANNEL";
 "Conversation.ViewGroup" = "VIEW GROUP";
+"Conversation.ViewBot" = "VIEW BOT";
 
 "GroupInfo.ActionPromote" = "Promote";
 "GroupInfo.ActionRestrict" = "Restrict";
@@ -5705,6 +5714,7 @@ Sorry for the inconvenience.";
 "VoiceChat.SpeakPermissionAdmin" = "New paricipants are muted";
 "VoiceChat.Share" = "Share Invite Link";
 "VoiceChat.EndVoiceChat" = "End Voice Chat";
+"VoiceChat.EndLiveStream" = "End Live Stream";
 
 "VoiceChat.CopyInviteLink" = "Copy Invite Link";
 "VoiceChat.InviteLinkCopiedText" = "Invite link copied to clipboard";
@@ -5717,18 +5727,20 @@ Sorry for the inconvenience.";
 
 "VoiceChat.PanelJoin" = "Join";
 "VoiceChat.Title" = "Voice Chat";
+"VoiceChatChannel.Title" = "Live Stream";
 
 "VoiceChat.InviteMember" = "Invite Member";
-"VoiceChat.UserInvited" = "You invited **%@** to the voice chat";
 
 "Notification.VoiceChatInvitation" = "%1$@ invited %2$@ to the voice chat";
 "Notification.VoiceChatInvitationForYou" = "%1$@ invited you to the voice chat";
 
 "VoiceChat.InvitedPeerText" = "You invited %@ to the voice chat";
+"LiveStream.InvitedPeerText" = "You invited %@ to the live stream";
 "VoiceChat.RemovedPeerText" = "You removed %@ from this group";
 
 "Notification.VoiceChatStarted" = "%1$@ started a voice chat";
 "Notification.VoiceChatEnded" = "Voice chat ended (%@)";
+"Notification.LiveStreamEnded" = "Live stream ended (%@)";
 "Notification.VoiceChatEndedGroup" = "%1$@ ended the voice chat (%2$@)";
 
 "VoiceChat.Panel.TapToJoin" = "Tap to join";
@@ -5748,12 +5760,17 @@ Sorry for the inconvenience.";
 "VoiceChat.Status.MembersFormat" = "%1$@ %2$@";
 
 "ChannelInfo.CreateVoiceChat" = "Start Voice Chat";
+"ChannelInfo.CreateLiveStream" = "Start Live Stream";
 
 "VoiceChat.AnonymousDisabledAlertText" = "Sorry, you can't join voice chat as an anonymous admin.";
+"LiveStream.AnonymousDisabledAlertText" = "Sorry, you can't join live stream as an anonymous admin.";
 "VoiceChat.ChatFullAlertText" = "Sorry, this voice chat has too many participants at the moment.";
+"LiveStream.ChatFullAlertText" = "Sorry, this live stream has too many participants at the moment.";
 
 "VoiceChat.EndConfirmationTitle" = "End voice chat";
+"LiveStream.EndConfirmationTitle" = "End live stream";
 "VoiceChat.EndConfirmationText" = "Are you sure you want to end this voice chat?";
+"LiveStream.EndConfirmationText" = "Are you sure you want to end this live stream?";
 "VoiceChat.EndConfirmationEnd" = "End";
 
 "VoiceChat.InviteMemberToGroupFirstText" = "%1$@ isn't a member of \"%2$@\" yet. Add them to the group?";
@@ -5761,6 +5778,7 @@ Sorry for the inconvenience.";
 "VoiceChat.InviteMemberToGroupFirstAdd" = "Add";
 
 "VoiceChat.CreateNewVoiceChatText" = "Voice chat ended. Start a new one?";
+"LiveStream.CreateNewVoiceChatText" = "Live stream ended. Start a new one?";
 "VoiceChat.CreateNewVoiceChatStart" = "Start";
 "VoiceChat.CreateNewVoiceChatStartNow" = "Start Now";
 "VoiceChat.CreateNewVoiceChatSchedule" = "Schedule";
@@ -5770,8 +5788,10 @@ Sorry for the inconvenience.";
 "PUSH_CHAT_VOICECHAT_INVITE_YOU" = "%2$@|%1$@ invited you to the voice chat";
 "PUSH_CHAT_VOICECHAT_END" = "%2$@|%1$@ has ended the voice chat";
 
-"Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
-"Call.VoiceChatInProgressMessageCall" = "Leave voice chat in %1$@ and start a call with %2$@?";
+"PUSH_CHAT_LIVESTREAM_START" = "%2$@|%1$@ started a live stream";
+"PUSH_CHAT_LIVESTREAM_INVITE" = "%2$@|%1$@ invited %3$@ to the live stream";
+"PUSH_CHAT_LIVESTREAM_INVITE_YOU" = "%2$@|%1$@ invited you to the live stream";
+"PUSH_CHAT_LIVESTREAM_END" = "%2$@|%1$@ has ended the live stream";
 
 "Conversation.Dice.u1F3B3" = "Send a bowling emoji to try your luck.";
 
@@ -5787,7 +5807,9 @@ Sorry for the inconvenience.";
 "VoiceOver.Chat.MessagesSelected_any" = "%@ messages selected";
 
 "Channel.AdminLog.StartedVoiceChat" = "%1$@ started voice chat";
+"Channel.AdminLog.StartedLiveStream" = "%1$@ started live stream";
 "Channel.AdminLog.EndedVoiceChat" = "%1$@ ended voice chat";
+"Channel.AdminLog.EndedLiveStream" = "%1$@ ended live stream";
 "Channel.AdminLog.MutedParticipant" = "%1$@ muted %2$@";
 "Channel.AdminLog.UnmutedMutedParticipant" = "%1$@ unmuted %2$@";
 "Channel.AdminLog.AllowedNewMembersToSpeak" = "%1$@ allowed new members to speak";
@@ -5796,22 +5818,29 @@ Sorry for the inconvenience.";
 "Group.GroupMembersHeader" = "GROUP MEMBERS";
 
 "Conversation.VoiceChatMediaRecordingRestricted" = "You can't record voice and video messages during a voice chat.";
+"Conversation.LiveStreamMediaRecordingRestricted" = "You can't record voice and video messages during a live stream.";
 
 "CallList.ActiveVoiceChatsHeader" = "ACTIVE VOICE CHATS";
 "CallList.RecentCallsHeader" = "RECENT CALLS";
 
 "VoiceChat.PeerJoinedText" = "%@ joined the voice chat";
+"LiveStream.PeerJoinedText" = "%@ joined the live stream";
 
 "VoiceChat.StartRecording" = "Start Recording";
+"LiveStream.StartRecording" = "Start Recording";
 "VoiceChat.StopRecording" = "Stop Recording";
 
 "VoiceChat.StartRecordingTitle" = "Start Recording";
+"LiveStream.StartRecordingTitle" = "Start Recording";
 "VoiceChat.StartRecordingText" = "Do you want to start recording this chat and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
+"LiveStream.StartRecordingText" = "Do you want to start recording this live stream and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "VoiceChat.StartRecordingStart" = "Start";
 
 "VoiceChat.RecordingTitlePlaceholder" = "Audio Title (Optional)";
 "VoiceChat.RecordingStarted" = "Voice chat recording started";
+"LiveStream.RecordingStarted" = "Live stream recording started";
 "VoiceChat.RecordingInProgress" = "Voice chat is being recorded";
+"LiveStream.RecordingInProgress" = "Live stream is being recorded";
 
 "VoiceChat.StopRecordingTitle" = "Stop Recording?";
 "VoiceChat.StopRecordingStop" = "Stop";
@@ -5836,6 +5865,7 @@ Sorry for the inconvenience.";
 "VoiceChat.MuteForMe" = "Mute for Me";
 
 "PeerInfo.ButtonVoiceChat" = "Voice Chat";
+"PeerInfo.ButtonLiveStream" = "Live Stream";
 "VoiceChat.OpenChat" = "Open Chat";
 
 "GroupInfo.InviteLinks" = "Invite Links";
@@ -6183,16 +6213,20 @@ Sorry for the inconvenience.";
 "VoiceChat.DisplayAsInfo" = "Choose whether you want to be displayed as your personal account or as your channel.";
 "VoiceChat.DisplayAsInfoGroup" = "Choose whether you want to be displayed as your personal account, this group, or one of your channels.";
 "VoiceChat.DisplayAsSuccess" = "Members of this voice chat will now see your as **%@**.";
+"LiveStream.DisplayAsSuccess" = "Members of this live stream will now see your as **%@**.";
 "VoiceChat.PersonalAccount" = "personal account";
 "VoiceChat.EditTitle" = "Edit Voice Chat Title";
+"LiveStream.EditTitle" = "Edit Live Stream Title";
 "VoiceChat.EditPermissions" = "Edit Permissions";
 
 "VoiceChat.OpenChannel" = "Open Channel";
 
-"VoiceChat.EditTitleTitle" = "Voice Chat Title";
 "VoiceChat.EditTitleText" = "Edit a title of this voice chat.";
+"LiveStream.EditTitleText" = "Edit a title of this live stream.";
 "VoiceChat.EditTitleSuccess" = "Voice chat title changed to **%@**.";
+"LiveStream.EditTitleSuccess" = "Live stream title changed to **%@**.";
 "VoiceChat.EditTitleRemoveSuccess" = "Voice chat title removed.";
+"LiveStream.EditTitleRemoveSuccess" = "Live Stream title removed.";
 
 "VoiceChat.InviteLink.Speaker" = "Speaker";
 "VoiceChat.InviteLink.Listener" = "Listener";
@@ -6212,8 +6246,6 @@ Sorry for the inconvenience.";
 "VoiceChat.InviteLink.InviteListeners_3_10" = "[%@] Invite Listeners";
 "VoiceChat.InviteLink.InviteListeners_many" = "[%@] Invite Listeners";
 "VoiceChat.InviteLink.InviteListeners_any" = "[%@] Invite Listeners";
-
-"Conversation.JoinVoiceChat" = "JOIN VOICE CHAT";
 
 "Conversation.CancelForwardTitle" = "Cancel Forwarding";
 "Conversation.CancelForwardText" = "Do you want to cancel forwarding or send messages to a different chat?";
@@ -6256,8 +6288,10 @@ Sorry for the inconvenience.";
 
 "VoiceChat.RemovePeerConfirmationChannel" = "Are you sure you want to remove %@ from the channel?";
 "VoiceChat.RemoveAndBanPeerConfirmation" = "Do you want to remove %1$@ from the voice chat and ban them in %2$@?";
+"LiveStream.RemoveAndBanPeerConfirmation" = "Do you want to remove %1$@ from the live stream and ban them in %2$@?";
 
 "Notification.VoiceChatStartedChannel" = "Voice chat started";
+"Notification.LiveStreamStarted" = "Live stream started";
 
 "Conversation.MessageCopied" = "Message copied to clipboard";
 "Conversation.LinkCopied" = "Link copied to clipboard";
@@ -6276,14 +6310,19 @@ Sorry for the inconvenience.";
 "Conversation.DeletedFromContacts" = "**%@** deleted from your contacts";
 
 "Conversation.VoiceChat" = "Voice Chat";
+"Conversation.LiveStream" = "Live Stream";
 
 "Conversation.JoinVoiceChatAsSpeaker" = "JOIN AS SPEAKER";
 "Conversation.JoinVoiceChatAsListener" = "JOIN AS LISTENER";
 
 "VoiceChat.LeaveConfirmation" = "Are you sure you want to leave this voice chat?";
+"LiveStream.LeaveConfirmation" = "Are you sure you want to leave this live stream?";
 "VoiceChat.LeaveVoiceChat" = "Leave Voice Chat";
+"LiveStream.LeaveVoiceChat" = "Leave Live Stream";
 "VoiceChat.LeaveAndEndVoiceChat" = "End Voice Chat";
+"LiveStream.LeaveAndEndVoiceChat" = "End Live Stream";
 "VoiceChat.LeaveAndCancelVoiceChat" = "Abort Voice Chat";
+"LiveStream.LeaveAndCancelVoiceChat" = "Abort Live Stream";
 
 "VoiceChat.ForwardTooltip.Chat" = "Invite link forwarded to **%@**";
 "VoiceChat.ForwardTooltip.TwoChats" = "Invite link forwarded to **%@** and **%@**";
@@ -6337,12 +6376,15 @@ Sorry for the inconvenience.";
 "VoiceChat.UnpinVideo" = "Unpin Video";
 
 "Notification.VoiceChatScheduledChannel" = "Voice chat scheduled for %@";
+"Notification.LiveStreamScheduled" = "Live stream scheduled for %@";
 "Notification.VoiceChatScheduled" = "%1$@ scheduled a voice chat for %2$@";
 
 "Notification.VoiceChatScheduledTodayChannel" = "Voice chat scheduled for today at %@";
+"Notification.LiveStreamScheduledToday" = "Live stream scheduled for today at %@";
 "Notification.VoiceChatScheduledToday" = "%1$@ scheduled a voice chat for today at %2$@";
 
 "Notification.VoiceChatScheduledTomorrowChannel" = "Voice chat scheduled for tomorrow at %@";
+"Notification.LiveStreamScheduledTomorrow" = "Live stream scheduled for tomorrow at %@";
 "Notification.VoiceChatScheduledTomorrow" = "%1$@ scheduled a voice chat for tomorrow at %2$@";
 
 "VoiceChat.StartsIn" = "Starts in";
@@ -6361,27 +6403,36 @@ Sorry for the inconvenience.";
 "VoiceChat.TapToEditTitle" = "Tap to edit title";
 
 "ChannelInfo.ScheduleVoiceChat" = "Schedule Voice Chat";
+"ChannelInfo.ScheduleLiveStream" = "Schedule Live Stream";
 
 "ScheduleVoiceChat.Title" = "Schedule Voice Chat";
+"ScheduleLiveStream.Title" = "Schedule Live Stream";
 "ScheduleVoiceChat.GroupText" = "The members of the group will be notified that the voice chat will start in %@.";
-"ScheduleVoiceChat.ChannelText" = "The members of the channel will be notified that the voice chat will start in %@.";
+"ScheduleLiveStream.ChannelText" = "The members of the channel will be notified that the live stream will start in %@.";
 
 "ScheduleVoiceChat.ScheduleToday" = "Start today at %@";
 "ScheduleVoiceChat.ScheduleTomorrow" = "Start tomorrow at %@";
 "ScheduleVoiceChat.ScheduleOn" = "Start on %@ at %@";
 
 "Conversation.ScheduledVoiceChat" = "Scheduled Voice Chat";
+"Conversation.ScheduledLiveStream" = "Scheduled Live Stream";
 
 "Conversation.ScheduledVoiceChatStartsOn" = "Voice chat starts on %@";
+"Conversation.ScheduledLiveStreamStartsOn" = "Live stream starts on %@";
 "Conversation.ScheduledVoiceChatStartsOnShort" = "Starts on %@";
 "Conversation.ScheduledVoiceChatStartsToday" = "Voice chat starts today at %@";
+"Conversation.ScheduledLiveStreamStartsToday" = "Live stream starts today at %@";
 "Conversation.ScheduledVoiceChatStartsTodayShort" = "Starts today at %@";
 "Conversation.ScheduledVoiceChatStartsTomorrow" = "Voice chat starts tomorrow at %@";
+"Conversation.ScheduledLiveStreamStartsTomorrow" = "Live stream starts tomorrow at %@";
 "Conversation.ScheduledVoiceChatStartsTomorrowShort" = "Starts tomorrow at %@";
 
 "VoiceChat.CancelVoiceChat" = "Abort Voice Chat";
+"VoiceChat.CancelLiveStream" = "Abort Live Stream";
 "VoiceChat.CancelConfirmationTitle" = "Abort Voice Chat";
+"LiveStream.CancelConfirmationTitle" = "Abort Live Stream";
 "VoiceChat.CancelConfirmationText" = "Do you want to abort the scheduled voice chat?";
+"LiveStream.CancelConfirmationText" = "Do you want to abort the scheduled live stream?";
 "VoiceChat.CancelConfirmationEnd" = "Abort";
 
 "ScheduledIn.Seconds_1" = "%@ second";
@@ -6569,7 +6620,176 @@ Sorry for the inconvenience.";
 "Gallery.VideoSaved" = "Video Saved";
 "Gallery.WaitForVideoDownoad" = "Please wait for the video to be fully downloaded.";
 
+"Gallery.SaveImage" = "Save Image";
+"Gallery.SaveVideo" = "Save Video";
+
 "VoiceChat.VideoParticipantsLimitExceededExtended" = "The voice chat is over %@ members.\nNew participants only have access to audio stream. ";
 
 "PlaybackSpeed.Title" = "Playback Speed";
 "PlaybackSpeed.Normal" = "Normal";
+
+"Chat.NextChannelSameLocationSwipeProgress" = "Swipe up to go to the next unread channel";
+"Chat.NextChannelSameLocationSwipeAction" = "Release to go to the next unread channel";
+"Chat.NextChannelFolderSwipeProgress" = "Swipe up to go to the %@ folder";
+"Chat.NextChannelFolderSwipeAction" = "Release to go to the %@ folder";
+"Chat.NextChannelArchivedSwipeProgress" = "Swipe up to go to archived channels";
+"Chat.NextChannelArchivedSwipeAction" = "Release to go to archived channels";
+"Chat.NextChannelUnarchivedSwipeProgress" = "Swipe up to go to unarchived channels";
+"Chat.NextChannelUnarchivedSwipeAction" = "Release to go to unarchived channels";
+
+"Conversation.ForwardOptions.Text" = "What whould you like to do with %1$@ from %2$@?";
+"Conversation.ForwardOptions.TextPersonal" = "What whould you like to do with %1$@ from your chat with %2$@?";
+"Conversation.ForwardOptions.ShowOptions" = "Show Forwarding Options";
+"Conversation.ForwardOptions.CancelForwarding" = "Cancel Forwarding";
+
+"Conversation.ForwardOptions.HideSendersName" = "Hide Sender's Name";
+"Conversation.ForwardOptions.ShowSendersName" = "Show Sender's Name";
+
+"Conversation.ForwardOptions.HideSendersNames" = "Hide Senders' Names";
+"Conversation.ForwardOptions.ShowSendersNames" = "Show Senders' Names";
+
+"Conversation.ForwardOptions.ShowCaption" = "Show Captions";
+"Conversation.ForwardOptions.HideCaption" = "Hide Captions";
+
+"Conversation.ForwardOptions.ChangeRecipient" = "Change Recipient";
+"Conversation.ForwardOptions.SendMessage" = "Send Message";
+"Conversation.ForwardOptions.SendMessages" = "Send Messages";
+
+"Conversation.ForwardOptions.TapForOptions" = "Tap here for forwarding options";
+"Conversation.ForwardOptions.TapForOptionsShort" = "Tap here for options";
+
+"Conversation.ForwardOptions.UserMessageForwardVisible" = "%@ will see that it was forwarded";
+"Conversation.ForwardOptions.UserMessageForwardHidden" = "%@ won't see that it was forwarded";
+"Conversation.ForwardOptions.UserMessagesForwardVisible" = "%@ will see they were forwarded";
+"Conversation.ForwardOptions.UserMessagesForwardHidden" = "%@ won't see they were forwarded";
+
+"Conversation.ForwardOptions.GroupMessageForwardVisible" = "Members will see that it was forwarded";
+"Conversation.ForwardOptions.GroupMessageForwardHidden" = "Members won't see that it was forwarded";
+"Conversation.ForwardOptions.GroupMessagesForwardVisible" = "Members will see they were forwarded";
+"Conversation.ForwardOptions.GroupMessagesForwardHidden" = "Members won't see they were forwarded";
+
+"Conversation.ForwardOptions.ChannelMessageForwardVisible" = "Subscribers will see that it was forwarded";
+"Conversation.ForwardOptions.ChannelMessageForwardHidden" = "Subscribers won't see that it was forwarded";
+"Conversation.ForwardOptions.ChannelMessagesForwardVisible" = "Subscribers will see they were forwarded";
+"Conversation.ForwardOptions.ChannelMessagesForwardHidden" = "Subscribers won't see they were forwarded";
+
+"Conversation.ForwardOptions.ForwardTitleSingle" = "Forward Message";
+"Conversation.ForwardOptions.ForwardTitle_1" = "Forward %@ Message";
+"Conversation.ForwardOptions.ForwardTitle_2" = "Forward %@ Messages";
+"Conversation.ForwardOptions.ForwardTitle_3_10" = "Forward %@ Messages";
+"Conversation.ForwardOptions.ForwardTitle_any" = "Forward %@ Messages";
+"Conversation.ForwardOptions.ForwardTitle_many" = "Forward %@ Messages";
+"Conversation.ForwardOptions.ForwardTitle_0" = "Forward %@ Messages";
+
+"Conversation.ForwardOptions.Title_1" = "%@ Message";
+"Conversation.ForwardOptions.Title_2" = "%@ Messages";
+"Conversation.ForwardOptions.Title_3_10" = "%@ Messages";
+"Conversation.ForwardOptions.Title_any" = "%@ Messages";
+"Conversation.ForwardOptions.Title_many" = "%@ Messages";
+"Conversation.ForwardOptions.Title_0" = "%@ Messages";
+
+"Conversation.ForwardOptions.Messages_1" = "%@ message";
+"Conversation.ForwardOptions.Messages_2" = "%@ messages";
+"Conversation.ForwardOptions.Messages_3_10" = "%@ messages";
+"Conversation.ForwardOptions.Messages_any" = "%@ messages";
+"Conversation.ForwardOptions.Messages_many" = "%@ messages";
+"Conversation.ForwardOptions.Messages_0" = "%@ messages";
+
+"Activity.ChoosingSticker" = "choosing sticker";
+"DialogList.SingleChoosingStickerSuffix" = "%@ is choosing sticker";
+
+"WallpaperPreview.Animate" = "Animate";
+"WallpaperPreview.AnimateDescription" = "Colors will move when you send messages";
+
+"Username.InvalidStartsWithUnderscore" = "Sorry, a username can't start with an underscore.";
+"Username.InvalidEndsWithUnderscore" = "Sorry, a username can't end with an underscore.";
+
+"Channel.Username.InvalidStartsWithUnderscore" = "Channel names can't start with an underscore.";
+"Channel.Username.InvalidEndsWithUnderscore" = "Channel names can't end with an underscore.";
+
+"Group.Username.InvalidStartsWithUnderscore" = "Group names can't start with an underscore.";
+"Group.Username.InvalidEndsWithUnderscore" = "Group names can't end with an underscore.";
+
+"UserInfo.ChangeColors" = "Change Colors";
+
+"Conversation.Theme.Title" = "Select Theme";
+"Conversation.Theme.Apply" = "Apply Theme";
+"Conversation.Theme.NoTheme" = "No\nTheme";
+"Conversation.Theme.Reset" = "Reset Theme for This Chat";
+"Conversation.Theme.SwitchToDark" = "Switch to dark appearance";
+"Conversation.Theme.SwitchToLight" = "Switch to light appearance";
+
+"Notification.ChangedTheme" = "%1$@ changed chat theme to %2$@";
+"Notification.DisabledTheme" = "%@ disabled chat theme";
+
+"Notification.YouChangedTheme" = "You changed chat theme to %@";
+"Notification.YouDisabledTheme" = "You disabled chat theme";
+
+"Notification.ChannelChangedTheme" = "Channel theme changed to %1$@";
+"Notification.ChannelDisabledTheme" = "Channel theme disabled";
+
+"Appstore.Cloud" = "**Cloud-based**\nUnlimited storage for chats,\nmedia and documents.";
+"Appstore.Cloud.Profile" = "**Jennifer**\n23 y.o. designer from San Francisco.";
+"Appstore.Creative" = "**Creative**\nColor themes, stickers, GIFs,\nvideo messages and more.";
+"Appstore.Creative.Chat" = "**You**\nSend a dice emoji to roll a die!\n**You**\nAdvance to Illinois Ave. If you pass Go, collect coffee\n**Gabriella**\nPassed!\n**You**\nOkay\nWait for me there.";
+"Appstore.Creative.Chat.Name" = "**Gabriella**";
+"Appstore.Fast" = "**Fast**\nSimple, reliable and synced\nacross all your devices.";
+"Appstore.Fast.Chat1" = "**Alicia Torreaux**\nBob says hi.";
+"Appstore.Fast.Chat2" = "**Roberto**\nSay hello to Alice.";
+"Appstore.Fast.Chat3" = "**Digital Nomads**\nJennie\nWe just reached 2,500 members! WOO!";
+"Appstore.Fast.Chat4" = "**Veronica**\nTable for four, 2 PM. Be there.";
+"Appstore.Fast.Chat5" = "**Animal Videos**\nVote now! Moar cat videos in this channel?";
+"Appstore.Fast.Chat6" = "**Little Sister**\nDon't tell mom yet, but I got the job! I'm going to ROME!";
+"Appstore.Fast.Chat7" = "**James**\nCheck these out";
+"Appstore.Fast.Chat8" = "**Study Group**\nEmma\nSticker";
+"Appstore.Fast.Chat9" = "**Digital Nomads**";
+"Appstore.Free.Chat" = "**Jessica**\nPaper airplane is lyfted by...\nWings\nPropeller\n**You**\nIs this from Monday’s test?\n**Harry**\nOnlinePartyPlan.ppd\nLet's get back to planning!\n**You**\n550 MB keynote file??\n**Helene**\nHe added fireworks videos";
+"Appstore.Free.Chat.Name" = "**Study Group**";
+"Appstore.Open" = "**Open**\nNo ads, no fees. Open source\ncode free for everyone.";
+"Appstore.Powerful" = "**Powerful**\nNo limits on the size of\ngroups and broadcasts.";
+"Appstore.Powerful.Chat" = "**James**\nGood morning!\n\nDwayne joined the group\n\n**You**\nDo you have any idea what time it is?\n**Roxanne**\nIs it still morning?\nSure!\nNot sure\n**Emma**\nVoice";
+"Appstore.Private" = "**Private**\nYour data is never disclosed.\nOnly you are in control.";
+"Appstore.Private.Chat" = "**You**\nNo limits on the size of your cats.";
+"Appstore.Private.Chat.Name" = "**Beatrice**";
+"Appstore.Public" = "**Public**\nPublic channels, open groups,\nbots for integrations.";
+"Appstore.Public.Chat1" = "**Financial Times**\nTruth is like the sun. You can shut it out for a time, but it ain’t goin’ away.";
+"Appstore.Public.Chat2" = "**Bloomberg**\nWe'll be sending you a few big stories daily, which you can expect to start...";
+"Appstore.Public.Chat3" = "**Health and Safety**\nIf you're looking for official news about the Novel Coronavirus and COVID-19";
+"Appstore.Public.IV" = "We now have enough data to measure the relative effectiveness of major climate solutions. This simulator lets you see which ones would work best.\n\nBloomberg\n\nThe Best Way to Slow Global Warming? You Decide in This Climate Simulator\nIt was on Earth Day 2016 when more than 170 nations signed the Paris Agreement calling for limiting global warming \"to well below 2°C\".";
+"Appstore.Secure" = "**Secure**\nAll chats are protected\nwith strong encryption.";
+"Appstore.Secure.Chat" = "**Little Sister**\nAny gift ideas for mom?\n**You**A dog!\n**You**I'm serious. Let's get her a puppy. \n**You**\nI saw this!\n**Little Sister**\nI needed proof this was your idea!";
+"Appstore.Secure.Chat.Name" = "**Little Sister**";
+
+"Conversation.ReplyMessagePanelTitle" = "Reply to %@";
+
+"Channel.AdminLog.MessageChangedThemeSet" = "%1$@ changed chat theme to %2$@";
+"Channel.AdminLog.MessageChangedThemeRemove" = "%1$@ disabled chat theme";
+
+"SponsoredMessageMenu.Info" = "What are sponsored\nmessages?";
+"SponsoredMessageInfo.Text" = "See https://telegram.org";
+"SponsoredMessageInfo.Action" = "Learn More";
+"SponsoredMessageInfo.ActionUrl" = "https://telegram.org";
+
+"Chat.NavigationNoChannels" = "You have no unread channels";
+
+"Message.SponsoredLabel" = "sponsored";
+
+"Stickers.Favorites" = "Favorites";
+"Stickers.Recent" = "Recent";
+"Stickers.Stickers" = "Stickers";
+"Stickers.Gifs" = "GIFs";
+"Stickers.Trending" = "Trending";
+"Stickers.Settings" = "Settings";
+
+"Gif.Emotion.Angry" = "Angry";
+"Gif.Emotion.Surprised" = "Surprised";
+"Gif.Emotion.Joy" = "Joy";
+"Gif.Emotion.Kiss" = "Kiss";
+"Gif.Emotion.Hearts" = "Hearts";
+"Gif.Emotion.ThumbsUp" = "Thumbs Up";
+"Gif.Emotion.ThumbsDown" = "Thumbs Down";
+"Gif.Emotion.RollEyes" = "Roll-Eyes";
+"Gif.Emotion.Cool" = "Cool";
+"Gif.Emotion.Party" = "Party";
+
+"Conversation.ForwardFrom" = "From: %@";

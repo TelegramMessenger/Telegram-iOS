@@ -2,10 +2,10 @@
 
 @interface SBag : NSObject
 
-- (NSInteger)addItem:(id)item;
-- (void)enumerateItems:(void (^)(id))block;
+- (NSInteger)addItem:(id _Nonnull)item;
+- (void)enumerateItems:(void (^ _Nonnull)(id _Nonnull))block;
 - (void)removeItem:(NSInteger)key;
 - (bool)isEmpty;
-- (NSArray *)copyItems;
+- (NSArray * _Nonnull)copyItems;
 
 @end

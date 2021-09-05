@@ -332,7 +332,7 @@ open class LegacyController: ViewController, PresentableController {
     private let sizeClass: SVariable = SVariable()
     public var enableSizeClassSignal: Bool = false
     public var sizeClassSignal: SSignal {
-        return self.sizeClass.signal()!
+        return self.sizeClass.signal()
     }
     private var enableContainerLayoutUpdates = false
     

@@ -200,7 +200,7 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ProxySettingsControllerArguments
         switch self {
-            case let .enabled(theme, text, value, createsNew):
+            case let .enabled(_, text, value, createsNew):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: !createsNew, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     if createsNew {
                         arguments.addNewServer()
@@ -208,9 +208,9 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                         arguments.toggleEnabled(value)
                     }
                 })
-            case let .serversHeader(theme, text):
+            case let .serversHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .addServer(theme, text, _):
+            case let .addServer(_, text, _):
                 return ProxySettingsActionItem(presentationData: presentationData, title: text, icon: .add, sectionId: self.section, editing: false, action: {
                     arguments.addNewServer()
                 })
@@ -224,15 +224,15 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
                 }, removeServer: { _ in
                     arguments.removeServer(settings)
                 })
-            case let .shareProxyList(theme, text):
+            case let .shareProxyList(_, text):
                 return ProxySettingsActionItem(presentationData: presentationData, title: text, sectionId: self.section, editing: false, action: {
                     arguments.shareProxyList()
                 })
-            case let .useForCalls(theme, text, value):
+            case let .useForCalls(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleUseForCalls(value)
                 })
-            case let .useForCallsInfo(theme, text):
+            case let .useForCallsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -313,8 +313,7 @@ public func proxySettingsController(context: AccountContext, mode: ProxySettings
     return proxySettingsController(accountManager: context.sharedContext.accountManager, context: context, postbox: context.account.postbox, network: context.account.network, mode: mode, presentationData: presentationData, updatedPresentationData: context.sharedContext.presentationData)
 }
 
-public func proxySettingsController(accountManager: AccountManager, context: AccountContext? = nil, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>) -> ViewController {
-    var presentControllerImpl: ((ViewController, Any?) -> Void)?
+public func proxySettingsController(accountManager: AccountManager<TelegramAccountManagerTypes>, context: AccountContext? = nil, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, presentationData: PresentationData, updatedPresentationData: Signal<PresentationData, NoError>) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     let stateValue = Atomic(value: ProxySettingsControllerState())
@@ -439,9 +438,6 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
     
     let controller = ItemListController(presentationData: ItemListPresentationData(presentationData), updatedPresentationData: updatedPresentationData |> map(ItemListPresentationData.init(_:)), state: signal, tabBarItem: nil)
     controller.navigationPresentation = .modal
-    presentControllerImpl = { [weak controller] c, a in
-        controller?.present(c, in: .window(.root), with: a)
-    }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }

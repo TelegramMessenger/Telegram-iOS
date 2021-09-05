@@ -37,14 +37,10 @@ public final class GalleryFooterNode: ASDisplayNode {
         let cleanInsets = layout.insets(options: [])
         
         var dismissedCurrentFooterContentNode: GalleryFooterContentNode?
-        var dismissedThumbnailPanelHeight: CGFloat?
         if self.currentFooterContentNode !== footerContentNode {
             if let currentFooterContentNode = self.currentFooterContentNode {
                 currentFooterContentNode.requestLayout = nil
                 dismissedCurrentFooterContentNode = currentFooterContentNode
-            }
-            if let currentThumbnailPanelHeight = self.currentThumbnailPanelHeight {
-                dismissedThumbnailPanelHeight = currentThumbnailPanelHeight
             }
             self.currentThumbnailPanelHeight = thumbnailPanelHeight
             self.currentFooterContentNode = footerContentNode
@@ -74,7 +70,10 @@ public final class GalleryFooterNode: ASDisplayNode {
             }
         }
         
-        let effectiveThumbnailPanelHeight = self.currentThumbnailPanelHeight ?? thumbnailPanelHeight
+        var effectiveThumbnailPanelHeight = self.currentThumbnailPanelHeight ?? thumbnailPanelHeight
+        if layout.size.width > layout.size.height {
+            effectiveThumbnailPanelHeight = 0.0
+        }
         var backgroundHeight: CGFloat = 0.0
         let verticalOffset: CGFloat = isHidden ? (layout.size.width > layout.size.height ? 44.0 : (effectiveThumbnailPanelHeight > 0.0 ? 106.0 : 54.0)) : 0.0
         if let footerContentNode = self.currentFooterContentNode {

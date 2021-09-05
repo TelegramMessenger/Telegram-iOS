@@ -224,11 +224,11 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             } else {
                 let fontSize: CGFloat = 17.0
                 
-                var baseFont = Font.regular(fontSize)
-                var linkFont = baseFont
-                var boldFont = Font.medium(fontSize)
-                var italicFont = Font.italic(fontSize)
-                var boldItalicFont = Font.semiboldItalic(fontSize)
+                let baseFont = Font.regular(fontSize)
+                let linkFont = baseFont
+                let boldFont = Font.medium(fontSize)
+                let italicFont = Font.italic(fontSize)
+                let boldItalicFont = Font.semiboldItalic(fontSize)
                 let titleFixedFont = Font.monospace(fontSize)
                 
                 let entities = generateTextEntities(item.text, enabledTypes: enabledEntities)

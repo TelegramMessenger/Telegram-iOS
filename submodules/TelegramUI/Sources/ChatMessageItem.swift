@@ -15,7 +15,10 @@ public enum ChatMessageItemContent: Sequence {
     case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes)
     case group(messages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)])
     
-    func effectivelyIncoming(_ accountPeerId: PeerId) -> Bool {
+    func effectivelyIncoming(_ accountPeerId: PeerId, associatedData: ChatMessageItemAssociatedData? = nil) -> Bool {
+        if let subject = associatedData?.subject, case .forwardedMessages = subject {
+            return false
+        }
         switch self {
             case let .message(message, _, _, _):
                 return message.effectivelyIncoming(accountPeerId)
@@ -256,8 +259,6 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let additionalContent: ChatMessageItemAdditionalContent?
     
     let wantTrButton: [(Bool, [String])]
-    
-    //public let accessoryItem: ListViewAccessoryItem?
     let dateHeader: ChatMessageDateHeader
     let avatarHeader: ChatMessageAvatarHeader?
 
@@ -365,8 +366,11 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
         }
         self.avatarHeader = avatarHeader
-
+        
         var headers: [ListViewItemHeader] = [self.dateHeader]
+        if case .forwardedMessages = associatedData.subject {
+            headers = []
+        }
         if let avatarHeader = self.avatarHeader {
             headers.append(avatarHeader)
         }
@@ -461,7 +465,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { _ in apply(.None, synchronousLoads) })
+                    return (nil, { _ in apply(.None, ListViewItemApply(isOnScreen: false), synchronousLoads) })
                 })
             }
         }
@@ -521,8 +525,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     
                     let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !self.disableDate)
                     Queue.mainQueue().async {
-                        completion(layout, { _ in
-                            apply(animation, false)
+                        completion(layout, { info in
+                            apply(animation, info, false)
                             if let nodeValue = node() as? ChatMessageItemView {
                                 nodeValue.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
                                 nodeValue.updateSelectionState(animated: false)

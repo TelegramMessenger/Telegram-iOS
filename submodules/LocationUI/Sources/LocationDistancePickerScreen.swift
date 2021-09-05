@@ -90,7 +90,7 @@ final class LocationDistancePickerScreen: ViewController {
             self?.dismiss()
         }
         
-        self.controllerNode.update()
+        let _ = self.controllerNode.update()
     }
     
     override public func loadView() {
@@ -463,7 +463,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             pickerView.selectRow(1, inComponent: 1, animated: true)
         }
         self.updateDoneButtonTitle()
-        self.update()
+        let _ = self.update()
     }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
@@ -601,7 +601,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        var hadValidLayout = self.containerLayout != nil
+        let hadValidLayout = self.containerLayout != nil
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.statusBar, .input])

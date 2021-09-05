@@ -1272,6 +1272,62 @@ public struct account {
         }
     
     }
+    public enum ChatThemes: TypeConstructorDescription {
+        case chatThemesNotModified
+        case chatThemes(hash: Int32, themes: [Api.ChatTheme])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .chatThemesNotModified:
+                    if boxed {
+                        buffer.appendInt32(-535699004)
+                    }
+                    
+                    break
+                case .chatThemes(let hash, let themes):
+                    if boxed {
+                        buffer.appendInt32(-28524867)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(themes.count))
+                    for item in themes {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatThemesNotModified:
+                return ("chatThemesNotModified", [])
+                case .chatThemes(let hash, let themes):
+                return ("chatThemes", [("hash", hash), ("themes", themes)])
+    }
+    }
+    
+        public static func parse_chatThemesNotModified(_ reader: BufferReader) -> ChatThemes? {
+            return Api.account.ChatThemes.chatThemesNotModified
+        }
+        public static func parse_chatThemes(_ reader: BufferReader) -> ChatThemes? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.ChatTheme]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ChatTheme.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.account.ChatThemes.chatThemes(hash: _1!, themes: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum Authorizations: TypeConstructorDescription {
         case authorizations(authorizations: [Api.Authorization])
     
@@ -4376,6 +4432,21 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func setChatTheme(peer: Api.InputPeer, emoticon: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-432283329)
+                    peer.serialize(buffer, true)
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.setChatTheme", parameters: [("peer", peer), ("emoticon", emoticon)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
@@ -4950,6 +5021,35 @@ public extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func viewSponsoredMessage(channel: Api.InputChannel, randomId: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1095836780)
+                    channel.serialize(buffer, true)
+                    serializeBytes(randomId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "channels.viewSponsoredMessage", parameters: [("channel", channel), ("randomId", randomId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getSponsoredMessages(channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SponsoredMessages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-333377601)
+                    channel.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.getSponsoredMessages", parameters: [("channel", channel)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SponsoredMessages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.SponsoredMessages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.SponsoredMessages
                         }
                         return result
                     })
@@ -7616,6 +7716,20 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func getChatThemes(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.ChatThemes>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-690545285)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getChatThemes", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.ChatThemes? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.ChatThemes?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.ChatThemes
+                        }
+                        return result
+                    })
+                }
             }
             public struct langpack {
                 public static func getLangPack(langPack: String, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.LangPackDifference>) {
@@ -8010,11 +8124,12 @@ public extension Api {
                     })
                 }
             
-                public static func getGroupCall(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCall>) {
+                public static func getGroupCall(call: Api.InputGroupCall, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCall>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(209498135)
+                    buffer.appendInt32(68699611)
                     call.serialize(buffer, true)
-                    return (FunctionDescription(name: "phone.getGroupCall", parameters: [("call", call)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.GroupCall? in
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "phone.getGroupCall", parameters: [("call", call), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.GroupCall? in
                         let reader = BufferReader(buffer)
                         var result: Api.phone.GroupCall?
                         if let signature = reader.readInt32() {
@@ -8069,13 +8184,14 @@ public extension Api {
                     })
                 }
             
-                public static func toggleGroupCallRecord(flags: Int32, call: Api.InputGroupCall, title: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func toggleGroupCallRecord(flags: Int32, call: Api.InputGroupCall, title: String?, videoPortrait: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1070962985)
+                    buffer.appendInt32(-248985848)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     call.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "phone.toggleGroupCallRecord", parameters: [("flags", flags), ("call", call), ("title", title)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 2) != 0 {videoPortrait!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "phone.toggleGroupCallRecord", parameters: [("flags", flags), ("call", call), ("title", title), ("videoPortrait", videoPortrait)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

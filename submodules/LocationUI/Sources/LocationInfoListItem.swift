@@ -230,8 +230,6 @@ final class LocationInfoListItemNode: ListViewItemNode {
                         
                         let subtitleFrame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset + titleLayout.size.height + titleSpacing), size: subtitleLayout.size)
                         subtitleNode.frame = subtitleFrame
-
-                        let separatorHeight = UIScreenPixel
                         
                         let iconNodeFrame = CGRect(origin: CGPoint(x: params.leftInset + inset, y: 10.0), size: CGSize(width: iconSize, height: iconSize))
                         strongSelf.venueIconNode.frame = iconNodeFrame

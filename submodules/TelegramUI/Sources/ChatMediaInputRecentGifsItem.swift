@@ -12,15 +12,17 @@ final class ChatMediaInputRecentGifsItem: ListViewItem {
     let selectedItem: () -> Void
     let expanded: Bool
     let theme: PresentationTheme
+    let strings: PresentationStrings
     
     var selectable: Bool {
         return true
     }
     
-    init(inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, expanded: Bool, selected: @escaping () -> Void) {
+    init(inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, strings: PresentationStrings, expanded: Bool, selected: @escaping () -> Void) {
         self.inputNodeInteraction = inputNodeInteraction
         self.selectedItem = selected
         self.theme = theme
+        self.strings = strings
         self.expanded = expanded
     }
     
@@ -33,7 +35,7 @@ final class ChatMediaInputRecentGifsItem: ListViewItem {
             node.updateIsHighlighted()
             node.updateAppearanceTransition(transition: .immediate)
             Queue.mainQueue().async {
-                node.updateTheme(theme: self.theme, expanded: self.expanded)
+                node.updateTheme(theme: self.theme, strings: self.strings, expanded: self.expanded)
                 completion(node, {
                     return (nil, { _ in })
                 })
@@ -44,7 +46,7 @@ final class ChatMediaInputRecentGifsItem: ListViewItem {
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             completion(ListViewItemNodeLayout(contentSize: self.expanded ? expandedBoundingSize : boundingSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), { _ in
-                (node() as? ChatMediaInputRecentGifsItemNode)?.updateTheme(theme: self.theme, expanded: self.expanded)
+                (node() as? ChatMediaInputRecentGifsItemNode)?.updateTheme(theme: self.theme, strings: self.strings, expanded: self.expanded)
             })
         }
     }
@@ -86,6 +88,7 @@ final class ChatMediaInputRecentGifsItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
+        self.imageNode.contentMode = .scaleAspectFit
         
         self.titleNode = ImmediateTextNode()
         
@@ -104,14 +107,14 @@ final class ChatMediaInputRecentGifsItemNode: ListViewItemNode {
     deinit {
     }
     
-    func updateTheme(theme: PresentationTheme, expanded: Bool) {
+    func updateTheme(theme: PresentationTheme, strings: PresentationStrings, expanded: Bool) {
         if self.theme !== theme {
             self.theme = theme
             
             self.highlightNode.image = PresentationResourcesChat.chatMediaInputPanelHighlightedIconImage(theme)
             self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelRecentGifsIconImage(theme)
             
-            self.titleNode.attributedText = NSAttributedString(string: "GIFs", font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: strings.Stickers_Gifs, font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
         }
         
         let imageSize = CGSize(width: 26.0 * 1.6, height: 26.0 * 1.6)
@@ -124,15 +127,17 @@ final class ChatMediaInputRecentGifsItemNode: ListViewItemNode {
         let expandScale: CGFloat = expanded ? 1.0 : boundingImageScale
         let expandTransition: ContainedViewLayoutTransition = self.currentExpanded != expanded ? .animated(duration: 0.3, curve: .spring) : .immediate
         expandTransition.updateTransformScale(node: self.scalingNode, scale: expandScale)
-        expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -2.0 : 3.0)))
+        expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -53.0 : -7.0)))
 
-        expandTransition.updateAlpha(node: self.titleNode, alpha: expanded ? 1.0 : 0.0)
         let titleSize = self.titleNode.updateLayout(CGSize(width: expandedBoundingSize.width - 8.0, height: expandedBoundingSize.height))
         
-        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 2.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 6.0), size: titleSize)
         let displayTitleFrame = expanded ? titleFrame : CGRect(origin: CGPoint(x: titleFrame.minX, y: self.imageNode.position.y - titleFrame.size.height), size: titleFrame.size)
         expandTransition.updateFrameAsPositionAndBounds(node: self.titleNode, frame: displayTitleFrame)
         expandTransition.updateTransformScale(node: self.titleNode, scale: expanded ? 1.0 : 0.001)
+        
+        let alphaTransition: ContainedViewLayoutTransition = self.currentExpanded != expanded ? .animated(duration: expanded ? 0.15 : 0.1, curve: .linear) : .immediate
+        alphaTransition.updateAlpha(node: self.titleNode, alpha: expanded ? 1.0 : 0.0, delay: expanded ? 0.05 : 0.0)
         
         self.currentExpanded = expanded
         

@@ -24,9 +24,9 @@ private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError>
             if let authInfo = context.authInfoForDatacenter(withId: id, selector: .persistent), let authKey = authInfo.authKey {
                 let transportScheme = context.chooseTransportSchemeForConnection(toDatacenterId: id, schemes: context.transportSchemesForDatacenter(withId: id, media: true, enforceMedia: false, isProxy: false))
                 var addressList: [AccountDatacenterAddress] = []
-                if let transportScheme = transportScheme, let address = transportScheme.address, let host = address.host {
-                    let secret: Data? = address.secret
-                    addressList.append(AccountDatacenterAddress(host: host, port: Int32(address.port), isMedia: address.preferForMedia, secret: secret))
+                if let transportScheme = transportScheme, let host = transportScheme.address.host {
+                    let secret: Data? = transportScheme.address.secret
+                    addressList.append(AccountDatacenterAddress(host: host, port: Int32(transportScheme.address.port), isMedia: transportScheme.address.preferForMedia, secret: secret))
                 }
                 
                 var ephemeralMainKey: AccountDatacenterKey?
@@ -64,7 +64,7 @@ private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError>
     }
 }
 
-func sharedAccountInfos(accountManager: AccountManager, accounts: Signal<[Account], NoError>) -> Signal<StoredAccountInfos, NoError> {
+func sharedAccountInfos(accountManager: AccountManager<TelegramAccountManagerTypes>, accounts: Signal<[Account], NoError>) -> Signal<StoredAccountInfos, NoError> {
     return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.proxySettings]), accounts)
     |> take(1)
     |> mapToSignal { sharedData, accounts -> Signal<StoredAccountInfos, NoError> in

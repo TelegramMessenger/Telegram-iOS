@@ -251,7 +251,7 @@ class ChatSlowmodeItemNode: ListViewItemNode {
                         let _ = apply()
                     }
                     
-                    var textNodes: [(TextNode, CGSize)] = textLayoutAndApply.map { layout, apply -> (TextNode, CGSize) in
+                    let textNodes: [(TextNode, CGSize)] = textLayoutAndApply.map { layout, apply -> (TextNode, CGSize) in
                         let node = apply()
                         return (node, layout.size)
                     }

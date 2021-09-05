@@ -322,7 +322,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 
 #pragma mark - Properties
 
-- (bool)isTracking
+- (BOOL)isTracking
 {
     return _knobView.highlighted;
 }
@@ -447,6 +447,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 }
 
 - (void)setEnablePanHandling:(bool)enablePanHandling {
+    _enablePanHandling = enablePanHandling;
     _panGestureRecognizer.enabled = enablePanHandling;
 }
 

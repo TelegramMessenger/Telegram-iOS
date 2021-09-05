@@ -90,8 +90,8 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                             }
                             
                             let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>
-                            if case let .file(id, _, _, _, _, _, slug, _, settings) = presentationTheme.chat.defaultWallpaper, id == 0 {
-                                resolvedWallpaper = cachedWallpaper(account: account, slug: slug, settings: settings)
+                            if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
+                                resolvedWallpaper = cachedWallpaper(account: account, slug: file.slug, settings: file.settings)
                                 |> map { wallpaper in
                                     return wallpaper?.wallpaper
                                 }
@@ -101,15 +101,15 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                             
                             return resolvedWallpaper
                             |> mapToSignal { wallpaper -> Signal<(PresentationThemeReference, PresentationTheme?), NoError> in
-                                if let wallpaper = wallpaper, case let .file(_, _, _, _, _, _, slug, file, _) = wallpaper {
+                                if let wallpaper = wallpaper, case let .file(file) = wallpaper {
                                     var convertedRepresentations: [ImageRepresentationWithReference] = []
-                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(slug), resource: file.resource)))
-                                    return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
+                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 100, height: 100), resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
+                                    return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                                     |> mapToSignal { _, fullSizeData, complete -> Signal<(PresentationThemeReference, PresentationTheme?), NoError> in
                                         guard complete, let fullSizeData = fullSizeData else {
                                             return .complete()
                                         }
-                                        accountManager.mediaBox.storeResourceData(file.resource.id, data: fullSizeData, synchronous: true)
+                                        accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData, synchronous: true)
                                         return .single((.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper, creatorAccountId: theme.isCreator ? account.id : nil)), presentationTheme))
                                     }
                                 } else {

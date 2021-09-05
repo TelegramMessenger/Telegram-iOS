@@ -14,7 +14,12 @@ void InjectInstanceMethodFromAnotherClass(Class toClass, Class fromClass, SEL fr
 }
 #endif
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 typedef void (^TGAlertHandler)(UIAlertView *alertView);
+
+#pragma clang diagnostic pop
 
 typedef enum {
     TGStatusBarAppearanceAnimationSlideDown = 1,

@@ -387,52 +387,8 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 }
 
 private func peerNearbyContextMenuItems(context: AccountContext, peerId: PeerId, present: @escaping (ViewController) -> Void) -> Signal<[ContextMenuItem], NoError> {
-    let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
-    return context.account.postbox.transaction { transaction -> [ContextMenuItem] in
-        var items: [ContextMenuItem] = []
-//        
-//        let peer = transaction.getPeer(peerId)
-//        
-//        if let peer = peer as? TelegramUser {
-//            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Context_AddToContacts, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-//                f(.default)
-//            })))
-//        } else {
-//            items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeopleNearby_Context_JoinGroup, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-//                let _ = (joinChannel(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(next: { participant in
-//                    f(.default)
-//                }, error: { error in
-////                    if let strongSelf = self {
-////                        if case .tooMuchJoined = error {
-////                            if let parentNavigationController = strongSelf.parentNavigationController {
-////                                let context = strongSelf.context
-////                                let link = strongSelf.link
-////                                let navigateToPeer = strongSelf.navigateToPeer
-////                                let resolvedState = strongSelf.resolvedState
-////                                parentNavigationController.pushViewController(oldChannelsController(context: strongSelf.context, intent: .join, completed: { [weak parentNavigationController] value in
-////                                    if value {
-////                                        (parentNavigationController?.viewControllers.last as? ViewController)?.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: navigateToPeer, parentNavigationController: parentNavigationController, resolvedState: resolvedState), in: .window(.root))
-////                                    }
-////                                }))
-////                            } else {
-////                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Join_ChannelsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-////                            }
-////                            strongSelf.dismiss()
-////                        }
-////                    }
-//                })
-//            })))
-//            
-//            items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeopleNearby_Context_UnrelatedLocation, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-//                    let _ = (TelegramCore.reportPeer(account: context.account, peerId: peerId, reason: .irrelevantLocation)
-//                    |> deliverOnMainQueue).start(completed: {
-//                        let _ = ApplicationSpecificNotice.setIrrelevantPeerGeoReport(postbox: context.account.postbox, peerId: peerId).start()
-//                        
-//                        present(textAlertController(context: context, title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {})]))
-//                    })
-//                    f(.default)
-//            })))
-//        }
+    return context.account.postbox.transaction { _ -> [ContextMenuItem] in
+        let items: [ContextMenuItem] = []
         
         return items
     }
@@ -642,7 +598,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         controller?.clearItemNodesHighlight(animated: true)
     }
     navigateToProfileImpl = { [weak controller] peer, distance in
-        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .nearbyPeer(distance: distance), avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false) {
+        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .nearbyPeer(distance: distance), avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false) {
             navigationController.pushViewController(controller)
         }
     }

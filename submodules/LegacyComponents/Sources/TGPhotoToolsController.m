@@ -250,10 +250,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     {
         NSString *title = tool.title;
         CGFloat width = 0.0f;
-        if ([title respondsToSelector:@selector(sizeWithAttributes:)])
-            width = CGCeil([title sizeWithAttributes:@{ NSFontAttributeName:[TGPhotoEditorInterfaceAssets editorItemTitleFont] }].width);
-        else
-            width = CGCeil([title sizeWithFont:[TGPhotoEditorInterfaceAssets editorItemTitleFont]].width);
+        width = CGCeil([title sizeWithAttributes:@{ NSFontAttributeName:[TGPhotoEditorInterfaceAssets editorItemTitleFont] }].width);
         
         if (width > maxTitleWidth)
             maxTitleWidth = width;
@@ -844,7 +841,10 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 - (void)updateToolViews
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     UIInterfaceOrientation orientation = self.interfaceOrientation;
+#pragma clang diagnostic pop
     if ([self inFormSheet] || TGIsPad())
     {
         _landscapeToolsWrapperView.hidden = true;

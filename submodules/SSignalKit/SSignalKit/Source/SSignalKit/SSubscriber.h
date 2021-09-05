@@ -4,19 +4,19 @@
 {
 }
 
-- (instancetype)initWithNext:(void (^)(id))next error:(void (^)(id))error completed:(void (^)())completed;
+- (instancetype _Nonnull)initWithNext:(void (^ _Nullable)(id _Nullable))next error:(void (^ _Nullable)(id _Nullable))error completed:(void (^ _Nullable)())completed;
 
-- (void)_assignDisposable:(id<SDisposable>)disposable;
+- (void)_assignDisposable:(id<SDisposable> _Nullable)disposable;
 - (void)_markTerminatedWithoutDisposal;
 
-- (void)putNext:(id)next;
-- (void)putError:(id)error;
+- (void)putNext:(id _Nullable)next;
+- (void)putError:(id _Nullable)error;
 - (void)putCompletion;
 
 @end
 
 @interface STracingSubscriber : SSubscriber
 
-- (instancetype)initWithName:(NSString *)name next:(void (^)(id))next error:(void (^)(id))error completed:(void (^)())completed;
+- (instancetype _Nonnull)initWithName:(NSString * _Nonnull)name next:(void (^ _Nullable)(id _Nullable))next error:(void (^ _Nullable)(id _Nullable))error completed:(void (^ _Nullable)())completed;
 
 @end

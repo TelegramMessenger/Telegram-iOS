@@ -20,8 +20,8 @@ public func dateFillNeedsBlur(theme: PresentationTheme, wallpaper: TelegramWallp
         return false
     } else if case .color = wallpaper {
         return false
-    } else if case let .file(_, _, _, _, isPattern, _, _, _, settings) = wallpaper {
-        if isPattern, let intensity = settings.intensity, intensity < 0 {
+    } else if case let .file(file) = wallpaper {
+        if file.isPattern, let intensity = file.settings.intensity, intensity < 0 {
             return false
         } else {
             return true
@@ -35,7 +35,7 @@ public let defaultServiceBackgroundColor = UIColor(rgb: 0x000000, alpha: 0.2)
 public let defaultPresentationTheme = makeDefaultDayPresentationTheme(serviceBackgroundColor: defaultServiceBackgroundColor, day: false, preview: false)
 public let defaultDayAccentColor = UIColor(rgb: 0x007ee5)
 
-public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
+public func customizeDefaultDayTheme(theme: PresentationTheme, specialMode: Bool = false, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: [UInt32], bubbleColors: [UInt32], animateBubbleColors: Bool?, wallpaper forcedWallpaper: TelegramWallpaper? = nil, serviceBackgroundColor: UIColor?) -> PresentationTheme {
     if (theme.referenceTheme != .day && theme.referenceTheme != .dayClassic) {
         return theme
     }
@@ -52,24 +52,74 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
     var suggestedWallpaper: TelegramWallpaper?
     
     var bubbleColors = bubbleColors
-    if bubbleColors == nil, editing {
-        if day {
-            let accentColor = accentColor ?? defaultDayAccentColor
-            bubbleColors = (accentColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98), accentColor)
-        } else {
-            if let accentColor = accentColor, !accentColor.alpha.isZero {
-                let hsb = accentColor.hsb
-                bubbleColors = (UIColor(hue: hsb.0, saturation: (hsb.1 > 0.0 && hsb.2 > 0.0) ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0), nil)
-                if accentColor.lightness > 0.705 {
-                    outgoingAccent = UIColor(hue: hsb.0, saturation: min(1.0, hsb.1 * 1.1), brightness: min(hsb.2, 0.6), alpha: 1.0)
-                } else {
-                    outgoingAccent = accentColor
+    if specialMode, bubbleColors.count < 3, let color = bubbleColors.first.flatMap({ UIColor(rgb: $0) }) {
+        let colorHSB = color.hsb
+        if colorHSB.b > 0.9 {
+            let bubbleColor = color.withMultiplied(hue: 0.9, saturation: 1.3, brightness: 1.0)
+            bubbleColors = [bubbleColor.rgb]
+            
+            let colorPairs: [(UInt32, UInt32)] = [
+                (0xe5f9d7, 0x6cd516),
+                (0xe7f5ff, 0x43b6f9),
+                (0xe3f7f5, 0x4ccbb8),
+                (0xfff6cf, 0xe8b816),
+                (0xfffac9, 0xe2c714),
+                (0xc5a61e, 0xd6b534)
+            ]
+            
+            func generateAccentColor(color: UIColor) -> UIColor {
+                var nearest: (color: (UInt32, UInt32), distance: Int32)?
+                for (sample, accentSample) in colorPairs {
+                    let distance = color.distance(to: UIColor(rgb: sample))
+                    if let currentNearest = nearest {
+                        if distance < currentNearest.distance {
+                            nearest = ((sample, accentSample), distance)
+                        }
+                    } else {
+                        nearest = ((sample, accentSample), distance)
+                    }
                 }
-
-                suggestedWallpaper = .gradient(nil, defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
+                
+                if let colors = nearest?.color {
+                    let colorHsb = color.hsb
+                    let similarColorHsb = UIColor(rgb: colors.0).hsb
+                    let accentColorHsb = UIColor(rgb: colors.1).hsb
+                    
+                    let correction = (similarColorHsb.0 > 0.0 ? colorHsb.0 / similarColorHsb.0 : 1.0, similarColorHsb.1 > 0.0 ? colorHsb.1 / similarColorHsb.1 : 1.0, similarColorHsb.2 > 0.0 ? colorHsb.2 / similarColorHsb.2 : 1.0)
+                    let correctedComplementingColor = UIColor(hue: min(1.0, accentColorHsb.0 * correction.0), saturation: min(1.0, accentColorHsb.1 * correction.1), brightness: min(1.0, accentColorHsb.2 * correction.2), alpha: 1.0)
+                    return correctedComplementingColor
+                } else {
+                    return color
+                }
+            }
+            
+            outgoingAccent = generateAccentColor(color: color)
+        } else {
+            let bubbleColor = color.withMultiplied(hue: 1.014, saturation: 0.12, brightness: 1.29)
+            bubbleColors = [bubbleColor.rgb]
+            
+            outgoingAccent = color
+        }
+    } else {
+        if bubbleColors.isEmpty, editing {
+            if day {
+                let accentColor = accentColor ?? defaultDayAccentColor
+                bubbleColors = [accentColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98).rgb, accentColor.rgb]
             } else {
-                bubbleColors = (UIColor(rgb: 0xe1ffc7), nil)
-                suggestedWallpaper = .gradient(nil, defaultBuiltinWallpaperGradientColors.map(\.rgb), WallpaperSettings())
+                if let accentColor = accentColor, !accentColor.alpha.isZero {
+                    let hsb = accentColor.hsb
+                    bubbleColors = [UIColor(hue: hsb.0, saturation: (hsb.1 > 0.0 && hsb.2 > 0.0) ? 0.14 : 0.0, brightness: 0.79 + hsb.2 * 0.21, alpha: 1.0).rgb]
+                    if accentColor.lightness > 0.705 {
+                        outgoingAccent = UIColor(hue: hsb.0, saturation: min(1.0, hsb.1 * 1.1), brightness: min(hsb.2, 0.6), alpha: 1.0)
+                    } else {
+                        outgoingAccent = accentColor
+                    }
+
+                    suggestedWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: defaultBuiltinWallpaperGradientColors.map(\.rgb), settings: WallpaperSettings()))
+                } else {
+                    bubbleColors = [UIColor(rgb: 0xe1ffc7).rgb]
+                    suggestedWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: defaultBuiltinWallpaperGradientColors.map(\.rgb), settings: WallpaperSettings()))
+                }
             }
         }
     }
@@ -105,8 +155,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
     }
         
     var incomingBubbleStrokeColor: UIColor?
-    var outgoingBubbleFillColor: UIColor?
-    var outgoingBubbleFillGradientColor: UIColor?
+    var outgoingBubbleFillColors: [UIColor]?
     var outgoingBubbleHighlightedFill: UIColor?
     var outgoingBubbleStrokeColor: UIColor?
     var outgoingPrimaryTextColor: UIColor?
@@ -133,11 +182,11 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
         outgoingBubbleStrokeColor = bubbleStrokeColor
     }
     
-    if let bubbleColors = bubbleColors {
-        var topBubbleColor = bubbleColors.0
-        var bottomBubbleColor = bubbleColors.1 ?? bubbleColors.0
+    if !bubbleColors.isEmpty {
+        //var topBubbleColor = UIColor(rgb: bubbleColors[0])
+        //var bottomBubbleColor = UIColor(rgb: bubbleColors.last ?? bubbleColors[0])
 
-        if topBubbleColor.rgb != bottomBubbleColor.rgb {
+        /*if topBubbleColor.rgb != bottomBubbleColor.rgb {
             let topBubbleColorLightness = topBubbleColor.lightness
             let bottomBubbleColorLightness = bottomBubbleColor.lightness
             if abs(topBubbleColorLightness - bottomBubbleColorLightness) > 0.7 {
@@ -147,30 +196,29 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                     bottomBubbleColor = bottomBubbleColor.withMultiplied(hue: 1.0, saturation: 1.0, brightness: 0.85)
                 }
             }
-        }
+        }*/
         
-        outgoingBubbleFillColor = topBubbleColor
-        outgoingBubbleFillGradientColor = bottomBubbleColor
+        outgoingBubbleFillColors = bubbleColors.map(UIColor.init(rgb:))
 
         if day {
             outgoingBubbleStrokeColor = .clear
         }
         
-        outgoingBubbleHighlightedFill = outgoingBubbleFillColor?.withMultiplied(hue: 1.054, saturation: 1.589, brightness: 0.96)
+        outgoingBubbleHighlightedFill = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.054, saturation: 1.589, brightness: 0.96)
         
-        let lightnessColor = bubbleColors.0.mixedWith(bubbleColors.1 ?? bubbleColors.0, alpha: 0.5)
+        let lightnessColor = UIColor.average(of: bubbleColors.map(UIColor.init(rgb:)))
         if lightnessColor.lightness > 0.705 {
             let hueFactor: CGFloat = 0.75
             let saturationFactor: CGFloat = 1.1
             outgoingPrimaryTextColor = UIColor(rgb: 0x000000)
-            outgoingSecondaryTextColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.549).withAlphaComponent(0.8)
+            outgoingSecondaryTextColor = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554 * saturationFactor, brightness: 0.549).withAlphaComponent(0.8)
             
             if let outgoingAccent = outgoingAccent {
                 outgoingAccentTextColor = outgoingAccent
                 outgoingLinkTextColor = outgoingAccent
                 outgoingScamColor = UIColor(rgb: 0xff3b30)
                 outgoingControlColor = outgoingAccent
-                outgoingInactiveControlColor = outgoingAccent //1111
+                outgoingInactiveControlColor = outgoingAccent
                 outgoingFileTitleColor = outgoingAccent
                 outgoingPollsProgressColor = accentColor
                 outgoingSelectionColor = outgoingAccent.withMultiplied(hue: 1.0, saturation: 1.292, brightness: 0.871)
@@ -192,13 +240,13 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
             }
             outgoingPendingActivityColor = outgoingCheckColor
             
-            outgoingFileDescriptionColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.257 * hueFactor, saturation: 1.842, brightness: 0.698)
-            outgoingFileDurationColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554, brightness: 0.549).withAlphaComponent(0.8)
-            outgoingMediaPlaceholderColor = outgoingBubbleFillColor?.withMultiplied(hue: 0.998, saturation: 1.129, brightness: 0.949)
-            outgoingPollsButtonColor = outgoingBubbleFillColor?.withMultiplied(hue: 1.207 * hueFactor, saturation: 1.721, brightness: 0.851)
+            outgoingFileDescriptionColor = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.257 * hueFactor, saturation: 1.842, brightness: 0.698)
+            outgoingFileDurationColor = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.344 * hueFactor, saturation: 4.554, brightness: 0.549).withAlphaComponent(0.8)
+            outgoingMediaPlaceholderColor = outgoingBubbleFillColors?.first?.withMultiplied(hue: 0.998, saturation: 1.129, brightness: 0.949)
+            outgoingPollsButtonColor = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.207 * hueFactor, saturation: 1.721, brightness: 0.851)
 
             if day {
-                if let distance = outgoingBubbleFillColor?.distance(to: UIColor(rgb: 0xffffff)), distance < 200 {
+                if let distance = outgoingBubbleFillColors?.first?.distance(to: UIColor(rgb: 0xffffff)), distance < 200 {
                     outgoingBubbleStrokeColor = UIColor(rgb: 0xc8c7cc)
                 }
             }
@@ -214,7 +262,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
             outgoingFileTitleColor = outgoingPrimaryTextColor
             outgoingFileDescriptionColor = outgoingSecondaryTextColor
             outgoingFileDurationColor = outgoingSecondaryTextColor
-            outgoingMediaPlaceholderColor = outgoingBubbleFillColor?.withMultipliedBrightnessBy(0.95)
+            outgoingMediaPlaceholderColor = outgoingBubbleFillColors?.first?.withMultipliedBrightnessBy(0.95)
             outgoingPollsButtonColor = outgoingSecondaryTextColor
             outgoingPollsProgressColor = outgoingPrimaryTextColor
             outgoingSelectionBaseColor = UIColor(rgb: 0xffffff)
@@ -228,7 +276,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
         defaultWallpaper = forcedWallpaper
     } else if !backgroundColors.isEmpty {
         if backgroundColors.count >= 2 {
-            defaultWallpaper = .gradient(nil, backgroundColors, WallpaperSettings())
+            defaultWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: backgroundColors, settings: WallpaperSettings()))
         } else {
             defaultWallpaper = .color(backgroundColors[0])
         }
@@ -238,6 +286,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
     
     chat = chat.withUpdated(
         defaultWallpaper: defaultWallpaper,
+        animateMessageColors: animateBubbleColors,
         message: chat.message.withUpdated(
             incoming: chat.message.incoming.withUpdated(
                 bubble: chat.message.incoming.bubble.withUpdated(
@@ -268,14 +317,12 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
             outgoing: chat.message.outgoing.withUpdated(
                 bubble: chat.message.outgoing.bubble.withUpdated(
                     withWallpaper: chat.message.outgoing.bubble.withWallpaper.withUpdated(
-                        fill: outgoingBubbleFillColor,
-                        gradientFill: outgoingBubbleFillGradientColor,
+                        fill: outgoingBubbleFillColors,
                         highlightedFill: outgoingBubbleHighlightedFill,
                         stroke: outgoingBubbleStrokeColor
                     ),
                     withoutWallpaper: chat.message.outgoing.bubble.withoutWallpaper.withUpdated(
-                        fill: outgoingBubbleFillColor,
-                        gradientFill: outgoingBubbleFillGradientColor,
+                        fill: outgoingBubbleFillColors,
                         highlightedFill: outgoingBubbleHighlightedFill,
                         stroke: outgoingBubbleStrokeColor
                     )
@@ -532,7 +579,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
 
     let message = PresentationThemeChatMessage(
         incoming: PresentationThemePartedColors(
-            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: bubbleStrokeColor, shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: bubbleStrokeColor, shadow: nil)),
+            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0xffffff)], highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: bubbleStrokeColor, shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0xffffff)], highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: bubbleStrokeColor, shadow: nil)),
             primaryTextColor: UIColor(rgb: 0x000000),
             secondaryTextColor: UIColor(rgb: 0x525252, alpha: 0.6),
             linkTextColor: UIColor(rgb: 0x004bad),
@@ -554,7 +601,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
             actionButtonsFillColor: PresentationThemeVariableColor(withWallpaper: serviceBackgroundColor, withoutWallpaper: UIColor(rgb: 0x596e89, alpha: 0.35)), actionButtonsStrokeColor: PresentationThemeVariableColor(color: .clear),
             actionButtonsTextColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xffffff)), textSelectionColor: UIColor(rgb: 0x007ee5, alpha: 0.2), textSelectionKnobColor: UIColor(rgb: 0x007ee5)),
         outgoing: PresentationThemePartedColors(
-            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe1ffc7), highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: bubbleStrokeColor, shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe1ffc7), highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: bubbleStrokeColor, shadow: nil)),
+            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0xe1ffc7)], highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: bubbleStrokeColor, shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0xe1ffc7)], highlightedFill: UIColor(rgb: 0xc8ffa6), stroke: bubbleStrokeColor, shadow: nil)),
             primaryTextColor: UIColor(rgb: 0x000000),
             secondaryTextColor: UIColor(rgb: 0x008c09, alpha: 0.8),
             linkTextColor: UIColor(rgb: 0x004bad),
@@ -578,7 +625,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
             actionButtonsTextColor: PresentationThemeVariableColor(color: UIColor(rgb: 0xffffff)),
             textSelectionColor: UIColor(rgb: 0xbbde9f),
             textSelectionKnobColor: UIColor(rgb: 0x3fc33b)),
-        freeform: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: UIColor(rgb: 0x86a9c9, alpha: 0.5), shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: UIColor(rgb: 0x86a9c9, alpha: 0.5), shadow: nil)),
+        freeform: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0xffffff)], highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: UIColor(rgb: 0x86a9c9, alpha: 0.5), shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0xffffff)], highlightedFill: UIColor(rgb: 0xd9f4ff), stroke: UIColor(rgb: 0x86a9c9, alpha: 0.5), shadow: nil)),
         infoPrimaryTextColor: UIColor(rgb: 0x000000),
         infoLinkTextColor: UIColor(rgb: 0x004bad),
         outgoingCheckColor: UIColor(rgb: 0x19c700),
@@ -597,7 +644,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     
     let messageDay = PresentationThemeChatMessage(
         incoming: PresentationThemePartedColors(
-            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xffffff), highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xffffff), shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xf1f1f4), highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xf1f1f4), shadow: nil)),
+            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0xffffff)], highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xffffff), shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0xf1f1f4)], highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xf1f1f4), shadow: nil)),
             primaryTextColor: UIColor(rgb: 0x000000),
             secondaryTextColor: UIColor(rgb: 0x525252, alpha: 0.6),
             linkTextColor: UIColor(rgb: 0x004bad),
@@ -622,7 +669,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
             textSelectionColor: UIColor(rgb: 0x007ee5, alpha: 0.3),
             textSelectionKnobColor: UIColor(rgb: 0x007ee5)),
         outgoing: PresentationThemePartedColors(
-            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x57b2e0), gradientFill: UIColor(rgb: 0x007ee5), highlightedFill: UIColor(rgb: 0x57b2e0).withMultipliedBrightnessBy(0.7), stroke: .clear, shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0x57b2e0), gradientFill: UIColor(rgb: 0x007ee5), highlightedFill: UIColor(rgb: 0x57b2e0).withMultipliedBrightnessBy(0.7), stroke: .clear, shadow: nil)),
+            bubble: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0x57b2e0), UIColor(rgb: 0x007ee5)], highlightedFill: UIColor(rgb: 0x57b2e0).withMultipliedBrightnessBy(0.7), stroke: .clear, shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0x57b2e0), UIColor(rgb: 0x007ee5)], highlightedFill: UIColor(rgb: 0x57b2e0).withMultipliedBrightnessBy(0.7), stroke: .clear, shadow: nil)),
             primaryTextColor: UIColor(rgb: 0xffffff),
             secondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.65),
             linkTextColor: UIColor(rgb: 0xffffff),
@@ -646,7 +693,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
             actionButtonsTextColor: PresentationThemeVariableColor(withWallpaper: UIColor(rgb: 0xffffff), withoutWallpaper: UIColor(rgb: 0x007ee5)),
             textSelectionColor: UIColor(rgb: 0xffffff, alpha: 0.2),
             textSelectionKnobColor: UIColor(rgb: 0xffffff)),
-        freeform: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe5e5ea), highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xe5e5ea), shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: UIColor(rgb: 0xe5e5ea), highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xe5e5ea), shadow: nil)),
+        freeform: PresentationThemeBubbleColor(withWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0xe5e5ea)], highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xe5e5ea), shadow: nil), withoutWallpaper: PresentationThemeBubbleColorComponents(fill: [UIColor(rgb: 0xe5e5ea)], highlightedFill: UIColor(rgb: 0xdadade), stroke: UIColor(rgb: 0xe5e5ea), shadow: nil)),
         infoPrimaryTextColor: UIColor(rgb: 0x000000),
         infoLinkTextColor: UIColor(rgb: 0x004bad),
         outgoingCheckColor: UIColor(rgb: 0xffffff),
@@ -742,6 +789,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
 
     let chat = PresentationThemeChat(
         defaultWallpaper: day ? .color(0xffffff) : defaultPatternWallpaper,
+        animateMessageColors: false,
         message: day ? messageDay : message,
         serviceMessage: day ? serviceMessageDay : serviceMessage,
         inputPanel: inputPanel,
@@ -754,7 +802,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         dimColor: UIColor(white: 0.0, alpha: 0.4),
         backgroundType: .light,
         opaqueItemBackgroundColor: UIColor(rgb: 0xffffff),
-        itemBackgroundColor: UIColor(white: 1.0, alpha: 0.87),
+        itemBackgroundColor: UIColor(white: 1.0, alpha: 0.8),
         opaqueItemHighlightedBackgroundColor: UIColor(white: 0.9, alpha: 1.0),
         itemHighlightedBackgroundColor: UIColor(white: 0.9, alpha: 0.7),
         opaqueItemSeparatorColor: UIColor(white: 0.9, alpha: 1.0),
@@ -1013,19 +1061,19 @@ public extension BuiltinWallpaperData {
             signals.append(getWallpaper(network: account.network, slug: slug)
             |> map { wallpaper -> String? in
                 switch wallpaper {
-                case let .file(id, accessHash, _, _, _, _, _, file, _):
-                    guard let resource = file.resource as? CloudDocumentMediaResource else {
+                case let .file(file):
+                    guard let resource = file.file.resource as? CloudDocumentMediaResource else {
                         return nil
                     }
-                    guard let size = file.size else {
+                    guard let size = file.file.size else {
                         return nil
                     }
                     return """
 static let \(name) = BuiltinWallpaperData(
-    wallpaperId: \(id),
-    wallpaperAccessHash: \(accessHash),
+    wallpaperId: \(file.id),
+    wallpaperAccessHash: \(file.accessHash),
     slug: "\(slug)",
-    fileId: \(file.fileId.id),
+    fileId: \(file.file.fileId.id),
     fileAccessHash: \(resource.accessHash),
     datacenterId: \(resource.datacenterId),
     fileSize: \(size)
@@ -1055,7 +1103,7 @@ static let \(name) = BuiltinWallpaperData(
 }
 
 public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32], intensity: Int32 = 50, rotation: Int32? = nil) -> TelegramWallpaper {
-    return .file(
+    return .file(TelegramWallpaper.File(
         id: data.wallpaperId,
         accessHash: data.wallpaperAccessHash,
         isCreator: false,
@@ -1098,5 +1146,5 @@ public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32]
             ]
         ),
         settings: WallpaperSettings(colors: colors, intensity: intensity, rotation: rotation)
-    )
+    ))
 }

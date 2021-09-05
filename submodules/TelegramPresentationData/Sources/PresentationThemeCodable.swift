@@ -33,6 +33,37 @@ private func encodeColor<Key>(_ values: inout KeyedEncodingContainer<Key>, _ val
     }
 }
 
+private func decodeColorList<Key>(_ values: KeyedDecodingContainer<Key>, _ key: Key) throws -> [UIColor] {
+    let colorValues = try values.decode([String].self, forKey: key)
+
+    var result: [UIColor] = []
+    for value in colorValues {
+        if value.lowercased() == "clear" {
+            result.append(UIColor.clear)
+        } else if let color = UIColor(hexString: value) {
+            result.append(color)
+        } else {
+            throw PresentationThemeDecodingError.generic
+        }
+    }
+
+    return result
+}
+
+private func encodeColorList<Key>(_ values: inout KeyedEncodingContainer<Key>, _ colors: [UIColor], _ key: Key) throws {
+    var stringList: [String] = []
+    for value in colors {
+        if value == UIColor.clear {
+            stringList.append("clear")
+        } else if value.alpha < 1.0 {
+            stringList.append(String(format: "%08x", value.argb))
+        } else {
+            stringList.append(String(format: "%06x", value.rgb))
+        }
+    }
+    try values.encode(stringList, forKey: key)
+}
+
 extension TelegramWallpaper: Codable {
     public init(from decoder: Decoder) throws {
         let values = try decoder.singleValueContainer()
@@ -56,52 +87,41 @@ extension TelegramWallpaper: Codable {
                             blur = true
                         }
                         
-                        if components.count >= 2 && components.count <= 5 && [6, 8].contains(components[0].count) && !optionKeys.contains(components[0]) && [6, 8].contains(components[1].count) && !optionKeys.contains(components[1]), let topColor = UIColor(hexString: components[0]), let bottomColor = UIColor(hexString: components[1]) {
-                            var rotation: Int32?
-                            if components.count > 2, components[2].count <= 3, let value = Int32(components[2]) {
-                                if value >= 0 && value < 360 {
-                                    rotation = value
-                                }
+                        var slug: String?
+                        var colors: [UIColor] = []
+                        var intensity: Int32?
+                        var rotation: Int32?
+                        for i in 0 ..< components.count {
+                            let component = components[i]
+                            if optionKeys.contains(component) {
+                                continue
                             }
                             
-                            self = .gradient(nil, [topColor.argb, bottomColor.argb], WallpaperSettings(blur: blur, motion: motion, rotation: rotation))
-                        } else {
-                            var slug: String?
-                            var colors: [UInt32] = []
-                            var intensity: Int32?
-                            var rotation: Int32?
-
-                            if !components.isEmpty {
-                                slug = components[0]
-                            }
-                            if components.count > 1 {
-                                for i in 1 ..< components.count {
-                                    let component = components[i]
-                                    if optionKeys.contains(component) {
-                                        continue
+                            if i == 0 && component.count > 8 {
+                                slug = component
+                            } else if [6, 8].contains(component.count), let color = UIColor(hexString: component) {
+                                colors.append(color)
+                            } else if component.count <= 4, let value = Int32(component) {
+                                if intensity == nil {
+                                    if value >= -100 && value <= 100 {
+                                        intensity = value
+                                    } else {
+                                        intensity = 50
                                     }
-                                    if [6, 8].contains(component.count), let value = UIColor(hexString: component) {
-                                        colors.append(value.rgb)
-                                    } else if component.count <= 3, let value = Int32(component) {
-                                        if intensity == nil {
-                                            if value >= 0 && value <= 100 {
-                                                intensity = value
-                                            } else {
-                                                intensity = 50
-                                            }
-                                        } else if rotation == nil {
-                                            if value >= 0 && value < 360 {
-                                                rotation = value
-                                            }
-                                        }
+                                } else if rotation == nil {
+                                    if value >= 0 && value < 360 {
+                                        rotation = value
                                     }
                                 }
                             }
-                            if let slug = slug {
-                                self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: !colors.isEmpty, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors, intensity: intensity, rotation: rotation))
-                            } else {
-                                throw PresentationThemeDecodingError.generic
-                            }
+                        }
+                        
+                        if let slug = slug {
+                            self = .file(TelegramWallpaper.File(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: !colors.isEmpty, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: WallpaperDataResource(slug: slug), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, colors: colors.map { $0.argb }, intensity: intensity, rotation: rotation)))
+                        } else if colors.count > 1 {
+                            self = .gradient(TelegramWallpaper.Gradient(id: nil, colors: colors.map { $0.argb }, settings: WallpaperSettings(blur: blur, motion: motion, rotation: rotation)))
+                        } else {
+                            throw PresentationThemeDecodingError.generic
                         }
                     }
             }
@@ -117,18 +137,18 @@ extension TelegramWallpaper: Codable {
                 try container.encode("builtin")
             case let .color(color):
                 try container.encode(String(format: "%06x", color))
-            case let .gradient(_, colors, settings):
+            case let .gradient(gradient):
                 var components: [String] = []
-                for color in colors {
+                for color in gradient.colors {
                     components.append(String(format: "%06x", color))
                 }
-                if let rotation = settings.rotation {
+                if let rotation = gradient.settings.rotation {
                     components.append("\(rotation)")
                 }
-                if settings.motion {
+                if gradient.settings.motion {
                     components.append("motion")
                 }
-                if settings.blur {
+                if gradient.settings.blur {
                     components.append("blur")
                 }
                 try container.encode(components.joined(separator: " "))
@@ -1070,22 +1090,30 @@ extension PresentationThemeBubbleColorComponents: Codable {
         case highlightedBg
         case stroke
         case shadow
+        case bgList
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
-        
-        var fillColor = try decodeColor(values, .bg)
-        var gradientColor = try decodeColor(values, .gradientBg, decoder: decoder, fallbackKey: "\(codingPath).bg")
-        if gradientColor.rgb != fillColor.rgb {
-            fillColor = fillColor.withAlphaComponent(1.0)
-            gradientColor = gradientColor.withAlphaComponent(1.0)
+
+        let fill: [UIColor]
+
+        if let bgList = try? decodeColorList(values, .bgList) {
+            fill = bgList
+        } else {
+            var fillColor = try decodeColor(values, .bg)
+            var gradientColor = try decodeColor(values, .gradientBg, decoder: decoder, fallbackKey: "\(codingPath).bg")
+            if gradientColor.rgb != fillColor.rgb {
+                fillColor = fillColor.withAlphaComponent(1.0)
+                gradientColor = gradientColor.withAlphaComponent(1.0)
+            }
+
+            fill = [fillColor, gradientColor]
         }
-        
+
         self.init(
-            fill: fillColor,
-            gradientFill: gradientColor,
+            fill: fill,
             highlightedFill: try decodeColor(values, .highlightedBg),
             stroke: try decodeColor(values, .stroke),
             shadow: try? values.decode(PresentationThemeBubbleShadow.self, forKey: .shadow)
@@ -1094,8 +1122,17 @@ extension PresentationThemeBubbleColorComponents: Codable {
     
     public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
-        try encodeColor(&values, self.fill, .bg)
-        try encodeColor(&values, self.gradientFill, .gradientBg)
+        if self.fill.count <= 2 {
+            if self.fill.count > 1 {
+                try encodeColor(&values, self.fill[0], .bg)
+                try encodeColor(&values, self.fill[1], .gradientBg)
+            } else {
+                try encodeColor(&values, self.fill[0], .bg)
+                try encodeColor(&values, self.fill[0], .gradientBg)
+            }
+        } else {
+            try encodeColorList(&values, self.fill, .bgList)
+        }
         try encodeColor(&values, self.highlightedFill, .highlightedBg)
         try encodeColor(&values, self.stroke, .stroke)
     }
@@ -1611,6 +1648,7 @@ extension PresentationThemeChat: Codable {
     enum CodingKeys: String, CodingKey {
         case defaultWallpaper
         case message
+        case animateMessageColors
         case serviceMessage
         case inputPanel
         case inputMediaPanel
@@ -1629,6 +1667,7 @@ extension PresentationThemeChat: Codable {
         }
     
         self.init(defaultWallpaper: wallpaper,
+                  animateMessageColors: (try? values.decode(Bool.self, forKey: .animateMessageColors)) ?? false,
                   message: try values.decode(PresentationThemeChatMessage.self, forKey: .message),
                   serviceMessage: try values.decode(PresentationThemeServiceMessage.self, forKey: .serviceMessage),
                   inputPanel: try values.decode(PresentationThemeChatInputPanel.self, forKey: .inputPanel),
@@ -1640,6 +1679,7 @@ extension PresentationThemeChat: Codable {
     public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(self.defaultWallpaper, forKey: .defaultWallpaper)
+        try values.encode(self.animateMessageColors, forKey: .animateMessageColors)
         try values.encode(self.message, forKey: .message)
         try values.encode(self.serviceMessage, forKey: .serviceMessage)
         try values.encode(self.inputPanel, forKey: .inputPanel)

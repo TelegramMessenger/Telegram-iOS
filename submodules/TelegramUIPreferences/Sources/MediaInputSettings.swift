@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public struct MediaInputSettings: PreferencesEntry, Equatable {
@@ -38,7 +39,7 @@ public struct MediaInputSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateMediaInputSettingsInteractively(accountManager: AccountManager, _ f: @escaping (MediaInputSettings) -> MediaInputSettings) -> Signal<Void, NoError> {
+public func updateMediaInputSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (MediaInputSettings) -> MediaInputSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.mediaInputSettings, { entry in
             let currentSettings: MediaInputSettings

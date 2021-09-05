@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import TelegramPresentationData
 import TelegramUIPreferences
 
 public final class ChatPresentationThemeData: Equatable {

@@ -45,7 +45,7 @@ typedef enum
 
 @end
 
-@interface TGMenuSheetController () <UIGestureRecognizerDelegate, UIPopoverPresentationControllerDelegate, UIPopoverControllerDelegate, UIViewControllerPreviewingDelegate>
+@interface TGMenuSheetController () <UIGestureRecognizerDelegate, UIPopoverPresentationControllerDelegate, UIPopoverControllerDelegate>
 {
     bool _dark;
     
@@ -75,8 +75,11 @@ typedef enum
     
     bool _checked3dTouch;
     NSDictionary *_3dTouchHandlers;
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     UIPopoverController *_popoverController;
+#pragma clang diagnostic pop
     
     id<LegacyComponentsContext> _context;
 }
@@ -99,8 +102,11 @@ typedef enum
             self.pallete = [[LegacyComponentsGlobals provider] darkMenuSheetPallete];
         else if (!dark && [[LegacyComponentsGlobals provider] respondsToSelector:@selector(menuSheetPallete)])
             self.pallete = [[LegacyComponentsGlobals provider] menuSheetPallete];
-        
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         self.wantsFullScreenLayout = true;
+#pragma clang diagnostic pop
     }
     return self;
 }
@@ -373,6 +379,8 @@ typedef enum
         *rect = self.sourceRect();
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)popoverControllerDidDismissPopover:(UIPopoverController *)__unused popoverController
 {
     _popoverController = nil;
@@ -383,6 +391,7 @@ typedef enum
     if (self.sourceRect != nil)
         *rect = self.sourceRect();
 }
+#pragma clang diagnostic pop
 
 #pragma mark -
 
@@ -417,7 +426,10 @@ typedef enum
     }
     else
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         _popoverController = [[UIPopoverController alloc] initWithContentViewController:self];
+#pragma clang diagnostic pop
         
         UIColor *backgroundColor = self.pallete != nil ? self.pallete.backgroundColor : [UIColor whiteColor];
         if ([_popoverController respondsToSelector:@selector(setBackgroundColor:)])
@@ -574,6 +586,8 @@ typedef enum
         if (animated)
         {
             self.view.userInteractionEnabled = false;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             [self animateSheetViewToPosition:_sheetView.menuHeight + [self safeAreaInsetForOrientation:self.interfaceOrientation].bottom velocity:0 type:TGMenuSheetAnimationDismiss completion:^
             {
                 [self.view removeFromSuperview];
@@ -586,6 +600,7 @@ typedef enum
                 if (completion != nil)
                     completion();
             }];
+#pragma clang diagnostic pop
         }
         else
         {
@@ -807,10 +822,13 @@ typedef enum
             if (velocity > 200.0f && allowDismissal)
             {
                 [self setDimViewHidden:true animated:true];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                 [self animateSheetViewToPosition:_sheetView.menuHeight + [self safeAreaInsetForOrientation:self.interfaceOrientation].bottom velocity:velocity type:TGMenuSheetAnimationDismiss completion:^
                 {
                     [self dismissAnimated:false];
                 }];
+#pragma clang diagnostic pop
             }
             else
             {
@@ -924,7 +942,10 @@ typedef enum
         _containerView.frame = CGRectMake(_containerView.frame.origin.x, _containerView.frame.origin.y, viewWidth, self.view.frame.size.height);
         _dimView.frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         _sheetView.safeAreaInset = [self safeAreaInsetForOrientation:self.interfaceOrientation];
+#pragma clang diagnostic pop
         
         CGFloat minSide = MIN(referenceSize.width, referenceSize.height);
         _sheetView.narrowInLandscape = self.narrowInLandscape;
@@ -943,8 +964,9 @@ typedef enum
 - (UIEdgeInsets)safeAreaInsetForOrientation:(UIInterfaceOrientation)orientation
 {
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     if (safeAreaInset.bottom > FLT_EPSILON)
@@ -955,14 +977,19 @@ typedef enum
 
 - (UIEdgeInsets)safeAreaInset
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [self safeAreaInsetForOrientation:self.interfaceOrientation];
+#pragma clang diagnostic pop
 }
 
 - (void)repositionMenuWithReferenceSize:(CGSize)referenceSize
 {
     if ([self sizeClass] == UIUserInterfaceSizeClassRegular && !_forceFullScreen)
         return;
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     UIEdgeInsets safeAreaInset = [self safeAreaInsetForOrientation:self.interfaceOrientation];
     if (_keyboardOffset > FLT_EPSILON)
         safeAreaInset.bottom = 0.0f;
@@ -970,6 +997,7 @@ typedef enum
     CGFloat defaultStatusBarHeight = TGMenuSheetDefaultStatusBarHeight;
     if (!TGIsPad() && iosMajorVersion() >= 11 && UIInterfaceOrientationIsLandscape(self.interfaceOrientation))
         defaultStatusBarHeight = 0.0;
+#pragma clang diagnostic pop
     
     CGFloat statusBarHeight = !UIEdgeInsetsEqualToEdgeInsets(safeAreaInset, UIEdgeInsetsZero) ? safeAreaInset.top : defaultStatusBarHeight;
     referenceSize.height = referenceSize.height + statusBarHeight - [self statusBarHeight];
@@ -995,7 +1023,9 @@ typedef enum
     CGSize statusBarSize = [_context statusBarFrame].size;
     CGFloat statusBarHeight = MIN(statusBarSize.width, statusBarSize.height);
     statusBarHeight = MAX(TGMenuSheetDefaultStatusBarHeight, statusBarHeight);
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (!TGIsPad() && iosMajorVersion() >= 11 && UIInterfaceOrientationIsLandscape(self.interfaceOrientation))
     {
         return 0.0f;
@@ -1006,6 +1036,7 @@ typedef enum
         if (!UIEdgeInsetsEqualToEdgeInsets(safeAreaInset, UIEdgeInsetsZero))
             statusBarHeight = 44.0f;
     }
+#pragma clang diagnostic pop
     return statusBarHeight;
 }
 

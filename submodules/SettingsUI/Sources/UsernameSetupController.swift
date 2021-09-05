@@ -94,12 +94,12 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! UsernameSetupControllerArguments
         switch self {
-            case let .editablePublicLink(theme, strings, prefix, currentText, text):
+            case let .editablePublicLink(theme, _, prefix, currentText, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearType: .always, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
                 }, action: {
                 })
-            case let .publicLinkInfo(theme, text):
+            case let .publicLinkInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { action in
                     if case .tap = action {
                         arguments.shareLink()
@@ -194,7 +194,11 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
                     switch error {
                         case .startsWithDigit:
                             statusText = presentationData.strings.Username_InvalidStartsWithNumber
-                        case .startsWithUnderscore, .endsWithUnderscore, .invalidCharacters:
+                        case .startsWithUnderscore:
+                            statusText = presentationData.strings.Username_InvalidStartsWithUnderscore
+                        case .endsWithUnderscore:
+                            statusText = presentationData.strings.Username_InvalidEndsWithUnderscore
+                        case .invalidCharacters:
                             statusText = presentationData.strings.Username_InvalidCharacters
                         case .tooShort:
                             statusText = presentationData.strings.Username_InvalidTooShort

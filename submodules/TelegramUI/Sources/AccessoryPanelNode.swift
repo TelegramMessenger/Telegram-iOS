@@ -11,6 +11,12 @@ class AccessoryPanelNode: ASDisplayNode {
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
     }
     
-    func updateState(size: CGSize, interfaceState: ChatPresentationInterfaceState) {
+    func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
+    }
+    
+    func animateIn() {
+    }
+    
+    func animateOut() {
     }
 }

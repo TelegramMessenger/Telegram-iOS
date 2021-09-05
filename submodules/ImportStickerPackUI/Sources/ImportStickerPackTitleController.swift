@@ -105,7 +105,7 @@ private class TextField: UITextField, UIScrollViewDelegate {
     }
     
     func selectWhole() {
-        guard let scrollView = self.scrollView else {
+        guard let _ = self.scrollView else {
             return
         }
 //        if scrollView.contentSize.width > scrollView.frame.width - scrollView.contentInset.left {
@@ -813,7 +813,7 @@ func importStickerPackShortNameController(context: AccountContext, title: String
         contentNode?.inputFieldNode.updateTheme(presentationData.theme)
     })
     let checkDisposable = MetaDisposable()
-    var value = value ?? ""
+    let value = value ?? ""
     contentNode.actionNodes.last?.actionEnabled = !value.isEmpty
     if !value.isEmpty {
         Queue.mainQueue().after(0.25) {

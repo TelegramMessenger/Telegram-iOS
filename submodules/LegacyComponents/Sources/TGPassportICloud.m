@@ -21,7 +21,10 @@
         return nil;
     
     NSError *error;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSString *urlData = [[url bookmarkDataWithOptions:NSURLBookmarkCreationSuitableForBookmarkFile includingResourceValuesForKeys:nil relativeToURL:nil error:&error] base64Encoding];
+#pragma clang diagnostic pop
     if (error != nil || urlData == nil)
         return nil;
     
@@ -118,7 +121,10 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         NSData *urlData = [[NSData alloc] initWithBase64Encoding:description.urlData];
+#pragma clang diagnostic pop
         if (urlData == nil)
         {
             [subscriber putCompletion];

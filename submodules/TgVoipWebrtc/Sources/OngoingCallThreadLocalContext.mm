@@ -577,7 +577,7 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
     if (_keepLandscape) {
         resolvedId += std::string(":landscape");
     }
-    _interface->switchToDevice(resolvedId);
+    _interface->switchToDevice(resolvedId, false);
 }
 
 - (void)setIsVideoEnabled:(bool)isVideoEnabled {
@@ -1361,7 +1361,9 @@ private:
     outputDeviceId:(NSString * _Nonnull)outputDeviceId
     videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer
     requestMediaChannelDescriptions:(id<OngoingGroupCallMediaChannelDescriptionTask> _Nonnull (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull, void (^ _Nonnull)(NSArray<OngoingGroupCallMediaChannelDescription *> * _Nonnull)))requestMediaChannelDescriptions
-    requestBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestBroadcastPart
+    requestCurrentTime:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(void (^ _Nonnull)(int64_t)))requestCurrentTime
+    requestAudioBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestAudioBroadcastPart
+    requestVideoBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, int32_t, OngoingGroupCallRequestedVideoQuality, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestVideoBroadcastPart
     outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
     enableNoiseSuppression:(bool)enableNoiseSuppression {
@@ -1433,8 +1435,14 @@ private:
             .initialInputDeviceId = inputDeviceId.UTF8String,
             .initialOutputDeviceId = outputDeviceId.UTF8String,
             .videoCapture = [_videoCapturer getInterface],
-            .requestBroadcastPart = [requestBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
-                id<OngoingGroupCallBroadcastPartTask> task = requestBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
+            .requestCurrentTime = [requestCurrentTime](std::function<void(int64_t)> completion) {
+                id<OngoingGroupCallBroadcastPartTask> task = requestCurrentTime(^(int64_t result) {
+                    completion(result);
+                });
+                return std::make_shared<BroadcastPartTaskImpl>(task);
+            },
+            .requestAudioBroadcastPart = [requestAudioBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
+                id<OngoingGroupCallBroadcastPartTask> task = requestAudioBroadcastPart(timestampMilliseconds, durationMilliseconds, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
                     tgcalls::BroadcastPart parsedPart;
                     parsedPart.timestampMilliseconds = part.timestampMilliseconds;
                     
@@ -1461,9 +1469,63 @@ private:
                     }
                     parsedPart.status = mappedStatus;
                     
-                    parsedPart.oggData.resize(part.oggData.length);
-                    [part.oggData getBytes:parsedPart.oggData.data() length:part.oggData.length];
+                    parsedPart.data.resize(part.oggData.length);
+                    [part.oggData getBytes:parsedPart.data.data() length:part.oggData.length];
                     
+                    completion(std::move(parsedPart));
+                });
+                return std::make_shared<BroadcastPartTaskImpl>(task);
+            },
+            .requestVideoBroadcastPart = [requestVideoBroadcastPart](int64_t timestampMilliseconds, int64_t durationMilliseconds, int32_t channelId, tgcalls::VideoChannelDescription::Quality quality, std::function<void(tgcalls::BroadcastPart &&)> completion) -> std::shared_ptr<tgcalls::BroadcastPartTask> {
+                OngoingGroupCallRequestedVideoQuality mappedQuality;
+                switch (quality) {
+                    case tgcalls::VideoChannelDescription::Quality::Thumbnail: {
+                        mappedQuality = OngoingGroupCallRequestedVideoQualityThumbnail;
+                        break;
+                    }
+                    case tgcalls::VideoChannelDescription::Quality::Medium: {
+                        mappedQuality = OngoingGroupCallRequestedVideoQualityMedium;
+                        break;
+                    }
+                    case tgcalls::VideoChannelDescription::Quality::Full: {
+                        mappedQuality = OngoingGroupCallRequestedVideoQualityFull;
+                        break;
+                    }
+                    default: {
+                        mappedQuality = OngoingGroupCallRequestedVideoQualityThumbnail;
+                        break;
+                    }
+                }
+                id<OngoingGroupCallBroadcastPartTask> task = requestVideoBroadcastPart(timestampMilliseconds, durationMilliseconds, channelId, mappedQuality, ^(OngoingGroupCallBroadcastPart * _Nullable part) {
+                    tgcalls::BroadcastPart parsedPart;
+                    parsedPart.timestampMilliseconds = part.timestampMilliseconds;
+
+                    parsedPart.responseTimestamp = part.responseTimestamp;
+
+                    tgcalls::BroadcastPart::Status mappedStatus;
+                    switch (part.status) {
+                        case OngoingGroupCallBroadcastPartStatusSuccess: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::Success;
+                            break;
+                        }
+                        case OngoingGroupCallBroadcastPartStatusNotReady: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::NotReady;
+                            break;
+                        }
+                        case OngoingGroupCallBroadcastPartStatusResyncNeeded: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::ResyncNeeded;
+                            break;
+                        }
+                        default: {
+                            mappedStatus = tgcalls::BroadcastPart::Status::NotReady;
+                            break;
+                        }
+                    }
+                    parsedPart.status = mappedStatus;
+
+                    parsedPart.data.resize(part.oggData.length);
+                    [part.oggData getBytes:parsedPart.data.data() length:part.oggData.length];
+
                     completion(std::move(parsedPart));
                 });
                 return std::make_shared<BroadcastPartTaskImpl>(task);
@@ -1785,6 +1847,20 @@ private:
     }
 }
 
+- (void)getStats:(void (^ _Nonnull)(OngoingGroupCallStats * _Nonnull))completion {
+    if (_instance) {
+        _instance->getStats([completion](tgcalls::GroupInstanceStats stats) {
+            NSMutableDictionary<NSString *,OngoingGroupCallIncomingVideoStats *> *incomingVideoStats = [[NSMutableDictionary alloc] init];
+
+            for (const auto &it : stats.incomingVideoStats) {
+                incomingVideoStats[[NSString stringWithUTF8String:it.first.c_str()]] = [[OngoingGroupCallIncomingVideoStats alloc] initWithReceivingQuality:it.second.receivingQuality availableQuality:it.second.availableQuality];
+            }
+
+            completion([[OngoingGroupCallStats alloc] initWithIncomingVideoStats:incomingVideoStats]);
+        });
+    }
+}
+
 @end
 
 @implementation OngoingGroupCallMediaChannelDescription
@@ -1841,6 +1917,31 @@ private:
         _ssrcGroups = ssrcGroups;
         _minQuality = minQuality;
         _maxQuality = maxQuality;
+    }
+    return self;
+}
+
+@end
+
+@implementation OngoingGroupCallIncomingVideoStats
+
+- (instancetype _Nonnull)initWithReceivingQuality:(int)receivingQuality availableQuality:(int)availableQuality {
+    self = [super init];
+    if (self != nil) {
+        _receivingQuality = receivingQuality;
+        _availableQuality = availableQuality;
+    }
+    return self;
+}
+
+@end
+
+@implementation OngoingGroupCallStats
+
+- (instancetype _Nonnull)initWithIncomingVideoStats:(NSDictionary<NSString *, OngoingGroupCallIncomingVideoStats *> * _Nonnull)incomingVideoStats {
+    self = [super init];
+    if (self != nil) {
+        _incomingVideoStats = incomingVideoStats;
     }
     return self;
 }

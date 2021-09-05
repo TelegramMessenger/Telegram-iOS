@@ -312,7 +312,7 @@ private class ColorInputFieldNode: ASDisplayNode, UITextFieldDelegate {
 
 struct WallpaperColorPanelNodeState: Equatable {
     var selection: Int?
-    var colors: [UInt32]
+    var colors: [HSBColor]
     var maximumNumberOfColors: Int
     var rotateAvailable: Bool
     var rotation: Int32
@@ -390,7 +390,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
     private var sampleItemNodes: [ColorSampleItemNode] = []
     private let multiColorFieldNode: ColorInputFieldNode
 
-    var colorsChanged: (([UInt32], Bool) -> Void)?
+    var colorsChanged: (([HSBColor], Int, Bool) -> Void)?
     var colorSelected: (() -> Void)?
     var rotate: (() -> Void)?
     
@@ -456,7 +456,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
                     var updated = current
                     updated.preview = !ended
                     if let index = strongSelf.state.selection {
-                        updated.colors[index] = color.rgb
+                        updated.colors[index] = HSBColor(color: color)
                     }
                     return updated
                 })
@@ -486,7 +486,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
                     var updated = current
                     updated.preview = true
                     if let index = strongSelf.state.selection {
-                        updated.colors[index] = color.rgb
+                        updated.colors[index] = color
                     }
                     return updated
                 }, updateLayout: false)
@@ -498,7 +498,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
                     var updated = current
                     updated.preview = false
                     if let index = strongSelf.state.selection {
-                        updated.colors[index] = color.rgb
+                        updated.colors[index] = color
                     }
                     return updated
                 }, updateLayout: false)
@@ -518,6 +518,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         var updateLayout = updateLayout
         let previousColors = self.state.colors
         let previousPreview = self.state.preview
+        let previousSelection = self.state.selection
         self.state = f(self.state)
         
         let colorWasRemovable = self.multiColorFieldNode.isRemovable
@@ -528,7 +529,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
 
         if let index = self.state.selection {
             if self.state.colors.count > index {
-                self.colorPickerNode.color = UIColor(rgb: self.state.colors[index])
+                self.colorPickerNode.color = self.state.colors[index]
             }
         }
     
@@ -536,20 +537,20 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
         }
 
-        if let index = state.selection {
+        if let index = self.state.selection {
             if self.state.colors.count > index {
-                self.multiColorFieldNode.setColor(UIColor(rgb: self.state.colors[index]), update: false)
+                self.multiColorFieldNode.setColor(self.state.colors[index].color, update: false)
             }
         }
 
-        for i in 0 ..< state.colors.count {
+        for i in 0 ..< self.state.colors.count {
             if i < self.sampleItemNodes.count {
-                self.sampleItemNodes[i].update(size: self.sampleItemNodes[i].bounds.size, color: UIColor(rgb: state.colors[i]), isSelected: state.selection == i)
+                self.sampleItemNodes[i].update(size: self.sampleItemNodes[i].bounds.size, color: self.state.colors[i].color, isSelected: state.selection == i)
             }
         }
 
-        if self.state.colors != previousColors || self.state.preview != previousPreview {
-            self.colorsChanged?(self.state.colors, !self.state.preview)
+        if self.state.colors != previousColors || self.state.preview != previousPreview || self.state.selection != previousSelection {
+            self.colorsChanged?(self.state.colors, self.state.selection ?? 0, !self.state.preview)
         }
     }
     
@@ -567,55 +568,20 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         let fieldHeight: CGFloat = 33.0
         let leftInset: CGFloat
         let rightInset: CGFloat
-        let fieldSpacing: CGFloat
         if condensedLayout {
             leftInset = 6.0
             rightInset = 6.0
-            fieldSpacing = 40.0
         } else {
             leftInset = 15.0
             rightInset = 15.0
-            fieldSpacing = 45.0
         }
-        let rightInsetWithButton: CGFloat = 42.0
         
         let buttonSize = CGSize(width: 26.0, height: 26.0)
-        let buttonOffset: CGFloat = (rightInsetWithButton - 13.0) / 2.0
-        //let middleButtonFrame = CGRect(origin: CGPoint(x: self.state.secondColor != nil ? floor((size.width - 26.0) / 2.0) : (self.state.secondColorAvailable ? size.width - rightInsetWithButton + floor((rightInsetWithButton - buttonSize.width) / 2.0) : size.width + buttonOffset), y: floor((topPanelHeight - buttonSize.height) / 2.0)), size: buttonSize)
-        
-        //transition.updateFrame(node: self.rotateButton, frame: middleButtonFrame)
-        //transition.updateFrame(node: self.swapButton, frame: middleButtonFrame)
-
         let canAddColors = self.state.colors.count < self.state.maximumNumberOfColors
 
         transition.updateFrame(node: self.addButton, frame: CGRect(origin: CGPoint(x: size.width - rightInset - buttonSize.width, y: floor((topPanelHeight - buttonSize.height) / 2.0)), size: buttonSize))
         transition.updateAlpha(node: self.addButton, alpha: canAddColors ? 1.0 : 0.0)
         transition.updateSublayerTransformScale(node: self.addButton, scale: canAddColors ? 1.0 : 0.1)
-        
-        /*let rotateButtonAlpha: CGFloat
-        let swapButtonAlpha: CGFloat
-        let addButtonAlpha: CGFloat
-        if let _ = self.state.secondColor {
-            if self.state.rotateAvailable {
-                rotateButtonAlpha = 1.0
-                swapButtonAlpha = 0.0
-            } else {
-                rotateButtonAlpha = 0.0
-                swapButtonAlpha = 1.0
-            }
-            addButtonAlpha = 0.0
-        } else {
-            swapButtonAlpha = 0.0
-            rotateButtonAlpha = 0.0
-            if self.state.secondColorAvailable {
-                addButtonAlpha = 1.0
-            } else {
-                addButtonAlpha = 0.0
-            }
-        }
-        transition.updateAlpha(node: self.rotateButton, alpha: rotateButtonAlpha)
-        transition.updateAlpha(node: self.swapButton, alpha: swapButtonAlpha)
-        transition.updateAlpha(node: self.addButton, alpha: addButtonAlpha)*/
         
         func degreesToRadians(_ degrees: CGFloat) -> CGFloat {
             var degrees = degrees
@@ -663,7 +629,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             }
             itemNode.frame = CGRect(origin: CGPoint(x: nextSampleX, y: (topPanelHeight - sampleItemSize) / 2.0), size: CGSize(width: sampleItemSize, height: sampleItemSize))
             nextSampleX += sampleItemSize
-            itemNode.update(size: itemNode.bounds.size, color: UIColor(rgb: self.state.colors[i]), isSelected: self.state.selection == i)
+            itemNode.update(size: itemNode.bounds.size, color: self.state.colors[i].color, isSelected: self.state.selection == i)
 
             if animateIn {
                 transition.animateTransformScale(node: itemNode, from: 0.1)
@@ -727,9 +693,9 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             var current = current
             if current.colors.count < current.maximumNumberOfColors {
                 if current.colors.isEmpty {
-                    current.colors.append(0xffffff)
+                    current.colors.append(HSBColor(rgb: 0xffffff))
                 } else if current.simpleGradientGeneration {
-                    var hsb = UIColor(rgb: current.colors[0]).hsb
+                    var hsb = current.colors[0].values
                     if hsb.1 > 0.5 {
                         hsb.1 -= 0.15
                     } else {
@@ -740,7 +706,7 @@ final class WallpaperColorPanelNode: ASDisplayNode {
                     } else {
                         hsb.0 += 0.05
                     }
-                    current.colors.append(UIColor(hue: hsb.0, saturation: hsb.1, brightness: hsb.2, alpha: 1.0).rgb)
+                    current.colors.append(HSBColor(values: hsb))
                 } else {
                     current.colors.append(current.colors[current.colors.count - 1])
                 }
@@ -748,38 +714,6 @@ final class WallpaperColorPanelNode: ASDisplayNode {
             }
             return current
         })
-        
-        /*self.firstColorFieldNode.setSkipEndEditingIfNeeded()
-        
-        self.updateState({ current in
-            var updated = current
-            updated.selection = .index(1)
-            
-            let firstColor = current.firstColor ?? current.defaultColor
-            if let color = firstColor {
-                updated.firstColor = color
-                
-                let secondColor: UIColor
-                if updated.simpleGradientGeneration {
-                    var hsb = color.hsb
-                    if hsb.1 > 0.5 {
-                        hsb.1 -= 0.15
-                    } else {
-                        hsb.1 += 0.15
-                    }
-                    if hsb.0 > 0.5 {
-                        hsb.0 -= 0.05
-                    } else {
-                        hsb.0 += 0.05
-                    }
-                    updated.secondColor = UIColor(hue: hsb.0, saturation: hsb.1, brightness: hsb.2, alpha: 1.0)
-                } else {
-                    updated.secondColor = generateGradientColors(color: color).1
-                }
-            }
-
-            return updated
-        })*/
     }
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

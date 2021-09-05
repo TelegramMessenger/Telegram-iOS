@@ -14,7 +14,7 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
                 memcpy(bytes, msgKey, 16)
                 memcpy(bytes.advanced(by: 16), key.key.memory.advanced(by: x), 32)
             }
-            let sha1A = MTSha1(sha1AData)!
+            let sha1A = MTSha1(sha1AData)
             
             var sha1BData = Data()
             sha1BData.count = 16 + 16 + 16
@@ -23,7 +23,7 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
                 memcpy(bytes.advanced(by: 16), msgKey, 16)
                 memcpy(bytes.advanced(by: 16 + 16), key.key.memory.advanced(by: 48 + x), 16)
             }
-            let sha1B = MTSha1(sha1BData)!
+            let sha1B = MTSha1(sha1BData)
             
             var sha1CData = Data()
             sha1CData.count = 32 + 16
@@ -31,7 +31,7 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
                 memcpy(bytes, key.key.memory.advanced(by: 64 + x), 32)
                 memcpy(bytes.advanced(by: 32), msgKey, 16)
             }
-            let sha1C = MTSha1(sha1CData)!
+            let sha1C = MTSha1(sha1CData)
             
             var sha1DData = Data()
             sha1DData.count = 16 + 32
@@ -39,7 +39,7 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
                 memcpy(bytes, msgKey, 16)
                 memcpy(bytes.advanced(by: 16), key.key.memory.advanced(by: 96 + x), 32)
             }
-            let sha1D = MTSha1(sha1DData)!
+            let sha1D = MTSha1(sha1DData)
             
             var aesKey = Data()
             aesKey.count = 8 + 12 + 12
@@ -85,13 +85,13 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
             sha256_a_data.append(msgKey.assumingMemoryBound(to: UInt8.self), count: 16)
             sha256_a_data.append(key.key.memory.assumingMemoryBound(to: UInt8.self).advanced(by: xValue), count: 36)
             
-            let sha256_a = MTSha256(sha256_a_data)!
+            let sha256_a = MTSha256(sha256_a_data)
             
             var sha256_b_data = Data()
             sha256_b_data.append(key.key.memory.assumingMemoryBound(to: UInt8.self).advanced(by: 40 + xValue), count: 36)
             sha256_b_data.append(msgKey.assumingMemoryBound(to: UInt8.self), count: 16)
             
-            let sha256_b = MTSha256(sha256_b_data)!
+            let sha256_b = MTSha256(sha256_b_data)
             
             var aesKey = Data()
             aesKey.append(sha256_a.subdata(in: 0 ..< (0 + 8)))
@@ -136,7 +136,7 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
                 return nil
             }
             
-            let calculatedMsgKeyData = MTSubdataSha1(decryptedData, 0, UInt(payloadLength) + 4)!
+            let calculatedMsgKeyData = MTSubdataSha1(decryptedData, 0, UInt(payloadLength) + 4)
             let msgKeyMatches = calculatedMsgKeyData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Bool in
                 return memcmp(bytes.advanced(by: calculatedMsgKeyData.count - 16), msgKey, 16) == 0
             }
@@ -184,7 +184,7 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
             keyLargeData.append(parameters.key.key.memory.assumingMemoryBound(to: UInt8.self).advanced(by: 88 + xValue), count: 32)
             keyLargeData.append(decryptedData)
             
-            let keyLarge = MTSha256(keyLargeData)!
+            let keyLarge = MTSha256(keyLargeData)
             let localMessageKey = keyLarge.subdata(in: 8 ..< (8 + 16))
             
             let msgKeyData = Data(bytes: msgKey.assumingMemoryBound(to: UInt8.self), count: 16)
@@ -230,7 +230,7 @@ func encryptedMessageContents(parameters: SecretChatEncryptionParameters, data: 
     
     switch parameters.mode {
         case .v1:
-            var msgKey = MTSha1(payloadData)!
+            var msgKey = MTSha1(payloadData)
             msgKey.replaceSubrange(0 ..< (msgKey.count - 16), with: Data())
             
             var randomBuf = malloc(16)!
@@ -301,7 +301,7 @@ func encryptedMessageContents(parameters: SecretChatEncryptionParameters, data: 
             
             keyData.append(decryptedData)
             
-            let keyLarge = MTSha256(keyData)!
+            let keyLarge = MTSha256(keyData)
             
             let msgKey = keyLarge.subdata(in: 8 ..< (8 + 16))
             

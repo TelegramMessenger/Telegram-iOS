@@ -1,17 +1,17 @@
 import Foundation
 
-final class MutableAccountRecordsView {
-    fileprivate var records: [AccountRecord]
+final class MutableAccountRecordsView<Types: AccountManagerTypes> {
+    fileprivate var records: [AccountRecord<Types.Attribute>]
     fileprivate var currentId: AccountRecordId?
-    fileprivate var currentAuth: AuthAccountRecord?
+    fileprivate var currentAuth: AuthAccountRecord<Types.Attribute>?
     
-    init(getRecords: () -> [AccountRecord], currentId: AccountRecordId?, currentAuth: AuthAccountRecord?) {
+    init(getRecords: () -> [AccountRecord<Types.Attribute>], currentId: AccountRecordId?, currentAuth: AuthAccountRecord<Types.Attribute>?) {
         self.records = getRecords()
         self.currentId = currentId
         self.currentAuth = currentAuth
     }
     
-    func replay(operations: [AccountManagerRecordOperation], metadataOperations: [AccountManagerMetadataOperation]) -> Bool {
+    func replay(operations: [AccountManagerRecordOperation<Types.Attribute>], metadataOperations: [AccountManagerMetadataOperation<Types.Attribute>]) -> Bool {
         var updated = false
         
         for operation in operations {
@@ -61,15 +61,15 @@ final class MutableAccountRecordsView {
     }
 }
 
-public final class AccountRecordsView {
-    public let records: [AccountRecord]
-    public let currentRecord: AccountRecord?
-    public let currentAuthAccount: AuthAccountRecord?
+public final class AccountRecordsView<Types: AccountManagerTypes> {
+    public let records: [AccountRecord<Types.Attribute>]
+    public let currentRecord: AccountRecord<Types.Attribute>?
+    public let currentAuthAccount: AuthAccountRecord<Types.Attribute>?
     
-    init(_ view: MutableAccountRecordsView) {
+    init(_ view: MutableAccountRecordsView<Types>) {
         self.records = view.records
         if let currentId = view.currentId {
-            var currentRecord: AccountRecord?
+            var currentRecord: AccountRecord<Types.Attribute>?
             for record in view.records {
                 if record.id == currentId {
                     currentRecord = record
