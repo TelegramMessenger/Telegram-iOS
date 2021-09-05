@@ -332,7 +332,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     return .fail
                 }
                 
-                if strongSelf.telegramFile == nil {
+                if false, strongSelf.telegramFile == nil {
                     if let animationNode = strongSelf.animationNode, animationNode.frame.contains(point) {
                         return .waitForDoubleTap
                     }

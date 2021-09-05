@@ -22,13 +22,13 @@ extension TelegramThemeSettings {
 enum ThemeAccentColorControllerMode {
     case colors(themeReference: PresentationThemeReference, create: Bool)
     case background(themeReference: PresentationThemeReference)
-    case edit(theme: PresentationTheme, wallpaper: TelegramWallpaper?, generalThemeReference: PresentationThemeReference?, defaultThemeReference: PresentationThemeReference?, create: Bool, completion: (PresentationTheme, TelegramThemeSettings?) -> Void)
+    case edit(settings: TelegramThemeSettings?, theme: PresentationTheme, wallpaper: TelegramWallpaper?, generalThemeReference: PresentationThemeReference?, defaultThemeReference: PresentationThemeReference?, create: Bool, completion: (PresentationTheme, TelegramThemeSettings?) -> Void)
     
     var themeReference: PresentationThemeReference? {
         switch self {
             case let .colors(themeReference, _), let .background(themeReference):
                 return themeReference
-            case let .edit(_, _, _, defaultThemeReference, _, _):
+            case let .edit(_, _, _, _, defaultThemeReference, _, _):
                 return defaultThemeReference
         }
     }
@@ -135,7 +135,7 @@ final class ThemeAccentColorController: ViewController {
         
         let theme: PresentationTheme
         let initialWallpaper: TelegramWallpaper
-        if case let .edit(editedTheme, walpaper, _, _, _, _) = self.mode {
+        if case let .edit(_, editedTheme, walpaper, _, _, _, _) = self.mode {
             theme = editedTheme
             initialWallpaper = walpaper ?? editedTheme.chat.defaultWallpaper
         } else {
@@ -184,7 +184,7 @@ final class ThemeAccentColorController: ViewController {
                     prepareWallpaper = .complete()
                 }
                 
-                if case let .edit(theme, _, generalThemeReference, _, _, completion) = strongSelf.mode {
+                if case let .edit(themeSettings, theme, _, generalThemeReference, _, _, completion) = strongSelf.mode {
                     let _ = (prepareWallpaper
                     |> deliverOnMainQueue).start(completed: {
                         let updatedTheme: PresentationTheme
@@ -192,7 +192,10 @@ final class ThemeAccentColorController: ViewController {
                         var hasSettings = false
                         var baseTheme: TelegramBaseTheme?
                         
-                        if case let .cloud(theme) = generalThemeReference, let settings = theme.theme.settings {
+                        if let settings = themeSettings {
+                            hasSettings = true
+                            baseTheme = settings.baseTheme
+                        } else if case let .cloud(theme) = generalThemeReference, let settings = theme.theme.settings {
                             hasSettings = true
                             baseTheme = settings.baseTheme
                         } else if case let .builtin(theme) = generalThemeReference {
@@ -562,24 +565,34 @@ final class ThemeAccentColorController: ViewController {
                         }
                         
                         messageColors = theme.chat.message.outgoing.bubble.withWallpaper.fill.map(\.rgb)
-                        
                         animateMessageColors = theme.chat.animateMessageColors
                     }
                 }
-            } else if case let .edit(theme, wallpaper, _, _, _, _) = strongSelf.mode {
-                accentColor = theme.rootController.navigationBar.accentTextColor
-                outgoingAccentColor = nil
-                
-                let wallpaper = wallpaper ?? theme.chat.defaultWallpaper
-                extractWallpaperParameters(wallpaper)
-                
-                if !wallpaper.isColorOrGradient {
+            } else if case let .edit(settings, theme, wallpaper, _, _, _, _) = strongSelf.mode {
+                if let settings = settings {
+                    accentColor = UIColor(rgb: settings.accentColor)
+                    outgoingAccentColor = settings.outgoingAccentColor.flatMap { UIColor(rgb: $0) }
+                    
+                    let wallpaper = settings.wallpaper ?? theme.chat.defaultWallpaper
+                    extractWallpaperParameters(wallpaper)
                     initialWallpaper = wallpaper
+                    
+                    messageColors = settings.messageColors
+                    animateMessageColors = settings.animateMessageColors
+                } else {
+                    accentColor = theme.rootController.navigationBar.accentTextColor
+                    outgoingAccentColor = nil
+                    
+                    let wallpaper = wallpaper ?? theme.chat.defaultWallpaper
+                    extractWallpaperParameters(wallpaper)
+                    
+                    if !wallpaper.isColorOrGradient {
+                        initialWallpaper = wallpaper
+                    }
+                    
+                    messageColors = theme.chat.message.outgoing.bubble.withWallpaper.fill.map(\.rgb)
+                    animateMessageColors = theme.chat.animateMessageColors
                 }
-                
-                messageColors = theme.chat.message.outgoing.bubble.withWallpaper.fill.map(\.rgb)
-                
-                animateMessageColors = theme.chat.animateMessageColors
             } else {
                 accentColor = defaultDayAccentColor
                 outgoingAccentColor = nil

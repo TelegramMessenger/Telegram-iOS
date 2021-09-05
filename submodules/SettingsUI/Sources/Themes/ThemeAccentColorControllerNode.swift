@@ -295,7 +295,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.patternPanelNode = WallpaperPatternPanelNode(context: self.context, theme: self.theme, strings: self.presentationData.strings)
         
         let doneButtonType: WallpaperGalleryToolbarDoneButtonType
-        if case .edit(_, _, _, _, true, _) = self.mode {
+        if case .edit(_, _, _, _, _, true, _) = self.mode {
             doneButtonType = .proceed
         } else {
             doneButtonType = .set
@@ -497,7 +497,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             if !updateOnlyWallpaper {
                 if let themeReference = mode.themeReference {
                     updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor.color, outgoingAccentColor: outgoingAccentColor?.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
-                } else if case let .edit(theme, _, _, _, _, _) = mode {
+                } else if case let .edit(_, theme, _, _, _, _, _) = mode {
                     updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor.color, outgoingAccentColor: outgoingAccentColor?.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors)
                 } else {
                     updatedTheme = theme
@@ -749,7 +749,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 doneButtonType = .apply
                 cancelButtonType = .discard
             } else {
-                if case .edit(_, _, _, _, true, _) = self.mode {
+                if case .edit(_, _, _, _, _, true, _) = self.mode {
                     doneButtonType = .proceed
                 } else {
                     doneButtonType = .set
@@ -1189,7 +1189,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         } else {
             self.view.endEditing(true)
             
-            let wallpaper = self.state.previousPatternWallpaper ?? self.patternPanelNode.wallpapers.first
+            let wallpaper: TelegramWallpaper?
+            if let currentPatternWallpaper = self.state.patternWallpaper {
+                wallpaper = currentPatternWallpaper
+            } else {
+                wallpaper = self.state.previousPatternWallpaper ?? self.patternPanelNode.wallpapers.first
+            }
             let backgroundColors = self.currentBackgroundColors
             
             var appeared = false
