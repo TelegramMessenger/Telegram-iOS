@@ -663,7 +663,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                 })
                             }
                         case let .edit(info):
-                            let _ = (prepare |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme, title: state.title, slug: state.slug, resource: state.converting ? nil : themeResource, settings: settings, resetFile: state.converting ? true : false)
+                            let _ = (prepare |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme, title: state.title, slug: state.slug, resource: state.converting ? nil : themeResource, settings: settings)
                             |> deliverOnMainQueue)).start(next: { next in
                                 if case let .result(resultTheme) = next {
                                     let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
