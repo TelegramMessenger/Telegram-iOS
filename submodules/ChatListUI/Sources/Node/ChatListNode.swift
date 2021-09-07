@@ -806,7 +806,7 @@ public final class ChatListNode: ListView {
         
         let hideArchivedFolderByDefault = context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.chatArchiveSettings])
         |> map { view -> Bool in
-            let settings: ChatArchiveSettings = view.values[ApplicationSpecificPreferencesKeys.chatArchiveSettings] as? ChatArchiveSettings ?? .default
+            let settings: ChatArchiveSettings = view.values[ApplicationSpecificPreferencesKeys.chatArchiveSettings]?.get(ChatArchiveSettings.self) ?? .default
             return settings.isHiddenByDefault
         }
         |> distinctUntilChanged
@@ -1759,7 +1759,7 @@ public final class ChatListNode: ListView {
         let postbox = self.context.account.postbox
         return self.context.sharedContext.accountManager.transaction { transaction -> Signal<ChatListIndex?, NoError> in
             var filter = true
-            if let inAppNotificationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings {
+            if let inAppNotificationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)?.get(InAppNotificationSettings.self) {
                 switch inAppNotificationSettings.totalUnreadCountDisplayStyle {
                     case .filtered:
                         filter = true

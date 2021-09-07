@@ -1335,22 +1335,26 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var addedContentNodes: [(Message, Bool, ChatMessageBubbleContentNode)]?
         
         let (contentNodeMessagesAndClasses, needSeparateContainers) = contentNodeMessagesAndClassesForItem(item)
-        for (contentNodeMessage, contentNodeClass, attributes, bubbleAttributes) in contentNodeMessagesAndClasses {
+        for contentNodeItemValue in contentNodeMessagesAndClasses {
+            let contentNodeItem = contentNodeItemValue as (message: Message, type: AnyClass, attributes: ChatMessageEntryAttributes, bubbleAttributes: BubbleItemAttributes)
+
             var found = false
-            for (currentMessage, currentClass, supportsMosaic, currentLayout) in currentContentClassesPropertiesAndLayouts {
-                if currentClass == contentNodeClass && currentMessage.stableId == contentNodeMessage.stableId {
-                    contentPropertiesAndPrepareLayouts.append((contentNodeMessage, supportsMosaic, attributes, bubbleAttributes, currentLayout))
+            for currentNodeItemValue in currentContentClassesPropertiesAndLayouts {
+                let currentNodeItem = currentNodeItemValue as (message: Message, type: AnyClass, supportsMosaic: Bool, currentLayout: (ChatMessageBubbleContentItem, ChatMessageItemLayoutConstants, ChatMessageBubblePreparePosition, Bool?, CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))))
+
+                if currentNodeItem.type == contentNodeItem.type && currentNodeItem.message.stableId == contentNodeItem.message.stableId {
+                    contentPropertiesAndPrepareLayouts.append((contentNodeItem.message, currentNodeItem.supportsMosaic, contentNodeItem.attributes, contentNodeItem.bubbleAttributes, currentNodeItem.currentLayout))
                     found = true
                     break
                 }
             }
             if !found {
-                let contentNode = (contentNodeClass as! ChatMessageBubbleContentNode.Type).init()
-                contentPropertiesAndPrepareLayouts.append((contentNodeMessage, contentNode.supportsMosaic, attributes, bubbleAttributes, contentNode.asyncLayoutContent()))
+                let contentNode = (contentNodeItem.type as! ChatMessageBubbleContentNode.Type).init()
+                contentPropertiesAndPrepareLayouts.append((contentNodeItem.message, contentNode.supportsMosaic, contentNodeItem.attributes, contentNodeItem.bubbleAttributes, contentNode.asyncLayoutContent()))
                 if addedContentNodes == nil {
                     addedContentNodes = []
                 }
-                addedContentNodes!.append((contentNodeMessage, bubbleAttributes.isAttachment, contentNode))
+                addedContentNodes!.append((contentNodeItem.message, contentNodeItem.bubbleAttributes.isAttachment, contentNode))
             }
         }
         
@@ -1862,8 +1866,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         findRemoved: for i in 0 ..< currentContentClassesPropertiesAndLayouts.count {
             let currentMessage = currentContentClassesPropertiesAndLayouts[i].0
             let currentClass: AnyClass = currentContentClassesPropertiesAndLayouts[i].1
-            for (contentNodeMessage, contentNodeClass, _, _) in contentNodeMessagesAndClasses {
-                if currentClass == contentNodeClass && currentMessage.stableId == contentNodeMessage.stableId {
+            for contentItemValue in contentNodeMessagesAndClasses {
+                let contentItem = contentItemValue as (message: Message, type: AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)
+
+                if currentClass == contentItem.type && currentMessage.stableId == contentItem.message.stableId {
                     continue findRemoved
                 }
             }
@@ -1944,7 +1950,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     bottomLeft = .merged
                     bottomRight = .merged
                 } else {
-                    switch lastNodeTopPosition {
+                    var switchValue = lastNodeTopPosition
+                    if !"".isEmpty {
+                        switchValue = .BubbleNeighbour
+                    }
+
+                    switch switchValue {
                         case .Neighbour:
                             bottomLeft = .merged
                             bottomRight = .merged
@@ -2685,17 +2696,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             
             var sortedContentNodes: [ChatMessageBubbleContentNode] = []
-            outer: for (message, nodeClass, _, _) in contentNodeMessagesAndClasses {
+            outer: for contentItemValue in contentNodeMessagesAndClasses {
+                let contentItem = contentItemValue as (message: Message, type: AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)
+
                 if let addedContentNodes = addedContentNodes {
                     for (contentNodeMessage, _, contentNode) in addedContentNodes {
-                        if type(of: contentNode) == nodeClass && contentNodeMessage.stableId == message.stableId {
+                        if type(of: contentNode) == contentItem.type && contentNodeMessage.stableId == contentItem.message.stableId {
                             sortedContentNodes.append(contentNode)
                             continue outer
                         }
                     }
                 }
                 for contentNode in updatedContentNodes {
-                    if type(of: contentNode) == nodeClass && contentNode.item?.message.stableId == message.stableId {
+                    if type(of: contentNode) == contentItem.type && contentNode.item?.message.stableId == contentItem.message.stableId {
                         sortedContentNodes.append(contentNode)
                         continue outer
                     }

@@ -229,14 +229,14 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
                         return []
                     case .Animated:
                         return []
-                    case let .Video(video):
-                        if video.flags.contains(.instantRoundVideo) {
+                    case let .Video(_, _, flags):
+                        if flags.contains(.instantRoundVideo) {
                             return []
                         } else {
                             options.formUnion([.imageOrVideo, .file])
                         }
-                    case let .Audio(audio):
-                        if audio.isVoice {
+                    case let .Audio(isVoice, _, _, _, _):
+                        if isVoice {
                             return []
                         } else {
                             if let _ = message.groupingKey {
@@ -464,7 +464,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     }
     
     let loadLimits = context.account.postbox.transaction { transaction -> LimitsConfiguration in
-        return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+        return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
     }
     
     let cachedData = context.account.postbox.transaction { transaction -> CachedPeerData? in
@@ -1131,7 +1131,7 @@ private func canPerformDeleteActions(limits: LimitsConfiguration, accountPeerId:
 
 func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message] = [:], peers: [PeerId: Peer] = [:]) -> Signal<ChatAvailableMessageActions, NoError> {
     return postbox.transaction { transaction -> ChatAvailableMessageActions in
-        let limitsConfiguration: LimitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+        let limitsConfiguration: LimitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
         var banPeer: Peer?
         var hadPersonalIncoming = false
@@ -1166,8 +1166,8 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
             if let message = getMessage(id) {
                 for media in message.media {
                     if let file = media as? TelegramMediaFile, file.isSticker {
-                        for case let .Sticker(sticker) in file.attributes {
-                            if let _ = sticker.packReference {
+                        for case let .Sticker(_, packReference, _) in file.attributes {
+                            if let _ = packReference {
                                 optionsMap[id]!.insert(.viewStickerPack)
                             }
                             break

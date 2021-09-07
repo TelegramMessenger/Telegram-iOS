@@ -9,7 +9,9 @@ public final class CachedResolvedByNamePeer: PostboxCoding {
         let key: ValueBoxKey
         if let nameData = name.data(using: .utf8) {
             key = ValueBoxKey(length: nameData.count)
-            nameData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+            nameData.withUnsafeBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
                 memcpy(key.memory, bytes, nameData.count)
             }
         } else {

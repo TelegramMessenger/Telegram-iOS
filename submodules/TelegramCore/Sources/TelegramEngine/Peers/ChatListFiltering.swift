@@ -277,9 +277,9 @@ public struct ChatListFilter: Codable, Equatable {
         try container.encodeIfPresent(self.emoticon, forKey: "emoticon")
 
         try container.encode(self.data.categories.rawValue, forKey: "categories")
-        try container.encode(self.data.excludeMuted ? 1 : 0, forKey: "excludeMuted")
-        try container.encode(self.data.excludeRead ? 1 : 0, forKey: "excludeRead")
-        try container.encode(self.data.excludeArchived ? 1 : 0, forKey: "excludeArchived")
+        try container.encode((self.data.excludeMuted ? 1 : 0) as Int32, forKey: "excludeMuted")
+        try container.encode((self.data.excludeRead ? 1 : 0) as Int32, forKey: "excludeRead")
+        try container.encode((self.data.excludeArchived ? 1 : 0) as Int32, forKey: "excludeArchived")
         try container.encode(self.data.includePeers.peers.map { $0.toInt64() }, forKey: "includePeers")
         try container.encode(self.data.includePeers.pinnedPeers.map { $0.toInt64() }, forKey: "pinnedPeers")
         try container.encode(self.data.excludePeers.map { $0.toInt64() }, forKey: "excludePeers")

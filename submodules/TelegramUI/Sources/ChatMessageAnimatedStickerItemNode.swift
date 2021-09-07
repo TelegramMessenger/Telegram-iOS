@@ -1388,7 +1388,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let appConfiguration = item.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
                         |> take(1)
                         |> map { view in
-                            return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+                            return view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
                         }
                                                 
                         if let text = self.item?.message.text, var firstScalar = text.unicodeScalars.first {

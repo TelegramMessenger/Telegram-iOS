@@ -22,16 +22,20 @@ public struct ChatTheme: Codable, Equatable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.emoji = try container.decode(String.self, forKey: "e")
-        self.theme = try container.decode(TelegramTheme.self, forKey: "t")
-        self.darkTheme = try container.decode(TelegramTheme.self, forKey: "dt")
+
+        let themeData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: "t")
+        self.theme = TelegramTheme(decoder: PostboxDecoder(buffer: MemoryBuffer(data: themeData.data)))
+
+        let darkThemeData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: "dt")
+        self.darkTheme = TelegramTheme(decoder: PostboxDecoder(buffer: MemoryBuffer(data: darkThemeData.data)))
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         try container.encode(self.emoji, forKey: "e")
-        try container.encode(self.theme, forKey: "t")
-        try container.encode(self.darkTheme, forKey: "dt")
+        try container.encode(PostboxEncoder().encodeObjectToRawData(self.theme), forKey: "t")
+        try container.encode(PostboxEncoder().encodeObjectToRawData(self.darkTheme), forKey: "dt")
     }
 }
 

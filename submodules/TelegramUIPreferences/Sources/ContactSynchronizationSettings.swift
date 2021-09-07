@@ -29,11 +29,11 @@ public struct ContactSynchronizationSettings: Equatable, Codable {
     }
     
     public init(from decoder: Decoder) throws {
-        let container = decoder.container(keyedBy: StringCodingKey.self)
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self._legacySynchronizeDeviceContacts = (try container.decode(Int32.self, forKey: "synchronizeDeviceContacts")) != 0
         self.nameDisplayOrder = PresentationPersonNameOrder(rawValue: try container.decode(Int32.self, forKey: "nameDisplayOrder")) ?? .firstLast
-        self.sortOrder = ContactsSortOrder(rawValue: try container.decode(Int32.self, forKey: "sortOrder", orElse: 0)) ?? .presence
+        self.sortOrder = ContactsSortOrder(rawValue: try container.decode(Int32.self, forKey: "sortOrder")) ?? .presence
     }
     
     public func encode(to encoder: Encoder) throws {

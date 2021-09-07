@@ -109,7 +109,7 @@ func _internal_editPeerExportedInvitation(account: Account, peerId: PeerId, link
                     } else {
                         return nil
                     }
-                } |> mapError { _ in .generic }
+                } |> mapError { _ -> EditPeerExportedInvitationError in }
             }
         } else {
             return .complete()
@@ -179,7 +179,7 @@ func _internal_revokePeerExportedInvitation(account: Account, peerId: PeerId, li
                     } else {
                         return nil
                     }
-                } |> mapError { _ in .generic }
+                } |> mapError { _ -> RevokePeerExportedInvitationError in }
             }
         } else {
             return .complete()

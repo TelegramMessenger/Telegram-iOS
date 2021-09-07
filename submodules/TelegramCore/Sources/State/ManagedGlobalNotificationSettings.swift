@@ -15,6 +15,7 @@ public func updateGlobalNotificationSettingsInteractively(postbox: Postbox, _ f:
                 return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: settings, remote: settings))
             }
         })
+        transaction.globalNotificationSettingsUpdated()
     }
 }
 
@@ -83,6 +84,7 @@ func managedGlobalNotificationSettings(postbox: Postbox, network: Network) -> Si
                                 return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: nil, remote: settings))
                             }
                         })
+                        transaction.globalNotificationSettingsUpdated()
                     }
                 }
             case let .push(settings):
@@ -95,6 +97,7 @@ func managedGlobalNotificationSettings(postbox: Postbox, network: Network) -> Si
                                 return current
                             }
                         })
+                        transaction.globalNotificationSettingsUpdated()
                     })
         }
     }

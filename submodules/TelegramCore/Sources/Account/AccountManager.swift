@@ -189,7 +189,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedRecentPeers.self, f: { CachedRecentPeers(decoder: $0) })
     //declareEncodable(AppChangelogState.self, f: { AppChangelogState(decoder: $0) })
     //declareEncodable(AppConfiguration.self, f: { AppConfiguration(decoder: $0) })
-    declareEncodable(JSON.self, f: { JSON(decoder: $0) })
+    //declareEncodable(JSON.self, f: { JSON(decoder: $0) })
     //declareEncodable(SearchBotsConfiguration.self, f: { SearchBotsConfiguration(decoder: $0) })
     //declareEncodable(AutodownloadSettings.self, f: { AutodownloadSettings(decoder: $0 )})
     declareEncodable(TelegramMediaPoll.self, f: { TelegramMediaPoll(decoder: $0) })

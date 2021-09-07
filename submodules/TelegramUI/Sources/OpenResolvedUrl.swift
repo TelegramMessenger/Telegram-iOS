@@ -106,7 +106,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case let .stickerPack(name):
             dismissInput()
-            if false {
+            /*if false {
                 var mainStickerPack: StickerPackReference?
                 var stickerPacks: [StickerPackReference] = []
                 if let message = contentContext as? Message {
@@ -140,10 +140,10 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     let controller = StickerPackScreen(context: context, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, parentNavigationController: navigationController, sendSticker: sendSticker)
                     present(controller, nil)
                 }
-            } else {
+            } else {*/
                 let controller = StickerPackScreen(context: context, mainStickerPack: .name(name), stickerPacks: [.name(name)], parentNavigationController: navigationController, sendSticker: sendSticker)
                 present(controller, nil)
-            }
+            //}
         case let .instantView(webpage, anchor):
             navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
         case let .join(link):

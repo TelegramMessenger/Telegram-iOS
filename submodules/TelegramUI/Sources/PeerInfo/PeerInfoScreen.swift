@@ -2505,14 +2505,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     strongSelf.controller?.present(statusController, in: .window(.root))
                                 }
                                 strongSelf.activeActionDisposable.set((combineLatest(updateNameSignal, updateBioSignal) |> deliverOnMainQueue
-                                |> deliverOnMainQueue).start(error: { _ in
-                                    dismissStatus?()
-                                    
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
-                                }, completed: {
+                                |> deliverOnMainQueue).start(completed: {
                                     dismissStatus?()
                                     
                                     guard let strongSelf = self else {
@@ -2812,8 +2805,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 
                 var currentIsVideo = false
                 let item = strongSelf.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
-                if let item = item, case let .image(image) = item {
-                    currentIsVideo = !image.2.isEmpty
+                if let item = item, case let .image(_, _, videoRepresentations, _) = item {
+                    currentIsVideo = !videoRepresentations.isEmpty
                 }
                 
                 let items: [ContextMenuItem] = [
@@ -4114,7 +4107,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         let peerId = self.peerId
         let _ = (self.context.account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
             let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
-            let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
+            let globalSettings: GlobalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) ?? GlobalNotificationSettings.defaultSettings
             return (peerSettings, globalSettings)
         }
         |> deliverOnMainQueue).start(next: { [weak self] peerSettings, globalSettings in
@@ -4148,7 +4141,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         let peerId = self.peerId
         let _ = (self.context.account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
             let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
-            let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
+            let globalSettings: GlobalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) ?? GlobalNotificationSettings.defaultSettings
             return (peerSettings, globalSettings)
         }
         |> deliverOnMainQueue).start(next: { [weak self] peerSettings, globalSettings in
@@ -5232,8 +5225,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         var currentIsVideo = false
         let item = self.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
-        if let item = item, case let .image(image) = item {
-            currentIsVideo = !image.2.isEmpty
+        if let item = item, case let .image(_, _, videoRepresentations, _) = item {
+            currentIsVideo = !videoRepresentations.isEmpty
         }
         
         let peerId = self.peerId
@@ -6575,7 +6568,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
             
             let notificationsFromAllAccounts = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
             |> map { sharedData -> Bool in
-                let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+                let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
                 return settings.displayNotificationsFromAllAccounts
             }
             |> distinctUntilChanged

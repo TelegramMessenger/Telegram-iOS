@@ -444,6 +444,15 @@ public final class PostboxEncoder {
             return
         }
     }
+
+    public func encodeObjectToRawData<T: PostboxCoding>(_ value: T) -> AdaptedPostboxEncoder.RawObjectData {
+        let typeHash: Int32 = murMurHashString32("\(type(of: value))")
+
+        let innerEncoder = PostboxEncoder()
+        value.encode(innerEncoder)
+
+        return AdaptedPostboxEncoder.RawObjectData(typeHash: typeHash, data: innerEncoder.makeData())
+    }
     
     public func encodeObjectArray<T: PostboxCoding>(_ value: [T], forKey key: String) {
         self.encodeKey(key)
@@ -649,7 +658,7 @@ public final class PostboxEncoder {
         let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
         try! value.encode(to: innerEncoder)
 
-        let (data, valueType) = innerEncoder.makeData(addHeader: true)
+        let (data, valueType) = innerEncoder.makeData(addHeader: true, isDictionary: false)
         self.encodeInnerObjectData(data, valueType: valueType, forKey: key)
     }
 
@@ -1010,6 +1019,10 @@ public final class PostboxDecoder {
     
     public func decodeRootObject() -> PostboxCoding? {
         return self.decodeObjectForKey("_")
+    }
+
+    public func decodeRootObjectWithHash(hash: Int32) -> PostboxCoding? {
+        return typeStore.decode(hash, decoder: self)
     }
     
     public func decodeCodable<T: Codable>(_ type: T.Type, forKey key: String) -> T? {
@@ -1651,6 +1664,43 @@ public final class PostboxDecoder {
             return [:]
         }
     }
+
+    public func decodeObjectDataDictRaw() -> [(Data, Data)] {
+        var dict: [(Data, Data)] = []
+
+        var length: Int32 = 0
+        memcpy(&length, self.buffer.memory + self.offset, 4)
+        self.offset += 4
+
+        var i: Int32 = 0
+        while i < length {
+            var keyHash: Int32 = 0
+            memcpy(&keyHash, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+
+            var keyLength: Int32 = 0
+            memcpy(&keyLength, self.buffer.memory + self.offset, 4)
+
+            let keyData = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(keyLength), freeWhenDone: false).makeData()
+            self.offset += 4 + Int(keyLength)
+
+            var valueHash: Int32 = 0
+            memcpy(&valueHash, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+
+            var valueLength: Int32 = 0
+            memcpy(&valueLength, self.buffer.memory + self.offset, 4)
+
+            let objectData = ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(valueLength), freeWhenDone: false).makeData()
+            self.offset += 4 + Int(valueLength)
+
+            dict.append((keyData, objectData))
+
+            i += 1
+        }
+
+        return dict
+    }
     
     public func decodeBytesForKeyNoCopy(_ key: String) -> ReadBuffer? {
         if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Bytes) {
@@ -1728,7 +1778,13 @@ public final class PostboxDecoder {
             let innerData = innerBuffer.makeData()
             self.offset += 4 + Int(length)
 
-            return try? AdaptedPostboxDecoder().decode(T.self, from: innerData)
+            do {
+                let result = try AdaptedPostboxDecoder().decode(T.self, from: innerData)
+                return result
+            } catch let error {
+                assertionFailure("Decoding error: \(error)")
+                return nil
+            }
         } else {
             return nil
         }

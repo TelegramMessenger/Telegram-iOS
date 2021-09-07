@@ -14,12 +14,12 @@ private enum VerticalChatContextResultsEntryStableId: Hashable {
     case action
     case result(ChatContextResult)
     
-    var hashValue: Int {
+    func hash(into hasher: inout Hasher) {
         switch self {
             case .action:
-                return 0
+                hasher.combine(0)
             case let .result(result):
-                return result.id.hashValue
+                hasher.combine(result.id.hashValue)
         }
     }
     

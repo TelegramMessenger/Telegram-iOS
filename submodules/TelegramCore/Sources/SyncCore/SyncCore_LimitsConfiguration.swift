@@ -64,7 +64,7 @@ public struct LimitsConfiguration: Codable, Equatable {
         try container.encode(self.maxRecentStickerCount, forKey: "maxRecentStickerCount")
         try container.encode(self.maxMessageEditingInterval, forKey: "maxMessageEditingInterval")
         try container.encode(self.maxMediaCaptionLength, forKey: "maxMediaCaptionLength")
-        try container.encode(self.canRemoveIncomingMessagesInPrivateChats ? 1 : 0, forKey: "canRemoveIncomingMessagesInPrivateChats")
+        try container.encode((self.canRemoveIncomingMessagesInPrivateChats ? 1 : 0) as Int32, forKey: "canRemoveIncomingMessagesInPrivateChats")
         try container.encode(self.maxMessageRevokeInterval, forKey: "maxMessageRevokeInterval")
         try container.encode(self.maxMessageRevokeIntervalInPrivateChats, forKey: "maxMessageRevokeIntervalInPrivateChats")
     }

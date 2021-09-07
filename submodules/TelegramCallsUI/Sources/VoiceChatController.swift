@@ -1899,7 +1899,7 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 
-                let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+                let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
                 let configuration = VoiceChatConfiguration.with(appConfiguration: appConfiguration)
                 strongSelf.configuration = configuration
                 

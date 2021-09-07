@@ -262,7 +262,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         let hasProxy = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
         |> map { sharedData -> (Bool, Bool) in
-            if let settings = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+            if let settings = sharedData.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) {
                 return (!settings.servers.isEmpty, settings.enabled)
             } else {
                 return (false, false)
@@ -1192,7 +1192,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let context = self.context
             let signal = combineLatest(self.context.sharedContext.accountManager.transaction { transaction -> String in
                 let languageCode: String
-                if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
+                if let current = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) {
                     let code = current.primaryComponent.languageCode
                     let rawSuffix = "-raw"
                     if code.hasSuffix(rawSuffix) {
@@ -1206,7 +1206,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return languageCode
             }, self.context.account.postbox.transaction { transaction -> SuggestedLocalizationEntry? in
                 var suggestedLocalization: SuggestedLocalizationEntry?
-                if let localization = transaction.getPreferencesEntry(key: PreferencesKeys.suggestedLocalization) as? SuggestedLocalizationEntry {
+                if let localization = transaction.getPreferencesEntry(key: PreferencesKeys.suggestedLocalization)?.get(SuggestedLocalizationEntry.self) {
                     suggestedLocalization = localization
                 }
                 return suggestedLocalization
@@ -1291,7 +1291,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 PreferencesKeys.chatListFiltersFeaturedState
             ])
             |> mapToSignal { view -> Signal<Bool, NoError> in
-                if let entry = view.values[PreferencesKeys.chatListFiltersFeaturedState] as? ChatListFiltersFeaturedState {
+                if let entry = view.values[PreferencesKeys.chatListFiltersFeaturedState]?.get(ChatListFiltersFeaturedState.self) {
                     return .single(!entry.filters.isEmpty && !entry.isSeen)
                 } else {
                     return .complete()
@@ -1537,7 +1537,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         let experimentalUISettingsKey: ValueBoxKey = ApplicationSpecificSharedDataKeys.experimentalUISettings
         let displayTabsAtBottom = self.context.sharedContext.accountManager.sharedData(keys: Set([experimentalUISettingsKey]))
         |> map { sharedData -> Bool in
-            let settings: ExperimentalUISettings = sharedData.entries[experimentalUISettingsKey] as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+            let settings: ExperimentalUISettings = sharedData.entries[experimentalUISettingsKey]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
             return settings.foldersTabAtBottom
         }
         |> distinctUntilChanged

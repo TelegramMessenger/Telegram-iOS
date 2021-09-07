@@ -255,14 +255,14 @@ final class ChatMessageAccessibilityData {
                                             label = item.presentationData.strings.VoiceOver_Chat_YourSticker
                                         }
                                     }
-                                case let .Audio(audio):
+                                case let .Audio(isVoice, duration, title, performer, _):
                                     isSpecialFile = true
                                     if isSelected == nil {
                                         hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
                                     }
                                     traits.insert(.startsMediaSession)
-                                    if audio.isVoice {
-                                        let durationString = voiceMessageDurationFormatter.string(from: Double(audio.duration)) ?? ""
+                                    if isVoice {
+                                        let durationString = voiceMessageDurationFormatter.string(from: Double(duration)) ?? ""
                                         if isIncoming {
                                             if announceIncomingAuthors, let authorName = authorName {
                                                 label = item.presentationData.strings.VoiceOver_Chat_VoiceMessageFrom(authorName).string
@@ -274,7 +274,7 @@ final class ChatMessageAccessibilityData {
                                         }
                                         text = item.presentationData.strings.VoiceOver_Chat_Duration(durationString).string
                                     } else {
-                                        let durationString = musicDurationFormatter.string(from: Double(audio.duration)) ?? ""
+                                        let durationString = musicDurationFormatter.string(from: Double(duration)) ?? ""
                                         if isIncoming {
                                             if announceIncomingAuthors, let authorName = authorName {
                                                 label = item.presentationData.strings.VoiceOver_Chat_MusicFrom(authorName).string
@@ -284,20 +284,20 @@ final class ChatMessageAccessibilityData {
                                         } else {
                                             label = item.presentationData.strings.VoiceOver_Chat_YourMusic
                                         }
-                                        let performer = audio.performer ?? "Unknown"
-                                        let title = audio.title ?? "Unknown"
+                                        let performer = performer ?? "Unknown"
+                                        let title = title ?? "Unknown"
                                         
                                         text = item.presentationData.strings.VoiceOver_Chat_MusicTitle(title, performer).string
                                         text.append(item.presentationData.strings.VoiceOver_Chat_Duration(durationString).string)
                                     }
-                                case let .Video(video):
+                                case let .Video(duration, _, flags):
                                     isSpecialFile = true
                                     if isSelected == nil {
                                         hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
                                     }
                                     traits.insert(.startsMediaSession)
-                                    let durationString = voiceMessageDurationFormatter.string(from: Double(video.duration)) ?? ""
-                                    if video.flags.contains(.instantRoundVideo) {
+                                    let durationString = voiceMessageDurationFormatter.string(from: Double(duration)) ?? ""
+                                    if flags.contains(.instantRoundVideo) {
                                         if isIncoming {
                                             if announceIncomingAuthors, let authorName = authorName {
                                                 label = item.presentationData.strings.VoiceOver_Chat_VideoMessageFrom(authorName).string
@@ -895,10 +895,6 @@ public class ChatMessageItemView: ListViewItemNode {
     }
     
     override public var preferredAnimationCurve: (CGFloat) -> CGFloat {
-        if false, let item = self.item, let subject = item.associatedData.subject, case .forwardedMessages = subject {
-            return listViewAnimationCurveEaseInOut
-        } else {
-            return listViewAnimationCurveSystem
-        }
+        return listViewAnimationCurveSystem
     }
 }

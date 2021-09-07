@@ -823,7 +823,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = (context.account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
             let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
-            let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
+            let globalSettings: GlobalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) ?? GlobalNotificationSettings.defaultSettings
             return (peerSettings, globalSettings)
         }
         |> deliverOnMainQueue).start(next: { peerSettings, globalSettings in
@@ -929,7 +929,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             
             var globalNotificationSettings: GlobalNotificationSettings = GlobalNotificationSettings.defaultSettings
             if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
-                if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                if let settings = preferencesView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
                     globalNotificationSettings = settings
                 }
             }

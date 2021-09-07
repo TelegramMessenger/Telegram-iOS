@@ -34,7 +34,7 @@ public func renderedTotalUnreadCount(accountManager: AccountManager<TelegramAcco
         }
         
         let inAppSettings: InAppNotificationSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) {
             inAppSettings = value
         } else {
             inAppSettings = .defaultSettings

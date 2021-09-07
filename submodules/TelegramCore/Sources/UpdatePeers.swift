@@ -152,9 +152,9 @@ func updateContacts(transaction: Transaction, apiUsers: [Api.User]) {
     for user in apiUsers {
         var isContact: Bool?
         switch user {
-        case let .user(user):
-            if (user.flags & (1 << 20)) == 0 {
-                isContact = (user.flags & (1 << 11)) != 0
+        case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _):
+            if (flags & (1 << 20)) == 0 {
+                isContact = (flags & (1 << 11)) != 0
             }
         case .userEmpty:
             isContact = false

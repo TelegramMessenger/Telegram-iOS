@@ -479,7 +479,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             inputData = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.musicPlaybackSettings])
             |> take(1)
             |> mapToSignal { sharedData -> Signal<(Account, SharedMediaPlaylist, MusicPlaybackSettings, MediaPlaybackStoredState?)?, NoError> in
-                let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.musicPlaybackSettings] as? MusicPlaybackSettings) ?? MusicPlaybackSettings.defaultSettings
+                let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.musicPlaybackSettings]?.get(MusicPlaybackSettings.self) ?? MusicPlaybackSettings.defaultSettings
                 
                 if let location = playlist.location as? PeerMessagesPlaylistLocation, let messageId = location.messageId {
                     return mediaPlaybackStoredState(postbox: account.postbox, messageId: messageId)

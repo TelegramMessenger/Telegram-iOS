@@ -15,11 +15,11 @@ func _internal_twoStepVerificationConfiguration(account: Account) -> Signal<TwoS
     |> retryRequest
     |> map { result -> TwoStepVerificationConfiguration in
         switch result {
-            case let .password(password):
-                if password.currentAlgo != nil {
-                    return .set(hint: password.hint ?? "", hasRecoveryEmail: (password.flags & (1 << 0)) != 0, pendingEmail: password.emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }), hasSecureValues: (password.flags & (1 << 1)) != 0, pendingResetTimestamp: password.pendingResetDate)
+            case let .password(flags, currentAlgo, _, _, hint, emailUnconfirmedPattern, _, _, _, pendingResetDate):
+                if currentAlgo != nil {
+                    return .set(hint: hint ?? "", hasRecoveryEmail: (flags & (1 << 0)) != 0, pendingEmail: emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }), hasSecureValues: (flags & (1 << 1)) != 0, pendingResetTimestamp: pendingResetDate)
                 } else {
-                    return .notSet(pendingEmail: password.emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }))
+                    return .notSet(pendingEmail: emailUnconfirmedPattern.flatMap({ TwoStepVerificationPendingEmail(pattern: $0, codeLength: nil) }))
                 }
         }
     }

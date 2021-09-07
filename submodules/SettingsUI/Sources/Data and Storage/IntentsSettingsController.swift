@@ -305,7 +305,7 @@ public func intentsSettingsController(context: AccountContext) -> ViewController
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings]), activeAccountsAndPeers(context: context, includePrimary: true))
     |> deliverOnMainQueue
     |> map { presentationData, sharedData, accounts -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings) ?? IntentsSettings.defaultSettings
+        let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings]?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.IntentsSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: intentsSettingsControllerEntries(context: context, presentationData: presentationData, settings: settings, accounts: accounts.1.map { ($0.0.account, $0.1) }), style: .blocks, animateChanges: false)

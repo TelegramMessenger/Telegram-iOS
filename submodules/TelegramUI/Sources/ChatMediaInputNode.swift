@@ -1077,7 +1077,7 @@ final class ChatMediaInputNode: ChatInputNode {
             guard let view = views.views[preferencesViewKey] as? PreferencesView else {
                 return defaultReactions
             }
-            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
                 return defaultReactions
             }
             guard let data = appConfiguration.data, let emojis = data["gif_search_emojies"] as? [String] else {

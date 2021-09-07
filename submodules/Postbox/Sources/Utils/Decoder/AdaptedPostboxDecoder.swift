@@ -8,9 +8,10 @@ final public class AdaptedPostboxDecoder {
         case objectArray
         case stringArray
         case dataArray
+        case objectDict
     }
 
-    public final class RawObjectData: Codable {
+    public final class RawObjectData: Decodable {
         public let data: Data
         public let typeHash: Int32
 
@@ -55,7 +56,7 @@ extension AdaptedPostboxDecoder.ContentType {
         case .ObjectArray:
             self = .objectArray
         case .ObjectDictionary:
-            return nil
+            self = .objectDict
         case .Bytes:
             return nil
         case .Nil:
@@ -117,6 +118,8 @@ extension _AdaptedPostboxDecoder: Decoder {
             content = .stringArray(decoder.decodeStringArrayRaw())
         case .dataArray:
             content = .dataArray(decoder.decodeBytesArrayRaw().map { $0.makeData() })
+        case .objectDict:
+            content = .objectDict(decoder.decodeObjectDataDictRaw())
         }
 
         if let content = content {

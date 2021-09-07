@@ -72,7 +72,27 @@ public final class SeedConfiguration {
     public let getGlobalNotificationSettings: (Transaction) -> PostboxGlobalNotificationSettings?
     public let defaultGlobalNotificationSettings: PostboxGlobalNotificationSettings
     
-    public init(globalMessageIdsPeerIdNamespaces: Set<GlobalMessageIdsNamespace>, initializeChatListWithHole: (topLevel: ChatListHole?, groups: ChatListHole?), messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]], upgradedMessageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]], messageThreadHoles: [PeerId.Namespace: [MessageId.Namespace]], existingMessageTags: MessageTags, messageTagsWithSummary: MessageTags, existingGlobalMessageTags: GlobalMessageTags, peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace], peerSummaryCounterTags: @escaping (Peer, Bool) -> PeerSummaryCounterTags, additionalChatListIndexNamespace: MessageId.Namespace?, messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>, defaultMessageNamespaceReadStates: [MessageId.Namespace: PeerReadState], chatMessagesNamespaces: Set<MessageId.Namespace>, getGlobalNotificationSettings: @escaping (Transaction) -> PostboxGlobalNotificationSettings?, defaultGlobalNotificationSettings: PostboxGlobalNotificationSettings) {
+    public init(
+        globalMessageIdsPeerIdNamespaces: Set<GlobalMessageIdsNamespace>,
+        initializeChatListWithHole: (
+            topLevel: ChatListHole?,
+            groups: ChatListHole?
+        ),
+        messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]],
+        upgradedMessageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]],
+        messageThreadHoles: [PeerId.Namespace: [MessageId.Namespace]],
+        existingMessageTags: MessageTags,
+        messageTagsWithSummary: MessageTags,
+        existingGlobalMessageTags: GlobalMessageTags,
+        peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace],
+        peerSummaryCounterTags: @escaping (Peer, Bool) -> PeerSummaryCounterTags,
+        additionalChatListIndexNamespace: MessageId.Namespace?,
+        messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>,
+        defaultMessageNamespaceReadStates: [MessageId.Namespace: PeerReadState],
+        chatMessagesNamespaces: Set<MessageId.Namespace>,
+        getGlobalNotificationSettings: @escaping (Transaction) -> PostboxGlobalNotificationSettings?,
+        defaultGlobalNotificationSettings: PostboxGlobalNotificationSettings
+    ) {
         self.globalMessageIdsPeerIdNamespaces = globalMessageIdsPeerIdNamespaces
         self.initializeChatListWithHole = initializeChatListWithHole
         self.messageHoles = messageHoles

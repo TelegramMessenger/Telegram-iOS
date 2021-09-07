@@ -644,7 +644,7 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     |> deliverOnMainQueue
     |> map { presentationData, state, view, temporaryPackOrder, featuredAndArchived, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var stickerSettings = StickerSettings.defaultSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
            stickerSettings = value
         }
         

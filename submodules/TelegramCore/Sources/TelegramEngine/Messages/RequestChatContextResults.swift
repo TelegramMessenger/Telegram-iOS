@@ -115,7 +115,7 @@ func _internal_requestChatContextResults(account: Account, botId: PeerId, peerId
             }
             if let (latitude, longitude) = location {
                 flags |= (1 << 0)
-                var geoPointFlags: Int32 = 0
+                let geoPointFlags: Int32 = 0
                 geoPoint = Api.InputGeoPoint.inputGeoPoint(flags: geoPointFlags, lat: latitude, long: longitude, accuracyRadius: nil)
             }
             

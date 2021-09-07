@@ -14,14 +14,16 @@ enum CachedSentMediaReferenceKey {
             case let .image(hash):
                 let result = ValueBoxKey(length: 1 + hash.count)
                 result.setUInt8(0, value: 0)
-                hash.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+                hash.withUnsafeBytes { rawBytes -> Void in
+                    let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                     memcpy(result.memory.advanced(by: 1), bytes, hash.count)
                 }
                 return result
             case let .file(hash):
                 let result = ValueBoxKey(length: 1 + hash.count)
                 result.setUInt8(0, value: 1)
-                hash.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+                hash.withUnsafeBytes { rawBytes -> Void in
+                    let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                     memcpy(result.memory.advanced(by: 1), bytes, hash.count)
                 }
                 return result

@@ -408,7 +408,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
     cacheSettingsPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])
     |> map { sharedData -> CacheStorageSettings in
         let cacheSettings: CacheStorageSettings
-        if let value = sharedData.entries[SharedDataKeys.cacheStorageSettings] as? CacheStorageSettings {
+        if let value = sharedData.entries[SharedDataKeys.cacheStorageSettings]?.get(CacheStorageSettings.self) {
             cacheSettings = value
         } else {
             cacheSettings = CacheStorageSettings.defaultSettings

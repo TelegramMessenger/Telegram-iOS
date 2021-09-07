@@ -103,11 +103,7 @@ private let applicationSpecificPreferencesKeyMapping: [LegacyApplicationSpecific
 ]
 
 private func upgradedSharedDataValue(_ value: PreferencesEntry?) -> PreferencesEntry? {
-    if let settings = value as? AutomaticMediaDownloadSettings {
-        return MediaAutoDownloadSettings.upgradeLegacySettings(settings)
-    } else {
-        return value
-    }
+    return value
 }
 
 public func upgradedAccounts(accountManager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Float, NoError> {
@@ -154,7 +150,7 @@ public func upgradedAccounts(accountManager: AccountManager<TelegramAccountManag
                                     }
                                 }
                                 
-                                if let value = values[LegacyApplicationSpecificPreferencesKeyValues.presentationThemeSettings.key] as? PresentationThemeSettings {
+                                if let value = values[LegacyApplicationSpecificPreferencesKeyValues.presentationThemeSettings.key]?.get(PresentationThemeSettings.self) {
                                     let mediaBox = MediaBox(basePath: path + "/postbox/media")
                                     let wallpapers = Array(value.themeSpecificChatWallpapers.values)
                                     for wallpaper in wallpapers {
@@ -280,16 +276,16 @@ public func upgradedAccounts(accountManager: AccountManager<TelegramAccountManag
         }
         if version < 4 {
             let updatedContactSynchronizationSettings = accountManager.transaction { transaction -> (ContactSynchronizationSettings, [AccountRecordId]) in
-                return (transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings) as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings, transaction.getRecords().map({ $0.id }))
+                return (transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings)?.get(ContactSynchronizationSettings.self) ?? ContactSynchronizationSettings.defaultSettings, transaction.getRecords().map({ $0.id }))
             }
             |> mapToSignal { globalSettings, ids -> Signal<Never, NoError> in
                 var importSignal: Signal<Never, NoError> = .complete()
                 for id in ids {
                     let importInfoAccounttSignal = accountTransaction(rootPath: rootPath, id: id, encryptionParameters: encryptionParameters, isReadOnly: false, transaction: { _, transaction -> Void in
                         transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
-                            var settings = current as? ContactsSettings ?? ContactsSettings.defaultSettings
+                            var settings = current?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
                             settings.synchronizeContacts = globalSettings._legacySynchronizeDeviceContacts
-                            return settings
+                            return PreferencesEntry(settings)
                         })
                     })
                     |> ignoreValues
@@ -310,7 +306,6 @@ public func upgradedAccounts(accountManager: AccountManager<TelegramAccountManag
                 |> then(
                     applyVersion
                 )) |> mapToSignal { _ -> Signal<Float, NoError> in
-                        return .complete()
                 }
             )
         }

@@ -561,14 +561,14 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     dataAndStorageDataPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.proxySettings])
     |> map { sharedData -> DataAndStorageData in
         var automaticMediaDownloadSettings: MediaAutoDownloadSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = .defaultSettings
         }
         
         var autodownloadSettings: AutodownloadSettings
-        if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
+        if let value = sharedData.entries[SharedDataKeys.autodownloadSettings]?.get(AutodownloadSettings.self) {
             autodownloadSettings = value
             automaticMediaDownloadSettings = automaticMediaDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
         } else {
@@ -576,21 +576,21 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         }
         
         let generatedMediaStoreSettings: GeneratedMediaStoreSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings] as? GeneratedMediaStoreSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings]?.get(GeneratedMediaStoreSettings.self) {
             generatedMediaStoreSettings = value
         } else {
             generatedMediaStoreSettings = GeneratedMediaStoreSettings.defaultSettings
         }
         
         let voiceCallSettings: VoiceCallSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) {
             voiceCallSettings = value
         } else {
             voiceCallSettings = VoiceCallSettings.defaultSettings
         }
         
         var proxySettings: ProxySettings?
-        if let value = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+        if let value = sharedData.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) {
             proxySettings = value
         }
         
@@ -682,7 +682,7 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         contentSettingsConfiguration.get()
     )
     |> map { presentationData, state, dataAndStorageData, sharedData, contentSettingsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let webBrowserSettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings) ?? WebBrowserSettings.defaultSettings
+        let webBrowserSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) ?? WebBrowserSettings.defaultSettings
         let options = availableOpenInOptions(context: context, item: .url(url: "https://telegram.org"))
         let defaultWebBrowser: String
         if let option = options.first(where: { $0.identifier == webBrowserSettings.defaultWebBrowser }) {

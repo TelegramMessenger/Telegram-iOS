@@ -415,8 +415,8 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                 return
             }
             var messageId: MessageId?
-            if let messageReference = messageReference, case let .message(m) = messageReference.content {
-                messageId = m.id
+            if let messageReference = messageReference, case let .message(_, id, _, _, _) = messageReference.content {
+                messageId = id
             }
             strongSelf.controllerInteraction.openPeerContextMenu(peer, messageId, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
         }

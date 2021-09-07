@@ -32,7 +32,7 @@ final class PeersNearbyManagerImpl: PeersNearbyManager {
         
         self.preferencesDisposable = (account.postbox.preferencesView(keys: [PreferencesKeys.peersNearby])
         |> map { view -> Int32? in
-            let state = view.values[PreferencesKeys.peersNearby] as? PeersNearbyState ?? .default
+            let state = view.values[PreferencesKeys.peersNearby]?.get(PeersNearbyState.self) ?? .default
             return state.visibilityExpires
         }
         |> deliverOnMainQueue
@@ -97,12 +97,6 @@ final class PeersNearbyManagerImpl: PeersNearbyManager {
     }
     
     private func updateLocation(_ location: CLLocation) {
-        self.updateDisposable.set(self.engine.peersNearby.updatePeersNearbyVisibility(update: .location(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), background: true).start(error: { [weak self] _ in
-            if let strongSelf = self {
-                let _ = strongSelf.engine.peersNearby.updatePeersNearbyVisibility(update: .invisible, background: false).start()
-                strongSelf.locationDisposable.set(nil)
-                strongSelf.updateDisposable.set(nil)
-            }
-        }))
+        self.updateDisposable.set(self.engine.peersNearby.updatePeersNearbyVisibility(update: .location(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude), background: true).start())
     }
 }

@@ -129,11 +129,11 @@ public class UnauthorizedAccount {
             let keychain = makeExclusiveKeychain(id: self.id, postbox: self.postbox)
             
             return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
-                return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)
+                return (transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self), transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self))
             }
             |> mapToSignal { localizationSettings, proxySettings -> Signal<(LocalizationSettings?, ProxySettings?, NetworkSettings?), NoError> in
                 return self.postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
-                    return (localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                    return (localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self))
                 }
             }
             |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<UnauthorizedAccount, NoError> in
@@ -251,7 +251,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                 return .single(.upgrading(0.0))
             case let .postbox(postbox):
                 return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
-                    return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)
+                    return (transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self), transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self))
                 }
                 |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountResult, NoError> in
                     return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
@@ -266,7 +266,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                             transaction.setKeychainEntry(data, forKey: "persistent:datacenterAuthInfoById")
                         }
                         
-                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self))
                     }
                     |> mapToSignal { (accountState, localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
                         let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
@@ -407,7 +407,8 @@ func _internal_twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MT
 
 public func hexString(_ data: Data) -> String {
     let hexString = NSMutableString()
-    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+    data.withUnsafeBytes { rawBytes -> Void in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
         for i in 0 ..< data.count {
             hexString.appendFormat("%02x", UInt(bytes.advanced(by: i).pointee))
         }
@@ -437,19 +438,22 @@ public func dataWithHexString(_ string: String) -> Data {
 }
 
 func sha1Digest(_ data : Data) -> Data {
-    return data.withUnsafeBytes { bytes -> Data in
+    return data.withUnsafeBytes { rawBytes -> Data in
+        let bytes = rawBytes.baseAddress!
         return CryptoSHA1(bytes, Int32(data.count))
     }
 }
 
 func sha256Digest(_ data : Data) -> Data {
-    return data.withUnsafeBytes { bytes -> Data in
+    return data.withUnsafeBytes { rawBytes -> Data in
+        let bytes = rawBytes.baseAddress!
         return CryptoSHA256(bytes, Int32(data.count))
     }
 }
 
 func sha512Digest(_ data : Data) -> Data {
-    return data.withUnsafeBytes { bytes -> Data in
+    return data.withUnsafeBytes { rawBytes -> Data in
+        let bytes = rawBytes.baseAddress!
         return CryptoSHA512(bytes, Int32(data.count))
     }
 }
@@ -466,7 +470,8 @@ func passwordUpdateKDF(encryptionProvider: EncryptionProvider, password: String,
             var nextSalt1 = salt1
             var randomSalt1 = Data()
             randomSalt1.count = 32
-            randomSalt1.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            randomSalt1.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 arc4random_buf(bytes, 32)
             }
             nextSalt1.append(randomSalt1)
@@ -474,7 +479,8 @@ func passwordUpdateKDF(encryptionProvider: EncryptionProvider, password: String,
             let nextSalt2 = salt2
             
             var g = Data(count: 4)
-            g.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            g.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 var gValue = gValue
                 withUnsafeBytes(of: &gValue, { (sourceBuffer: UnsafeRawBufferPointer) -> Void in
                     let sourceBytes = sourceBuffer.bindMemory(to: Int8.self).baseAddress!
@@ -526,8 +532,10 @@ private func paddedXor(_ a: Data, _ b: Data) -> Data {
     while b.count < count {
         b.insert(0, at: 0)
     }
-    a.withUnsafeMutableBytes { (aBytes: UnsafeMutablePointer<UInt8>) -> Void in
-        b.withUnsafeBytes { (bBytes: UnsafePointer<UInt8>) -> Void in
+    a.withUnsafeMutableBytes { rawABytes -> Void in
+        let aBytes = rawABytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+        b.withUnsafeBytes { rawBBytes -> Void in
+            let bBytes = rawBBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             for i in 0 ..< count {
                 aBytes.advanced(by: i).pointee = aBytes.advanced(by: i).pointee ^ bBytes.advanced(by: i).pointee
             }
@@ -547,12 +555,14 @@ func passwordKDF(encryptionProvider: EncryptionProvider, password: String, deriv
         case let .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1, salt2, iterations, gValue, p):
             var a = Data(count: p.count)
             let aLength = a.count
-            a.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+            a.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                 let _ = SecRandomCopyBytes(nil, aLength, bytes)
             }
             
             var g = Data(count: 4)
-            g.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            g.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 var gValue = gValue
                 withUnsafeBytes(of: &gValue, { (sourceBuffer: UnsafeRawBufferPointer) -> Void in
                     let sourceBytes = sourceBuffer.bindMemory(to: Int8.self).baseAddress!
@@ -616,7 +626,8 @@ func securePasswordUpdateKDF(password: String, derivation: TwoStepSecurePassword
             var nextSalt = salt
             var randomSalt = Data()
             randomSalt.count = 32
-            randomSalt.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            randomSalt.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 arc4random_buf(bytes, 32)
             }
             nextSalt.append(randomSalt)
@@ -630,7 +641,8 @@ func securePasswordUpdateKDF(password: String, derivation: TwoStepSecurePassword
             var nextSalt = salt
             var randomSalt = Data()
             randomSalt.count = 32
-            randomSalt.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            randomSalt.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 arc4random_buf(bytes, 32)
             }
             nextSalt.append(randomSalt)
@@ -746,7 +758,8 @@ private func masterNotificationsKey(masterNotificationKeyValue: Atomic<MasterNot
         } else {
             var secretData = Data(count: 256)
             let secretDataCount = secretData.count
-            if !secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
+            if !secretData.withUnsafeMutableBytes({ rawBytes -> Bool in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 let copyResult = SecRandomCopyBytes(nil, secretDataCount, bytes)
                 return copyResult == errSecSuccess
             }) {
@@ -785,7 +798,8 @@ public func decryptedNotificationPayload(key: MasterNotificationKey, data: Data)
     }
     
     var dataLength: Int32 = 0
-    data.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+    data.withUnsafeBytes { rawBytes -> Void in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
         memcpy(&dataLength, bytes, 4)
     }
     
@@ -1087,7 +1101,7 @@ public class Account {
         }))
         self.managedOperationsDisposable.add((accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
         |> map { sharedData -> ProxyServerSettings? in
-            if let settings = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+            if let settings = sharedData.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) {
                 return settings.effectiveActiveServer
             } else {
                 return nil
@@ -1138,7 +1152,7 @@ public class Account {
                 guard let mediaBox = mediaBox else {
                     return
                 }
-                let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings] as? CacheStorageSettings ?? CacheStorageSettings.defaultSettings
+                let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings]?.get(CacheStorageSettings.self) ?? CacheStorageSettings.defaultSettings
                 mediaBox.setMaxStoreTimes(general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes)
             })
         }
@@ -1238,9 +1252,9 @@ public class Account {
     }
     
     public func addUpdates(serializedData: Data) -> Void {
-        if let object = Api.parse(Buffer(data: serializedData)) {
-            //self.stateManager.addUpdates()
-        }
+        /*if let object = Api.parse(Buffer(data: serializedData)) {
+            self.stateManager.addUpdates()
+        }*/
     }
 }
 

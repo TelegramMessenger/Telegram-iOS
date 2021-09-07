@@ -102,7 +102,7 @@ private func uploadedWallpaper(postbox: Postbox, network: Network, resource: Med
 
 public func uploadWallpaper(account: Account, resource: MediaResource, mimeType: String = "image/jpeg", settings: WallpaperSettings) -> Signal<UploadWallpaperStatus, UploadWallpaperError> {
     return uploadedWallpaper(postbox: account.postbox, network: account.network, resource: resource)
-    |> mapError { _ -> UploadWallpaperError in return .generic }
+    |> mapError { _ -> UploadWallpaperError in }
     |> mapToSignal { result -> Signal<(UploadWallpaperStatus, MediaResource?), UploadWallpaperError> in
         switch result.content {
             case .error:

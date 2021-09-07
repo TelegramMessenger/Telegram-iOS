@@ -416,8 +416,8 @@ public final class AccountStateManager {
                 |> take(1)
                 |> mapToSignal { [weak self] state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
                     if let authorizedState = state.state {
-                        var flags: Int32 = 0
-                        var ptsTotalLimit: Int32? = nil
+                        let flags: Int32 = 0
+                        let ptsTotalLimit: Int32? = nil
                         #if DEBUG
                         //flags = 1 << 0
                         //ptsTotalLimit = 1000
@@ -533,9 +533,6 @@ public final class AccountStateManager {
                             assertionFailure()
                         }
                     }
-                }, error: { _ in
-                    assertionFailure()
-                    Logger.shared.log("AccountStateManager", "processUpdateGroups signal completed with error")
                 })
             case let .collectUpdateGroups(_, timeout):
                 self.operationTimer?.invalidate()
@@ -634,9 +631,7 @@ public final class AccountStateManager {
                         }
                     }
                 }
-                let _ = (signal |> deliverOn(self.queue)).start(error: { _ in
-                    completed()
-                }, completed: {
+                let _ = (signal |> deliverOn(self.queue)).start(completed: {
                     completed()
                 })
             case let .processEvents(operationId, events):
@@ -737,8 +732,6 @@ public final class AccountStateManager {
                     if let strongSelf = self {
                         strongSelf.notificationMessagesPipe.putNext(messages)
                     }
-                }, error: { _ in
-                    completed()
                 }, completed: {
                     completed()
                 })
@@ -833,10 +826,6 @@ public final class AccountStateManager {
                         }
                         completion()
                     }
-                }, error: { _ in
-                    assertionFailure()
-                    Logger.shared.log("AccountStateManager", "processUpdateGroups signal completed with error")
-                    completion()
                 })
         }
     }
@@ -1053,7 +1042,7 @@ public final class AccountStateManager {
         
         if let updates = Api.parse(Buffer(data: rawData)) as? Api.Updates {
             switch updates {
-            case let .updates(updates, users, chats, date, seq):
+            case let .updates(updates, _, _, _, _):
                 for update in updates {
                     switch update {
                     case let .updatePhoneCall(phoneCall):
@@ -1122,7 +1111,7 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     if let notificationSettings = transaction.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings {
         var defaultSound: PeerMessageSound = .bundledModern(id: 0)
         var defaultNotify: Bool = true
-        if let globalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings {
+        if let globalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) {
             if id.peerId.namespace == Namespaces.Peer.CloudUser {
                 defaultNotify = globalNotificationSettings.effective.privateChats.enabled
                 defaultSound = globalNotificationSettings.effective.privateChats.sound

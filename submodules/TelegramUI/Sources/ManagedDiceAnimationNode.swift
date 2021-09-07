@@ -133,7 +133,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         
         self.configuration.set(self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { preferencesView -> InteractiveEmojiConfiguration? in
-            let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+            let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
             return InteractiveEmojiConfiguration.with(appConfiguration: appConfiguration)
         })
         self.emojis.set(context.engine.stickers.loadedStickerPack(reference: .dice(emoji), forceActualized: false)

@@ -480,13 +480,10 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 let key = SharedContextStore.Key(accountId: accountId)
                 
                 let context: MTContext
-                if false, let current = store.contexts[key] {
-                    context = current
-                    context.updateApiEnvironment({ _ in return apiEnvironment})
-                } else {
-                    context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
-                    store.contexts[key] = context
-                }
+
+                context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
+                store.contexts[key] = context
+
                 contextValue = context
             }
             
@@ -627,7 +624,7 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
         self.contextLoggedOutUpdated = contextLoggedOutUpdated
     }
     
-    func fetchContextDatacenterPublicKeys(_ context: MTContext!, datacenterId: Int) -> MTSignal! {
+    func fetchContextDatacenterPublicKeys(_ context: MTContext, datacenterId: Int) -> MTSignal {
         return MTSignal { subscriber in
             let disposable = self.requestPublicKeys(datacenterId).start(next: { next in
                 subscriber?.putNext(next)
@@ -640,7 +637,7 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
         }
     }
     
-    func isContextNetworkAccessAllowed(_ context: MTContext!) -> MTSignal! {
+    func isContextNetworkAccessAllowed(_ context: MTContext) -> MTSignal {
         return MTSignal { subscriber in
             let disposable = self.isContextNetworkAccessAllowedImpl().start(next: { next in
                 subscriber?.putNext(next as NSNumber)
@@ -653,12 +650,12 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
         }
     }
     
-    func contextApiEnvironmentUpdated(_ context: MTContext!, apiEnvironment: MTApiEnvironment!) {
+    func contextApiEnvironmentUpdated(_ context: MTContext, apiEnvironment: MTApiEnvironment) {
         let settings: MTSocksProxySettings? = apiEnvironment.socksProxySettings
         self.contextProxyIdUpdated(settings.flatMap(NetworkContextProxyId.init(settings:)))
     }
     
-    func contextLoggedOut(_ context: MTContext!) {
+    func contextLoggedOut(_ context: MTContext) {
         self.contextLoggedOutUpdated()
     }
 }

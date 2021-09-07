@@ -248,7 +248,7 @@ public class ShareRootControllerImpl {
             }
             
             let account: Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> = internalContext.sharedContext.accountManager.transaction { transaction -> (SharedAccountContextImpl, LoggingSettings) in
-                return (internalContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
+                return (internalContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings)
             }
             |> castError(ShareAuthorizationError.self)
             |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
@@ -261,7 +261,7 @@ public class ShareRootControllerImpl {
                     let accountRecords = Set(transaction.getRecords().map { record in
                         return record.id
                     })
-                    let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
+                    let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings)?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
                     return (accountRecords, intentsSettings.account)
                 })
                 |> castError(ShareAuthorizationError.self)
@@ -300,7 +300,7 @@ public class ShareRootControllerImpl {
             |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContext, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
                 let limitsConfigurationAndContentSettings = account.postbox.transaction { transaction -> (LimitsConfiguration, ContentSettings, AppConfiguration) in
                     return (
-                        transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue,
+                        transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue,
                         getContentSettings(transaction: transaction),
                         getAppConfiguration(transaction: transaction)
                     )

@@ -488,7 +488,6 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         return .complete()
                     }
                     |> mapToSignal { _ -> Signal<PeerId?, CreateGroupError> in
-                        return .complete()
                     }
                     |> then(.single(peerId))
                 } else {

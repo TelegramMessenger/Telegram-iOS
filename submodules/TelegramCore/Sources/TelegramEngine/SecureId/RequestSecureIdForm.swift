@@ -289,7 +289,7 @@ public func requestSecureIdForm(postbox: Postbox, network: Network, peerId: Peer
                         }
                     }, termsUrl: termsUrl, encryptedValues: values, errors: errors)
             }
-        } |> mapError { _ in return RequestSecureIdFormError.generic }
+        } |> mapError { _ -> RequestSecureIdFormError in }
     }
 }
 

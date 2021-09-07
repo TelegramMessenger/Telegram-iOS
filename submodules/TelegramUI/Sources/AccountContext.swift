@@ -190,7 +190,7 @@ public final class AccountContextImpl: AccountContext {
         
         let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])
         |> map { preferences -> LimitsConfiguration in
-            return preferences.values[PreferencesKeys.limitsConfiguration] as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+            return preferences.values[PreferencesKeys.limitsConfiguration]?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
         }
         
         self.currentLimitsConfiguration = Atomic(value: limitsConfiguration)
@@ -462,14 +462,14 @@ private final class ChatLocationContextHolderImpl: ChatLocationContextHolder {
 }
 
 func getAppConfiguration(transaction: Transaction) -> AppConfiguration {
-    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
     return appConfiguration
 }
 
 func getAppConfiguration(postbox: Postbox) -> Signal<AppConfiguration, NoError> {
     return postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> map { view -> AppConfiguration in
-        let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? AppConfiguration.defaultValue
+        let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
         return appConfiguration
     }
     |> distinctUntilChanged

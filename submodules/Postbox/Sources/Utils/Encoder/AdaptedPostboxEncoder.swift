@@ -2,6 +2,16 @@ import Foundation
 import MurMurHash32
 
 public class AdaptedPostboxEncoder {
+    public final class RawObjectData: Encodable {
+        public let typeHash: Int32
+        public let data: Data
+
+        public init(typeHash: Int32, data: Data) {
+            self.typeHash = typeHash
+            self.data = data
+        }
+    }
+    
     public init() {
     }
 
@@ -10,7 +20,7 @@ public class AdaptedPostboxEncoder {
 
         let encoder = _AdaptedPostboxEncoder(typeHash: typeHash)
         try value.encode(to: encoder)
-        return encoder.makeData(addHeader: false).0
+        return encoder.makeData(addHeader: false, isDictionary: false).0
     }
 }
 
@@ -27,8 +37,8 @@ final class _AdaptedPostboxEncoder {
         self.typeHash = typeHash
     }
 
-    func makeData(addHeader: Bool) -> (Data, ValueType) {
-        return self.container!.makeData(addHeader: addHeader)
+    func makeData(addHeader: Bool, isDictionary: Bool) -> (Data, ValueType) {
+        return self.container!.makeData(addHeader: addHeader, isDictionary: isDictionary)
     }
 }
 
@@ -61,5 +71,5 @@ extension _AdaptedPostboxEncoder: Encoder {
 }
 
 protocol AdaptedPostboxEncodingContainer: AnyObject {
-    func makeData(addHeader: Bool) -> (Data, ValueType)
+    func makeData(addHeader: Bool, isDictionary: Bool) -> (Data, ValueType)
 }

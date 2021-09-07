@@ -438,7 +438,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.interactiveEmojisDisposable = (self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { preferencesView -> InteractiveEmojiConfiguration in
-            let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+            let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
             return InteractiveEmojiConfiguration.with(appConfiguration: appConfiguration)
         }
         |> deliverOnMainQueue).start(next: { [weak self] emojis in

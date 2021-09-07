@@ -29,7 +29,7 @@ func archiveContextMenuItems(context: AccountContext, groupId: PeerGroupId, chat
             })))
         }
         
-        let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.chatArchiveSettings) as? ChatArchiveSettings ?? ChatArchiveSettings.default
+        let settings = transaction.getPreferencesEntry(key: ApplicationSpecificPreferencesKeys.chatArchiveSettings)?.get(ChatArchiveSettings.self) ?? ChatArchiveSettings.default
         let isPinned = !settings.isHiddenByDefault
         items.append(.action(ContextMenuActionItem(text: isPinned ? strings.ChatList_Context_HideArchive : strings.ChatList_Context_UnhideArchive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { [weak chatListController] _, f in
             chatListController?.toggleArchivedFolderHiddenByDefault()

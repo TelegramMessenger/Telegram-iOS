@@ -351,7 +351,7 @@ public func notificationPeerExceptionController(context: AccountContext, peer: P
     
     statePromise.set(context.account.postbox.transaction { transaction -> NotificationExceptionPeerState in
         var state = NotificationExceptionPeerState(canRemove: mode.peerIds.contains(peer.id), notifications: transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings)
-        let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
+        let globalSettings: GlobalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) ?? GlobalNotificationSettings.defaultSettings
         switch mode {
             case .channels:
                 state = state.withUpdatedDefaultSound(globalSettings.effective.channels.sound)

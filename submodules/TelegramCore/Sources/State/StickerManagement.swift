@@ -4,13 +4,13 @@ import Postbox
 import SwiftSignalKit
 
 
-private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
+private func hashForIdsReverse(_ ids: [Int64]) -> Int64 {
     var acc: UInt64 = 0
     
     for id in ids {
         combineInt64Hash(&acc, with: UInt64(bitPattern: id))
     }
-    return Int32(bitPattern: UInt32(clamping: acc & UInt64(0x7FFFFFFF)))
+    return Int64(bitPattern: acc)
 }
 
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
@@ -35,8 +35,8 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
         let initialPackIds = initialPacks.map {
             return FeaturedStickerPackItemId($0.id).packId
         }
-        let initialHash: Int32 = hashForIdsReverse(initialPackIds)
-        return network.request(Api.functions.messages.getFeaturedStickers(hash: 0))
+        let initialHash: Int64 = hashForIdsReverse(initialPackIds)
+        return network.request(Api.functions.messages.getFeaturedStickers(hash: initialHash))
         |> retryRequest
         |> mapToSignal { result -> Signal<Void, NoError> in
             return postbox.transaction { transaction -> Void in

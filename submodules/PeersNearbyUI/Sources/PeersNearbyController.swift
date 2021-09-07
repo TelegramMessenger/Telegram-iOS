@@ -573,7 +573,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     |> deliverOnMainQueue
     |> map { presentationData, data, chatLocation, displayLoading, expanded, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
-        let state = view.values[PreferencesKeys.peersNearby] as? PeersNearbyState ?? .default
+        let state = view.values[PreferencesKeys.peersNearby]?.get(PeersNearbyState.self) ?? .default
         
         var crossfade = false
         if (data?.users.isEmpty ?? true) != (previous?.users.isEmpty ?? true) {

@@ -591,7 +591,7 @@ struct AccountMutableState {
                         self.readInboxMaxIds[peerId] = MessageId(peerId: peerId, namespace: namespace, id: maxIncomingReadId)
                     }
                 }
-            case let .ResetMessageTagSummary(peerId, namespace, count, range):
+            case .ResetMessageTagSummary:
                 break
         }
         

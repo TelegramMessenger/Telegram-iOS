@@ -564,7 +564,7 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
     return ApplicationSpecificNotice.getSecretChatLinkPreviews(accountManager: context.sharedContext.accountManager)
     |> mapToSignal { linkPreviews -> Signal<ResolvedUrl, NoError> in
         return context.account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
-            let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+            let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
             let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
             
             var skipUrlAuth = skipUrlAuth

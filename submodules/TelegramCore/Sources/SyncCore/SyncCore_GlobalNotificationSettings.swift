@@ -1,6 +1,6 @@
 import Postbox
 
-public struct MessageNotificationSettings: Codable {
+public struct MessageNotificationSettings: Codable, Equatable {
     public var enabled: Bool
     public var displayPreviews: Bool
     public var sound: PeerMessageSound
@@ -21,14 +21,15 @@ public struct MessageNotificationSettings: Codable {
         self.enabled = ((try? container.decode(Int32.self, forKey: "e")) ?? 0) != 0
         self.displayPreviews = ((try? container.decode(Int32.self, forKey: "p")) ?? 0) != 0
 
-        self.sound = PeerMessageSound.decodeInline(container)
+        self.sound = try PeerMessageSound.decodeInline(container)
     }
     
     public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        encoder.encodeInt32(self.enabled ? 1 : 0, forKey: "e")
-        encoder.encodeInt32(self.displayPreviews ? 1 : 0, forKey: "p")
-        self.sound.encodeInline(encoder)
+        try container.encode((self.enabled ? 1 : 0) as Int32, forKey: "e")
+        try container.encode((self.displayPreviews ? 1 : 0) as Int32, forKey: "p")
+        try self.sound.encodeInline(&container)
     }
 }
 
@@ -52,18 +53,20 @@ public struct GlobalNotificationSettingsSet: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        self.privateChats = decoder.decodeObjectForKey("p", decoder: { MessageNotificationSettings(decoder: $0) }) as! MessageNotificationSettings
-        self.groupChats = decoder.decodeObjectForKey("g", decoder: { MessageNotificationSettings(decoder: $0) }) as! MessageNotificationSettings
-        self.channels = (decoder.decodeObjectForKey("c", decoder: { MessageNotificationSettings(decoder: $0) }) as? MessageNotificationSettings) ?? MessageNotificationSettings.defaultSettings
-        self.contactsJoined = decoder.decodeInt32ForKey("contactsJoined", orElse: 1) != 0
+        self.privateChats = try container.decode(MessageNotificationSettings.self, forKey: "p")
+        self.groupChats = try container.decode(MessageNotificationSettings.self, forKey: "g")
+        self.channels = try container.decode(MessageNotificationSettings.self, forKey: "c")
+
+        self.contactsJoined = (try container.decode(Int32.self, forKey: "contactsJoined")) != 0
     }
     
     public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        encoder.encodeObject(self.privateChats, forKey: "p")
-        encoder.encodeObject(self.groupChats, forKey: "g")
-        encoder.encodeObject(self.channels, forKey: "c")
-        encoder.encodeInt32(self.contactsJoined ? 1 : 0, forKey: "contactsJoined")
+        try container.encode(self.privateChats, forKey: "p")
+        try container.encode(self.groupChats, forKey: "g")
+        try container.encode(self.channels, forKey: "c")
+        try container.encode((self.contactsJoined ? 1 : 0) as Int32, forKey: "contactsJoined")
     }
 }
 
@@ -89,7 +92,7 @@ public struct GlobalNotificationSettings: Codable {
         )
     }
     
-    private func defaultIncludePeer(peer: Peer) -> Bool {
+    func defaultIncludePeer(peer: Peer) -> Bool {
         let settings = self.effective
         if peer is TelegramUser || peer is TelegramSecretChat {
             return settings.privateChats.enabled
@@ -135,16 +138,14 @@ public struct GlobalNotificationSettings: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        self.toBeSynchronized = decoder.decodeObjectForKey("s", decoder: { GlobalNotificationSettingsSet(decoder: $0) }) as? GlobalNotificationSettingsSet
-        self.remote = decoder.decodeObjectForKey("r", decoder: { GlobalNotificationSettingsSet(decoder: $0) }) as! GlobalNotificationSettingsSet
+        self.toBeSynchronized = try container.decodeIfPresent(GlobalNotificationSettingsSet.self, forKey: "s")
+        self.remote = try container.decode(GlobalNotificationSettingsSet.self, forKey: "r")
     }
     
     public func encode(to encoder: Encoder) throws {
-        if let toBeSynchronized = self.toBeSynchronized {
-            encoder.encodeObject(toBeSynchronized, forKey: "s")
-        } else {
-            encoder.encodeNil(forKey: "s")
-        }
-        encoder.encodeObject(self.remote, forKey: "r")
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encodeIfPresent(self.toBeSynchronized, forKey: "s")
+        try container.encode(self.remote, forKey: "r")
     }
 }

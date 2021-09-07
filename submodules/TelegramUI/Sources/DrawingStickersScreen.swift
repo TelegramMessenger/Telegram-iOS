@@ -954,7 +954,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     func updateLayout(width: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
         let searchMode: ChatMediaInputSearchMode? = nil
                 
-        let displaySearch = false
+        let displaySearch = !"".isEmpty //silence warning
         let separatorHeight = max(UIScreenPixel, 1.0 - UIScreenPixel)
         let topPanelHeight: CGFloat = 56.0
         let panelHeight: CGFloat

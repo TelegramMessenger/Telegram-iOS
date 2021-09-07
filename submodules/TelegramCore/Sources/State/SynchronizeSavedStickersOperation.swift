@@ -92,7 +92,7 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                             if let stickerStringRepresentations = stickerStringRepresentations {
                                 return postbox.transaction { transaction -> Void in
                                     addSavedSticker(transaction: transaction, file: file, stringRepresentations: stickerStringRepresentations)
-                                } |> mapError { _ in return AddSavedStickerError.generic }
+                                } |> mapError { _ -> AddSavedStickerError in }
                             } else {
                                 return .fail(.notFound)
                             }
@@ -102,7 +102,7 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
             }
         }
         return .complete()
-    } |> mapError { _ in return AddSavedStickerError.generic } |> switchToLatest
+    } |> mapError { _ -> AddSavedStickerError in } |> switchToLatest
 }
 
 public func addSavedSticker(transaction: Transaction, file: TelegramMediaFile, stringRepresentations: [String]) {

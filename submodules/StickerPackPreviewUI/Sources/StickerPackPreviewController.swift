@@ -173,7 +173,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         self.stickerPackDisposable.set((combineLatest(self.stickerPackContents.get(), self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> take(1))
         |> mapToSignal { next, sharedData -> Signal<(LoadedStickerPack, StickerSettings), NoError> in
             var stickerSettings = StickerSettings.defaultSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
                 stickerSettings = value
             }
             

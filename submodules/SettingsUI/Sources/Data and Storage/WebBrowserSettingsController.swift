@@ -103,7 +103,7 @@ public func webBrowserSettingsController(context: AccountContext) -> ViewControl
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings]))
     |> deliverOnMainQueue
     |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings) ?? WebBrowserSettings.defaultSettings
+        let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) ?? WebBrowserSettings.defaultSettings
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.WebBrowser_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: webBrowserSettingsControllerEntries(context: context, presentationData: presentationData, selectedBrowser: settings.defaultWebBrowser), style: .blocks, animateChanges: false)

@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import TelegramCore
 
 public struct ChatArchiveSettings: Equatable, Codable {
     public var isHiddenByDefault: Bool
@@ -19,11 +20,11 @@ public struct ChatArchiveSettings: Equatable, Codable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.isHiddenByDefault = (try container.decode(Int32.self, forKey: "isHiddenByDefault")) != 0
-        self.hiddenPsaPeerId = (try container.decodeIfPresent(Int64.self), forKey: "hiddenPsaPeerId").flatMap(PeerId.init)
+        self.hiddenPsaPeerId = (try container.decodeIfPresent(Int64.self, forKey: "hiddenPsaPeerId")).flatMap(PeerId.init)
     }
     
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: StringCodingKeys.self)
+        var container = encoder.container(keyedBy: StringCodingKey.self)
 
         try container.encode((self.isHiddenByDefault ? 1 : 0) as Int32, forKey: "isHiddenByDefault")
         if let hiddenPsaPeerId = self.hiddenPsaPeerId {
@@ -42,6 +43,6 @@ public func updateChatArchiveSettings(transaction: Transaction, _ f: @escaping (
         } else {
             currentSettings = .default
         }
-        return PreferncesEntry(f(currentSettings))
+        return PreferencesEntry(f(currentSettings))
     })
 }

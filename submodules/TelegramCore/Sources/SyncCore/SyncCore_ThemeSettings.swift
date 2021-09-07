@@ -10,13 +10,22 @@ public final class ThemeSettings: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        self.currentTheme = try container.decodeIfPresent(TelegramTheme.self, forKey: "t")
+        if let currentThemeData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "t") {
+            self.currentTheme = TelegramTheme(decoder: PostboxDecoder(buffer: MemoryBuffer(data: currentThemeData.data)))
+        } else {
+            self.currentTheme = nil
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        try container.encodeIfPresent(self.currentTheme, forKey: "t")
+        if let currentTheme = self.currentTheme {
+            let currentThemeData = PostboxEncoder().encodeObjectToRawData(currentTheme)
+            try container.encode(currentThemeData, forKey: "t")
+        } else {
+            try container.encodeNil(forKey: "t")
+        }
     }
     
     public static func ==(lhs: ThemeSettings, rhs: ThemeSettings) -> Bool {

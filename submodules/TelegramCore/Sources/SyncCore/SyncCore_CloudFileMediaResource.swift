@@ -520,7 +520,7 @@ public struct LocalFileMediaResourceId: MediaResourceId, Hashable, Equatable {
     }
 }
 
-public class LocalFileMediaResource: TelegramMediaResource {
+public class LocalFileMediaResource: TelegramMediaResource, Codable {
     public let fileId: Int64
     public let size: Int?
     
@@ -541,6 +541,14 @@ public class LocalFileMediaResource: TelegramMediaResource {
             self.size = nil
         }
     }
+
+    public required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.fileId = try container.decode(Int64.self, forKey: "f")
+        self.isSecretRelated = try container.decodeIfPresent(Bool.self, forKey: "sr") ?? false
+        self.size = (try container.decodeIfPresent(Int32.self, forKey: "s")).flatMap(Int.init)
+    }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.fileId, forKey: "f")
@@ -550,6 +558,14 @@ public class LocalFileMediaResource: TelegramMediaResource {
         } else {
             encoder.encodeNil(forKey: "s")
         }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.fileId, forKey: "f")
+        try container.encode(self.isSecretRelated, forKey: "sr")
+        try container.encodeIfPresent(self.size.flatMap(Int32.init), forKey: "s")
     }
     
     public var id: MediaResourceId {

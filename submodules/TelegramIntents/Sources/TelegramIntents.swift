@@ -69,7 +69,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                 return sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings])
                 |> take(1)
                 |> mapToSignal { sharedData -> Signal<[(Peer, SendMessageIntentSubject)], NoError> in
-                    let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings) ?? IntentsSettings.defaultSettings
+                    let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings]?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
                     if let accountId = settings.account, accountId != account.peerId {
                         return .single([])
                     }

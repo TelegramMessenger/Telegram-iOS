@@ -378,7 +378,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
         |> deliverOnMainQueue
         |> map { presentationData, state, packs, installedView, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var stickerSettings = StickerSettings.defaultSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
                 stickerSettings = value
             }
             

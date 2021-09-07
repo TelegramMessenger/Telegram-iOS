@@ -3889,7 +3889,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let themeSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
         |> map { sharedData -> PresentationThemeSettings in
             let themeSettings: PresentationThemeSettings
-            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings {
+            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
                 themeSettings = current
             } else {
                 themeSettings = PresentationThemeSettings.defaultSettings
@@ -4012,7 +4012,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.stickerSettingsDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]), self.disableStickerAnimationsPromise.get()).start(next: { [weak self] sharedData, disableStickerAnimations in
             var stickerSettings = StickerSettings.defaultSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
                 stickerSettings = value
             }
             
@@ -9169,7 +9169,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func presentAttachmentMenu(editMediaOptions: MessageMediaEditingOptions?, editMediaReference: AnyMediaReference?) {
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
-            let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
+            let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self)
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
         }
         |> deliverOnMainQueue).start(next: { [weak self] settings in
@@ -9546,7 +9546,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, completion: @escaping ([Any], Bool, Int32) -> Void) {
         let postbox = self.context.account.postbox
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> Signal<(GeneratedMediaStoreSettings, SearchBotsConfiguration), NoError> in
-            let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
+            let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self)
             return postbox.transaction { transaction -> (GeneratedMediaStoreSettings, SearchBotsConfiguration) in
                 let configuration = currentSearchBotsConfiguration(transaction: transaction)
                 return (entry ?? GeneratedMediaStoreSettings.defaultSettings, configuration)
@@ -9679,7 +9679,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let _ = (self.context.account.postbox.transaction { transaction -> SearchBotsConfiguration in
-            if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.searchBotsConfiguration) as? SearchBotsConfiguration {
+            if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.searchBotsConfiguration)?.get(SearchBotsConfiguration.self) {
                 return entry
             } else {
                 return SearchBotsConfiguration.defaultValue
@@ -10381,7 +10381,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func displayPasteMenu(_ images: [UIImage]) {
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
-            let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
+            let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self)
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
         }
         |> deliverOnMainQueue).start(next: { [weak self] settings in
@@ -12419,7 +12419,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var parsedUrlValue: URL?
                     if let parsed = URL(string: string) {
                         parsedUrlValue = parsed
-                    } else if let encoded = (string as NSString).addingPercentEscapes(using: String.Encoding.utf8.rawValue), let parsed = URL(string: encoded) {
+                    } else if let encoded = (string as NSString).addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), let parsed = URL(string: encoded) {
                         parsedUrlValue = parsed
                     }
                     

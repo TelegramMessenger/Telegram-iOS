@@ -215,12 +215,12 @@ private func activeChannelsFromDifference(_ difference: Api.updates.Difference) 
     
     var chats: [Api.Chat] = []
     switch difference {
-        case let .difference(difference):
-            chats = difference.chats
+        case let .difference(_, _, _, differenceChats, _, _):
+            chats = differenceChats
         case .differenceEmpty:
             break
-        case let .differenceSlice(differenceSlice):
-            chats = differenceSlice.chats
+        case let .differenceSlice(_, _, _, differenceChats, _, _):
+            chats = differenceChats
         case .differenceTooLong:
             break
     }
@@ -466,7 +466,7 @@ private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<Pe
         }
     }
     
-    var state = AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates, channelsToPollExplicitely: channelsToPollExplicitely), initialPeers: peers, initialReferencedMessageIds: associatedMessageIds, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
+    let state = AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates, channelsToPollExplicitely: channelsToPollExplicitely), initialPeers: peers, initialReferencedMessageIds: associatedMessageIds, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
     return state
 }
 
@@ -773,7 +773,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                     rhsPts = pts
                 case let .updateEditChannelMessage(_, pts, _):
                     rhsPts = pts
-                case let .updatePinnedChannelMessages(_, channelId, _, pts, _):
+                case let .updatePinnedChannelMessages(_, _, _, pts, _):
                     rhsPts = pts
                 default:
                     break
@@ -1190,7 +1190,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 })
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)): status], explicit: true)
-            case let .updateUserName(userId, firstName, lastName, username):
+            case let .updateUserName(userId, _, _, username):
                 //TODO add contact checking for apply first and last name
                 updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), { peer in
                     if let user = peer as? TelegramUser {
@@ -1375,8 +1375,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
             case let .updateLangPack(difference):
                 let langCode: String
                 switch difference {
-                    case let .langPackDifference(langPackDifference):
-                        langCode = langPackDifference.langCode
+                    case let .langPackDifference(langCodeValue, _, _, _):
+                        langCode = langCodeValue
                 }
                 updatedState.updateLangPack(langCode: langCode, difference: difference)
             case let .updateMessagePoll(_, pollId, poll, results):
@@ -1521,6 +1521,7 @@ private func resolveAssociatedMessages(network: Network, state: AccountMutableSt
         return .single(state)
     } else {
         var missingPeers = false
+        let _ = missingPeers
         
         var signals: [Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>] = []
         for (peerId, messageIds) in messagesIdsGroupedByPeerId(missingMessageIds) {
@@ -2027,7 +2028,7 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                         apiTimeout = timeout
                         
                         let channelPts: Int32
-                        if let previousState = updatedState.channelStates[peer.id] {
+                        if let _ = updatedState.channelStates[peer.id] {
                             channelPts = pts
                         } else {
                             channelPts = pts
@@ -2039,7 +2040,7 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                         var parameters: (peer: Api.Peer, pts: Int32, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32)?
                         
                         switch dialog {
-                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, notifySettings, pts, draft, folderId):
+                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, _, pts, _, _):
                                 if let pts = pts {
                                     parameters = (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount)
                                 }
@@ -2592,8 +2593,8 @@ func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes
                     var updatedPoll = poll
                     let resultsMin: Bool
                     switch results {
-                    case let .pollResults(pollResults):
-                        resultsMin = (pollResults.flags & (1 << 0)) != 0
+                    case let .pollResults(flags, _, _, _, _, _):
+                        resultsMin = (flags & (1 << 0)) != 0
                     }
                     if let apiPoll = apiPoll {
                         switch apiPoll {
@@ -2648,7 +2649,7 @@ func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes
                 if messageId.peerId != accountPeerId, messageId.peerId.namespace == Namespaces.Peer.CloudUser, let timestamp = timestamp {
                     recordPeerActivityTimestamp(peerId: messageId.peerId, timestamp: timestamp, into: &peerActivityTimestamps)
                 }
-            case let .ReadGroupFeedInbox(groupId, index):
+            case .ReadGroupFeedInbox:
                 break
                 //transaction.applyGroupFeedReadMaxIndex(groupId: groupId, index: index)
             case let .UpdateReadThread(threadMessageId, readMaxId, isIncoming, mainChannelMessage):
@@ -2816,6 +2817,7 @@ func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes
                             updated.remote.privateChats = notificationSettings
                             return PreferencesEntry(updated)
                         })
+                        transaction.globalNotificationSettingsUpdated()
                     case .groups:
                         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
                             var updated: GlobalNotificationSettings
@@ -2827,6 +2829,7 @@ func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes
                             updated.remote.groupChats = notificationSettings
                             return PreferencesEntry(updated)
                         })
+                        transaction.globalNotificationSettingsUpdated()
                     case .channels:
                         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
                             var updated: GlobalNotificationSettings
@@ -2838,6 +2841,7 @@ func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes
                             updated.remote.channels = notificationSettings
                             return PreferencesEntry(updated)
                         })
+                        transaction.globalNotificationSettingsUpdated()
                 }
             case let .MergeApiChats(chats):
                 var peers: [Peer] = []
@@ -2970,7 +2974,9 @@ func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes
                     case .sync:
                         addSynchronizePinnedChatsOperation(transaction: transaction, groupId: groupId)
                 }
-            case let .ReadMessageContents(peerId, messageIds):
+            case let .ReadMessageContents(peerIdAndMessageIds):
+                let (peerId, messageIds) = peerIdAndMessageIds
+
                 if let peerId = peerId {
                     for id in messageIds {
                         markMessageContentAsConsumedRemotely(transaction: transaction, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id))

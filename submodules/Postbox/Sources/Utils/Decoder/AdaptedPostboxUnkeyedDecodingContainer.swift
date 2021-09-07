@@ -8,6 +8,7 @@ extension _AdaptedPostboxDecoder {
             case objectArray([Data])
             case stringArray([String])
             case dataArray([Data])
+            case objectDict([(Data, Data)])
 
             var count: Int {
                 switch self {
@@ -21,6 +22,8 @@ extension _AdaptedPostboxDecoder {
                     return array.count
                 case let .dataArray(array):
                     return array.count
+                case let .objectDict(dict):
+                    return dict.count * 2
                 }
             }
         }
@@ -64,6 +67,7 @@ extension _AdaptedPostboxDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
                 self._currentIndex += 1
                 return array[index] as! T
             default:
+                assertionFailure()
                 throw DecodingError.typeMismatch(Data.self, DecodingError.Context(codingPath: self.codingPath, debugDescription: ""))
             }
         } else {
@@ -74,7 +78,35 @@ extension _AdaptedPostboxDecoder.UnkeyedContainer: UnkeyedDecodingContainer {
 
                 let data = array[index]
                 return try AdaptedPostboxDecoder().decode(T.self, from: data)
+            case let .objectDict(dict):
+                let index = self._currentIndex
+                self._currentIndex += 1
+
+                let dataPair = dict[index / 2]
+                let data: Data
+                if index % 2 == 0 {
+                    data = dataPair.0
+                } else {
+                    data = dataPair.1
+                }
+                return try AdaptedPostboxDecoder().decode(T.self, from: data)
+            case let .int32Array(array):
+                let index = self._currentIndex
+                self._currentIndex += 1
+
+                return array[index] as! T
+            case let .int64Array(array):
+                let index = self._currentIndex
+                self._currentIndex += 1
+
+                return array[index] as! T
+            case let .stringArray(array):
+                let index = self._currentIndex
+                self._currentIndex += 1
+
+                return array[index] as! T
             default:
+                assertionFailure()
                 throw DecodingError.typeMismatch(T.self, DecodingError.Context(codingPath: self.codingPath, debugDescription: ""))
             }
         }

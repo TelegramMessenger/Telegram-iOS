@@ -205,8 +205,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self._automaticMediaDownloadSettings.set(.single(initialPresentationDataAndSettings.automaticMediaDownloadSettings)
         |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])
             |> map { sharedData in
-                let autodownloadSettings: AutodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
-                let automaticDownloadSettings: MediaAutoDownloadSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings ?? .defaultSettings
+                let autodownloadSettings: AutodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings]?.get(AutodownloadSettings.self) ?? .defaultSettings
+                let automaticDownloadSettings: MediaAutoDownloadSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) ?? .defaultSettings
                 return automaticDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
             }
         ))
@@ -253,7 +253,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self._autodownloadSettings.set(.single(initialPresentationDataAndSettings.autodownloadSettings)
         |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings])
             |> map { sharedData in
-                let autodownloadSettings: AutodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
+                let autodownloadSettings: AutodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings]?.get(AutodownloadSettings.self) ?? .defaultSettings
                 return autodownloadSettings
             }
         ))
@@ -291,7 +291,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.inAppNotificationSettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
         |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
-                if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings {
+                if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) {
                     let _ = strongSelf.currentInAppNotificationSettings.swap(settings)
                 }
             }
@@ -300,7 +300,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.mediaInputSettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.mediaInputSettings])
         |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
-                if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaInputSettings] as? MediaInputSettings {
+                if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaInputSettings]?.get(MediaInputSettings.self) {
                     let _ = strongSelf.currentMediaInputSettings.swap(settings)
                 }
             }
@@ -310,7 +310,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let _ = immediateExperimentalUISettingsValue.swap(initialPresentationDataAndSettings.experimentalUISettings)
         self.experimentalUISettingsDisposable = (self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
         |> deliverOnMainQueue).start(next: { sharedData in
-            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings {
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) {
                 let _ = immediateExperimentalUISettingsValue.swap(settings)
             }
         })
@@ -412,7 +412,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                     return nil
                                 })
                                 return account.postbox.transaction { transaction -> AddedAccountResult in
-                                    let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+                                    let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
                                     let contentSettings = getContentSettings(transaction: transaction)
                                     let appConfiguration = getAppConfiguration(transaction: transaction)
                                     return .ready(id, account, attributes.sortIndex, limitsConfiguration, contentSettings, appConfiguration)
@@ -769,7 +769,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             
             let enableSpotlight = accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.intentsSettings]))
             |> map { sharedData -> Bool in
-                let intentsSettings: IntentsSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings ?? .defaultSettings
+                let intentsSettings: IntentsSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings]?.get(IntentsSettings.self) ?? .defaultSettings
                 return intentsSettings.contacts
             }
             |> distinctUntilChanged
@@ -837,7 +837,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         let settings = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
         |> map { sharedData -> (allAccounts: Bool, includeMuted: Bool) in
-            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
             return (settings.displayNotificationsFromAllAccounts, false)
         }
         |> distinctUntilChanged(isEqual: { lhs, rhs in

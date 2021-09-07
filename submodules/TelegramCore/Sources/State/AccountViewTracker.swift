@@ -1172,7 +1172,7 @@ public final class AccountViewTracker {
                 
                 return ids
             }
-            |> deliverOn(self.queue)).start(next: { [weak self] messageIds in
+            |> deliverOn(self.queue)).start(next: { _ in
                 //self?.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
             })
         }
@@ -1585,8 +1585,6 @@ public final class AccountViewTracker {
                     } else {
                         subscriber.putNext([])
                     }
-                }, error: { error in
-                    subscriber.putError(error)
                 }, completed: {
                     subscriber.putCompletion()
                 })
@@ -1721,7 +1719,7 @@ public final class AccountViewTracker {
                     var currentMessages: [Message] = []
                     for entry in view.entries {
                         switch entry {
-                            case let .hole(index):
+                            case .hole:
                                 if !currentMessages.isEmpty {
                                     entries.append(.message(currentMessages[currentMessages.count - 1], currentMessages))
                                     currentMessages.removeAll()

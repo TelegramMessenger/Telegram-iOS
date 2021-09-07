@@ -197,7 +197,6 @@ private final class ContactSyncManagerImpl {
                 disposable.add(
                     (syncContactsOnce(network: self.network, postbox: self.postbox, accountPeerId: self.accountPeerId)
                     |> mapToSignal { _ -> Signal<PushDeviceContactsResult, NoError> in
-                        return .complete()
                     }
                     |> then(importSignal)
                     |> deliverOn(self.queue)
@@ -250,8 +249,8 @@ private func pushDeviceContacts(postbox: Postbox, network: Network, importableCo
                         if let updatedData = importableContacts[number] {
                             if let value = value as? TelegramDeviceContactImportedData {
                                 switch value {
-                                    case let .imported(imported):
-                                        if imported.data != updatedData {
+                                    case let .imported(data, _):
+                                        if data != updatedData {
                                            updatedDataIdentifiers.insert(identifier)
                                         }
                                     case .retryLater:

@@ -307,7 +307,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     
     let featuredFilters = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFiltersFeaturedState])
     |> map { preferences -> [ChatListFeaturedFilter] in
-        guard let state = preferences.values[PreferencesKeys.chatListFiltersFeaturedState] as? ChatListFiltersFeaturedState else {
+        guard let state = preferences.values[PreferencesKeys.chatListFiltersFeaturedState]?.get(ChatListFiltersFeaturedState.self) else {
             return []
         }
         return state.filters
@@ -330,7 +330,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         featuredFilters
     )
     |> map { presentationData, state, filtersWithCountsValue, preferences, updatedFilterOrderValue, suggestedFilters -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let filterSettings = preferences.values[ApplicationSpecificPreferencesKeys.chatListFilterSettings] as? ChatListFilterSettings ?? ChatListFilterSettings.default
+        let filterSettings = preferences.values[ApplicationSpecificPreferencesKeys.chatListFilterSettings]?.get(ChatListFilterSettings.self) ?? ChatListFilterSettings.default
         let leftNavigationButton: ItemListNavigationButton?
         switch mode {
         case .default:

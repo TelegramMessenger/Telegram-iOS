@@ -30,7 +30,7 @@ extension ReplyMarkupButton {
             case let .inputKeyboardButtonUrlAuth(_, text, fwdText, url, _):
                 self.init(title: text, titleWhenForwarded: fwdText, action: .urlAuth(url: url, buttonId: 0))
             case let .keyboardButtonRequestPoll(_, quiz, text):
-                var isQuiz: Bool? = quiz.flatMap { quiz in
+                let isQuiz: Bool? = quiz.flatMap { quiz in
                     if case .boolTrue = quiz {
                         return true
                     } else {

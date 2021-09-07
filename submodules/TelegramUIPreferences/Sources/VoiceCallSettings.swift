@@ -29,7 +29,7 @@ public enum VoiceCallDataSaving: Int32 {
     case `default`
 }
 
-public struct VoiceCallSettings: PreferencesEntry, Equatable {
+public struct VoiceCallSettings: Codable, Equatable {
     public var dataSaving: VoiceCallDataSaving
     public var enableSystemIntegration: Bool
     
@@ -42,22 +42,18 @@ public struct VoiceCallSettings: PreferencesEntry, Equatable {
         self.enableSystemIntegration = enableSystemIntegration
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.dataSaving = VoiceCallDataSaving(rawValue: decoder.decodeInt32ForKey("ds", orElse: 0))!
-        self.enableSystemIntegration = decoder.decodeInt32ForKey("enableSystemIntegration", orElse: 1) != 0
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.dataSaving = VoiceCallDataSaving(rawValue: try container.decode(Int32.self, forKey: "ds")) ?? .default
+        self.enableSystemIntegration = (try container.decode(Int32.self, forKey: "enableSystemIntegration")) != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.dataSaving.rawValue, forKey: "ds")
-        encoder.encodeInt32(self.enableSystemIntegration ? 1 : 0, forKey: "enableSystemIntegration")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? VoiceCallSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.dataSaving.rawValue, forKey: "ds")
+        try container.encode((self.enableSystemIntegration ? 1 : 0) as Int32, forKey: "enableSystemIntegration")
     }
     
     public static func ==(lhs: VoiceCallSettings, rhs: VoiceCallSettings) -> Bool {
@@ -75,12 +71,12 @@ public func updateVoiceCallSettingsSettingsInteractively(accountManager: Account
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.voiceCallSettings, { entry in
             let currentSettings: VoiceCallSettings
-            if let entry = entry as? VoiceCallSettings {
+            if let entry = entry?.get(VoiceCallSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = VoiceCallSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

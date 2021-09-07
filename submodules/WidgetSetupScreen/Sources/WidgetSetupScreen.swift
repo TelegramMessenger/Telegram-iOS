@@ -293,7 +293,7 @@ public func widgetSetupScreen(context: AccountContext) -> ViewController {
     ])
     |> mapToSignal { views -> Signal<InputData, NoError> in
         let widgetSettings: WidgetSettings
-        if let view = views.views[preferencesKey] as? PreferencesView, let value = view.values[ApplicationSpecificPreferencesKeys.widgetSettings] as? WidgetSettings {
+        if let view = views.views[preferencesKey] as? PreferencesView, let value = view.values[ApplicationSpecificPreferencesKeys.widgetSettings]?.get(WidgetSettings.self) {
             widgetSettings = value
         } else {
             widgetSettings = .default

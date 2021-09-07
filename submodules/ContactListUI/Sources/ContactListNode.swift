@@ -904,7 +904,7 @@ public final class ContactListNode: ASDisplayNode {
         |> then(
             combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .contacts)!), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]))
             |> map { noticeView, preferences -> (Bool, Bool) in
-                let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings ?? ContactsSettings.defaultSettings
+                let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings]?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
                 let synchronizeDeviceContacts: Bool = settings.synchronizeContacts
                 let suppressed: Bool
                 let timestamp = noticeView.value.flatMap({ ApplicationSpecificNotice.getTimestampValue($0) })

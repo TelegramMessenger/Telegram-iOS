@@ -24,9 +24,10 @@ private struct FetchManagerLocationEntryId: Hashable {
         }
         return true
     }
-    
-    var hashValue: Int {
-        return self.resourceId.hashValue &* 31 &+ self.locationKey.hashValue
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(self.resourceId.hashValue)
+        hasher.combine(self.locationKey)
     }
 }
 
@@ -221,7 +222,6 @@ private final class FetchManagerCategoryContext {
                             return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                             |> castError(FetchResourceError.self)
                             |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
-                                return .complete()
                             }
                             |> then(.single(type))
                         }
@@ -349,7 +349,7 @@ private final class FetchManagerCategoryContext {
                     if isVideoPreload {
                         activeContext.disposable = (preloadVideoResource(postbox: self.postbox, resourceReference: entry.resourceReference, duration: 4.0)
                         |> castError(FetchResourceError.self)
-                        |> map { _ -> FetchResourceSourceType in return .local }
+                        |> map { _ -> FetchResourceSourceType in }
                         |> then(.single(.local))
                         |> deliverOnMainQueue).start(next: { _ in
                             entryCompleted(topEntryId)
@@ -362,7 +362,6 @@ private final class FetchManagerCategoryContext {
                                 return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                                 |> castError(FetchResourceError.self)
                                 |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
-                                    return .complete()
                                 }
                                 |> then(.single(type))
                             }

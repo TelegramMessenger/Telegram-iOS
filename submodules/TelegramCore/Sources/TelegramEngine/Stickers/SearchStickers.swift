@@ -175,7 +175,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
         var cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query))) as? CachedStickerQueryResult
         
         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-        let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+        let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
         let searchStickersConfiguration = SearchStickersConfiguration.with(appConfiguration: appConfiguration)
         
         if let currentCached = cached, currentTime > currentCached.timestamp + searchStickersConfiguration.cacheTimeout {

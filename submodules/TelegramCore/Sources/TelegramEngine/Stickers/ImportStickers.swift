@@ -38,7 +38,7 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
         return .fail(.generic)
     }
     return uploadedSticker(postbox: account.postbox, network: account.network, resource: resource)
-    |> mapError { _ -> UploadStickerError in return .generic }
+    |> mapError { _ -> UploadStickerError in }
     |> mapToSignal { result -> Signal<UploadStickerStatus, UploadStickerError> in
         switch result.content {
             case .error:

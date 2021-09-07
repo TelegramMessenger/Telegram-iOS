@@ -1166,7 +1166,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let appConfiguration = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> take(1)
         |> map { view in
-            return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+            return view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
         }
         
         var didSetPresentationData = false

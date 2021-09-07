@@ -436,8 +436,8 @@ private func privacySearchableItems(context: AccountContext, privacySettings: Ac
             callsSignal = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration]))
             |> take(1)
             |> map { sharedData, view -> (VoiceCallSettings, VoipConfiguration)? in
-                let voiceCallSettings: VoiceCallSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
-                let voipConfiguration = view.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
+                let voiceCallSettings: VoiceCallSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) ?? .defaultSettings
+                let voipConfiguration = view.values[PreferencesKeys.voipConfiguration]?.get(VoipConfiguration.self) ?? .defaultValue
                 return (voiceCallSettings, voipConfiguration)
             }
         } else {
@@ -742,7 +742,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
     |> take(1)
     |> map { view -> GlobalNotificationSettingsSet in
         let viewSettings: GlobalNotificationSettingsSet
-        if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+        if let settings = view.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
             viewSettings = settings.effective
         } else {
             viewSettings = GlobalNotificationSettingsSet.defaultSettings
@@ -758,7 +758,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
     
     let proxyServers = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
     |> map { sharedData -> ProxySettings in
-        if let value = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+        if let value = sharedData.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) {
             return value
         } else {
             return ProxySettings.defaultSettings
@@ -771,13 +771,13 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
     let localizationPreferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.localizationListState]))
     let localizations = combineLatest(context.account.postbox.combinedView(keys: [localizationPreferencesKey]), context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings]))
     |> map { view, sharedData -> [LocalizationInfo] in
-        if let localizationListState = (view.views[localizationPreferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState] as? LocalizationListState, !localizationListState.availableOfficialLocalizations.isEmpty {
+        if let localizationListState = (view.views[localizationPreferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState]?.get(LocalizationListState.self), !localizationListState.availableOfficialLocalizations.isEmpty {
             
             var existingIds = Set<String>()
             let availableSavedLocalizations = localizationListState.availableSavedLocalizations.filter({ info in !localizationListState.availableOfficialLocalizations.contains(where: { $0.languageCode == info.languageCode }) })
             
             var activeLanguageCode: String?
-            if let localizationSettings = sharedData.entries[SharedDataKeys.localizationSettings] as? LocalizationSettings {
+            if let localizationSettings = sharedData.entries[SharedDataKeys.localizationSettings]?.get(LocalizationSettings.self) {
                 activeLanguageCode = localizationSettings.primaryComponent.languageCode
             }
             

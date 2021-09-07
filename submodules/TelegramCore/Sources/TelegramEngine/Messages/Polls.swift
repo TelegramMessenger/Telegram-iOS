@@ -31,7 +31,7 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
                                 resultPoll = transaction.getMedia(pollId) as? TelegramMediaPoll
                                 if let poll = poll {
                                     switch poll {
-                                    case let .poll(id, flags, question, answers, closePeriod, _):
+                                    case let .poll(_, flags, question, answers, closePeriod, _):
                                         let publicity: TelegramMediaPollPublicity
                                         if (flags & (1 << 1)) != 0 {
                                             publicity = .public
@@ -45,15 +45,13 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
                                             kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
                                         }
                                         resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
-                                    default:
-                                        break
                                     }
                                 }
                                 
                                 let resultsMin: Bool
                                 switch results {
-                                case let .pollResults(pollResults):
-                                    resultsMin = (pollResults.flags & (1 << 0)) != 0
+                                case let .pollResults(flags, _, _, _, _, _):
+                                    resultsMin = (flags & (1 << 0)) != 0
                                 }
                                 resultPoll = resultPoll?.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
                                 

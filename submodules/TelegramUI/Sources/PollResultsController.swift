@@ -76,10 +76,10 @@ private enum PollResultsEntry: ItemListNodeEntry {
         switch self {
         case .text:
             return PollResultsSection.text.rawValue
-        case let .optionPeer(optionPeer):
-            return PollResultsSection.option(optionPeer.optionId).rawValue
-        case let .optionExpand(optionExpand):
-            return PollResultsSection.option(optionExpand.optionId).rawValue
+        case let .optionPeer(optionId, _, _, _, _, _, _, _, _, _):
+            return PollResultsSection.option(optionId).rawValue
+        case let .optionExpand(optionId, _, _, _):
+            return PollResultsSection.option(optionId).rawValue
         case .solutionHeader, .solutionText:
             return PollResultsSection.solution.rawValue
         }
@@ -89,10 +89,10 @@ private enum PollResultsEntry: ItemListNodeEntry {
         switch self {
         case .text:
             return .text
-        case let .optionPeer(optionPeer):
-            return .optionPeer(optionPeer.optionId, optionPeer.index)
-        case let .optionExpand(optionExpand):
-            return .optionExpand(optionExpand.optionId)
+        case let .optionPeer(optionId, index, _, _, _, _, _, _, _, _):
+            return .optionPeer(optionId, index)
+        case let .optionExpand(optionId, _, _, _):
+            return .optionExpand(optionId)
         case .solutionHeader:
             return .solutionHeader
         case .solutionText:
@@ -129,7 +129,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
             default:
                 return true
             }
-        case let .optionPeer(lhsOptionPeer):
+        case let .optionPeer(lhsOptionId, lhsIndex, _, _, _, _, _, _, _, _):
             switch rhs {
             case .text:
                 return false
@@ -137,20 +137,20 @@ private enum PollResultsEntry: ItemListNodeEntry {
                 return false
             case .solutionText:
                 return false
-            case let .optionPeer(rhsOptionPeer):
-                if lhsOptionPeer.optionId == rhsOptionPeer.optionId {
-                    return lhsOptionPeer.index < rhsOptionPeer.index
+            case let .optionPeer(rhsOptionId, rhsIndex, _, _, _, _, _, _, _, _):
+                if lhsOptionId == rhsOptionId {
+                    return lhsIndex < rhsIndex
                 } else {
-                    return lhsOptionPeer.optionId < rhsOptionPeer.optionId
+                    return lhsOptionId < rhsOptionId
                 }
-            case let .optionExpand(rhsOptionExpand):
-                if lhsOptionPeer.optionId == rhsOptionExpand.optionId {
+            case let .optionExpand(rhsOptionId, _, _, _):
+                if lhsOptionId == rhsOptionId {
                     return true
                 } else {
-                    return lhsOptionPeer.optionId < rhsOptionExpand.optionId
+                    return lhsOptionId < rhsOptionId
                 }
             }
-        case let .optionExpand(lhsOptionExpand):
+        case let .optionExpand(lhsOptionId, _, _, _):
             switch rhs {
             case .text:
                 return false
@@ -158,17 +158,17 @@ private enum PollResultsEntry: ItemListNodeEntry {
                 return false
             case .solutionText:
                 return false
-            case let .optionPeer(rhsOptionPeer):
-                if lhsOptionExpand.optionId == rhsOptionPeer.optionId {
+            case let .optionPeer(rhsOptionId, _, _, _, _, _, _, _, _, _):
+                if lhsOptionId == rhsOptionId {
                     return false
                 } else {
-                    return lhsOptionExpand.optionId < rhsOptionPeer.optionId
+                    return lhsOptionId < rhsOptionId
                 }
-            case let .optionExpand(rhsOptionExpand):
-                if lhsOptionExpand.optionId == rhsOptionExpand.optionId {
+            case let .optionExpand(rhsOptionId, _, _, _):
+                if lhsOptionId == rhsOptionId {
                     return false
                 } else {
-                    return lhsOptionExpand.optionId < rhsOptionExpand.optionId
+                    return lhsOptionId < rhsOptionId
                 }
             }
         }
@@ -391,8 +391,8 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
             var isFirstOption = true
             loop: for i in 0 ..< entries.count {
                 switch entries[i] {
-                case let .optionPeer(optionPeer):
-                    if optionPeer.opaqueIdentifier == focusOnOptionWithOpaqueIdentifier {
+                case let .optionPeer(_, _, _, _, _, _, _, opaqueIdentifier, _, _):
+                    if opaqueIdentifier == focusOnOptionWithOpaqueIdentifier {
                         if !isFirstOption {
                             initialScrollToItem = ListViewScrollToItem(index: i, position: .top(0.0), animated: false, curve: .Default(duration: nil), directionHint: .Down)
                         }

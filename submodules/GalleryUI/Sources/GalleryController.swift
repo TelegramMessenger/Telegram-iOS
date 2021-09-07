@@ -488,7 +488,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             let f: () -> Void = {
                 if let strongSelf = self {
                     if let view = view {
-                        let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+                        let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
                         let configuration = GalleryConfiguration.with(appConfiguration: appConfiguration)
                         strongSelf.configuration = configuration
                         
