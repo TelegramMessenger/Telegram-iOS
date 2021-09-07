@@ -6795,3 +6795,6 @@ More at: https://ads.telegram.org";
 "Gif.Emotion.Party" = "Party";
 
 "Conversation.ForwardFrom" = "From: %@";
+
+"Conversation.ContextMenuSeen_1" = "1 Seen";
+"Conversation.ContextMenuSeen_any" = "%@ Seen";

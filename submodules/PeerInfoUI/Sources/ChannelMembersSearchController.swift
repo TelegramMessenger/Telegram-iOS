@@ -34,6 +34,7 @@ public final class ChannelMembersSearchController: ViewController {
     
     private let forceTheme: PresentationTheme?
     private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
     
     private var didPlayPresentationAnimation = false
     
@@ -43,13 +44,13 @@ public final class ChannelMembersSearchController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContext, peerId: PeerId, forceTheme: PresentationTheme? = nil, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, forceTheme: PresentationTheme? = nil, mode: ChannelMembersSearchControllerMode, filters: [ChannelMembersSearchFilter] = [], openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode
         self.openPeer = openPeer
         self.filters = filters
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.forceTheme = forceTheme
         if let forceTheme = forceTheme {
             self.presentationData = self.presentationData.withUpdated(theme: forceTheme)
@@ -77,10 +78,23 @@ public final class ChannelMembersSearchController: ViewController {
             self?.activateSearch()
         })
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.presentationData = presentationData
+            strongSelf.controllerNode.updatePresentationData(presentationData)
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {

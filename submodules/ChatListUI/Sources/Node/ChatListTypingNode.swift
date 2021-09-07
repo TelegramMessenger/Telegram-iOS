@@ -127,7 +127,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                             case .speakingInGroupCall:
                                 state = .typingText(string, lightColor)
                             case .choosingSticker:
-                                state = .none
+                                state = .choosingSticker(string, lightColor)
                         }
                     }
                 } else {

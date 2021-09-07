@@ -318,6 +318,7 @@ struct WallpaperColorPanelNodeState: Equatable {
     var rotation: Int32
     var preview: Bool
     var simpleGradientGeneration: Bool
+    var suggestedNewColor: HSBColor?
 }
 
 private final class ColorSampleItemNode: ASImageNode {
@@ -707,6 +708,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
                         hsb.0 += 0.05
                     }
                     current.colors.append(HSBColor(values: hsb))
+                } else if let suggestedNewColor = current.suggestedNewColor {
+                    current.colors.append(suggestedNewColor)
                 } else {
                     current.colors.append(current.colors[current.colors.count - 1])
                 }

@@ -304,7 +304,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                     if let currentNode = strongSelf.emptyNode {
                         currentNode.updateIsLoading(isLoading)
                     } else {
-                        let emptyNode = ChatListEmptyNode(isFilter: filter != nil, isLoading: isLoading, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, action: {
+                        let emptyNode = ChatListEmptyNode(context: context, isFilter: filter != nil, isLoading: isLoading, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, action: {
                             self?.emptyAction(filter)
                         })
                         strongSelf.emptyNode = emptyNode

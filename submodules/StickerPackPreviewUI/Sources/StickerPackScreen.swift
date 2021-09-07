@@ -1065,10 +1065,10 @@ public enum StickerPackScreenPerformedAction {
     case remove(positionInList: Int)
 }
 
-public func StickerPackScreen(context: AccountContext, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
+public func StickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
     //return StickerPackScreenImpl(context: context, stickerPacks: stickerPacks, selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
     
-    let controller = StickerPackPreviewController(context: context, stickerPack: mainStickerPack, mode: mode, parentNavigationController: parentNavigationController, actionPerformed: actionPerformed)
+    let controller = StickerPackPreviewController(context: context, updatedPresentationData: updatedPresentationData, stickerPack: mainStickerPack, mode: mode, parentNavigationController: parentNavigationController, actionPerformed: actionPerformed)
     controller.dismissed = dismissed
     controller.sendSticker = sendSticker
     return controller

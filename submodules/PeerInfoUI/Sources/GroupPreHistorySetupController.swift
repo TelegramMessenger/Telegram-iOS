@@ -116,7 +116,7 @@ private func groupPreHistorySetupEntries(isSupergroup: Bool, presentationData: P
     return entries
 }
 
-public func groupPreHistorySetupController(context: AccountContext, peerId: PeerId, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
+public func groupPreHistorySetupController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void) -> ViewController {
     let statePromise = ValuePromise(GroupPreHistorySetupState(), ignoreRepeated: true)
     let stateValue = Atomic(value: GroupPreHistorySetupState())
     let updateState: ((GroupPreHistorySetupState) -> GroupPreHistorySetupState) -> Void = { f in
@@ -139,7 +139,8 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
         }
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
     |> deliverOnMainQueue
     |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let defaultValue: Bool = (view.cachedData as? CachedChannelData)?.flags.contains(.preHistoryEnabled) ?? false

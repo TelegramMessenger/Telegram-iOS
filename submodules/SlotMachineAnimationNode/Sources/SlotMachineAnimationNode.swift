@@ -157,13 +157,13 @@ public final class SlotMachineAnimationNode: ASDisplayNode {
     
     public var success: ((Bool) -> Void)?
     
-    public init(size: CGSize = CGSize(width: 184.0, height: 184.0)) {
+    public init(account: Account, size: CGSize = CGSize(width: 184.0, height: 184.0)) {
         self.animationSize = size
         self.backNode = ManagedAnimationNode(size: self.animationSize)
         let reelSize = CGSize(width: 384.0, height: 384.0)
-        self.leftReelNode = DiceAnimatedStickerNode(size: reelSize)
-        self.centerReelNode = DiceAnimatedStickerNode(size: reelSize)
-        self.rightReelNode = DiceAnimatedStickerNode(size: reelSize)
+        self.leftReelNode = DiceAnimatedStickerNode(account: account, size: reelSize)
+        self.centerReelNode = DiceAnimatedStickerNode(account: account,size: reelSize)
+        self.rightReelNode = DiceAnimatedStickerNode(account: account,size: reelSize)
         self.frontNode = ManagedAnimationNode(size: self.animationSize)
         
         super.init()
@@ -252,6 +252,7 @@ public final class SlotMachineAnimationNode: ASDisplayNode {
 }
 
 class DiceAnimatedStickerNode: ASDisplayNode {
+    private let account: Account
     public let intrinsicSize: CGSize
     
     private let animationNode: AnimatedStickerNode
@@ -260,7 +261,8 @@ class DiceAnimatedStickerNode: ASDisplayNode {
     public var trackStack: [ManagedAnimationItem] = []
     public var didTryAdvancingState = false
     
-    init(size: CGSize) {
+    init(account: Account, size: CGSize) {
+        self.account = account
         self.intrinsicSize = size
         
         self.animationNode = AnimatedStickerNode()
@@ -309,9 +311,7 @@ class DiceAnimatedStickerNode: ASDisplayNode {
         var source: AnimatedStickerNodeSource?
         switch item.source {
             case let .local(animationName):
-                if let path = getAppBundle().path(forResource: animationName, ofType: "tgs") {
-                    source = AnimatedStickerNodeLocalFileSource(path: path)
-                }
+                source = AnimatedStickerNodeLocalFileSource(name: animationName)
             case let .resource(account, resource):
                 source = AnimatedStickerResourceSource(account: account, resource: resource)
         }

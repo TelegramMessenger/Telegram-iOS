@@ -138,7 +138,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
         let arguments = arguments as! ChatListFilterPresetListControllerArguments
         switch self {
         case let .screenHeader(text):
-            return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: text, animation: .folders, sectionId: self.section)
+            return ChatListFilterSettingsHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animation: .folders, sectionId: self.section)
         case let .suggestedListHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
         case let .suggestedPreset(_, title, label, preset):

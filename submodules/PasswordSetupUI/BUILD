@@ -37,6 +37,7 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/AppBundle:AppBundle",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/OverlayStatusController:OverlayStatusController",

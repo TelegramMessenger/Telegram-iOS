@@ -22,6 +22,9 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
         if lhs.accentColor != rhs.accentColor {
             return false
         }
+        if lhs.outgoingAccentColor != rhs.outgoingAccentColor {
+            return false
+        }
         if lhs.messageColors != rhs.messageColors {
             return false
         }
@@ -36,13 +39,15 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
     
     public let baseTheme: TelegramBaseTheme
     public let accentColor: UInt32
+    public let outgoingAccentColor: UInt32?
     public let messageColors: [UInt32]
     public let animateMessageColors: Bool
     public let wallpaper: TelegramWallpaper?
     
-    public init(baseTheme: TelegramBaseTheme, accentColor: UInt32, messageColors: [UInt32], animateMessageColors: Bool, wallpaper: TelegramWallpaper?) {
+    public init(baseTheme: TelegramBaseTheme, accentColor: UInt32, outgoingAccentColor: UInt32?, messageColors: [UInt32], animateMessageColors: Bool, wallpaper: TelegramWallpaper?) {
         self.baseTheme = baseTheme
         self.accentColor = accentColor
+        self.outgoingAccentColor = outgoingAccentColor
         self.messageColors = messageColors
         self.animateMessageColors = animateMessageColors
         self.wallpaper = wallpaper
@@ -51,6 +56,7 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
     public init(decoder: PostboxDecoder) {
         self.baseTheme = TelegramBaseTheme(rawValue: decoder.decodeInt32ForKey("baseTheme", orElse: 0)) ?? .classic
         self.accentColor = UInt32(bitPattern: decoder.decodeInt32ForKey("accent", orElse: 0))
+        self.outgoingAccentColor = decoder.decodeOptionalInt32ForKey("outgoingAccent").flatMap { UInt32(bitPattern: $0) }
         let messageColors = decoder.decodeInt32ArrayForKey("messageColors")
         if !messageColors.isEmpty {
             self.messageColors = messageColors.map(UInt32.init(bitPattern:))
@@ -64,48 +70,21 @@ public final class TelegramThemeSettings: PostboxCoding, Equatable {
         self.animateMessageColors = decoder.decodeInt32ForKey("animateMessageColors", orElse: 0) != 0
         self.wallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
     }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: StringCodingKey.self)
-
-        self.baseTheme = TelegramBaseTheme(rawValue: try container.decode(Int32.self, forKey: "baseTheme")) ?? .classic
-        self.accentColor = UInt32(bitPattern: try container.decode(Int32.self, forKey: "accent"))
-        self.messageColors = (try container.decode([Int32].self, forKey: "messageColors")).map(UInt32.init(bitPattern:))
-        self.animateMessageColors = (try container.decode(Int32.self, forKey: "animateMessageColors")) != 0
-
-        if let wallpaperData = try container.decodeIfPresent(Data.self, forKey: "wallpaper") {
-            self.wallpaper = TelegramWallpaper(decoder: PostboxDecoder(buffer: MemoryBuffer(data: wallpaperData)))
-        } else {
-            self.wallpaper = nil
-        }
-    }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.baseTheme.rawValue, forKey: "baseTheme")
         encoder.encodeInt32(Int32(bitPattern: self.accentColor), forKey: "accent")
+        if let outgoingAccentColor = self.outgoingAccentColor {
+            encoder.encodeInt32(Int32(bitPattern: outgoingAccentColor), forKey: "outgoingAccent")
+        } else {
+            encoder.encodeNil(forKey: "outgoingAccent")
+        }
         encoder.encodeInt32Array(self.messageColors.map(Int32.init(bitPattern:)), forKey: "messageColors")
         encoder.encodeInt32(self.animateMessageColors ? 1 : 0, forKey: "animateMessageColors")
         if let wallpaper = self.wallpaper {
             encoder.encodeObject(wallpaper, forKey: "wallpaper")
         } else {
             encoder.encodeNil(forKey: "wallpaper")
-        }
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: StringCodingKey.self)
-
-        try container.encode(self.baseTheme.rawValue, forKey: "baseTheme")
-        try container.encode(Int32(bitPattern: self.accentColor), forKey: "accent")
-        try container.encode(self.messageColors.map(Int32.init(bitPattern:)), forKey: "messageColors")
-        try container.encode((self.animateMessageColors ? 1 : 0) as Int32, forKey: "animateMessageColors")
-
-        if let wallpaper = self.wallpaper {
-            let innerEncoder = PostboxEncoder()
-            wallpaper.encode(innerEncoder)
-            try container.encode(innerEncoder.makeData(), forKey: "wallpaper")
-        } else {
-            try container.encodeNil(forKey: "wallpaper")
         }
     }
 }

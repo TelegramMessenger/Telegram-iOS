@@ -13,6 +13,7 @@ enum ContextActionSibling {
 public protocol ContextActionNodeProtocol: ASDisplayNode {
     func setIsHighlighted(_ value: Bool)
     func performAction()
+    var isActionEnabled: Bool { get }
 }
 
 final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
@@ -32,6 +33,10 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
     private var iconDisposable: Disposable?
     
     private var pointerInteraction: PointerInteraction?
+
+    var isActionEnabled: Bool {
+        return true
+    }
     
     init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
         self.action = action

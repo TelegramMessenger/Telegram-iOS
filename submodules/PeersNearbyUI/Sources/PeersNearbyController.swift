@@ -215,7 +215,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
         let arguments = arguments as! PeersNearbyControllerArguments
         switch self {
             case let .header(theme, text):
-                return PeersNearbyHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return PeersNearbyHeaderItem(context: arguments.context, theme: theme, text: text, sectionId: self.section)
             case let .usersHeader(_, text, loading):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, activityIndicator: loading ? .left : .none, sectionId: self.section)
             case let .empty(theme, text):

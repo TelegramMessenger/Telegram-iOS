@@ -5,6 +5,12 @@
 @class SSignal;
 @class TGOverlayControllerWindow;
 
+@class TGNavigationBarPallete;
+@class TGMenuSheetPallete;
+@class TGMediaAssetsPallete;
+@class TGImageBorderPallete;
+@class TGCheckButtonPallete;
+
 typedef enum {
     LegacyComponentsActionSheetActionTypeGeneric,
     LegacyComponentsActionSheetActionTypeDestructive,
@@ -47,6 +53,12 @@ typedef enum {
 - (void)setStatusBarStyle:(UIStatusBarStyle)statusBarStyle animated:(BOOL)animated;
 - (void)forceStatusBarAppearanceUpdate;
 - (bool)prefersLightStatusBar;
+
+- (TGNavigationBarPallete *)navigationBarPallete;
+- (TGMenuSheetPallete *)menuSheetPallete;
+- (TGMenuSheetPallete *)darkMenuSheetPallete;
+- (TGMediaAssetsPallete *)mediaAssetsPallete;
+- (TGCheckButtonPallete *)checkButtonPallete;
 
 @required
 

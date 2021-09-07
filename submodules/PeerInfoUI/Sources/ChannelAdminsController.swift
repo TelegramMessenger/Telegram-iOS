@@ -470,7 +470,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
     return entries
 }
 
-public func channelAdminsController(context: AccountContext, peerId initialPeerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
+public func channelAdminsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId initialPeerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
     let statePromise = ValuePromise(ChannelAdminsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelAdminsControllerState())
     let updateState: ((ChannelAdminsControllerState) -> ChannelAdminsControllerState) -> Void = { f in
@@ -493,9 +493,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
     actionsDisposable.add(upgradeDisposable)
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
-    
-    let presentationDataSignal = context.sharedContext.presentationData
-    
+        
     var upgradedToSupergroupImpl: ((PeerId, @escaping () -> Void) -> Void)?
     
     let currentPeerId = ValuePromise<PeerId>(initialPeerId)
@@ -602,13 +600,13 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
                                         }
                                     }
                                     if !canUnban {
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Members_AddAdminErrorBlacklisted, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_Members_AddAdminErrorBlacklisted, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                         return
                                     }
                                 }
                             }
                         }
-                        pushControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
+                        pushControllerImpl?(channelAdminController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
                         }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership))
                     })
                     dismissController = { [weak controller] in
@@ -624,7 +622,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
         let _ = (currentPeerId.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerId in
-            pushControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
+            pushControllerImpl?(channelAdminController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
             }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership))
         })
     })
@@ -700,7 +698,8 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
     
     var previousPeers: [RenderedChannelParticipant]?
     
-    let signal = combineLatest(queue: .mainQueue(), presentationDataSignal, statePromise.get(), peerView.get(), adminsPromise.get() |> deliverOnMainQueue)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(queue: .mainQueue(), presentationData, statePromise.get(), peerView.get(), adminsPromise.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
     |> map { presentationData, state, view, admins -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peerId = view.peerId
@@ -757,7 +756,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
                 }
             }, openPeer: { _, participant in
                 if let participant = participant?.participant, case .member = participant {
-                    pushControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
+                    pushControllerImpl?(channelAdminController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
                         updateState { state in
                             return state.withUpdatedSearchingMembers(false)
                         }

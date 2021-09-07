@@ -775,24 +775,6 @@ public protocol AnimatedStickerNodeSource {
     func directDataPath() -> Signal<String, NoError>
 }
 
-public final class AnimatedStickerNodeLocalFileSource: AnimatedStickerNodeSource {
-    public var fitzModifier: EmojiFitzModifier? = nil
-    
-    public let path: String
-    
-    public init(path: String) {
-        self.path = path
-    }
-    
-    public func directDataPath() -> Signal<String, NoError> {
-        return .single(self.path)
-    }
-    
-    public func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError> {
-        return .never()
-    }
-}
-
 public final class AnimatedStickerNode: ASDisplayNode {
     private let queue: Queue
     private let disposable = MetaDisposable()

@@ -368,7 +368,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                     if strongSelf.didMoveFromInitialGesturePoint {
                         let actionPoint = strongSelf.view.convert(localPoint, to: strongSelf.actionsContainerNode.view)
-                        let actionNode = strongSelf.actionsContainerNode.actionNode(at: actionPoint)
+                        var actionNode = strongSelf.actionsContainerNode.actionNode(at: actionPoint)
+                        if let actionNodeValue = actionNode, !actionNodeValue.isActionEnabled {
+                            actionNode = nil
+                        }
+
                         if strongSelf.highlightedActionNode !== actionNode {
                             strongSelf.highlightedActionNode?.setIsHighlighted(false)
                             strongSelf.highlightedActionNode = actionNode

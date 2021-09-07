@@ -920,7 +920,7 @@ public final class ContactListNode: ASDisplayNode {
         var authorizeImpl: (() -> Void)?
         var openPrivacyPolicyImpl: (() -> Void)?
         
-        self.authorizationNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: PermissionKind.contacts.rawValue, icon: .image(UIImage(bundleImageName: "Settings/Permissions/Contacts")), title: self.presentationData.strings.Contacts_PermissionsTitle, text: self.presentationData.strings.Contacts_PermissionsText, buttonTitle: self.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
+        self.authorizationNode = PermissionContentNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, kind: PermissionKind.contacts.rawValue, icon: .image(UIImage(bundleImageName: "Settings/Permissions/Contacts")), title: self.presentationData.strings.Contacts_PermissionsTitle, text: self.presentationData.strings.Contacts_PermissionsText, buttonTitle: self.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
             authorizeImpl?()
         }, openPrivacyPolicy: {
             openPrivacyPolicyImpl?()
@@ -1376,7 +1376,7 @@ public final class ContactListNode: ASDisplayNode {
                     
                     let authorizationPreviousHidden = strongSelf.authorizationNode.isHidden
                     strongSelf.authorizationNode.removeFromSupernode()
-                    strongSelf.authorizationNode = PermissionContentNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, kind: PermissionKind.contacts.rawValue, icon: .image(UIImage(bundleImageName: "Settings/Permissions/Contacts")), title: strongSelf.presentationData.strings.Contacts_PermissionsTitle, text: strongSelf.presentationData.strings.Contacts_PermissionsText, buttonTitle: strongSelf.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
+                    strongSelf.authorizationNode = PermissionContentNode(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, kind: PermissionKind.contacts.rawValue, icon: .image(UIImage(bundleImageName: "Settings/Permissions/Contacts")), title: strongSelf.presentationData.strings.Contacts_PermissionsTitle, text: strongSelf.presentationData.strings.Contacts_PermissionsText, buttonTitle: strongSelf.presentationData.strings.Contacts_PermissionsAllow, buttonAction: {
                         authorizeImpl?()
                     }, openPrivacyPolicy: {
                         openPrivacyPolicyImpl?()

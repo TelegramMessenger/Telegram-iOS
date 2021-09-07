@@ -22,6 +22,8 @@ import SlotMachineAnimationNode
 import UniversalMediaPlayer
 import ShimmerEffect
 import WallpaperBackgroundNode
+import LocalMediaResources
+import AppBundle
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -165,6 +167,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
     private(set) var placeholderNode: StickerShimmerEffectNode
     private(set) var animationNode: GenericAnimatedStickerNode?
+    private var animationSize: CGSize?
+    private var additionalAnimationNodes: [AnimatedStickerNode] = []
     private var didSetUpAnimationNode = false
     private var isPlaying = false
   
@@ -329,7 +333,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     return .fail
                 }
                 
-                if strongSelf.telegramFile == nil {
+                if false, strongSelf.telegramFile == nil {
                     if let animationNode = strongSelf.animationNode, animationNode.frame.contains(point) {
                         return .waitForDoubleTap
                     }
@@ -404,7 +408,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let telegramDice = self.telegramDice {
             if telegramDice.emoji == "🎰" {
-                let animationNode = SlotMachineAnimationNode()
+                let animationNode = SlotMachineAnimationNode(account: item.context.account)
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     animationNode.success = { [weak self] onlyHaptic in
                         if let strongSelf = self, let item = strongSelf.item {
@@ -575,7 +579,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         
                         let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
                         let mode: AnimatedStickerMode = .direct(cachePathPrefix: pathPrefix)
-                        
+                        self.animationSize = fittedSize
                         animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: mode)
                     }
                 }
@@ -1286,6 +1290,36 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
+    private func playAdditionalAnimation(_ name: String) {
+        let source = AnimatedStickerNodeLocalFileSource(name: name)
+        guard let item = self.item, let path = source.path, let animationSize = self.animationSize, let animationNode = self.animationNode, self.additionalAnimationNodes.count < 4 else {
+            return
+        }
+        let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+        
+        self.supernode?.view.bringSubviewToFront(self.view)
+        
+        let resource = BundleResource(name: name, path: path)
+        let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
+        
+        let additionalAnimationNode = AnimatedStickerNode()
+        additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 3.0), height: Int(animationSize.height * 3.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+        additionalAnimationNode.completed = { [weak self, weak additionalAnimationNode] _ in
+            self?.additionalAnimationNodes.removeAll(where: { $0 === additionalAnimationNode })
+            additionalAnimationNode?.removeFromSupernode()
+        }
+        additionalAnimationNode.frame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
+            .offsetBy(dx: incoming ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
+        if incoming {
+            additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+        }
+        self.addSubnode(additionalAnimationNode)
+        
+        self.additionalAnimationNodes.append(additionalAnimationNode)
+        
+        additionalAnimationNode.play()
+    }
+    
     private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {
         switch gesture {
         case .tap:
@@ -1384,6 +1418,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let heart = 0x2764
                         let peach = 0x1F351
                         let coffin = 0x26B0
+                        let fireworks = 0x1F386
                         
                         let appConfiguration = item.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
                         |> take(1)
@@ -1398,6 +1433,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 firstScalar = UnicodeScalar(heart)!
                             }
                             return .optionalAction({
+                                if firstScalar.value == heart {
+                                    self.playAdditionalAnimation("TestHearts")
+                                } else if firstScalar.value == fireworks {
+                                    self.playAdditionalAnimation("TestFireworks")
+                                }
+                                
                                 if shouldPlay {
                                     let _ = (appConfiguration
                                     |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] appConfiguration in
@@ -1606,11 +1647,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let selectionState = item.controllerInteraction.selectionState {
-            var selected = false
-            var incoming = true
-            
-            selected = selectionState.selectedIds.contains(item.message.id)
-            incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            let selected = selectionState.selectedIds.contains(item.message.id)
+            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             
             let offset: CGFloat = incoming ? 42.0 : 0.0
             

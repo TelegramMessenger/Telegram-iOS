@@ -11,6 +11,7 @@ import TelegramPresentationData
 import PresentationDataUtils
 import TelegramCore
 import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import ActivityIndicator
 
 public enum TwoFactorDataInputMode {
@@ -104,7 +105,7 @@ public final class TwoFactorDataInputScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TwoFactorDataInputScreenNode(presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
+        self.displayNode = TwoFactorDataInputScreenNode(sharedContext: self.sharedContext, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -1247,7 +1248,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         }
     }
     
-    init(presentationData: PresentationData, mode: TwoFactorDataInputMode, action: @escaping () -> Void, skipAction: @escaping () -> Void, changeEmailAction: @escaping () -> Void, resendCodeAction: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, presentationData: PresentationData, mode: TwoFactorDataInputMode, action: @escaping () -> Void, skipAction: @escaping () -> Void, changeEmailAction: @escaping () -> Void, resendCodeAction: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
         self.action = action
@@ -1268,26 +1269,20 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         case .password, .passwordRecovery, .emailAddress, .updateEmailAddress:
             self.monkeyNode = ManagedMonkeyAnimationNode()
         case .emailConfirmation, .passwordRecoveryEmail:
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupMail", ofType: "tgs") {
-                let animatedStickerNode = AnimatedStickerNode()
-                animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            let animatedStickerNode = AnimatedStickerNode()
+            animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupMail"), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 animatedStickerNode.visibility = true
-                self.animatedStickerNode = animatedStickerNode
-            }
+            self.animatedStickerNode = animatedStickerNode
         case .passwordHint:
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupHint", ofType: "tgs") {
-                let animatedStickerNode = AnimatedStickerNode()
-                animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                animatedStickerNode.visibility = true
-                self.animatedStickerNode = animatedStickerNode
-            }
+            let animatedStickerNode = AnimatedStickerNode()
+            animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupHint"), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            animatedStickerNode.visibility = true
+            self.animatedStickerNode = animatedStickerNode
         case .rememberPassword:
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupRemember", ofType: "tgs") {
-                let animatedStickerNode = AnimatedStickerNode()
-                animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .count(3), mode: .direct(cachePathPrefix: nil))
-                animatedStickerNode.visibility = true
-                self.animatedStickerNode = animatedStickerNode
-            }
+            let animatedStickerNode = AnimatedStickerNode()
+            animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupRemember"), width: 272, height: 272, playbackMode: .count(3), mode: .direct(cachePathPrefix: nil))
+            animatedStickerNode.visibility = true
+            self.animatedStickerNode = animatedStickerNode
         }
         
         let title: String

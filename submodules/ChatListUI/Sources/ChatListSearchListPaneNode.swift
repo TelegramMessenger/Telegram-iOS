@@ -18,6 +18,7 @@ import TelegramBaseController
 import OverlayStatusController
 import ListMessageItem
 import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import ChatListSearchItemHeader
 import PhoneNumberFormat
 import InstantPageUI
@@ -794,10 +795,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         super.init()
                 
-        if let path = getAppBundle().path(forResource: "ChatListNoResults", ofType: "tgs") {
-            self.emptyResultsAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-            self.emptyResultsAnimationSize = CGSize(width: 148.0, height: 148.0)
-        }
+        self.emptyResultsAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ChatListNoResults"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+        self.emptyResultsAnimationSize = CGSize(width: 148.0, height: 148.0)
         
         self.addSubnode(self.recentListNode)
         self.addSubnode(self.listNode)

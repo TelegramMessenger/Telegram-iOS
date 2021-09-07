@@ -401,11 +401,11 @@
         _context = context;
         _saveEditedPhotos = saveEditedPhotos;
      
-        if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(navigationBarPallete)])
-            [((TGNavigationBar *)self.navigationBar) setPallete:[[LegacyComponentsGlobals provider] navigationBarPallete]];
+        if ([context respondsToSelector:@selector(navigationBarPallete)])
+            [((TGNavigationBar *)self.navigationBar) setPallete:[context navigationBarPallete]];
         
-        if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
-            [self setPallete:[[LegacyComponentsGlobals provider] mediaAssetsPallete]];
+        if ([context respondsToSelector:@selector(mediaAssetsPallete)])
+            [self setPallete:[context mediaAssetsPallete]];
         
         _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
         

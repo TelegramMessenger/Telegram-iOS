@@ -337,7 +337,7 @@ public enum OldChannelsControllerIntent {
     case upgrade
 }
 
-public func oldChannelsController(context: AccountContext, intent: OldChannelsControllerIntent, completed: @escaping (Bool) -> Void = { _ in }) -> ViewController {
+public func oldChannelsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, intent: OldChannelsControllerIntent, completed: @escaping (Bool) -> Void = { _ in }) -> ViewController {
     let initialState = OldChannelsState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -396,9 +396,10 @@ public func oldChannelsController(context: AccountContext, intent: OldChannelsCo
     
     var previousPeersWereEmpty = true
     
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(
         queue: Queue.mainQueue(),
-        context.sharedContext.presentationData,
+        presentationData,
         statePromise.get(),
         peersPromise.get()
     )

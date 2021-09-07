@@ -410,7 +410,7 @@ private func channelStatsControllerEntries(data: ChannelStats?, messages: [Messa
     return entries
 }
 
-public func channelStatsController(context: AccountContext, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
+public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
     var openMessageStatsImpl: ((MessageId) -> Void)?
     var contextActionImpl: ((MessageId, ASDisplayNode, ContextGesture?) -> Void)?
     
@@ -460,14 +460,15 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
     
     let previousData = Atomic<ChannelStats?>(value: nil)
     
-    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), messagesPromise.get(), longLoadingSignal)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, dataPromise.get(), messagesPromise.get(), longLoadingSignal)
     |> deliverOnMainQueue
     |> map { presentationData, data, messageView, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if data == nil {
             if longLoading {
-                emptyStateItem = StatsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
+                emptyStateItem = StatsEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings)
             } else {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }

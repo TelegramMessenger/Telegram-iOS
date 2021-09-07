@@ -1056,7 +1056,7 @@ final class ChatMediaInputNode: ChatInputNode {
             }
             strongSelf.view.window?.endEditing(true)
             let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
+            let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: strongSelf.controllerInteraction.updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
                 if let strongSelf = self {
                     return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
                 } else {
@@ -1559,7 +1559,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     switch attribute {
                                                     case let .Sticker(_, packReference, _):
                                                         if let packReference = packReference {
-                                                            let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                                            let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: strongSelf.controllerInteraction.updatedPresentationData,  mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                                 if let strongSelf = self {
                                                                     return strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect)
                                                                 } else {
@@ -1678,7 +1678,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         switch attribute {
                                                         case let .Sticker(_, packReference, _):
                                                             if let packReference = packReference {
-                                                                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
+                                                                let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: strongSelf.controllerInteraction.updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                                     if let strongSelf = self {
                                                                         return strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect)
                                                                     } else {
