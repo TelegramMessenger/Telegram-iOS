@@ -671,6 +671,20 @@ public final class PostboxEncoder {
         self.buffer.write(value)
     }
 
+    func encodeInnerObjectDataWithHeader(typeHash: Int32, data: Data, valueType: ValueType, forKey key: String) {
+        self.encodeKey(key)
+
+        var t: Int8 = valueType.rawValue
+        self.buffer.write(&t, offset: 0, length: 1)
+
+        var typeHash = typeHash
+        self.buffer.write(&typeHash, offset: 0, length: 4)
+
+        var length: Int32 = Int32(data.count)
+        self.buffer.write(&length, offset: 0, length: 4)
+        self.buffer.write(data)
+    }
+
     public let sharedWriteBuffer = WriteBuffer()
 }
 

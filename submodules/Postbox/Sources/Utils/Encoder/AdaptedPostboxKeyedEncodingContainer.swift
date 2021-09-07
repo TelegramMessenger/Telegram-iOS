@@ -44,12 +44,7 @@ extension _AdaptedPostboxEncoder.KeyedContainer: KeyedEncodingContainerProtocol 
         if let value = value as? Data {
             self.encoder.encodeData(value, forKey: key.stringValue)
         } else if let value = value as? AdaptedPostboxEncoder.RawObjectData {
-            let typeHash: Int32 = value.typeHash
-            let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
-            try! value.encode(to: innerEncoder)
-
-            let (data, valueType) = innerEncoder.makeData(addHeader: true, isDictionary: false)
-            self.encoder.encodeInnerObjectData(data, valueType: valueType, forKey: key.stringValue)
+            self.encoder.encodeInnerObjectDataWithHeader(typeHash: value.typeHash, data: value.data, valueType: .Object, forKey: key.stringValue)
         } else {
             let typeHash: Int32 = murMurHashString32("\(type(of: value))")
             let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
