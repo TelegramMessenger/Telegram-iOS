@@ -417,6 +417,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private weak var sendMessageActionsController: ChatSendMessageActionSheetController?
     private var searchResultsController: ChatSearchResultsController?
 
+    private weak var themeSceen: ChatThemeScreen?
+    
     private weak var currentPinchController: PinchController?
     private weak var currentPinchSourceItemNode: ListViewItemNode?
     
@@ -3995,6 +3997,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     controllerInteraction.updatedPresentationData = strongSelf.updatedPresentationData
                     strongSelf.presentationDataPromise.set(.single(strongSelf.presentationData))
+                    
+                    if !isFirstTime && previousTheme !== presentationData.theme {
+                        strongSelf.presentCrossfadeSnapshot(delay: 0.2)
+                    }
                 }
                 strongSelf.presentationReady.set(.single(true))
             }
@@ -8009,6 +8015,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.dismissAllTooltips()
         
         self.sendMessageActionsController?.dismiss()
+        self.themeSceen?.dismiss()
         
         if let _ = self.peekData {
             self.peekTimerDisposable.set(nil)
@@ -13303,13 +13310,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.push(controller)
     }
     
+    private var crossfading = false
     private func presentCrossfadeSnapshot(delay: Double) {
-        guard let snapshotView = self.view.snapshotView(afterScreenUpdates: false) else {
+        guard !self.crossfading, let snapshotView = self.view.snapshotView(afterScreenUpdates: false) else {
             return
         }
+        self.crossfading = true
         self.view.addSubview(snapshotView)
 
-        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak self, weak snapshotView] _ in
+            self?.crossfading = false
             snapshotView?.removeFromSuperview()
         })
     }
@@ -13375,6 +13385,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             strongSelf.present(controller, in: .window(.root))
+            strongSelf.themeSceen = controller
         })
     }
     

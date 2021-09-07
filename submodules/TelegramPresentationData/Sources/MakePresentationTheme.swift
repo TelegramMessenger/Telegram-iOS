@@ -34,18 +34,8 @@ public func customizePresentationTheme(_ theme: PresentationTheme, specialMode: 
 }
 
 public func makePresentationTheme(settings: TelegramThemeSettings, specialMode: Bool = false, title: String? = nil, serviceBackgroundColor: UIColor? = nil) -> PresentationTheme? {
-    var baseTheme: TelegramBaseTheme = settings.baseTheme
-    var chatWallpaper = settings.wallpaper
-    if specialMode && baseTheme == .tinted {
-        baseTheme = .night
-        
-        if let wallpaper = settings.wallpaper {
-            let colors = (wallpaper.settings?.colors ?? []).map { UIColor(rgb: $0).withMultiplied(hue: 1.0, saturation: 1.0, brightness: 2.25).rgb }
-            chatWallpaper = settings.wallpaper?.withUpdatedSettings(WallpaperSettings(blur: wallpaper.settings?.blur ?? false, motion: wallpaper.settings?.blur ?? false, colors: colors, intensity: wallpaper.settings?.intensity.flatMap({ -(max(55, $0)) }), rotation: wallpaper.settings?.rotation))
-        }
-    }
-    let defaultTheme = makeDefaultPresentationTheme(reference: PresentationBuiltinThemeReference(baseTheme: baseTheme), extendingThemeReference: nil, serviceBackgroundColor: serviceBackgroundColor, preview: false)
-    return customizePresentationTheme(defaultTheme, specialMode: specialMode, editing: true, title: title, accentColor: UIColor(argb: settings.accentColor), outgoingAccentColor: settings.outgoingAccentColor.flatMap { UIColor(argb: $0) }, backgroundColors: [], bubbleColors: settings.messageColors, animateBubbleColors: settings.animateMessageColors, wallpaper: chatWallpaper)
+    let defaultTheme = makeDefaultPresentationTheme(reference: PresentationBuiltinThemeReference(baseTheme: settings.baseTheme), extendingThemeReference: nil, serviceBackgroundColor: serviceBackgroundColor, preview: false)
+    return customizePresentationTheme(defaultTheme, specialMode: specialMode, editing: true, title: title, accentColor: UIColor(argb: settings.accentColor), outgoingAccentColor: settings.outgoingAccentColor.flatMap { UIColor(argb: $0) }, backgroundColors: [], bubbleColors: settings.messageColors, animateBubbleColors: settings.animateMessageColors, wallpaper: settings.wallpaper)
 }
 
 public func makePresentationTheme(mediaBox: MediaBox, themeReference: PresentationThemeReference, extendingThemeReference: PresentationThemeReference? = nil, accentColor: UIColor? = nil, outgoingAccentColor: UIColor? = nil, backgroundColors: [UInt32] = [], bubbleColors: [UInt32] = [], animateBubbleColors: Bool? = nil, wallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil, serviceBackgroundColor: UIColor? = nil, specialMode: Bool = false, preview: Bool = false) -> PresentationTheme? {

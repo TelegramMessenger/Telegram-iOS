@@ -703,7 +703,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             let maximumNumberOfColors: Int
             switch self.state.section {
             case .accent:
-                maximumNumberOfColors = 2
+                if [.classic, .day].contains(self.theme.referenceTheme.baseTheme) {
+                    maximumNumberOfColors = 2
+                } else {
+                    maximumNumberOfColors = 1
+                }
             case .background:
                 maximumNumberOfColors = 4
             case .messages:

@@ -855,16 +855,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 snapshotView?.removeFromSuperview()
             })
         }
-        
-        if animateBackground, let snapshotView = self.cancelButton.view.snapshotView(afterScreenUpdates: false) {
-            snapshotView.frame = self.cancelButton.frame
-            self.cancelButton.view.superview?.insertSubview(snapshotView, aboveSubview: self.cancelButton.view)
-            
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                snapshotView?.removeFromSuperview()
-            })
-        }
-        
+                
         self.listNode.forEachVisibleItemNode { node in
             if let node = node as? ThemeSettingsThemeItemIconNode {
                 node.crossfade()

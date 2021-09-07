@@ -6796,3 +6796,6 @@ Sorry for the inconvenience.";
 
 "Conversation.ContextMenuSeen_1" = "1 Seen";
 "Conversation.ContextMenuSeen_any" = "%@ Seen";
+
+"VideoChat.RecordingSaved" = "Video chat recording saved to **Saved Messages**.";
+"LiveStream.RecordingSaved" = "Live stream recording saved to **Saved Messages**.";

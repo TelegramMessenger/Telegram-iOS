@@ -1492,6 +1492,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private var presentationData: PresentationData
     
+    fileprivate let cachedDataPromise = Promise<CachedPeerData?>()
+    
     let scrollNode: ASScrollNode
     
     let headerNode: PeerInfoHeaderNode
@@ -2849,6 +2851,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 return
             }
             strongSelf.updateData(data)
+            strongSelf.cachedDataPromise.set(.single(data.cachedData))
         })
         
         if let _ = nearbyPeerDistance {
@@ -6509,6 +6512,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     
     fileprivate var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    private let cachedDataPromise = Promise<CachedPeerData?>()
     
     private let accountsAndPeers = Promise<((AccountContext, Peer)?, [(AccountContext, Peer, Int32)])>()
     private var accountsAndPeersValue: ((AccountContext, Peer)?, [(AccountContext, Peer, Int32)])?
@@ -6763,6 +6767,38 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
             self?.controllerNode.scrollToTop()
         }
         
+        let presentationDataSignal: Signal<PresentationData, NoError>
+        if let updatedPresentationData = updatedPresentationData {
+            presentationDataSignal = updatedPresentationData.signal
+        } else {
+            let themeEmoticon: Signal<String?, NoError> = self.cachedDataPromise.get()
+            |> map { cachedData -> String? in
+                if let cachedData = cachedData as? CachedUserData {
+                    return cachedData.themeEmoticon
+                } else if let cachedData = cachedData as? CachedGroupData {
+                    return cachedData.themeEmoticon
+                } else if let cachedData = cachedData as? CachedChannelData {
+                    return cachedData.themeEmoticon
+                } else {
+                    return nil
+                }
+            }
+            |> distinctUntilChanged
+            
+            presentationDataSignal = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, context.engine.themes.getChatThemes(accountManager: context.sharedContext.accountManager, onlyCached: false), themeEmoticon)
+            |> map { presentationData, chatThemes, themeEmoticon -> PresentationData in
+                var presentationData = presentationData
+                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoji == themeEmoticon }) {
+                    let customTheme = presentationData.theme.overallDarkAppearance ? theme.darkTheme : theme.theme
+                    if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings) {
+                        presentationData = presentationData.withUpdated(theme: theme)
+                        presentationData = presentationData.withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
+                    }
+                }
+                return presentationData
+            }
+        }
+        
         self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
@@ -6796,6 +6832,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages, isSettings: self.isSettings, ignoreGroupInCommon: self.ignoreGroupInCommon)
         self.controllerNode.accountsAndPeers.set(self.accountsAndPeers.get() |> map { $0.1 })
         self.controllerNode.activeSessionsContextAndCount.set(self.activeSessionsContextAndCount.get())
+        self.cachedDataPromise.set(self.controllerNode.cachedDataPromise.get())
         self._ready.set(self.controllerNode.ready.get())
         
         super.displayNodeDidLoad()
