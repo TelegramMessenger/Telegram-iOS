@@ -1850,7 +1850,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             }
                             
                             return items
-                        })
+                        }, minHeight: nil)
                     })))
                 }
                 if strongSelf.searchDisplayController == nil {
@@ -1984,7 +1984,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     }
                                     
                                     return items
-                                })
+                                }, minHeight: nil)
                             })))
                         }
                         
@@ -3700,7 +3700,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }, action: { [weak self] c, f in
                             self?.openReport(user: false, contextController: c, backAction: { c in
                                 if let mainItemsImpl = mainItemsImpl {
-                                    c.setItems(mainItemsImpl())
+                                    c.setItems(mainItemsImpl(), minHeight: nil)
                                 }
                             })
                         })))
@@ -4442,7 +4442,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             })))
             
             if let contextController = contextController {
-                contextController.setItems(.single(items))
+                contextController.setItems(.single(items), minHeight: nil)
             } else {
                 strongSelf.state = strongSelf.state.withHighlightedButton(.voiceChat)
                 if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -4538,7 +4538,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }
                 
                 if let contextController = contextController {
-                    contextController.setItems(.single(items))
+                    contextController.setItems(.single(items), minHeight: nil)
                 } else {
                     strongSelf.state = strongSelf.state.withHighlightedButton(.voiceChat)
                     if let (layout, navigationHeight) = strongSelf.validLayout {

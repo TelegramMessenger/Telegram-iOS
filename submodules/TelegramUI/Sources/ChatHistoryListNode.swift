@@ -1039,6 +1039,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 var disableAnimations = false
 
                 if let strongSelf = self, updatedScrollPosition == nil, case .InteractiveChanges = reason, case let .known(offset) = strongSelf.visibleContentOffset(), abs(offset) <= 0.9, let previous = previous {
+                    var fillsScreen = true
+                    switch strongSelf.visibleBottomContentOffset() {
+                    case let .known(bottomOffset):
+                        if bottomOffset <= strongSelf.visibleSize.height - strongSelf.insets.bottom {
+                            fillsScreen = false
+                        }
+                    default:
+                        break
+                    }
+
                     var previousNumAds = 0
                     for entry in previous.filteredEntries {
                         if case let .MessageEntry(message, _, _, _, _, _) = entry {
@@ -1062,7 +1072,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                     }
 
-                    if let firstNonAdIndex = firstNonAdIndex, previousNumAds == 0, updatedNumAds != 0 {
+                    if fillsScreen, let firstNonAdIndex = firstNonAdIndex, previousNumAds == 0, updatedNumAds != 0 {
                         updatedScrollPosition = .index(index: .message(firstNonAdIndex), position: .top(0.0), directionHint: .Up, animated: false, highlight: false)
                         disableAnimations = true
                     }

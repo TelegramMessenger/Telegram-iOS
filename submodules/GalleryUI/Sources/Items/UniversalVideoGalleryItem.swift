@@ -2087,7 +2087,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     return
                 }
 
-                c.setItems(strongSelf.contextMenuSpeedItems())
+                c.setItems(strongSelf.contextMenuSpeedItems(), minHeight: nil)
             })))
             
             if let (message, _, _) = strongSelf.contentInfo() {
@@ -2206,7 +2206,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     c.dismiss(completion: nil)
                     return
                 }
-                c.setItems(strongSelf.contextMenuMainItems())
+                c.setItems(strongSelf.contextMenuMainItems(), minHeight: nil)
             })))
 
             return items

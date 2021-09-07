@@ -151,7 +151,7 @@ private func cancelContextGestures(view: UIView) {
 
 open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGestureRecognizerDelegate {
     public final let scroller: ListViewScroller
-    private final var visibleSize: CGSize = CGSize()
+    public private(set) final var visibleSize: CGSize = CGSize()
     public private(set) final var insets = UIEdgeInsets()
     public final var visualInsets: UIEdgeInsets?
     public private(set) final var headerInsets = UIEdgeInsets()
