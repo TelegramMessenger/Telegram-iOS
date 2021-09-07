@@ -1623,6 +1623,7 @@ ios_extension(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
+        ":TelegramCoreFramework",
     ],
 )
 

@@ -2,6 +2,8 @@ import Foundation
 import UserNotifications
 import SwiftSignalKit
 import NotificationServiceObjC
+import Postbox
+import TelegramCore
 
 private let queue = Queue()
 
@@ -18,9 +20,6 @@ final class NotificationService: UNNotificationServiceExtension {
                     f()
                 }
             }, countIncomingMessage: { rootPath, accountId, encryptionParameters, peerId, messageId in
-                /*SyncProviderImpl.addIncomingMessage(queue: queue, withRootPath: rootPath, accountId: accountId, encryptionParameters: encryptionParameters, peerId: peerId, messageId: messageId, completion: { count in
-                    completion?(count)
-                })*/
                 completion?(0)
             }, isLocked: { rootPath in
                 return SyncProviderImpl.isLocked(withRootPath: rootPath)

@@ -10,6 +10,10 @@ public class AdaptedPostboxEncoder {
             self.typeHash = typeHash
             self.data = data
         }
+
+        public func encode(to encoder: Encoder) throws {
+            preconditionFailure()
+        }
     }
     
     public init() {

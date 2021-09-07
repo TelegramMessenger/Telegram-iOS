@@ -19,6 +19,10 @@ final public class AdaptedPostboxDecoder {
             self.data = data
             self.typeHash = typeHash
         }
+
+        public init(from decoder: Decoder) throws {
+            preconditionFailure()
+        }
     }
 
     public init() {

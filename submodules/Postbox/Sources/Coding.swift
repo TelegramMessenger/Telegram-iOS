@@ -779,6 +779,8 @@ public final class PostboxDecoder {
             offset += 1
 
             if keyLength != Int(readKeyLength) {
+                /*let keyString = String(data: Data(bytes: bytes + (offset - Int(readKeyLength) - 1), count: Int(readKeyLength)), encoding: .utf8)
+                print("\(String(describing: keyString))")*/
                 skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
                 continue
             }

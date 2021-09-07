@@ -7,6 +7,8 @@ swift_library(
         "Sources/*.swift",
     ]),
     deps = [
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
