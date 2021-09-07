@@ -1871,7 +1871,18 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
         if let currentStats = self.currentStats {
             if currentStats.peers.isEmpty {
-                self.textNode.attributedText = NSAttributedString(string: " ", font: textFont, textColor: self.presentationData.theme.contextMenu.secondaryColor)
+                var text = self.presentationData.strings.Conversation_ContextMenuNoViews
+                for media in self.item.message.media {
+                    if let file = media as? TelegramMediaFile {
+                        if file.isVoice {
+                            text = self.presentationData.strings.Conversation_ContextMenuNobodyListened
+                        } else if file.isInstantVideo {
+                            text = self.presentationData.strings.Conversation_ContextMenuNobodyWatched
+                        }
+                    }
+                }
+
+                self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.secondaryColor)
             } else if currentStats.peers.count == 1 {
                 self.textNode.attributedText = NSAttributedString(string: currentStats.peers[0].displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
             } else {

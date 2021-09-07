@@ -6803,3 +6803,7 @@ Ads should no longer be synonymous with abuse of user privacy. Let us redefine h
 
 "Conversation.ContextMenuSeen_1" = "1 Seen";
 "Conversation.ContextMenuSeen_any" = "%@ Seen";
+
+"Conversation.ContextMenuNoViews" = "Nobody Viewed";
+"Conversation.ContextMenuNobodyListened" = "Nobody Listened";
+"Conversation.ContextMenuNobodyWatched" = "Nobody Watched";
