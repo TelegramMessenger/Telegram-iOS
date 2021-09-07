@@ -1309,7 +1309,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             additionalAnimationNode?.removeFromSupernode()
         }
         additionalAnimationNode.frame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
-//            .offsetBy(dx: incoming ? animationNode.frame.width : -animationNode.frame.width, dy: 0.0)
+            .offsetBy(dx: incoming ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
         if incoming {
             additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
         }

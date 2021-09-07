@@ -185,27 +185,16 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, specialMode: Bool
     var outgoingCheckColor: UIColor?
     
     if !day {
-        let bubbleStrokeColor = serviceBackgroundColor?.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.2)
-        incomingBubbleStrokeColor = bubbleStrokeColor
-        outgoingBubbleStrokeColor = bubbleStrokeColor
+        if let outgoingAccent = outgoingAccent {
+            outgoingBubbleStrokeColor = outgoingAccent.withAlphaComponent(0.2)
+        } else {
+            let bubbleStrokeColor = serviceBackgroundColor?.withMultiplied(hue: 0.999, saturation: 1.667, brightness: 1.1).withAlphaComponent(0.2)
+            incomingBubbleStrokeColor = bubbleStrokeColor
+            outgoingBubbleStrokeColor = bubbleStrokeColor
+        }
     }
     
     if !bubbleColors.isEmpty {
-        //var topBubbleColor = UIColor(rgb: bubbleColors[0])
-        //var bottomBubbleColor = UIColor(rgb: bubbleColors.last ?? bubbleColors[0])
-
-        /*if topBubbleColor.rgb != bottomBubbleColor.rgb {
-            let topBubbleColorLightness = topBubbleColor.lightness
-            let bottomBubbleColorLightness = bottomBubbleColor.lightness
-            if abs(topBubbleColorLightness - bottomBubbleColorLightness) > 0.7 {
-                if topBubbleColorLightness > bottomBubbleColorLightness {
-                    topBubbleColor = topBubbleColor.withMultiplied(hue: 1.0, saturation: 1.0, brightness: 0.85)
-                } else {
-                    bottomBubbleColor = bottomBubbleColor.withMultiplied(hue: 1.0, saturation: 1.0, brightness: 0.85)
-                }
-            }
-        }*/
-        
         outgoingBubbleFillColors = bubbleColors.map(UIColor.init(rgb:))
 
         if day {

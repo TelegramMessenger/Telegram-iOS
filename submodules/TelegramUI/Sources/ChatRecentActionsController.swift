@@ -179,7 +179,7 @@ final class ChatRecentActionsController: TelegramBaseController {
                 if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoji == themeEmoticon }) {
                     let useDarkAppearance = presentationData.theme.overallDarkAppearance
                     let customTheme = useDarkAppearance ? theme.darkTheme : theme.theme
-                    if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings, specialMode: true) {
+                    if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings) {
                         presentationData = presentationData.withUpdated(theme: theme)
                         presentationData = presentationData.withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
                     }
