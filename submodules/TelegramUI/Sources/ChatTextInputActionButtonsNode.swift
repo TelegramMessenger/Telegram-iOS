@@ -112,14 +112,14 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         
         self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
         
-        if theme.referenceTheme.baseTheme == .night, theme.chat.message.outgoing.bubble.withWallpaper.fill.count > 1 {
+        if [.day, .night].contains(theme.referenceTheme.baseTheme) && theme.chat.message.outgoing.bubble.withWallpaper.fill.count > 1 {
             self.backdropNode.isHidden = false
         } else {
             self.backdropNode.isHidden = true
         }
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: theme, wallpaper: wallpaper, bubbleCorners: .init(mainRadius: 1, auxiliaryRadius: 1, mergeBubbleCorners: false))
-        self.backdropNode.setType(type: .outgoing(.None), theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), essentialGraphics: graphics, maskMode: true, backgroundNode: self.presentationContext?.backgroundNode)
+        self.backdropNode.setType(type: .outgoing(.None), theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), essentialGraphics: graphics, maskMode: false, backgroundNode: self.presentationContext?.backgroundNode)
     }
     
     private var absoluteRect: (CGRect, CGSize)?
