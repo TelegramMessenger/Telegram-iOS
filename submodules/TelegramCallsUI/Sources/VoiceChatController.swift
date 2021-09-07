@@ -2473,7 +2473,7 @@ public final class VoiceChatController: ViewController {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                c.setItems(strongSelf.contextMenuDisplayAsItems())
+                                c.setItems(strongSelf.contextMenuDisplayAsItems(), minHeight: nil)
                             })))
                             items.append(.separator)
                             break
@@ -2506,7 +2506,7 @@ public final class VoiceChatController: ViewController {
                         guard let strongSelf = self else {
                             return
                         }
-                        c.setItems(strongSelf.contextMenuAudioItems())
+                        c.setItems(strongSelf.contextMenuAudioItems(), minHeight: nil)
                     })))
                 }
 
@@ -2543,7 +2543,7 @@ public final class VoiceChatController: ViewController {
                             guard let strongSelf = self else {
                                 return
                             }
-                            c.setItems(strongSelf.contextMenuPermissionItems())
+                            c.setItems(strongSelf.contextMenuPermissionItems(), minHeight: nil)
                         })))
                     }
                 }
@@ -2795,7 +2795,7 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                c.setItems(strongSelf.contextMenuMainItems())
+                c.setItems(strongSelf.contextMenuMainItems(), minHeight: nil)
             })))
             return .single(items)
         }
@@ -2890,7 +2890,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    c.setItems(strongSelf.contextMenuMainItems())
+                    c.setItems(strongSelf.contextMenuMainItems(), minHeight: nil)
                 })))
                 return items
             }
@@ -2936,7 +2936,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    c.setItems(strongSelf.contextMenuMainItems())
+                    c.setItems(strongSelf.contextMenuMainItems(), minHeight: nil)
                 })))
             }
             return .single(items)

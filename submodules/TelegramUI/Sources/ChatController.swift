@@ -3438,7 +3438,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
 
                         if case .standard(previewing: false) = mode, let channel = renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
-                            if strongSelf.nextChannelToReadDisposable == nil {
+                            var isRegularChat = false
+                            if let subject = subject {
+                                if case .message = subject {
+                                    isRegularChat = true
+                                }
+                            } else {
+                                isRegularChat = true
+                            }
+                            if isRegularChat, strongSelf.nextChannelToReadDisposable == nil {
                                 strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
                                     strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, chatListFilterId: strongSelf.currentChatListFilter, getFilterPredicate: chatListFilterPredicate),
                                     ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
@@ -6487,7 +6495,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     })
                                 })))
                                 
-                                contextController.setItems(.single(contextItems))
+                                contextController.setItems(.single(contextItems), minHeight: nil)
                             }
                             return
                         } else {
@@ -6506,7 +6514,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     })
                                 })))
                                 
-                                contextController.setItems(.single(contextItems))
+                                contextController.setItems(.single(contextItems), minHeight: nil)
                                 
                                 return
                             } else {
@@ -12618,7 +12626,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if canDisplayContextMenu, let contextController = contextController {
-            contextController.setItems(.single(contextItems))
+            contextController.setItems(.single(contextItems), minHeight: nil)
         } else {
             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
