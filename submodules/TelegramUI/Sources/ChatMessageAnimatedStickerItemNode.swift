@@ -1436,7 +1436,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                             return .optionalAction({
                                 if firstScalar.value == heart {
-                                    self.playAdditionalAnimation("TestHearts")
+                                    if self.additionalAnimationNodes.count % 2 == 0 {
+                                        self.playAdditionalAnimation("TestHearts")
+                                    } else {
+                                        self.playAdditionalAnimation("TestHearts2")
+                                    }
                                 } else if firstScalar.value == fireworks {
                                     self.playAdditionalAnimation("TestFireworks")
                                 }
