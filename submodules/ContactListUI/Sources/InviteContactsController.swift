@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import MessageUI
 import TelegramPresentationData
 import AccountContext
@@ -131,7 +130,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         self.contactsNode.requestShareTelegram = { [weak self] in
             if let strongSelf = self {
                 let url = strongSelf.presentationData.strings.InviteText_URL
-                let body = strongSelf.presentationData.strings.InviteText_SingleContact(url).0
+                let body = strongSelf.presentationData.strings.InviteText_SingleContact(url).string
                 presentExternalShare(context: strongSelf.context, text: body, parentController: strongSelf)
                 
                 strongSelf.contactsNode.listNode.clearHighlightAnimated(true)
@@ -149,7 +148,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
                     composer.messageComposeDelegate = strongSelf
                     composer.recipients = Array(Set(recipients))
                     let url = strongSelf.presentationData.strings.InviteText_URL
-                    var body = strongSelf.presentationData.strings.InviteText_SingleContact(url).0
+                    var body = strongSelf.presentationData.strings.InviteText_SingleContact(url).string
                     if numbers.count == 1, numbers[0].1 > 0 {
                         body = strongSelf.presentationData.strings.InviteText_ContactsCountText(numbers[0].1)
                         body = body.replacingOccurrences(of: "{url}", with: url)
@@ -179,7 +178,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
             }
         }
         
-        self.contactsNode.listNode.didEndScrolling = { [weak self] in
+        self.contactsNode.listNode.didEndScrolling = { [weak self] _ in
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
                 let _ = fixNavigationSearchableListNodeScrolling(strongSelf.contactsNode.listNode, searchNode: searchContentNode)
             }
@@ -199,7 +198,7 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, actualNavigationBarHeight: self.navigationHeight, transition: transition)
+        self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, actualNavigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     private func activateSearch() {

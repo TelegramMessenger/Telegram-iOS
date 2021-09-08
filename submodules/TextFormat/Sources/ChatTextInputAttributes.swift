@@ -720,21 +720,23 @@ public func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttribu
                 let entity = string.substring(with: match.range(at: 7))
                 let substring = string.substring(with: match.range(at: 6)) + text + string.substring(with: match.range(at: 9))
                 
+                let textInputAttribute: NSAttributedString.Key?
                 switch entity {
                     case "`":
-                        result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.monospace: true as NSNumber]))
-                        offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
+                        textInputAttribute = ChatTextInputAttributes.monospace
                     case "**":
-                        result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.bold: true as NSNumber]))
-                        offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
+                        textInputAttribute = ChatTextInputAttributes.bold
                     case "__":
-                        result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.italic: true as NSNumber]))
-                        offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
+                        textInputAttribute = ChatTextInputAttributes.italic
                     case "~~":
-                        result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.strikethrough: true as NSNumber]))
-                        offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
+                        textInputAttribute = ChatTextInputAttributes.strikethrough
                     default:
-                        break
+                        textInputAttribute = nil
+                }
+                
+                if let textInputAttribute = textInputAttribute {
+                    result.append(NSAttributedString(string: substring, attributes: [textInputAttribute: true as NSNumber]))
+                    offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
                 }
                 
                 stringOffset -= match.range(at: 7).length * 2

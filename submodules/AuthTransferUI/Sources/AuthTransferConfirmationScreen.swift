@@ -30,7 +30,7 @@ public final class AuthDataTransferSplashScreen: ViewController {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let defaultTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
-        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
+        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Common_Back, close: self.presentationData.strings.Common_Close)))
         
@@ -80,7 +80,7 @@ public final class AuthDataTransferSplashScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! AuthDataTransferSplashScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
+        (self.displayNode as! AuthDataTransferSplashScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
 
@@ -118,7 +118,7 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         
         let buttonText: String
         
-        let badgeFont = Font.with(size: 13.0, design: .round, traits: [.bold])
+        let badgeFont = Font.with(size: 13.0, design: .round, weight: .bold)
         let textFont = Font.regular(16.0)
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
         
@@ -253,11 +253,9 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         let animationFitSize = CGSize(width: min(500.0, layout.size.width - sideInset + 20.0), height: 500.0)
         let animationSize = self.animationNode?.preferredSize()?.fitted(animationFitSize) ?? animationFitSize
         let iconSize: CGSize = animationSize
-        var iconOffset = CGPoint()
+        let iconOffset = CGPoint()
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        
-        let hasRTL = self.badgeTextNodes.first?.cachedLayout?.hasRTL ?? false
         
         var badgeTextSizes: [CGSize] = []
         var textSizes: [CGSize] = []
@@ -290,9 +288,9 @@ private final class AuthDataTransferSplashScreenNode: ViewControllerTracingNode 
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
-        var maxContentVerticalOrigin = buttonFrame.minY - 12.0 - contentHeight
+        let maxContentVerticalOrigin = buttonFrame.minY - 12.0 - contentHeight
         
         contentVerticalOrigin = min(contentVerticalOrigin, maxContentVerticalOrigin)
         

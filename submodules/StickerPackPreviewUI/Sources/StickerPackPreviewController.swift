@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramUIPreferences
 import AccountContext
@@ -82,7 +81,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         self.acceptsFocusWhenInOverlay = true
         self.statusBar.statusBarStyle = .Ignore
         
-        self.stickerPackContents.set(loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: stickerPack, forceActualized: true))
+        self.stickerPackContents.set(context.engine.stickers.loadedStickerPack(reference: stickerPack, forceActualized: true))
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -131,12 +130,10 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 return
             }
             
-            let account = strongSelf.context.account
-            strongSelf.openMentionDisposable.set((resolvePeerByName(account: strongSelf.context.account, name: mention)
-            |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-                if let peerId = peerId {
-                    return account.postbox.loadedPeerWithId(peerId)
-                    |> map(Optional.init)
+            strongSelf.openMentionDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: mention)
+            |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                if let peer = peer {
+                    return .single(peer._asPeer())
                 } else {
                     return .single(nil)
                 }
@@ -280,7 +277,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
 

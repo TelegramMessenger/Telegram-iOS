@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -136,9 +135,9 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 let text: String
                 if let title = title {
                     if isGroup {
-                        text = presentationData.strings.Channel_CommentsGroup_HeaderGroupSet(title).0
+                        text = presentationData.strings.Channel_CommentsGroup_HeaderGroupSet(title).string
                     } else {
-                        text = presentationData.strings.Channel_CommentsGroup_HeaderSet(title).0
+                        text = presentationData.strings.Channel_CommentsGroup_HeaderSet(title).string
                     }
                 } else {
                     text = presentationData.strings.Channel_CommentsGroup_Header
@@ -230,7 +229,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
     let groupPeers = Promise<[Peer]?>()
     groupPeers.set(.single(nil)
     |> then(
-        availableGroupsForChannelDiscussion(postbox: context.account.postbox, network: context.account.network)
+        context.engine.peers.availableGroupsForChannelDiscussion()
         |> map(Optional.init)
         |> `catch` { _ -> Signal<[Peer]?, NoError> in
             return .single(nil)
@@ -260,7 +259,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             pushControllerImpl?(context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) + " Chat", mode: .supergroup, completion: { groupId, dismiss in
-                var applySignal = updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: groupId)
+                var applySignal = context.engine.peers.updateGroupDiscussionForChannel(channelId: peerId, groupId: groupId)
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -327,7 +326,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     var applySignal: Signal<Bool, ChannelDiscussionGroupError>
                     var updatedPeerId: PeerId? = nil
                     if let legacyGroup = groupPeer as? TelegramGroup {
-                        applySignal = convertGroupToSupergroup(account: context.account, peerId: legacyGroup.id)
+                        applySignal = context.engine.peers.convertGroupToSupergroup(peerId: legacyGroup.id)
                         |> mapError { error -> ChannelDiscussionGroupError in
                             switch error {
                             case .tooManyChannels:
@@ -358,13 +357,13 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                                     })
                                 }
                                 
-                                return updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: resultPeerId)
+                                return context.engine.peers.updateGroupDiscussionForChannel(channelId: peerId, groupId: resultPeerId)
                             }
                             |> castError(ChannelDiscussionGroupError.self)
                             |> switchToLatest
                         }
                     } else {
-                        applySignal = updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: groupId)
+                        applySignal = context.engine.peers.updateGroupDiscussionForChannel(channelId: peerId, groupId: groupId)
                     }
                     var cancelImpl: (() -> Void)?
                     let progressSignal = Signal<Never, NoError> { subscriber in
@@ -407,13 +406,10 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                                     state.searching = false
                                     return state
                                 }
-                            case .hasNotPermissions:
-                                //TODO process error
-                                break
                             case .groupHistoryIsCurrentlyPrivate:
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_DiscussionGroup_MakeHistoryPublic, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_DiscussionGroup_MakeHistoryPublicProceed, action: {
-                                    var applySignal: Signal<Bool, ChannelDiscussionGroupError> = updateChannelHistoryAvailabilitySettingsInteractively(postbox: context.account.postbox, network: context.account.network, accountStateManager: context.account.stateManager, peerId: updatedPeerId ?? groupId, historyAvailableForNewMembers: true)
+                                    var applySignal: Signal<Bool, ChannelDiscussionGroupError> = context.engine.peers.updateChannelHistoryAvailabilitySettingsInteractively(peerId: updatedPeerId ?? groupId, historyAvailableForNewMembers: true)
                                     |> mapError { _ -> ChannelDiscussionGroupError in
                                         return .generic
                                     }
@@ -421,7 +417,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                                         return .complete()
                                     }
                                     |> then(
-                                        updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: updatedPeerId ?? groupId)
+                                        context.engine.peers.updateGroupDiscussionForChannel(channelId: peerId, groupId: updatedPeerId ?? groupId)
                                     )
                                     var cancelImpl: (() -> Void)?
                                     let progressSignal = Signal<Never, NoError> { subscriber in
@@ -502,7 +498,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                 return
             }
             
-            var applySignal = updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: applyPeerId, groupId: nil)
+            var applySignal = context.engine.peers.updateGroupDiscussionForChannel(channelId: applyPeerId, groupId: nil)
             var cancelImpl: (() -> Void)?
             let progressSignal = Signal<Never, NoError> { subscriber in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }

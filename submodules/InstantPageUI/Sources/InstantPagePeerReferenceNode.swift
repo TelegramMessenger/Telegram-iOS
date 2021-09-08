@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
@@ -147,15 +146,14 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         self.joinNode.addTarget(self, action: #selector(self.joinPressed), forControlEvents: .touchUpInside)
         
         let account = self.context.account
+        let context = self.context
         let signal = actualizedPeer(postbox: account.postbox, network: account.network, peer: initialPeer)
         |> mapToSignal({ peer -> Signal<Peer, NoError> in
             if let peer = peer as? TelegramChannel, let username = peer.username, peer.accessHash == nil {
-                return .single(peer) |> then(resolvePeerByName(account: account, name: username)
-                |> mapToSignal({ peerId -> Signal<Peer, NoError> in
-                    if let peerId = peerId {
-                        return account.postbox.transaction({ transaction -> Peer in
-                            return transaction.getPeer(peerId) ?? peer
-                        })
+                return .single(peer) |> then(context.engine.peers.resolvePeerByName(name: username)
+                |> mapToSignal({ updatedPeer -> Signal<Peer, NoError> in
+                    if let updatedPeer = updatedPeer {
+                        return .single(updatedPeer._asPeer())
                     } else {
                         return .single(peer)
                     }
@@ -309,7 +307,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     @objc func joinPressed() {
         if let peer = self.peer, case .notJoined = self.joinState {
             self.updateJoinState(.inProgress)
-            self.joinDisposable.set((joinChannel(account: self.context.account, peerId: peer.id, hash: nil) |> deliverOnMainQueue).start(error: { [weak self] _ in
+            self.joinDisposable.set((self.context.engine.peers.joinChannel(peerId: peer.id, hash: nil) |> deliverOnMainQueue).start(error: { [weak self] _ in
                 if let strongSelf = self {
                     if case .inProgress = strongSelf.joinState {
                         strongSelf.updateJoinState(.notJoined)

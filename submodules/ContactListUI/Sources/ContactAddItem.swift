@@ -5,7 +5,6 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AppBundle
 import PhoneNumberFormat
@@ -189,7 +188,7 @@ class ContactsAddItemNode: ListViewItemNode {
             let leftInset: CGFloat = 65.0 + params.leftInset
             let rightInset: CGFloat = 10.0 + params.rightInset
 
-            let titleAttributedString = NSAttributedString(string: item.strings.Contacts_AddPhoneNumber(formatPhoneNumber(item.phoneNumber)).0, font: titleFont, textColor: item.theme.list.itemAccentColor)
+            let titleAttributedString = NSAttributedString(string: item.strings.Contacts_AddPhoneNumber(formatPhoneNumber(item.phoneNumber)).string, font: titleFont, textColor: item.theme.list.itemAccentColor)
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -245,9 +244,9 @@ class ContactsAddItemNode: ListViewItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let (item, _, _, _, _) = self.layoutParams {
-            return item.header
+            return item.header.flatMap { [$0] }
         } else {
             return nil
         }

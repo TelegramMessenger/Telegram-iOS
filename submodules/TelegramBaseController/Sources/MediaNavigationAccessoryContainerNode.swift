@@ -3,41 +3,63 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 
 public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+    private let displayBackground: Bool
+
     public let backgroundNode: ASDisplayNode
+    public let separatorNode: ASDisplayNode
     public let headerNode: MediaNavigationAccessoryHeaderNode
     
     private let currentHeaderHeight: CGFloat = MediaNavigationAccessoryHeaderNode.minimizedHeight
     
     private var presentationData: PresentationData
     
-    init(context: AccountContext) {
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, presentationData: PresentationData, displayBackground: Bool) {
+        self.displayBackground = displayBackground
+
+        self.presentationData = presentationData
         
         self.backgroundNode = ASDisplayNode()
-        self.headerNode = MediaNavigationAccessoryHeaderNode(presentationData: self.presentationData)
+        self.separatorNode = ASDisplayNode()
+        self.headerNode = MediaNavigationAccessoryHeaderNode(context: context, presentationData: presentationData)
         
         super.init()
-        
-        self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+
+        if self.displayBackground {
+            self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
+            self.separatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        }
         self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.separatorNode)
         
         self.addSubnode(self.headerNode)
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
-        
-        self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+
+        if self.displayBackground {
+            self.backgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
+            self.separatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        }
+
         self.headerNode.updatePresentationData(presentationData)
     }
-    
+
+    func animateIn(transition: ContainedViewLayoutTransition) {
+        self.headerNode.animateIn(transition: transition)
+    }
+
+    func animateOut(transition: ContainedViewLayoutTransition) {
+        self.headerNode.animateOut(transition: transition)
+    }
+
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: self.currentHeaderHeight)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.currentHeaderHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
         
         let headerHeight = self.currentHeaderHeight
         transition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: headerHeight)))

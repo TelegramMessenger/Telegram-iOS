@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import CoreTelephony
@@ -570,7 +569,7 @@ public enum SecureIdPlaintextFormEntry: FormControllerEntry {
     public func item(params: SecureIdPlaintextFormParams, strings: PresentationStrings) -> FormControllerItem {
         switch self {
             case let .immediatelyAvailablePhone(value):
-                return FormControllerActionItem(type: .accent, title: strings.Passport_Phone_UseTelegramNumber(formatPhoneNumber(value)).0, activated: {
+                return FormControllerActionItem(type: .accent, title: strings.Passport_Phone_UseTelegramNumber(formatPhoneNumber(value)).string, activated: {
                     params.usePhone(value)
                 })
             case .immediatelyAvailablePhoneInfo:
@@ -603,7 +602,7 @@ public enum SecureIdPlaintextFormEntry: FormControllerEntry {
             case .numberVerifyInfo:
                 return FormControllerTextItem(text: strings.ChangePhoneNumberCode_Help)
             case let .immediatelyAvailableEmail(value):
-                return FormControllerActionItem(type: .accent, title: strings.Passport_Email_UseTelegramEmail(value).0, activated: {
+                return FormControllerActionItem(type: .accent, title: strings.Passport_Email_UseTelegramEmail(value).string, activated: {
                     params.useEmailAddress(value)
                 })
             case .immediatelyAvailableEmailInfo:
@@ -625,7 +624,7 @@ public enum SecureIdPlaintextFormEntry: FormControllerEntry {
                     
                 })
             case let .emailVerifyInfo(address):
-                return FormControllerTextItem(text: strings.Passport_Email_CodeHelp(address).0)
+                return FormControllerTextItem(text: strings.Passport_Email_CodeHelp(address).string)
         }
     }
 }

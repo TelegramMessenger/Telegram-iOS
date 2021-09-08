@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -49,7 +48,7 @@ private enum InviteContactsEntry: Comparable, Identifiable {
     
     func item(context: AccountContext, presentationData: PresentationData, interaction: InviteContactsInteraction) -> ListViewItem {
         switch self {
-            case let .option(_, option, theme, _):
+            case let .option(_, option, _, _):
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: option.title, icon: option.icon, header: nil, action: option.action)
             case let .peer(_, id, contact, count, selection, theme, strings, nameSortOrder, nameDisplayOrder):
                 let status: ContactsPeerItemStatus
@@ -294,7 +293,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         var shareImpl: (() -> Void)?
@@ -365,7 +364,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                     return DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phoneNumber.value))
                 })))
             }
-            return deviceContactsImportedByCount(postbox: context.account.postbox, contacts: mappedContacts)
+            return context.engine.contacts.deviceContactsImportedByCount(contacts: mappedContacts)
             |> map { counts -> [(DeviceContactStableId, DeviceContactBasicData, Int32)]? in
                 var result: [(DeviceContactStableId, DeviceContactBasicData, Int32)] = []
                 var contactValues: [DeviceContactStableId: DeviceContactBasicData] = [:]

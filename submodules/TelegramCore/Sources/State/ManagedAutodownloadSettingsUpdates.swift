@@ -4,9 +4,8 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-import SyncCore
 
-func managedAutodownloadSettingsUpdates(accountManager: AccountManager, network: Network) -> Signal<Void, NoError> {
+func managedAutodownloadSettingsUpdates(accountManager: AccountManager<TelegramAccountManagerTypes>, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
         return (network.request(Api.functions.account.getAutoDownloadSettings())
         |> retryRequest

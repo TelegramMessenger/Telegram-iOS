@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
@@ -874,19 +873,22 @@ public final class ContactListNode: ASDisplayNode {
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
     
+    public var multipleSelection = false
+    
     public init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
         self.contextAction = contextAction
+        self.multipleSelection = multipleSelection
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
         
         self.listNode = ListView()
-        self.listNode.dynamicBounceEnabled = !self.presentationData.disableAnimations
+        self.listNode.dynamicBounceEnabled = false
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.indexNode = CollectionIndexNode()
@@ -1095,7 +1097,7 @@ public final class ContactListNode: ASDisplayNode {
                     if globalSearch {
                         foundRemoteContacts = foundRemoteContacts
                         |> then(
-                            searchPeers(account: context.account, query: query)
+                            context.engine.peers.searchPeers(query: query)
                             |> map { ($0.0, $0.1) }
                             |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                         )
@@ -1256,8 +1258,8 @@ public final class ContactListNode: ASDisplayNode {
                             var peers: [(Peer, Int32)] = []
                             for entry in view.entries {
                                 switch entry {
-                                    case let .MessageEntry(messageEntry):
-                                        if let peer = messageEntry.5.peer {
+                                    case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
+                                        if let peer = renderedPeer.peer {
                                             if peer is TelegramGroup {
                                                 peers.append((peer, 0))
                                             } else if let channel = peer as? TelegramChannel, case .group = channel.info {
@@ -1338,8 +1340,6 @@ public final class ContactListNode: ASDisplayNode {
                             animation = .insertion
                         } else if hadPermissionInfo != hasPermissionInfo {
                             animation = .insertion
-                        } else if let previous = previous, !presentationData.disableAnimations, (entries.count - previous.count) < 20 {
-                            animation = .default
                         } else {
                             animation = .none
                         }
@@ -1366,11 +1366,10 @@ public final class ContactListNode: ASDisplayNode {
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
-                let previousDisableAnimations = strongSelf.presentationData.disableAnimations
                 
                 strongSelf.presentationData = presentationData
                 
-                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousDisableAnimations != presentationData.disableAnimations {
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.backgroundColor = presentationData.theme.chatList.backgroundColor
                     strongSelf.listNode.verticalScrollIndicatorColor = presentationData.theme.list.scrollIndicatorColor
                     strongSelf.presentationDataPromise.set(.single(presentationData))
@@ -1385,7 +1384,7 @@ public final class ContactListNode: ASDisplayNode {
                     strongSelf.authorizationNode.isHidden = authorizationPreviousHidden
                     strongSelf.addSubnode(strongSelf.authorizationNode)
                     
-                    strongSelf.listNode.dynamicBounceEnabled = !presentationData.disableAnimations
+                    strongSelf.listNode.dynamicBounceEnabled = false
                     
                     strongSelf.listNode.forEachAccessoryItemNode({ accessoryItemNode in
                         if let accessoryItemNode = accessoryItemNode as? ContactsSectionHeaderAccessoryItemNode {
@@ -1408,7 +1407,7 @@ public final class ContactListNode: ASDisplayNode {
             }
         })
         
-        self.listNode.didEndScrolling = { [weak self] in
+        self.listNode.didEndScrolling = { [weak self] _ in
             if let strongSelf = self {
                 let _ = strongSelf.contentScrollingEnded?(strongSelf.listNode)
             }

@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AccountContext
 
@@ -79,6 +78,7 @@ private final class LiveLocationSummaryContext {
 
 private final class LiveLocationPeerSummaryContext {
     private let queue: Queue
+    private let engine: TelegramEngine
     private let accountPeerId: PeerId
     private let viewTracker: AccountViewTracker
     private let peerId: PeerId
@@ -116,8 +116,9 @@ private final class LiveLocationPeerSummaryContext {
     
     private let peerDisposable = MetaDisposable()
     
-    init(queue: Queue, accountPeerId: PeerId, viewTracker: AccountViewTracker, peerId: PeerId, becameEmpty: @escaping () -> Void) {
+    init(queue: Queue, engine: TelegramEngine, accountPeerId: PeerId, viewTracker: AccountViewTracker, peerId: PeerId, becameEmpty: @escaping () -> Void) {
         self.queue = queue
+        self.engine = engine
         self.accountPeerId = accountPeerId
         self.viewTracker = viewTracker
         self.peerId = peerId
@@ -160,7 +161,7 @@ private final class LiveLocationPeerSummaryContext {
     
     private func updateSubscription() {
         if self.isActive || !self.subscribers.isEmpty {
-            self.peerDisposable.set((topPeerActiveLiveLocationMessages(viewTracker: self.viewTracker, accountPeerId: self.accountPeerId, peerId: self.peerId)
+            self.peerDisposable.set((self.engine.messages.topPeerActiveLiveLocationMessages(peerId: self.peerId)
                 |> deliverOn(self.queue)).start(next: { [weak self] accountPeer, messages in
                     if let strongSelf = self {
                         var peersAndMessages: [(Peer, Message)] = []
@@ -187,6 +188,7 @@ private final class LiveLocationPeerSummaryContext {
 
 public final class LiveLocationSummaryManagerImpl: LiveLocationSummaryManager {
     private let queue: Queue
+    private let engine: TelegramEngine
     private let postbox: Postbox
     private let accountPeerId: PeerId
     private let viewTracker: AccountViewTracker
@@ -194,9 +196,10 @@ public final class LiveLocationSummaryManagerImpl: LiveLocationSummaryManager {
     private let globalContext: LiveLocationSummaryContext
     private var peerContexts: [PeerId: LiveLocationPeerSummaryContext] = [:]
     
-    init(queue: Queue, postbox: Postbox, accountPeerId: PeerId, viewTracker: AccountViewTracker) {
+    init(queue: Queue, engine: TelegramEngine, postbox: Postbox, accountPeerId: PeerId, viewTracker: AccountViewTracker) {
         assert(queue.isCurrent())
         self.queue = queue
+        self.engine = engine
         self.postbox = postbox
         self.accountPeerId = accountPeerId
         self.viewTracker = viewTracker
@@ -212,7 +215,7 @@ public final class LiveLocationSummaryManagerImpl: LiveLocationSummaryManager {
         
         for peerId in peerIds {
             if self.peerContexts[peerId] == nil {
-                let context = LiveLocationPeerSummaryContext(queue: self.queue, accountPeerId: self.accountPeerId, viewTracker: self.viewTracker, peerId: peerId, becameEmpty: { [weak self] in
+                let context = LiveLocationPeerSummaryContext(queue: self.queue, engine: self.engine, accountPeerId: self.accountPeerId, viewTracker: self.viewTracker, peerId: peerId, becameEmpty: { [weak self] in
                     if let strongSelf = self, let context = strongSelf.peerContexts[peerId], context.isEmpty {
                         strongSelf.peerContexts.removeValue(forKey: peerId)
                     }
@@ -242,7 +245,7 @@ public final class LiveLocationSummaryManagerImpl: LiveLocationSummaryManager {
                     if let current = strongSelf.peerContexts[peerId] {
                         context = current
                     } else {
-                        context = LiveLocationPeerSummaryContext(queue: strongSelf.queue, accountPeerId: strongSelf.accountPeerId, viewTracker: strongSelf.viewTracker, peerId: peerId, becameEmpty: {
+                        context = LiveLocationPeerSummaryContext(queue: strongSelf.queue, engine: strongSelf.engine, accountPeerId: strongSelf.accountPeerId, viewTracker: strongSelf.viewTracker, peerId: peerId, becameEmpty: {
                             if let strongSelf = self, let context = strongSelf.peerContexts[peerId], context.isEmpty {
                                 strongSelf.peerContexts.removeValue(forKey: peerId)
                             }

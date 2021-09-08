@@ -6,7 +6,6 @@ import Display
 import SwiftSignalKit
 import WebKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
@@ -45,7 +44,7 @@ class ChatExternalFileGalleryItem: GalleryItem {
         }
         
         if let location = self.location {
-            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").string))
         }
         node.setMessage(self.message)
         
@@ -54,7 +53,7 @@ class ChatExternalFileGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatExternalFileGalleryItemNode, let location = self.location {
-            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").string))
             node.setMessage(self.message)
         }
     }
@@ -196,7 +195,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
                     strongSelf.statusNode.alpha = 1.0
                     strongSelf.statusNodeContainer.isUserInteractionEnabled = true
                     strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-                case let .Fetching(isActive, progress):
+                case let .Fetching(_, progress):
                     strongSelf.statusNode.isHidden = false
                     strongSelf.statusNode.alpha = 1.0
                     strongSelf.statusNodeContainer.isUserInteractionEnabled = true

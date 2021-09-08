@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AppBundle
@@ -17,11 +16,11 @@ final class ThemeGridSelectionPanelNode: ASDisplayNode {
     
     private var theme: PresentationTheme
     
-    var selectedIndices = Set<Int64>() {
+    var selectedIds = Set<ThemeGridControllerEntry.StableId>() {
         didSet {
-            if oldValue != self.selectedIndices {
-                self.deleteButton.isEnabled = !self.selectedIndices.isEmpty
-                self.shareButton.isEnabled = !self.selectedIndices.isEmpty
+            if oldValue != self.selectedIds {
+                self.deleteButton.isEnabled = !self.selectedIds.isEmpty
+                self.shareButton.isEnabled = !self.selectedIds.isEmpty
             }
         }
     }

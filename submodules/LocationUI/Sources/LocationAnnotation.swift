@@ -4,7 +4,6 @@ import MapKit
 import Display
 import SwiftSignalKit
 import Postbox
-import SyncCore
 import TelegramCore
 import AvatarNode
 import AppBundle
@@ -555,7 +554,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         
         if self.previousPeerId != peer.id {
             self.previousPeerId = peer.id
-            avatarNode.setPeer(context: context, theme: theme, peer: peer)
+            avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer))
         }
     }
     

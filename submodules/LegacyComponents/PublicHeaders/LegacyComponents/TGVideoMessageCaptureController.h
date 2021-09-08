@@ -36,12 +36,15 @@
 - (CGRect)frameForSendButton;
 
 - (void)complete;
-- (void)dismiss;
+- (void)dismiss:(bool)cancelled;
 - (bool)stop;
 
 + (void)clearStartImage;
 
 + (void)requestCameraAccess:(void (^)(bool granted, bool wasNotDetermined))resultBlock;
 + (void)requestMicrophoneAccess:(void (^)(bool granted, bool wasNotDetermined))resultBlock;
+
+- (UIView *)extractVideoContent;
+- (void)hideVideoContent;
 
 @end

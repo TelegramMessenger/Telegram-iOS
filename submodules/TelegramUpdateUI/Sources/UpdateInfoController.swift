@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import ItemListUI
@@ -75,7 +74,7 @@ private enum UpdateInfoControllerEntry: ItemListNodeEntry {
                 return UpdateInfoItem(theme: theme, appIcon: icon, title: title, text: text, entities: entities, sectionId: self.section, style: .blocks, linkItemAction: { action, itemLink in
                     arguments.linkAction(action, itemLink)
                 })
-            case let .update(theme, title):
+            case let .update(_, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.openAppStorePage()
                 })
@@ -86,7 +85,7 @@ private enum UpdateInfoControllerEntry: ItemListNodeEntry {
 private func updateInfoControllerEntries(theme: PresentationTheme, strings: PresentationStrings, appIcon: PresentationAppIcon?, appUpdateInfo: AppUpdateInfo) -> [UpdateInfoControllerEntry] {
     var entries: [UpdateInfoControllerEntry] = []
     
-    entries.append(.info(theme, appIcon, strings.Update_AppVersion(appUpdateInfo.version).0, appUpdateInfo.text, appUpdateInfo.entities))
+    entries.append(.info(theme, appIcon, strings.Update_AppVersion(appUpdateInfo.version).string, appUpdateInfo.text, appUpdateInfo.entities))
     entries.append(.update(theme, strings.Update_UpdateApp))
     
     return entries

@@ -2,44 +2,43 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import AccountContext
 
 public let maximumNumberOfAccounts = 3
 
-public func activeAccountsAndPeers(context: AccountContext, includePrimary: Bool = false) -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> {
+public func activeAccountsAndPeers(context: AccountContext, includePrimary: Bool = false) -> Signal<((AccountContext, Peer)?, [(AccountContext, Peer, Int32)]), NoError> {
     let sharedContext = context.sharedContext
-    return context.sharedContext.activeAccounts
-    |> mapToSignal { primary, activeAccounts, _ -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> in
-        var accounts: [Signal<(Account, Peer, Int32)?, NoError>] = []
-        func accountWithPeer(_ account: Account) -> Signal<(Account, Peer, Int32)?, NoError> {
-            return combineLatest(account.postbox.peerView(id: account.peerId), renderedTotalUnreadCount(accountManager: sharedContext.accountManager, postbox: account.postbox))
+    return context.sharedContext.activeAccountContexts
+    |> mapToSignal { primary, activeAccounts, _ -> Signal<((AccountContext, Peer)?, [(AccountContext, Peer, Int32)]), NoError> in
+        var accounts: [Signal<(AccountContext, Peer, Int32)?, NoError>] = []
+        func accountWithPeer(_ context: AccountContext) -> Signal<(AccountContext, Peer, Int32)?, NoError> {
+            return combineLatest(context.account.postbox.peerView(id: context.account.peerId), renderedTotalUnreadCount(accountManager: sharedContext.accountManager, postbox: context.account.postbox))
             |> map { view, totalUnreadCount -> (Peer?, Int32) in
                 return (view.peers[view.peerId], totalUnreadCount.0)
             }
             |> distinctUntilChanged { lhs, rhs in
                 return arePeersEqual(lhs.0, rhs.0) && lhs.1 == rhs.1
             }
-            |> map { peer, totalUnreadCount -> (Account, Peer, Int32)? in
+            |> map { peer, totalUnreadCount -> (AccountContext, Peer, Int32)? in
                 if let peer = peer {
-                    return (account, peer, totalUnreadCount)
+                    return (context, peer, totalUnreadCount)
                 } else {
                     return nil
                 }
             }
         }
-        for (_, account, _) in activeAccounts {
-            accounts.append(accountWithPeer(account))
+        for (_, context, _) in activeAccounts {
+            accounts.append(accountWithPeer(context))
         }
         
         return combineLatest(accounts)
-        |> map { accounts -> ((Account, Peer)?, [(Account, Peer, Int32)]) in
-            var primaryRecord: (Account, Peer)?
-            if let first = accounts.filter({ $0?.0.id == primary?.id }).first, let (account, peer, _) = first {
+        |> map { accounts -> ((AccountContext, Peer)?, [(AccountContext, Peer, Int32)]) in
+            var primaryRecord: (AccountContext, Peer)?
+            if let first = accounts.filter({ $0?.0.account.id == primary?.account.id }).first, let (account, peer, _) = first {
                 primaryRecord = (account, peer)
             }
-            let accountRecords: [(Account, Peer, Int32)] = (includePrimary ? accounts : accounts.filter({ $0?.0.id != primary?.id })).compactMap({ $0 })
+            let accountRecords: [(AccountContext, Peer, Int32)] = (includePrimary ? accounts : accounts.filter({ $0?.0.account.id != primary?.account.id })).compactMap({ $0 })
             return (primaryRecord, accountRecords)
         }
     }

@@ -28,14 +28,14 @@ final class ChatImportStatusPanel: ASDisplayNode {
         if self.theme !== presentationData.theme.theme {
             self.theme = presentationData.theme.theme
             
-            let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+            let graphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
             self.backgroundNode.image = graphics.dateFloatingBackground
             self.secondaryBackgroundNode.image = graphics.dateFloatingBackground
         }
         
         let titleFont = Font.medium(min(18.0, floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0)))
         
-        let text = presentationData.strings.Conversation_ImportProgress("\(Int(progress * 100.0))").0
+        let text = presentationData.strings.Conversation_ImportProgress("\(Int(progress * 100.0))").string
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         

@@ -120,7 +120,11 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
             self.iconNode.removeFromSupernode()
         }
         
-        transition.updateFrame(node: self.textNode, frame: textFrame)
+        if self.textNode.frame.width != textFrame.width {
+            self.textNode.frame = textFrame
+        } else {
+            transition.updateFrame(node: self.textNode, frame: textFrame)
+        }
         
         let highlightNodeOffset: CGFloat = topItem == nil ? 0.0 : UIScreenPixel
         self.selectionNode.update(size: CGSize(width: width, height: height + highlightNodeOffset), theme: presentationData.theme, transition: transition)

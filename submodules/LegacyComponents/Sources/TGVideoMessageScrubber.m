@@ -70,6 +70,9 @@ typedef enum
     if (self != nil)
     {
         _allowsTrimming = true;
+
+        self.clipsToBounds = true;
+        self.layer.cornerRadius = 16.0f;
         
         _wrapperView = [[UIControl alloc] initWithFrame:CGRectMake(0, 0, 0, 33)];
         _wrapperView.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -10, -5, -10);

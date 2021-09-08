@@ -11,6 +11,7 @@ enum CallControllerButtonsSpeakerMode: Equatable {
         case generic
         case airpods
         case airpodsPro
+        case airpodsMax
     }
     
     case none
@@ -24,6 +25,7 @@ enum CallControllerButtonsMode: Equatable {
     struct VideoState: Equatable {
         var isAvailable: Bool
         var isCameraActive: Bool
+        var isScreencastActive: Bool
         var canChangeStatus: Bool
         var hasVideo: Bool
         var isInitializingCamera: Bool
@@ -51,6 +53,7 @@ private enum ButtonDescription: Equatable {
         case bluetooth
         case airpods
         case airpodsPro
+        case airpodsMax
         case headphones
     }
     
@@ -62,7 +65,7 @@ private enum ButtonDescription: Equatable {
     
     case accept
     case end(EndType)
-    case enableCamera(Bool, Bool, Bool)
+    case enableCamera(isActive: Bool, isEnabled: Bool, isLoading: Bool, isScreencast: Bool)
     case switchCamera(Bool)
     case soundOutput(SoundOutput)
     case mute(Bool)
@@ -215,20 +218,25 @@ final class CallControllerButtonsNode: ASDisplayNode {
                             soundOutput = .airpods
                         case .airpodsPro:
                             soundOutput = .airpodsPro
+                        case .airpodsMax:
+                            soundOutput = .airpodsMax
                 }
             }
             
             if videoState.isAvailable {
                 let isCameraActive: Bool
+                let isScreencastActive: Bool
                 let isCameraInitializing: Bool
                 if videoState.hasVideo {
                     isCameraActive = videoState.isCameraActive
+                    isScreencastActive = videoState.isScreencastActive
                     isCameraInitializing = videoState.isInitializingCamera
                 } else {
                     isCameraActive = false
+                    isScreencastActive = false
                     isCameraInitializing = videoState.isInitializingCamera
                 }
-                topButtons.append(.enableCamera(isCameraActive, false, isCameraInitializing))
+                topButtons.append(.enableCamera(isActive: isCameraActive || isScreencastActive, isEnabled: false, isLoading: isCameraInitializing, isScreencast: isScreencastActive))
                 if !videoState.hasVideo {
                     topButtons.append(.mute(self.isMuted))
                     topButtons.append(.soundOutput(soundOutput))
@@ -238,7 +246,9 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     } else {
                         topButtons.append(.mute(self.isMuted))
                     }
-                    topButtons.append(.switchCamera(isCameraActive && !isCameraInitializing))
+                    if !isScreencastActive {
+                        topButtons.append(.switchCamera(isCameraActive && !isCameraInitializing))
+                    }
                 }
             } else {
                 topButtons.append(.mute(self.isMuted))
@@ -276,14 +286,17 @@ final class CallControllerButtonsNode: ASDisplayNode {
         case .active:
             if videoState.hasVideo {
                 let isCameraActive: Bool
+                let isScreencastActive: Bool
                 let isCameraEnabled: Bool
                 let isCameraInitializing: Bool
                 if videoState.hasVideo {
                     isCameraActive = videoState.isCameraActive
+                    isScreencastActive = videoState.isScreencastActive
                     isCameraEnabled = videoState.canChangeStatus
                     isCameraInitializing = videoState.isInitializingCamera
                 } else {
                     isCameraActive = false
+                    isScreencastActive = false
                     isCameraEnabled = videoState.canChangeStatus
                     isCameraInitializing = videoState.isInitializingCamera
                 }
@@ -306,16 +319,20 @@ final class CallControllerButtonsNode: ASDisplayNode {
                                 soundOutput = .airpods
                             case .airpodsPro:
                                 soundOutput = .airpodsPro
+                            case .airpodsMax:
+                                soundOutput = .airpodsMax
                     }
                 }
                 
-                topButtons.append(.enableCamera(isCameraActive, isCameraEnabled, isCameraInitializing))
+                topButtons.append(.enableCamera(isActive: isCameraActive || isScreencastActive, isEnabled: isCameraEnabled, isLoading: isCameraInitializing, isScreencast: isScreencastActive))
                 if hasAudioRouteMenu {
                     topButtons.append(.soundOutput(soundOutput))
                 } else {
                     topButtons.append(.mute(isMuted))
                 }
-                topButtons.append(.switchCamera(isCameraActive && !isCameraInitializing))
+                if !isScreencastActive {
+                    topButtons.append(.switchCamera(isCameraActive && !isCameraInitializing))
+                }
                 topButtons.append(.end(.end))
                 
                 let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
@@ -334,14 +351,17 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 var bottomButtons: [ButtonDescription] = []
                 
                 let isCameraActive: Bool
+                let isScreencastActive: Bool
                 let isCameraEnabled: Bool
                 let isCameraInitializing: Bool
                 if videoState.hasVideo {
                     isCameraActive = videoState.isCameraActive
+                    isScreencastActive = videoState.isScreencastActive
                     isCameraEnabled = videoState.canChangeStatus
                     isCameraInitializing = videoState.isInitializingCamera
                 } else {
                     isCameraActive = false
+                    isScreencastActive = false
                     isCameraEnabled = videoState.canChangeStatus
                     isCameraInitializing = videoState.isInitializingCamera
                 }
@@ -362,10 +382,12 @@ final class CallControllerButtonsNode: ASDisplayNode {
                                 soundOutput = .airpods
                             case .airpodsPro:
                                 soundOutput = .airpodsPro
+                            case .airpodsMax:
+                                soundOutput = .airpodsMax
                     }
                 }
                 
-                topButtons.append(.enableCamera(isCameraActive, isCameraEnabled, isCameraInitializing))
+                topButtons.append(.enableCamera(isActive: isCameraActive || isScreencastActive, isEnabled: isCameraEnabled, isLoading: isCameraInitializing, isScreencast: isScreencastActive))
                 topButtons.append(.mute(self.isMuted))
                 topButtons.append(.soundOutput(soundOutput))
                 
@@ -434,10 +456,10 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 case .end:
                     buttonText = strings.Call_End
                 }
-            case let .enableCamera(isActivated, isEnabled, isInitializing):
+            case let .enableCamera(isActivated, isEnabled, isInitializing, isScreencastActive):
                 buttonContent = CallControllerButtonItemNode.Content(
                     appearance: .blurred(isFilled: isActivated),
-                    image: .camera,
+                    image: isScreencastActive ? .screencast : .camera,
                     isEnabled: isEnabled,
                     hasProgress: isInitializing
                 )
@@ -467,6 +489,9 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     title = strings.Call_Audio
                 case .airpodsPro:
                     image = .airpodsPro
+                    title = strings.Call_Audio
+                case .airpodsMax:
+                    image = .airpodsMax
                     title = strings.Call_Audio
                 case .headphones:
                     image = .headphones

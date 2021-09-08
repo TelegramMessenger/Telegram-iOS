@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramUIPreferences
 import SwiftSignalKit
@@ -135,14 +134,16 @@ public func areSharedMediaPlaylistItemIdsEqual(_ lhs: SharedMediaPlaylistItemId?
 
 public struct PeerMessagesMediaPlaylistItemId: SharedMediaPlaylistItemId {
     public let messageId: MessageId
+    public let messageIndex: MessageIndex
     
-    public init(messageId: MessageId) {
+    public init(messageId: MessageId, messageIndex: MessageIndex) {
         self.messageId = messageId
+        self.messageIndex = messageIndex
     }
     
     public func isEqual(to: SharedMediaPlaylistItemId) -> Bool {
         if let to = to as? PeerMessagesMediaPlaylistItemId {
-            if self.messageId != to.messageId {
+            if self.messageId != to.messageId || self.messageIndex != to.messageIndex {
                 return false
             }
             return true
@@ -155,7 +156,7 @@ public protocol SharedMediaPlaylistLocation {
     func isEqual(to: SharedMediaPlaylistLocation) -> Bool
 }
 
-public protocol SharedMediaPlaylist: class {
+public protocol SharedMediaPlaylist: AnyObject {
     var id: SharedMediaPlaylistId { get }
     var location: SharedMediaPlaylistLocation { get }
     var state: Signal<SharedMediaPlaylistState, NoError> { get }

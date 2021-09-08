@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AccountContext
 import TelegramPresentationData
@@ -111,7 +110,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         self.controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
             return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, activateMessagePinch: { _ in
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
-            }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { fileReference, _, _, node, rect in return selectStickerImpl?(fileReference, node, rect) ?? false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+            }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { fileReference, _, _, _, _, node, rect in return selectStickerImpl?(fileReference, node, rect) ?? false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, chatControllerNode: {
@@ -145,8 +144,6 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: { _ in
-        }, greetingStickerNode: {
-            return nil
         }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
@@ -154,10 +151,12 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, editMessageMedia: { _, _ in
         }, copyText: { _ in
         }, displayUndo: { _ in
+        }, isAnimatingMessage: { _ in
+            return false
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
-           pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: true))
+        pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: true), presentationContext: ChatPresentationContext(backgroundNode: nil))
         
         self.blurView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
         
@@ -183,13 +182,13 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         self.stickerListView = ListView()
         self.stickerListView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
         self.stickerListView.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.maskListView = ListView()
         self.maskListView.transform = CATransform3DMakeRotation(-CGFloat(Double.pi / 2.0), 0.0, 0.0, 1.0)
         self.maskListView.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.topSeparatorNode = ASDisplayNode()
@@ -225,10 +224,11 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue {
                     strongSelf.controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
                         context: strongSelf.context,
+                        highlightedPackId: nil,
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
-                                return strongSelf.controllerInteraction.sendSticker(fileReference, nil, false, sourceNode, sourceRect)
+                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
                             } else {
                                 return false
                             }
@@ -263,12 +263,9 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             }
         }, navigateBackToStickers: {
         }, setGifMode: { _ in
-        }, openSettings: { [weak self] in
-            if let strongSelf = self {
-//                let controller = installedStickerPacksController(context: context, mode: .modal)
-//                controller.navigationPresentation = .modal
-//                strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
-            }
+        }, openSettings: {
+        }, openTrending: { _ in
+        }, dismissTrendingPacks: { _ in
         }, toggleSearch: { [weak self] value, searchMode, query in
             if let strongSelf = self {
                 if let searchMode = searchMode, value {
@@ -293,8 +290,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                             if let strongSelf = self {
                                 strongSelf.controllerInteraction.updateInputMode { current in
                                     switch current {
-                                        case let .media(mode, _):
-                                            return .media(mode: mode, expanded: .search(searchMode))
+                                        case let .media(mode, _, focused):
+                                            return .media(mode: mode, expanded: .search(searchMode), focused: focused)
                                         default:
                                             return current
                                     }
@@ -305,8 +302,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 } else {
                     strongSelf.controllerInteraction.updateInputMode { current in
                         switch current {
-                            case let .media(mode, _):
-                                return .media(mode: mode, expanded: nil)
+                            case let .media(mode, _, focused):
+                                return .media(mode: mode, expanded: nil, focused: focused)
                             default:
                                 return current
                         }
@@ -342,10 +339,11 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue {
                     strongSelf.controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
                         context: strongSelf.context,
+                        highlightedPackId: nil,
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
-                                return strongSelf.controllerInteraction.sendSticker(fileReference, nil, false, sourceNode, sourceRect)
+                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
                             } else {
                                 return false
                             }
@@ -380,13 +378,10 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             }
             }, navigateBackToStickers: {
         }, setGifMode: { _ in
-        }, openSettings: { [weak self] in
-            if let strongSelf = self {
-                //                let controller = installedStickerPacksController(context: context, mode: .modal)
-                //                controller.navigationPresentation = .modal
-                //                strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
-            }
-            }, toggleSearch: { [weak self] value, searchMode, query in
+        }, openSettings: {
+        }, openTrending: { _ in
+        }, dismissTrendingPacks: { _ in
+        }, toggleSearch: { [weak self] value, searchMode, query in
                 if let strongSelf = self {
                     if let searchMode = searchMode, value {
                         var searchContainerNode: PaneSearchContainerNode?
@@ -410,8 +405,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                                     if let strongSelf = self {
                                         strongSelf.controllerInteraction.updateInputMode { current in
                                             switch current {
-                                                case let .media(mode, _):
-                                                    return .media(mode: mode, expanded: .search(searchMode))
+                                                case let .media(mode, _, focused):
+                                                    return .media(mode: mode, expanded: .search(searchMode), focused: focused)
                                                 default:
                                                     return current
                                             }
@@ -422,8 +417,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     } else {
                         strongSelf.controllerInteraction.updateInputMode { current in
                             switch current {
-                                case let .media(mode, _):
-                                    return .media(mode: mode, expanded: nil)
+                                case let .media(mode, _, focused):
+                                    return .media(mode: mode, expanded: nil, focused: focused)
                                 default:
                                     return current
                             }
@@ -593,39 +588,12 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             for info in view.collectionInfos {
                 installedPacks.insert(info.0)
             }
-            
-            var hasUnreadTrending: Bool?
-            for pack in trendingPacks {
-                if hasUnreadTrending == nil {
-                    hasUnreadTrending = false
-                }
-                if pack.unread {
-                    hasUnreadTrending = true
-                    break
-                }
-            }
-            
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false, hasSettings: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
-            
-//                if view.higher == nil {
-//                    var hasTopSeparator = true
-//                    if gridEntries.count == 1, case .search = gridEntries[0] {
-//                        hasTopSeparator = false
-//                    }
-//
-//                    var index = 0
-//                    for item in trendingPacks {
-//                        if !installedPacks.contains(item.info.id) {
-//                            gridEntries.append(.trending(TrendingPanePackEntry(index: index, info: item.info, theme: theme, strings: strings, topItems: item.topItems, installed: installedPacks.contains(item.info.id), unread: item.unread, topSeparator: hasTopSeparator)))
-//                            hasTopSeparator = true
-//                            index += 1
-//                        }
-//                    }
-//                }
+                        
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, strings: strings, hasGifs: false, hasSettings: false)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: trendingPacks, installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
             
             let (previousPanelEntries, previousGridEntries) = previousStickerEntries.swap((panelEntries, gridEntries))
-            return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: stickersInputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: stickersInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
+            return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: stickersInputNodeInteraction, scrollToItem: nil), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: stickersInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
         }
         
         self.disposable.set((stickerTransitions
@@ -656,11 +624,11 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 installedPacks.insert(info.0)
             }
             
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false, hasSettings: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, strings: strings, hasGifs: false, hasSettings: false)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: [], installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
                         
             let (previousPanelEntries, previousGridEntries) = previousMaskEntries.swap((panelEntries, gridEntries))
-            return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: masksInputNodeInteraction), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: masksInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
+            return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: masksInputNodeInteraction, scrollToItem: nil), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: masksInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
         }
         
         self.maskDisposable.set((maskTransitions
@@ -984,22 +952,16 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     }
     
     func updateLayout(width: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
-        var searchMode: ChatMediaInputSearchMode?
+        let searchMode: ChatMediaInputSearchMode? = nil
                 
-        var displaySearch = false
+        let displaySearch = false
         let separatorHeight = max(UIScreenPixel, 1.0 - UIScreenPixel)
         let topPanelHeight: CGFloat = 56.0
         let panelHeight: CGFloat
         
-        var isExpanded: Bool = true
-//            switch expanded {
-//                case .content:
-                    panelHeight = maximumHeight
-//                case let .search(mode):
-//                    panelHeight = maximumHeight
-//                    displaySearch = true
-//                    searchMode = mode
-//            }
+        let isExpanded: Bool = true
+        panelHeight = maximumHeight
+
         self.stickerPane.collectionListPanelOffset = 0.0
         
         transition.updateFrame(node: self.topPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: topInset + topPanelHeight)))
@@ -1023,8 +985,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     searchContainerNode.frame = containerFrame
                     searchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics, transition: .immediate)
                     var placeholderNode: PaneSearchBarPlaceholderNode?
-                    var anchorTop = CGPoint(x: 0.0, y: 0.0)
-                    var anchorTopView: UIView = self.view
+                    let anchorTop = CGPoint(x: 0.0, y: 0.0)
+                    let anchorTopView: UIView = self.view
                     if let searchMode = searchMode {
                         switch searchMode {
                         case .sticker:
@@ -1039,7 +1001,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     }
                     
                     if let placeholderNode = placeholderNode {
-                        searchContainerNode.animateIn(from: placeholderNode, anchorTop: anchorTop, anhorTopView: anchorTopView, transition: transition, completion: { [weak self] in
+                        searchContainerNode.animateIn(from: placeholderNode, anchorTop: anchorTop, anhorTopView: anchorTopView, transition: transition, completion: {
                         })
                     }
                 }
@@ -1054,21 +1016,21 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         transition.updateFrame(view: self.blurView, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: maximumHeight)))
         
         transition.updateFrame(node: self.collectionListContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: maximumHeight + contentVerticalOffset - bottomPanelHeight - bottomInset), size: CGSize(width: width, height: max(0.0, bottomPanelHeight + UIScreenPixel + bottomInset))))
-        transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: bottomPanelHeight + bottomInset)))
+        transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0), size: CGSize(width: width, height: bottomPanelHeight + bottomInset)))
     
         transition.updateFrame(node: self.topSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset + topPanelHeight), size: CGSize(width: width, height: separatorHeight)))
         transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: maximumHeight + contentVerticalOffset - bottomPanelHeight - bottomInset), size: CGSize(width: width, height: separatorHeight)))
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
-        let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0)
-        self.stickerListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight, height: width)
+        let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0 + 15.0)
+        self.stickerListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight + 31.0, height: width)
         transition.updatePosition(node: self.stickerListView, position: listPosition)
         
-        self.maskListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight, height: width)
+        self.maskListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight + 31.0, height: width)
         transition.updatePosition(node: self.maskListView, position: listPosition)
         
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: bottomPanelHeight, height: width), insets: UIEdgeInsets(top: 4.0 + leftInset, left: 0.0, bottom: 4.0 + rightInset, right: 0.0), duration: duration, curve: curve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: bottomPanelHeight + 31.0, height: width), insets: UIEdgeInsets(top: 4.0 + leftInset, left: 0.0, bottom: 4.0 + rightInset, right: 0.0), duration: duration, curve: curve)
         self.stickerListView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         self.maskListView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         

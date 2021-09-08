@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -271,7 +270,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if let peer = item.peer {
-                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.theme, peer: peer, authorOfMessage: nil, overrideImage: nil, emptyColor: nil, clipStyle: .none, synchronousLoad: false)
+                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.theme, peer: EnginePeer(peer), authorOfMessage: nil, overrideImage: nil, emptyColor: nil, clipStyle: .none, synchronousLoad: false)
                     }
                     
                     let revealOffset = strongSelf.revealOffset

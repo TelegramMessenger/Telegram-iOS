@@ -117,14 +117,6 @@ private func containedLayoutForWindowLayout(_ layout: WindowLayout, deviceMetric
     return ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.onScreenNavigationHeight ?? 0.0, right: 0.0), safeInsets: resolvedSafeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: resolvedStatusBarHeight, inputHeight: updatedInputHeight, inputHeightIsInteractivellyChanging: layout.upperKeyboardInputPositionBound != nil && layout.upperKeyboardInputPositionBound != layout.size.height && layout.inputHeight != nil, inVoiceOver: layout.inVoiceOver)
 }
 
-private func encodeText(_ string: String, _ key: Int) -> String {
-    var result = ""
-    for c in string.unicodeScalars {
-        result.append(Character(UnicodeScalar(UInt32(Int(c.value) + key))!))
-    }
-    return result
-}
-
 public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UIView, keyboardOnly: Bool = false) -> Bool {
     if view.disablesInteractiveTransitionGestureRecognizer && !keyboardOnly {
         return true
@@ -237,7 +229,7 @@ public class Window1 {
     
     private var deviceMetrics: DeviceMetrics
     
-    private let statusBarHost: StatusBarHost?
+    public let statusBarHost: StatusBarHost?
     private let keyboardManager: KeyboardManager?
     private let keyboardViewManager: KeyboardViewManager?
     private var statusBarChangeObserver: AnyObject?
@@ -784,12 +776,11 @@ public class Window1 {
                         self?.inCallNavigate?()
                     }
                 }
+                self.hostView.containerView.insertSubview(rootController.view, at: 0)
                 if !self.windowLayout.size.width.isZero && !self.windowLayout.size.height.isZero {
                     rootController.displayNode.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
                     rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
                 }
-                
-                self.hostView.containerView.insertSubview(rootController.view, at: 0)
             }
             
             self.hostView.eventView.setNeedsLayout()

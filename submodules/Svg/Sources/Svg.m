@@ -104,9 +104,9 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
         [xmlString replaceOccurrencesOfString:[NSString stringWithFormat:@"class=\"%@\"", styleName] withString:[NSString stringWithFormat:@"style=\"%@\"", styleValue] options:0 range:NSMakeRange(0, xmlString.length)];
     }
     
-    char *zeroTerminatedData = xmlString.UTF8String;
+    const char *zeroTerminatedData = xmlString.UTF8String;
     
-    NSVGimage *image = nsvgParse(zeroTerminatedData, "px", 96);
+    NSVGimage *image = nsvgParse((char *)zeroTerminatedData, "px", 96);
     if (image == nil || image->width < 1.0f || image->height < 1.0f) {
         return nil;
     }
@@ -135,7 +135,6 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
         }
         
         if (shape->fill.type != NSVG_PAINT_NONE) {
-            //CGContextSetFillColorWithColor(context, UIColorRGBA(shape->fill.color, shape->opacity).CGColor);
             CGContextSetFillColorWithColor(context, [foregroundColor colorWithAlphaComponent:shape->opacity].CGColor);
 
             bool isFirst = true;
@@ -173,7 +172,6 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
         }
         
         if (shape->stroke.type != NSVG_PAINT_NONE) {
-            //CGContextSetStrokeColorWithColor(context, UIColorRGBA(shape->fill.color, shape->opacity).CGColor);
             CGContextSetStrokeColorWithColor(context, [foregroundColor colorWithAlphaComponent:shape->opacity].CGColor);
             CGContextSetMiterLimit(context, shape->miterLimit);
             
@@ -196,10 +194,10 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
                     CGContextSetLineJoin(context, kCGLineJoinBevel);
                     break;
                 case NSVG_JOIN_MITER:
-                    CGContextSetLineCap(context, kCGLineJoinMiter);
+                    CGContextSetLineJoin(context, kCGLineJoinMiter);
                     break;
                 case NSVG_JOIN_ROUND:
-                    CGContextSetLineCap(context, kCGLineJoinRound);
+                    CGContextSetLineJoin(context, kCGLineJoinRound);
                     break;
                 default:
                     break;

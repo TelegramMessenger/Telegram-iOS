@@ -24,9 +24,12 @@ public func decodeTinyThumbnail(data: Data) -> Data? {
     resultData.append(tinyThumbnailHeaderPattern)
     resultData.append(data.subdata(in: 3 ..< data.count))
     resultData.append(tinyThumbnailFooterPattern)
-    resultData.withUnsafeMutableBytes({ (resultBytes: UnsafeMutablePointer<UInt8>) -> Void in
+    resultData.withUnsafeMutableBytes { buffer -> Void in
+        guard let resultBytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+            return
+        }
         resultBytes[164] = width
         resultBytes[166] = height
-    })
+    }
     return resultData
 }

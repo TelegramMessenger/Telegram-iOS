@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 
 public extension TelegramWallpaper {
     var isEmpty: Bool {
@@ -9,7 +8,7 @@ public extension TelegramWallpaper {
         case .image:
             return false
         case let .file(file):
-            if self.isPattern, file.settings.color == 0xffffff || file.settings.color == 0xffffffff {
+            if self.isPattern, file.settings.colors.count == 1 && (file.settings.colors[0] == 0xffffff || file.settings.colors[0] == 0xffffffff) {
                 return true
             } else {
                 return false

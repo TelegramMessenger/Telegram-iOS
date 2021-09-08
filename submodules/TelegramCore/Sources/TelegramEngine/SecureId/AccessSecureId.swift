@@ -154,7 +154,7 @@ public enum SecureIdAccessError {
 }
 
 func _internal_accessSecureId(network: Network, password: String) -> Signal<(context: SecureIdAccessContext, settings: TwoStepVerificationSettings), SecureIdAccessError> {
-    return requestTwoStepVerifiationSettings(network: network, password: password)
+    return _internal_requestTwoStepVerifiationSettings(network: network, password: password)
     |> mapError { error -> SecureIdAccessError in
         return .passwordError(error)
     }

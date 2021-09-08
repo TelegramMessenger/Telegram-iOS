@@ -56,6 +56,7 @@ public struct PresentationResourcesSettings {
     
     public static let support = renderIcon(name: "Settings/MenuIcons/Support")
     public static let faq = renderIcon(name: "Settings/MenuIcons/Faq")
+    public static let tips = renderIcon(name: "Settings/MenuIcons/Tips")
     
     public static let addAccount = renderIcon(name: "Settings/MenuIcons/AddAccount")
     public static let setPasscode = renderIcon(name: "Settings/MenuIcons/SetPasscode")

@@ -92,16 +92,16 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable {
     }
 }
 
-public struct AuthAccountRecord: PostboxCoding, Codable {
+public struct AuthAccountRecord<Attribute: AccountRecordAttribute>: Codable {
     enum CodingKeys: String, CodingKey {
         case id
         case attributes
     }
     
     public let id: AccountRecordId
-    public let attributes: [AccountRecordAttribute]
+    public let attributes: [Attribute]
     
-    init(id: AccountRecordId, attributes: [AccountRecordAttribute]) {
+    init(id: AccountRecordId, attributes: [Attribute]) {
         self.id = id
         self.attributes = attributes
     }
@@ -109,41 +109,31 @@ public struct AuthAccountRecord: PostboxCoding, Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(AccountRecordId.self, forKey: .id)
-        let attributesData = try container.decode(Array<Data>.self, forKey: .attributes)
-        var attributes: [AccountRecordAttribute] = []
-        for data in attributesData {
-            if let object = PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? AccountRecordAttribute {
-                attributes.append(object)
+
+        if let attributesData = try? container.decode(Array<Data>.self, forKey: .attributes) {
+            var attributes: [Attribute] = []
+            for data in attributesData {
+                if let attribute = try? AdaptedPostboxDecoder().decode(Attribute.self, from: data) {
+                    attributes.append(attribute)
+                }
             }
+            self.attributes = attributes
+        } else {
+            let attributes = try container.decode([Attribute].self, forKey: .attributes)
+            self.attributes = attributes
         }
-        self.attributes = attributes
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.id, forKey: .id)
-        let attributesData: [Data] = self.attributes.map { attribute in
-            let encoder = PostboxEncoder()
-            encoder.encodeRootObject(attribute)
-            return encoder.makeData()
-        }
-        try container.encode(attributesData, forKey: .attributes)
-    }
-    
-    public init(decoder: PostboxDecoder) {
-        self.id = AccountRecordId(rawValue: decoder.decodeOptionalInt64ForKey("id")!)
-        self.attributes = decoder.decodeObjectArrayForKey("attributes").compactMap({ $0 as? AccountRecordAttribute })
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt64(self.id.rawValue, forKey: "id")
-        encoder.encodeGenericObjectArray(self.attributes.map { $0 as PostboxCoding }, forKey: "attributes")
+        try container.encode(self.attributes, forKey: .attributes)
     }
 }
 
-enum AccountManagerMetadataOperation {
+enum AccountManagerMetadataOperation<Attribute: AccountRecordAttribute> {
     case updateCurrentAccountId(AccountRecordId)
-    case updateCurrentAuthAccountRecord(AuthAccountRecord?)
+    case updateCurrentAuthAccountRecord(AuthAccountRecord<Attribute>?)
 }
 
 private enum MetadataKey: Int64 {
@@ -153,7 +143,7 @@ private enum MetadataKey: Int64 {
     case version = 3
 }
 
-final class AccountManagerMetadataTable: Table {
+final class AccountManagerMetadataTable<Attribute: AccountRecordAttribute>: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
@@ -189,27 +179,26 @@ final class AccountManagerMetadataTable: Table {
         }
     }
     
-    func setCurrentAccountId(_ id: AccountRecordId, operations: inout [AccountManagerMetadataOperation]) {
+    func setCurrentAccountId(_ id: AccountRecordId, operations: inout [AccountManagerMetadataOperation<Attribute>]) {
         var rawValue = id.rawValue
         self.valueBox.set(self.table, key: self.key(.currentAccountId), value: MemoryBuffer(memory: &rawValue, capacity: 8, length: 8, freeWhenDone: false))
         operations.append(.updateCurrentAccountId(id))
     }
     
-    func getCurrentAuthAccount() -> AuthAccountRecord? {
-        if let value = self.valueBox.get(self.table, key: self.key(.currentAuthAccount)), let object = PostboxDecoder(buffer: value).decodeRootObject() as? AuthAccountRecord {
+    func getCurrentAuthAccount() -> AuthAccountRecord<Attribute>? {
+        if let value = self.valueBox.get(self.table, key: self.key(.currentAuthAccount)) {
+            let object = try? AdaptedPostboxDecoder().decode(AuthAccountRecord<Attribute>.self, from: value.makeData())
+
             return object
         } else {
             return nil
         }
     }
     
-    func setCurrentAuthAccount(_ record: AuthAccountRecord?, operations: inout [AccountManagerMetadataOperation]) {
+    func setCurrentAuthAccount(_ record: AuthAccountRecord<Attribute>?, operations: inout [AccountManagerMetadataOperation<Attribute>]) {
         if let record = record {
-            let encoder = PostboxEncoder()
-            encoder.encodeRootObject(record)
-            withExtendedLifetime(encoder, {
-                self.valueBox.set(self.table, key: self.key(.currentAuthAccount), value: encoder.readBufferNoCopy())
-            })
+            let data = try! AdaptedPostboxEncoder().encode(record)
+            self.valueBox.set(self.table, key: self.key(.currentAuthAccount), value: ReadBuffer(data: data))
         } else {
             self.valueBox.remove(self.table, key: self.key(.currentAuthAccount), secure: false)
         }

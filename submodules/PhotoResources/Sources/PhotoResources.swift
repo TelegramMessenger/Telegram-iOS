@@ -6,7 +6,6 @@ import Display
 import AVFoundation
 import ImageIO
 import TelegramCore
-import SyncCore
 import WebPBinding
 import TelegramUIPreferences
 import MediaResources
@@ -59,9 +58,6 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
         }
         
         var sources: [SizeSource] = []
-        if let miniThumbnail = photoReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
-            sources.append(.miniThumbnail(data: miniThumbnail))
-        }
         let thumbnailByteSize = Int(progressiveRepresentation.progressiveSizes[0])
         var largestByteSize = Int(progressiveRepresentation.progressiveSizes[0])
         for (maxDimension, byteSizes) in progressiveRangeMap {
@@ -78,6 +74,12 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
             if maxDimension >= Int(fullRepresentationSize.width) {
                 break
             }
+        }
+        if sources.isEmpty {
+            sources.append(.image(size: largestByteSize))
+        }
+        if let miniThumbnail = photoReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
+            sources.insert(.miniThumbnail(data: miniThumbnail), at: 0)
         }
         
         return Signal { subscriber in
@@ -1743,8 +1745,7 @@ public func chatWebpageSnippetFileData(account: Account, fileReference: FileMedi
         let disposable = DisposableSet()
         disposable.add(resourceData.start(next: { data in
             subscriber.putNext(data)
-        }, error: { error in
-            subscriber.putError(error)
+        }, error: { _ in
         }, completed: {
             subscriber.putCompletion()
         }))
@@ -1764,8 +1765,7 @@ public func chatWebpageSnippetPhotoData(account: Account, photoReference: ImageM
             let disposable = DisposableSet()
             disposable.add(resourceData.start(next: { data in
                 subscriber.putNext(data)
-            }, error: { error in
-                subscriber.putError(error)
+            }, error: { _ in
             }, completed: {
                 subscriber.putCompletion()
             }))
@@ -2184,7 +2184,6 @@ public func chatMessageImageFile(account: Account, fileReference: FileMediaRefer
 public func instantPageImageFile(account: Account, fileReference: FileMediaReference, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return chatMessageFileDatas(account: account, fileReference: fileReference, progressive: false, fetched: fetched)
     |> map { value in
-        let thumbnailData = value._0
         let fullSizePath = value._1
         let fullSizeComplete = value._2
         return { arguments in

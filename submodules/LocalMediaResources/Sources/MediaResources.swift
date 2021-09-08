@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 
 public final class VideoMediaResourceAdjustments: PostboxCoding, Equatable {
     public let data: MemoryBuffer

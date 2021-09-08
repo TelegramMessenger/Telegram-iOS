@@ -1,6 +1,5 @@
 import Foundation
 import Postbox
-import SyncCore
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -323,7 +322,7 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
     
     let actionsDisposable = DisposableSet()
     
-    let resultsContext = PollResultsContext(account: context.account, messageId: messageId, poll: poll)
+    let resultsContext = context.engine.messages.pollResults(messageId: messageId, poll: poll)
     
     let arguments = PollResultsControllerArguments(context: context,
     collapseOption: { optionId in
@@ -350,7 +349,7 @@ public func pollResultsController(context: AccountContext, messageId: MessageId,
         })
     }, openPeer: { peer in
         if let peer = peer.peers[peer.peerId] {
-            if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+            if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                 pushControllerImpl?(controller)
             }
         }

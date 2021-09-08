@@ -222,7 +222,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         var srcCb = vImage_Buffer(data: frame.data[1], height: vImagePixelCount(frame.height), width: vImagePixelCount(frame.width / 2), rowBytes: Int(frame.lineSize[1]))
         var srcCr = vImage_Buffer(data: frame.data[2], height: vImagePixelCount(frame.height), width: vImagePixelCount(frame.width / 2), rowBytes: Int(frame.lineSize[2]))
         
-        let argbBytesPerRow = (4 * Int(frame.width) + 15) & (~15)
+        let argbBytesPerRow = (4 * Int(frame.width) + 31) & (~31)
         let argbLength = argbBytesPerRow * Int(frame.height)
         let argb = malloc(argbLength)!
         guard let provider = CGDataProvider(dataInfo: argb, data: argb, size: argbLength, releaseData: { bytes, _, _ in

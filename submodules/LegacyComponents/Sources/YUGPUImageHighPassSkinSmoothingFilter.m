@@ -127,7 +127,9 @@ SHADER_STRING
     return self;
 }
 
+
 - (void)setHighPassRadiusInPixels:(CGFloat)highPassRadiusInPixels {
+    _highPassRadiusInPixels = highPassRadiusInPixels;
     self.highPassFilter.radiusInPixels = highPassRadiusInPixels;
 }
 

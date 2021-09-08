@@ -41,7 +41,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
         self.placeholder = placeholder
         self.placeholderNode.accessibilityLabel = placeholder
         if let disabledOverlay = self.disabledOverlay {
-            disabledOverlay.backgroundColor = theme.rootController.navigationBar.backgroundColor.withAlphaComponent(0.5)
+            disabledOverlay.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor.withAlphaComponent(0.5)
         }
         if let validLayout = self.validLayout {
             self.updatePlaceholder(self.expansionProgress, size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: .immediate)
@@ -88,34 +88,9 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
     }
     
     public func setIsEnabled(_ enabled: Bool, animated: Bool = false) {
-        if !enabled {
-            if self.disabledOverlay == nil {
-                let disabledOverlay = ASDisplayNode()
-                self.addSubnode(disabledOverlay)
-                self.disabledOverlay = disabledOverlay
-                if animated {
-                    disabledOverlay.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-                }
-            }
-            if let disabledOverlay = self.disabledOverlay {
-                disabledOverlay.backgroundColor = self.theme?.rootController.navigationBar.backgroundColor.withAlphaComponent(0.4)
-                
-                var disabledOverlayFrame = self.placeholderNode.frame
-                if let searchBarHeight = self.placeholderHeight {
-                    disabledOverlayFrame.size.height = searchBarHeight
-                }
-                disabledOverlay.frame = disabledOverlayFrame
-            }
-        } else if let disabledOverlay = self.disabledOverlay {
-            self.disabledOverlay = nil
-            if animated {
-                disabledOverlay.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak disabledOverlay] _ in
-                    disabledOverlay?.removeFromSupernode()
-                })
-            } else {
-                disabledOverlay.removeFromSupernode()
-            }
-        }
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate
+        transition.updateAlpha(node: self.placeholderNode, alpha: enabled ? 1.0 : 0.6)
+        self.placeholderNode.isUserInteractionEnabled = enabled
     }
     
     private func updatePlaceholder(_ progress: CGFloat, size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -130,7 +105,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
         let overscrollProgress = max(0.0, max(0.0, self.expansionProgress - 1.0 + fraction) / fraction - visibleProgress)
         
         let searchBarNodeLayout = self.placeholderNode.asyncLayout()
-        let (searchBarHeight, searchBarApply) = searchBarNodeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.navigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.backgroundColor ?? .clear, transition)
+        let (searchBarHeight, searchBarApply) = searchBarNodeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.navigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.opaqueBackgroundColor ?? .clear, transition)
         searchBarApply()
         
         let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: 8.0 + overscrollProgress * fieldHeight), size: CGSize(width: baseWidth, height: fieldHeight))

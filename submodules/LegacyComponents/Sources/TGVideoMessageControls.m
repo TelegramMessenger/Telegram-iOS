@@ -300,9 +300,11 @@ static CGRect viewFrame(UIView *view)
     
     static CGFloat freeOffsetLimit = 35.0f;
     static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
-    {
+    dispatch_once(&onceToken, ^{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         CGFloat labelWidth = [TGLocalized(@"Conversation.SlideToCancel") sizeWithFont:TGSystemFontOfSize(14.0f)].width;
+#pragma clang diagnostic pop
         CGFloat arrowOrigin = CGFloor((TGScreenSize().width - labelWidth) / 2.0f) - 9.0f - 6.0f;
         CGFloat timerWidth = 90.0f;
         
@@ -445,7 +447,7 @@ static CGRect viewFrame(UIView *view)
     
     [UIView animateWithDuration:0.2 delay:0.0 options:UIViewAnimationOptionBeginFromCurrentState | animationCurveOption animations:^
     {
-        CGAffineTransform transform = CGAffineTransformScale(transform, 0.25f, 0.25f);
+        CGAffineTransform transform = CGAffineTransformMakeScale(0.25, 0.25);
         _cancelButton.transform = transform;
         _cancelButton.alpha = 0.0f;
     } completion:nil];

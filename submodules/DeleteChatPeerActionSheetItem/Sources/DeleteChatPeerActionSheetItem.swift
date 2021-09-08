@@ -1,9 +1,7 @@
 import Foundation
 import UIKit
 import Display
-import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AvatarNode
@@ -23,13 +21,13 @@ private let avatarFont = avatarPlaceholderFont(size: 26.0)
 
 public final class DeleteChatPeerActionSheetItem: ActionSheetItem {
     let context: AccountContext
-    let peer: Peer
-    let chatPeer: Peer
+    let peer: EnginePeer
+    let chatPeer: EnginePeer
     let action: DeleteChatPeerAction
     let strings: PresentationStrings
     let nameDisplayOrder: PresentationPersonNameOrder
     
-    public init(context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
+    public init(context: AccountContext, peer: EnginePeer, chatPeer: EnginePeer, action: DeleteChatPeerAction, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) {
         self.context = context
         self.peer = peer
         self.chatPeer = chatPeer
@@ -55,7 +53,7 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
     
     private let accessibilityArea: AccessibilityAreaNode
     
-    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, nameOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction) {
+    init(theme: ActionSheetControllerTheme, strings: PresentationStrings, nameOrder: PresentationPersonNameOrder, context: AccountContext, peer: EnginePeer, chatPeer: EnginePeer, action: DeleteChatPeerAction) {
         self.theme = theme
         self.strings = strings
         
@@ -103,55 +101,61 @@ private final class DeleteChatPeerActionSheetItemNode: ActionSheetItemNode {
                 break
             }
         default:
-            var text: (String, [(Int, NSRange)])?
+            var text: PresentationStrings.FormattedString?
             switch action {
             case .delete:
                 if chatPeer.id == context.account.peerId {
-                    text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
-                } else if let chatPeer = chatPeer as? TelegramGroup {
+                    text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
+                } else if case let .legacyGroup(chatPeer) = chatPeer {
                     text = strings.ChatList_LeaveGroupConfirmation(chatPeer.title)
-                } else if let chatPeer = chatPeer as? TelegramChannel {
+                } else if case let .channel(chatPeer) = chatPeer {
                     text = strings.ChatList_LeaveGroupConfirmation(chatPeer.title)
-                } else if chatPeer is TelegramSecretChat {
+                } else if case .secretChat = chatPeer {
                     text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 } else {
                     text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 }
             case .deleteAndLeave:
                 if chatPeer.id == context.account.peerId {
-                    text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
-                } else if let chatPeer = chatPeer as? TelegramGroup {
+                    text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
+                } else if case let .legacyGroup(chatPeer) = chatPeer {
                     text = strings.ChatList_DeleteAndLeaveGroupConfirmation(chatPeer.title)
-                } else if let chatPeer = chatPeer as? TelegramChannel {
+                } else if case let .channel(chatPeer) = chatPeer {
                     text = strings.ChatList_DeleteAndLeaveGroupConfirmation(chatPeer.title)
-                } else if chatPeer is TelegramSecretChat {
+                } else if case .secretChat = chatPeer {
                     text = strings.ChatList_DeleteSecretChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 } else {
                     text = strings.ChatList_DeleteChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 }
             case let .clearHistory(canClearCache):
                 if peer.id == context.account.peerId {
-                    text = (strings.ChatList_DeleteSavedMessagesConfirmation, [])
-                } else if peer is TelegramUser {
+                    text = PresentationStrings.FormattedString(string: strings.ChatList_DeleteSavedMessagesConfirmation, ranges: [])
+                } else if case .user = peer {
                     text = strings.ChatList_ClearChatConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 } else {
                     text = strings.Conversation_DeleteAllMessagesInChat(peer.displayTitle(strings: strings, displayOrder: nameOrder))
                 }
                 
                 if canClearCache {
-                    text?.0 += "\n\n\(strings.Conversation_AlsoClearCacheTitle)"
+                    if let textValue = text {
+                        text = PresentationStrings.FormattedString(string: textValue.string + "\n\n\(strings.Conversation_AlsoClearCacheTitle)", ranges: textValue.ranges)
+                    }
                 }
             case .removeFromGroup:
-                text = strings.VoiceChat_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameOrder))
+                if case let .channel(channel) = chatPeer, case .broadcast = channel.info {
+                    text = strings.LiveStream_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameOrder))
+                } else {
+                    text = strings.VoiceChat_RemoveAndBanPeerConfirmation(peer.displayTitle(strings: strings, displayOrder: nameOrder), chatPeer.displayTitle(strings: strings, displayOrder: nameOrder))
+                }
             case .removeFromChannel:
                 text = strings.VoiceChat_RemovePeerConfirmationChannel(peer.displayTitle(strings: strings, displayOrder: nameOrder))
             default:
                 break
             }
             if let text = text {
-                let formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: textFont, textColor: theme.primaryTextColor))
-                for (_, range) in text.1 {
-                    formattedAttributedText.addAttribute(.font, value: boldFont, range: range)
+                let formattedAttributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.string, font: textFont, textColor: theme.primaryTextColor))
+                for range in text.ranges {
+                    formattedAttributedText.addAttribute(.font, value: boldFont, range: range.range)
                 }
                 attributedText = formattedAttributedText
             }

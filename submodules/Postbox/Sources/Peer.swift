@@ -1,6 +1,10 @@
 import Foundation
 
 public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
+    enum CodingKeys: String, CodingKey {
+        case internalValue = "iv"
+    }
+
     public struct Namespace: Comparable, Hashable, Codable, CustomStringConvertible {
         public static var max: Namespace {
             return Namespace(rawValue: 0x7)
@@ -151,10 +155,21 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             self.namespace = Namespace(rawValue: UInt32(namespaceBits))
 
             let idHighBits = (data >> (32 + 3)) & 0xffffffff
-            assert(idHighBits == 0)
+            //assert(idHighBits == 0)
 
             self.id = Id(rawValue: Int32(bitPattern: UInt32(clamping: idLowBits)))
         }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let value = try container.decode(Int64.self, forKey: .internalValue)
+        self.init(value)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.toInt64(), forKey: .internalValue)
     }
     
     public func toInt64() -> Int64 {

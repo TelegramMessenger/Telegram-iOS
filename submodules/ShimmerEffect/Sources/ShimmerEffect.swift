@@ -2,9 +2,10 @@ import UIKit
 import AsyncDisplayKit
 import Display
 
-private final class ShimmerEffectForegroundNode: ASDisplayNode {
+final class ShimmerEffectForegroundNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
     private var currentForegroundColor: UIColor?
+    private var currentHorizontal: Bool?
     private let imageNodeContainer: ASDisplayNode
     private let imageNode: ASImageNode
     
@@ -45,31 +46,56 @@ private final class ShimmerEffectForegroundNode: ASDisplayNode {
         self.updateAnimation()
     }
     
-    func update(backgroundColor: UIColor, foregroundColor: UIColor) {
-        if let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor) {
+    func update(backgroundColor: UIColor, foregroundColor: UIColor, horizontal: Bool = false) {
+        if let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor), self.currentHorizontal == horizontal {
             return
         }
         self.currentBackgroundColor = backgroundColor
         self.currentForegroundColor = foregroundColor
+        self.currentHorizontal = horizontal
         
-        self.imageNode.image = generateImage(CGSize(width: 16.0, height: 320.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(backgroundColor.cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: size))
-            
-            context.clip(to: CGRect(origin: CGPoint(), size: size))
-            
-            let transparentColor = foregroundColor.withAlphaComponent(0.0).cgColor
-            let peakColor = foregroundColor.cgColor
-            
-            var locations: [CGFloat] = [0.0, 0.5, 1.0]
-            let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
-            
-            let colorSpace = CGColorSpaceCreateDeviceRGB()
-            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-            
-            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-        })
+        let image: UIImage?
+        if horizontal {
+            image = generateImage(CGSize(width: 320.0, height: 16.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(backgroundColor.cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: size))
+                
+                context.clip(to: CGRect(origin: CGPoint(), size: size))
+                
+                let transparentColor = foregroundColor.withAlphaComponent(0.0).cgColor
+                let peakColor = foregroundColor.cgColor
+                
+                var locations: [CGFloat] = [0.0, 0.5, 1.0]
+                let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
+                
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+            })
+        } else {
+            image = generateImage(CGSize(width: 16.0, height: 320.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(backgroundColor.cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: size))
+                
+                context.clip(to: CGRect(origin: CGPoint(), size: size))
+                
+                let transparentColor = foregroundColor.withAlphaComponent(0.0).cgColor
+                let peakColor = foregroundColor.cgColor
+                
+                var locations: [CGFloat] = [0.0, 0.5, 1.0]
+                let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
+                
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+            })
+        }
+        self.imageNode.image = image
+        self.updateAnimation()
     }
     
     func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
@@ -95,7 +121,7 @@ private final class ShimmerEffectForegroundNode: ASDisplayNode {
     }
     
     private func updateAnimation() {
-        let shouldBeAnimating = self.isCurrentlyInHierarchy && self.absoluteLocation != nil
+        let shouldBeAnimating = self.isCurrentlyInHierarchy && self.absoluteLocation != nil && self.currentHorizontal != nil
         if shouldBeAnimating != self.shouldBeAnimating {
             self.shouldBeAnimating = shouldBeAnimating
             if shouldBeAnimating {
@@ -107,15 +133,25 @@ private final class ShimmerEffectForegroundNode: ASDisplayNode {
     }
     
     private func addImageAnimation() {
-        guard let containerSize = self.absoluteLocation?.1 else {
+        guard let containerSize = self.absoluteLocation?.1, let horizontal = self.currentHorizontal else {
             return
         }
-        let gradientHeight: CGFloat = 250.0
-        self.imageNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -gradientHeight), size: CGSize(width: containerSize.width, height: gradientHeight))
-        let animation = self.imageNode.layer.makeAnimation(from: 0.0 as NSNumber, to: (containerSize.height + gradientHeight) as NSNumber, keyPath: "position.y", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 1.3 * 1.0, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
-        animation.repeatCount = Float.infinity
-        animation.beginTime = 1.0
-        self.imageNode.layer.add(animation, forKey: "shimmer")
+        
+        if horizontal {
+            let gradientHeight: CGFloat = 320.0
+            self.imageNode.frame = CGRect(origin: CGPoint(x: -gradientHeight, y: 0.0), size: CGSize(width: gradientHeight, height: containerSize.height))
+            let animation = self.imageNode.layer.makeAnimation(from: 0.0 as NSNumber, to: (containerSize.width + gradientHeight) as NSNumber, keyPath: "position.x", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 1.3 * 1.0, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+            animation.repeatCount = Float.infinity
+            animation.beginTime = 1.0
+            self.imageNode.layer.add(animation, forKey: "shimmer")
+        } else {
+            let gradientHeight: CGFloat = 250.0
+            self.imageNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -gradientHeight), size: CGSize(width: containerSize.width, height: gradientHeight))
+            let animation = self.imageNode.layer.makeAnimation(from: 0.0 as NSNumber, to: (containerSize.height + gradientHeight) as NSNumber, keyPath: "position.y", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 1.3 * 1.0, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+            animation.repeatCount = Float.infinity
+            animation.beginTime = 1.0
+            self.imageNode.layer.add(animation, forKey: "shimmer")
+        }
     }
 }
 
@@ -135,6 +171,7 @@ public final class ShimmerEffectNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
     private var currentForegroundColor: UIColor?
     private var currentShimmeringColor: UIColor?
+    private var currentHorizontal: Bool?
     private var currentSize = CGSize()
     
     override public init() {
@@ -157,8 +194,8 @@ public final class ShimmerEffectNode: ASDisplayNode {
         self.effectNode.updateAbsoluteRect(rect, within: containerSize)
     }
     
-    public func update(backgroundColor: UIColor, foregroundColor: UIColor, shimmeringColor: UIColor, shapes: [Shape], size: CGSize) {
-        if self.currentShapes == shapes, let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor), let currentShimmeringColor = self.currentShimmeringColor, currentShimmeringColor.isEqual(shimmeringColor), self.currentSize == size {
+    public func update(backgroundColor: UIColor, foregroundColor: UIColor, shimmeringColor: UIColor, shapes: [Shape], horizontal: Bool = false, size: CGSize) {
+        if self.currentShapes == shapes, let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor), let currentShimmeringColor = self.currentShimmeringColor, currentShimmeringColor.isEqual(shimmeringColor), horizontal == self.currentHorizontal, self.currentSize == size {
             return
         }
         
@@ -166,11 +203,12 @@ public final class ShimmerEffectNode: ASDisplayNode {
         self.currentForegroundColor = foregroundColor
         self.currentShimmeringColor = shimmeringColor
         self.currentShapes = shapes
+        self.currentHorizontal = horizontal
         self.currentSize = size
         
         self.backgroundNode.backgroundColor = foregroundColor
         
-        self.effectNode.update(backgroundColor: foregroundColor, foregroundColor: shimmeringColor)
+        self.effectNode.update(backgroundColor: foregroundColor, foregroundColor: shimmeringColor, horizontal: horizontal)
         
         self.foregroundNode.image = generateImage(size, rotatedContext: { size, context in
             context.setFillColor(backgroundColor.cgColor)

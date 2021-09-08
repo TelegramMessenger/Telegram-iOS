@@ -4,7 +4,6 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
-import SyncCore
 
 private final class ManagedSynchronizeEmojiKeywordsOperationHelper {
     var operationDisposables: [Int32: Disposable] = [:]

@@ -108,7 +108,7 @@ class ChatTypingActivityContentNode: ChatTitleActivityContentNode {
         self.addSubnode(self.indicatorNode)
     }
     
-    override func updateLayout(_ constrainedSize: CGSize, alignment: NSTextAlignment) -> CGSize {
+    override func updateLayout(_ constrainedSize: CGSize, offset: CGFloat, alignment: NSTextAlignment) -> CGSize {
         let indicatorSize = CGSize(width: 24.0, height: 16.0)
         let size = self.textNode.updateLayout(CGSize(width: constrainedSize.width - indicatorSize.width, height: constrainedSize.height))
         var originX: CGFloat

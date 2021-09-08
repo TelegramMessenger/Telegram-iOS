@@ -22,6 +22,7 @@ public enum ListViewScrollToItemDirectionHint {
 public enum ListViewAnimationCurve {
     case Spring(duration: Double)
     case Default(duration: Double?)
+    case Custom(duration: Double, Float, Float, Float, Float)
 }
 
 public struct ListViewScrollToItem {
@@ -30,13 +31,15 @@ public struct ListViewScrollToItem {
     public let animated: Bool
     public let curve: ListViewAnimationCurve
     public let directionHint: ListViewScrollToItemDirectionHint
+    public let displayLink: Bool
     
-    public init(index: Int, position: ListViewScrollPosition, animated: Bool, curve: ListViewAnimationCurve, directionHint: ListViewScrollToItemDirectionHint) {
+    public init(index: Int, position: ListViewScrollPosition, animated: Bool, curve: ListViewAnimationCurve, directionHint: ListViewScrollToItemDirectionHint, displayLink: Bool = false) {
         self.index = index
         self.position = position
         self.animated = animated
         self.curve = curve
         self.directionHint = directionHint
+        self.displayLink = displayLink
     }
 }
 

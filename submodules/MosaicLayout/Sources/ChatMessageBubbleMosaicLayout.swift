@@ -8,7 +8,6 @@ public struct MosaicItemPosition: OptionSet {
         self.rawValue = rawValue
     }
     
-    public static let none = MosaicItemPosition(rawValue: 0)
     public static let top = MosaicItemPosition(rawValue: 1)
     public static let bottom = MosaicItemPosition(rawValue: 2)
     public static let left = MosaicItemPosition(rawValue: 4)

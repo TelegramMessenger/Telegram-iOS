@@ -4,10 +4,9 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import AccountContext
 
-public protocol SettingsController: class {
+public protocol SettingsController: AnyObject {
     func updateContext(context: AccountContext)
 }
 

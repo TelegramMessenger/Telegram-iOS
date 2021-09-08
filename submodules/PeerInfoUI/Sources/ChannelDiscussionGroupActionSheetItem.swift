@@ -5,7 +5,6 @@ import UIKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AvatarNode
@@ -66,10 +65,10 @@ private final class ChannelDiscussionGroupActionSheetItemNode: ActionSheetItemNo
         self.addSubnode(self.channelAvatarNode)
         self.addSubnode(self.textNode)
         
-        self.channelAvatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: channelPeer)
-        self.groupAvatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: groupPeer)
+        self.channelAvatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: EnginePeer(channelPeer))
+        self.groupAvatarNode.setPeer(context: context, theme: (context.sharedContext.currentPresentationData.with { $0 }).theme, peer: EnginePeer(groupPeer))
         
-        let text: (String, [(Int, NSRange)])
+        let text: PresentationStrings.FormattedString
         if let channelPeer = channelPeer as? TelegramChannel, let addressName = channelPeer.addressName, !addressName.isEmpty {
             text = strings.Channel_DiscussionGroup_PublicChannelLink(groupPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder), channelPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
         } else {
@@ -79,9 +78,9 @@ private final class ChannelDiscussionGroupActionSheetItemNode: ActionSheetItemNo
         let textFont = Font.regular(floor(theme.baseFontSize * 14.0 / 17.0))
         let boldFont = Font.semibold(floor(theme.baseFontSize * 14.0 / 17.0))
         
-        let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.0, font: textFont, textColor: theme.primaryTextColor))
-        for (_, range) in text.1 {
-            attributedText.addAttribute(.font, value: boldFont, range: range)
+        let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: text.string, font: textFont, textColor: theme.primaryTextColor))
+        for range in text.ranges {
+            attributedText.addAttribute(.font, value: boldFont, range: range.range)
         }
         
         self.textNode.attributedText = attributedText

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
@@ -31,15 +30,6 @@ private enum ShareSearchRecentEntryStableId: Hashable {
                 } else {
                     return false
                 }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case .topPeers:
-                return 0
-            case let .peerId(peerId):
-                return peerId.hashValue
         }
     }
 }
@@ -111,13 +101,17 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
 
 private struct ShareSearchPeerEntry: Comparable, Identifiable {
     let index: Int32
-    let peer: RenderedPeer
+    let peer: RenderedPeer?
     let presence: PeerPresence?
     let theme: PresentationTheme
     let strings: PresentationStrings
     
     var stableId: Int64 {
-        return self.peer.peerId.toInt64()
+        if let peer = self.peer {
+            return peer.peerId.toInt64()
+        } else {
+            return Int64(index)
+        }
     }
     
     static func ==(lhs: ShareSearchPeerEntry, rhs: ShareSearchPeerEntry) -> Bool {
@@ -135,7 +129,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(context: context, theme: self.theme, strings: self.strings, peer: peer, presence: self.presence, controllerInteraction: interfaceInteraction, search: true)
+        return ShareControllerPeerGridItem(context: context, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, controllerInteraction: interfaceInteraction, search: true)
     }
 }
 
@@ -247,10 +241,13 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             if !query.isEmpty {
                 let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
                 let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased())
-                let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError> = .single(([], []))
+                let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError> = .single(([], [], true))
                 |> then(
-                    searchPeers(account: context.account, query: query)
+                    context.engine.peers.searchPeers(query: query)
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
+                    |> map { a, b -> ([FoundPeer], [FoundPeer], Bool) in
+                        return (a, b, false)
+                    }
                 )
                 
                 return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers)
@@ -279,21 +276,28 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                         }
                     }
                     
-                    for foundPeer in foundRemotePeers.0 {
-                        let peer = foundPeer.peer
-                        if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
-                            existingPeerIds.insert(peer.id)
-                            entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: foundPeer.peer), presence: nil, theme: theme, strings: strings))
+                    if foundRemotePeers.2 {
+                        for _ in 0 ..< 4 {
+                            entries.append(ShareSearchPeerEntry(index: index, peer: nil, presence: nil, theme: theme, strings: strings))
                             index += 1
                         }
-                    }
-                    
-                    for foundPeer in foundRemotePeers.1 {
-                        let peer = foundPeer.peer
-                        if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
-                            existingPeerIds.insert(peer.id)
-                            entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: peer), presence: nil, theme: theme, strings: strings))
-                            index += 1
+                    } else {
+                        for foundPeer in foundRemotePeers.0 {
+                            let peer = foundPeer.peer
+                            if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
+                                existingPeerIds.insert(peer.id)
+                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: foundPeer.peer), presence: nil, theme: theme, strings: strings))
+                                index += 1
+                            }
+                        }
+                        
+                        for foundPeer in foundRemotePeers.1 {
+                            let peer = foundPeer.peer
+                            if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
+                                existingPeerIds.insert(peer.id)
+                                entries.append(ShareSearchPeerEntry(index: index, peer: RenderedPeer(peer: peer), presence: nil, theme: theme, strings: strings))
+                                index += 1
+                            }
                         }
                     }
                     
@@ -333,7 +337,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             self?.searchQuery.set(text)
         }
         
-        let hasRecentPeers = recentPeers(account: context.account)
+        let hasRecentPeers = context.engine.peers.recentPeers()
         |> map { value -> Bool in
             switch value {
             case let .peers(peers):
@@ -437,7 +441,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         var scrollToItem: GridNodeScrollToItem?
         if !self.contentGridNode.isHidden, let ensurePeerVisibleOnLayout = self.ensurePeerVisibleOnLayout {
             self.ensurePeerVisibleOnLayout = nil
-            if let index = self.entries.firstIndex(where: { $0.peer.peerId == ensurePeerVisibleOnLayout }) {
+            if let index = self.entries.firstIndex(where: { $0.peer?.peerId == ensurePeerVisibleOnLayout }) {
                 scrollToItem = GridNodeScrollToItem(index: index, position: .visible, transition: transition, directionHint: .up, adjustForSection: false)
             }
         }

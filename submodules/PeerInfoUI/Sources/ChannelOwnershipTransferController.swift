@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ActivityIndicator
 import TextFormat
@@ -455,12 +454,12 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
         
         let signal: Signal<PeerId?, ChannelOwnershipTransferError>
         if let peer = peer as? TelegramChannel {
-            signal = context.peerChannelMemberCategoriesContextsManager.transferOwnership(account: context.account, peerId: peer.id, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
+            signal = context.peerChannelMemberCategoriesContextsManager.transferOwnership(engine: context.engine, peerId: peer.id, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
                 return .complete()
             }
             |> then(.single(nil))
         } else if let peer = peer as? TelegramGroup {
-            signal = convertGroupToSupergroup(account: context.account, peerId: peer.id)
+            signal = context.engine.peers.convertGroupToSupergroup(peerId: peer.id)
             |> map(Optional.init)
             |> mapError { error -> ChannelOwnershipTransferError in
                 switch error {
@@ -475,7 +474,7 @@ private func commitChannelOwnershipTransferController(context: AccountContext, p
                 guard let upgradedPeerId = upgradedPeerId else {
                     return .fail(.generic)
                 }
-                return context.peerChannelMemberCategoriesContextsManager.transferOwnership(account: context.account, peerId: upgradedPeerId, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
+                return context.peerChannelMemberCategoriesContextsManager.transferOwnership(engine: context.engine, peerId: upgradedPeerId, memberId: member.id, password: contentNode.password) |> mapToSignal { _ in
                     return .complete()
                 }
                 |> then(.single(upgradedPeerId))
@@ -542,10 +541,10 @@ private func confirmChannelOwnershipTransferController(context: AccountContext, 
     var text: String
     if isGroup {
         title = presentationData.strings.Group_OwnershipTransfer_Title
-        text = presentationData.strings.Group_OwnershipTransfer_DescriptionInfo(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), member.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+        text = presentationData.strings.Group_OwnershipTransfer_DescriptionInfo(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), member.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
     } else {
         title = presentationData.strings.Channel_OwnershipTransfer_Title
-        text = presentationData.strings.Channel_OwnershipTransfer_DescriptionInfo(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), member.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
+        text = presentationData.strings.Channel_OwnershipTransfer_DescriptionInfo(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), member.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
     }
     
     let attributedTitle = NSAttributedString(string: title, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)

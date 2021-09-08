@@ -5,7 +5,6 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -18,9 +17,10 @@ import PeerPresenceStatusManager
 import PhotoResources
 import ChatListSearchItemNode
 import ContextUI
+import ChatInterfaceState
 
 public enum ChatListItemContent {
-    case peer(messages: [Message], peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool)
+    case peer(messages: [Message], peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: StoredPeerChatInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool)
     case groupReference(groupId: PeerGroupId, peers: [ChatListGroupReferencePeer], message: Message?, unreadState: PeerGroupUnreadCountersCombinedSummary, hiddenByDefault: Bool)
     
     public var chatLocation: ChatLocation? {
@@ -128,9 +128,9 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
                 if let message = messages.last, let peer = peer.peer {
                     self.interaction.messageSelected(peer, message, promoInfo)
                 } else if let peer = peer.peer {
-                    self.interaction.peerSelected(peer, promoInfo)
+                    self.interaction.peerSelected(peer, nil, promoInfo)
                 } else if let peer = peer.peers[peer.peerId] {
-                    self.interaction.peerSelected(peer, promoInfo)
+                    self.interaction.peerSelected(peer, nil, promoInfo)
                 }
             case let .groupReference(groupId, _, _, _, _):
                 self.interaction.groupSelected(groupId)
@@ -520,7 +520,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
-                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).0)"
+                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
                         }
                         result += "\n\(messageText)"
                         return result
@@ -554,7 +554,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
-                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).0)"
+                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
                         }
                         if !message.flags.contains(.Incoming), let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageRead)"
@@ -676,12 +676,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if peerValue.peerId.namespace == Namespaces.Peer.SecretChat {
                     enablePreview = false
                 }
-            case let .groupReference(groupReference):
-                if let previousItem = previousItem, case let .groupReference(previousGroupReference) = previousItem.content, groupReference.hiddenByDefault != previousGroupReference.hiddenByDefault {
+            case let .groupReference(_, _, _, _, hiddenByDefault):
+                if let previousItem = previousItem, case let .groupReference(_, _, _, _, previousHiddenByDefault) = previousItem.content, hiddenByDefault != previousHiddenByDefault {
                     UIView.transition(with: self.avatarNode.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
                     }, completion: nil)
                 }
-                self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: .archivedChatsIcon(hiddenByDefault: groupReference.hiddenByDefault), emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+                self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer.flatMap(EnginePeer.init), overrideImage: .archivedChatsIcon(hiddenByDefault: hiddenByDefault), emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
         }
         
         if let peer = peer {
@@ -693,10 +693,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             } else if peer.isDeleted {
                 overrideImage = .deletedIcon
             }
-            self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
+            self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(peer), overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
         }
         
-        self.contextContainer.isGestureEnabled = enablePreview
+        self.contextContainer.isGestureEnabled = enablePreview && !item.editing
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -773,9 +773,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         guard let item = self.item, item.editing else {
             return
         }
-        if case let .peer(_, _, _, _, _, _, _, _, promoInfo, _, _, _) = item.content {
-            if promoInfo == nil {
-                item.interaction.togglePeerSelected(item.index.messageIndex.id.peerId)
+        if case let .peer(_, peer, _, _, _, _, _, _, promoInfo, _, _, _) = item.content {
+            if promoInfo == nil, let mainPeer = peer.chatMainPeer {
+                item.interaction.togglePeerSelected(mainPeer)
             }
         }
     }
@@ -814,7 +814,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let unreadCount: (count: Int32, unread: Bool, muted: Bool, mutedCount: Int32?)
             let isRemovedFromTotalUnreadCount: Bool
             let peerPresence: PeerPresence?
-            let embeddedState: PeerChatListEmbeddedInterfaceState?
+            let embeddedState: StoredPeerChatInterfaceState?
             let summaryInfo: ChatListMessageTagSummaryInfo
             let inputActivities: [(Peer, PeerInputActivity)]?
             let isPeerGroup: Bool
@@ -825,7 +825,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var groupHiddenByDefault = false
             
             switch item.content {
-                case let .peer(messagesValue, peerValue, combinedReadStateValue, isRemovedFromTotalUnreadCountValue, peerPresenceValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, promoInfoValue, ignoreUnreadBadge, displayAsMessageValue, hasFailedMessagesValue):
+                case let .peer(messagesValue, peerValue, combinedReadStateValue, isRemovedFromTotalUnreadCountValue, peerPresenceValue, summaryInfoValue, embeddedStateValue, inputActivitiesValue, promoInfoValue, ignoreUnreadBadge, displayAsMessageValue, _):
                     messages = messagesValue
                     contentPeer = .chat(peerValue)
                     combinedReadState = combinedReadStateValue
@@ -1022,11 +1022,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         chatListText = (text, messageText)
                     }
                     
-                    if inlineAuthorPrefix == nil, let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
+                    if inlineAuthorPrefix == nil, let embeddedState = embeddedState, embeddedState.overrideChatTimestamp != nil, let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
+                        let interfaceState = ChatInterfaceState.parse(opaqueState)
+
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
+
+                        let draftText: String = interfaceState.composeInputState.inputText.string
                         
-                        attributedText = NSAttributedString(string: foldLineBreaks(embeddedState.text.string.replacingOccurrences(of: "\n\n", with: " ")), font: textFont, textColor: theme.messageTextColor)
+                        attributedText = NSAttributedString(string: foldLineBreaks(draftText.replacingOccurrences(of: "\n\n", with: " ")), font: textFont, textColor: theme.messageTextColor)
                     } else if let message = messages.last {
                         var composedString: NSMutableAttributedString
                         if let inlineAuthorPrefix = inlineAuthorPrefix {
@@ -1276,7 +1280,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            var isMuted = isRemovedFromTotalUnreadCount
+            let isMuted = isRemovedFromTotalUnreadCount
             if isMuted {
                 currentMutedIconImage = PresentationResourcesChatList.mutedIcon(item.presentationData.theme)
             }
@@ -1347,7 +1351,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let layoutOffset: CGFloat = 0.0
             
-            let rawContentOriginX = 2.0
             let rawContentWidth = params.width - leftInset - params.rightInset - 10.0 - editingOffset
             
             let (dateLayout, dateApply) = dateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -1413,7 +1416,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if !displayAsMessage {
                         if let peer = renderedPeer.chatMainPeer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId {
                             let updatedPresence = TelegramUserPresence(status: presence.status, lastActivity: 0)
-                            let relativeStatus = relativeUserPresenceStatus(updatedPresence, relativeTo: timestamp)
+                            let relativeStatus = relativeUserPresenceStatus(EnginePeer.Presence(updatedPresence), relativeTo: timestamp)
                             if case .online = relativeStatus {
                                 online = true
                             }
@@ -1509,7 +1512,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.onlineIsVoiceChat = onlineIsVoiceChat
                     
                     strongSelf.contextContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
-                    
+                   
                     if case .groupReference = item.content {
                         strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, layout.contentSize.height - itemHeight, 0.0)
                     }
@@ -1821,7 +1824,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let separatorInset: CGFloat
-                    if case let .groupReference(groupReference) = item.content, groupReference.hiddenByDefault {
+                    if case let .groupReference(_, _, _, _, hiddenByDefault) = item.content, hiddenByDefault {
                         separatorInset = 0.0
                     } else if (!nextIsPinned && item.index.pinningIndex != nil) || last {
                             separatorInset = 0.0
@@ -1836,7 +1839,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if item.selected {
                         backgroundColor = theme.itemSelectedBackgroundColor
                     } else if item.index.pinningIndex != nil {
-                        if case let .groupReference(groupReference) = item.content, groupReference.hiddenByDefault {
+                        if case let .groupReference(_, _, _, _, hiddenByDefault) = item.content, hiddenByDefault {
                             backgroundColor = theme.itemBackgroundColor
                         } else {
                             backgroundColor = theme.pinnedItemBackgroundColor
@@ -1853,7 +1856,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     
                     if let peerPresence = peerPresence as? TelegramUserPresence {
-                        strongSelf.peerPresenceManager?.reset(presence: TelegramUserPresence(status: peerPresence.status, lastActivity: 0))
+                        strongSelf.peerPresenceManager?.reset(presence: TelegramUserPresence(status: peerPresence.status, lastActivity: 0), isOnline: online)
                     }
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
@@ -1893,9 +1896,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let item = self.layoutParams?.0 {
-            return item.header
+            return item.header.flatMap { [$0] }
         } else {
             return nil
         }

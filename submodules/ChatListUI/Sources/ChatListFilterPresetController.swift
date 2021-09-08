@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import PresentationDataUtils
 import ItemListUI
@@ -261,8 +260,8 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return .index(3)
         case .addIncludePeer:
             return .index(4)
-        case let .includeCategory(includeCategory):
-            return .includeCategory(includeCategory.category)
+        case let .includeCategory(_, category, _, _):
+            return .includeCategory(category)
         case .includeExpand:
             return .index(5)
         case .includePeerInfo:
@@ -271,16 +270,16 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return .index(7)
         case .addExcludePeer:
             return .index(8)
-        case let .excludeCategory(excludeCategory):
-            return .excludeCategory(excludeCategory.category)
+        case let .excludeCategory(_, category, _, _):
+            return .excludeCategory(category)
         case .excludeExpand:
             return .index(9)
         case .excludePeerInfo:
             return .index(10)
-        case let .includePeer(peer):
-            return .peer(peer.peer.peerId)
-        case let .excludePeer(peer):
-            return .peer(peer.peer.peerId)
+        case let .includePeer(_, peer, _):
+            return .peer(peer.peerId)
+        case let .excludePeer(_, peer, _):
+            return .peer(peer.peerId)
         }
     }
     
@@ -296,10 +295,10 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return .includeIndex(0)
         case .addIncludePeer:
             return .includeIndex(1)
-        case let .includeCategory(includeCategory):
-            return .includeIndex(2 + includeCategory.index)
-        case let .includePeer(includePeer):
-            return .includeIndex(200 + includePeer.index)
+        case let .includeCategory(index, _, _, _):
+            return .includeIndex(2 + index)
+        case let .includePeer(index, _, _):
+            return .includeIndex(200 + index)
         case .includeExpand:
             return .includeIndex(999)
         case .includePeerInfo:
@@ -308,10 +307,10 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return .excludeIndex(0)
         case .addExcludePeer:
             return .excludeIndex(1)
-        case let .excludeCategory(excludeCategory):
-            return .excludeIndex(2 + excludeCategory.index)
-        case let .excludePeer(excludePeer):
-            return .excludeIndex(200 + excludePeer.index)
+        case let .excludeCategory(index, _, _, _):
+            return .excludeIndex(2 + index)
+        case let .excludePeer(index, _, _):
+            return .excludeIndex(200 + index)
         case .excludeExpand:
             return .excludeIndex(999)
         case .excludePeerInfo:
@@ -624,7 +623,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
         }
         
         if applyAutomatically {
-            let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+            let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
                 var filters = filters
                 for i in 0 ..< filters.count {
                     if filters[i].id == filter.id {
@@ -634,7 +633,7 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
                     }
                 }
                 return filters
-            })
+            }
             |> deliverOnMainQueue).start(next: { _ in
                 controller?.dismiss()
             })
@@ -702,7 +701,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
         excludePeers.sort()
         
         if applyAutomatically {
-            let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+            let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
                 var filters = filters
                 for i in 0 ..< filters.count {
                     if filters[i].id == filter.id {
@@ -714,7 +713,7 @@ private func internalChatListFilterExcludeChatsController(context: AccountContex
                     }
                 }
                 return filters
-            })
+            }
             |> deliverOnMainQueue).start(next: { _ in
                 controller?.dismiss()
             })
@@ -835,7 +834,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             includePeers.setPeers(state.additionallyIncludePeers)
             let filter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             
-            let _ = (currentChatListFilters(postbox: context.account.postbox)
+            let _ = (context.engine.peers.currentChatListFilters()
             |> deliverOnMainQueue).start(next: { filters in
                 let controller = internalChatListFilterAddChatsController(context: context, filter: filter, allFilters: filters, applyAutomatically: false, updated: { filter in
                     skipStateAnimation = true
@@ -856,7 +855,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             includePeers.setPeers(state.additionallyIncludePeers)
             let filter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             
-            let _ = (currentChatListFilters(postbox: context.account.postbox)
+            let _ = (context.engine.peers.currentChatListFilters()
             |> deliverOnMainQueue).start(next: { filters in
                 let controller = internalChatListFilterExcludeChatsController(context: context, filter: filter, allFilters: filters, applyAutomatically: false, updated: { filter in
                     skipStateAnimation = true
@@ -985,12 +984,12 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     var attemptNavigationImpl: (() -> Bool)?
     let applyImpl: (() -> Void)? = {
         let state = stateValue.with { $0 }
-        let _ = (updateChatListFiltersInteractively(postbox: context.account.postbox, { filters in
+        let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
             var includePeers = ChatListFilterIncludePeers()
             includePeers.setPeers(state.additionallyIncludePeers)
             var updatedFilter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             if currentPreset == nil {
-                updatedFilter.id = generateNewChatListFilterId(filters: filters)
+                updatedFilter.id = context.engine.peers.generateNewChatListFilterId(filters: filters)
             }
             var filters = filters
             if let _ = currentPreset {
@@ -1017,7 +1016,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
                 filters.append(updatedFilter)
             }
             return filters
-        })
+        }
         |> deliverOnMainQueue).start(next: { filters in
             updated(filters)
             dismissImpl?()

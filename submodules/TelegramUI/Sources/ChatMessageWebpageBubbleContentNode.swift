@@ -5,7 +5,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import TextFormat
 import AccountContext
@@ -13,6 +12,7 @@ import WebsiteType
 import InstantPageUI
 import UrlHandling
 import GalleryData
+import TelegramPresentationData
 
 private let titleFont: UIFont = Font.semibold(15.0)
 
@@ -63,17 +63,27 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         }
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
-                var webPageContent: TelegramMediaWebpageLoadedContent?
-                for media in item.message.media {
-                    if let media = media as? TelegramMediaWebpage {
-                        if case let .Loaded(content) = media.content {
-                            webPageContent = content
-                        }
-                        break
+                if let adAttribute = item.message.adAttribute, let author = item.message.author {
+                    let navigationData: ChatControllerInteractionNavigateToPeer
+                    if let bot = author as? TelegramUser, bot.botInfo != nil, let startParam = adAttribute.startParam {
+                        navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
+                    } else {
+                        navigationData = .chat(textInputState: nil, subject: nil, peekData: nil)
                     }
-                }
-                if let webpage = webPageContent {
-                    item.controllerInteraction.openUrl(webpage.url, false, nil, nil)
+                    item.controllerInteraction.openPeer(author.id, navigationData, nil)
+                } else {
+                    var webPageContent: TelegramMediaWebpageLoadedContent?
+                    for media in item.message.media {
+                        if let media = media as? TelegramMediaWebpage {
+                            if case let .Loaded(content) = media.content {
+                                webPageContent = content
+                            }
+                            break
+                        }
+                    }
+                    if let webpage = webPageContent {
+                        item.controllerInteraction.openUrl(webpage.url, false, nil, nil)
+                    }
                 }
             }
         }
@@ -108,6 +118,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             
             var actionIcon: ChatMessageAttachedContentActionIcon?
             var actionTitle: String?
+
+            var displayLine: Bool = true
             
             if let webpage = webPageContent {
                 let type = websiteType(of: webpage.websiteName)
@@ -171,15 +183,15 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             mediaAndFlags = (webpage.image ?? file, [.preferMediaBeforeText])
                         }
                     } else if webpage.type == "telegram_background" {
-                        var topColor: UIColor?
-                        var bottomColor: UIColor?
+                        var colors: [UInt32] = []
                         var rotation: Int32?
-                        if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, firstColor, secondColor, intensity, rotationValue) = wallpaper {
-                            topColor = firstColor?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
-                            bottomColor = secondColor?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
+                        var intensity: Int32?
+                        if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, colorsValue, intensityValue, rotationValue) = wallpaper {
+                            colors = colorsValue
                             rotation = rotationValue
+                            intensity = intensityValue
                         }
-                        let media = WallpaperPreviewMedia(content: .file(file, topColor, bottomColor, rotation, false, false))
+                        let media = WallpaperPreviewMedia(content: .file(file: file, colors: colors, rotation: rotation, intensity: intensity, false, false))
                         mediaAndFlags = (media, [.preferMediaAspectFilled])
                         if let fileSize = file.size {
                             badge = dataSizeString(fileSize, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))
@@ -207,25 +219,23 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else if let type = webpage.type {
                     if type == "telegram_background" {
-                        var topColor: UIColor?
-                        var bottomColor: UIColor?
+                        var colors: [UInt32] = []
                         var rotation: Int32?
                         if let wallpaper = parseWallpaperUrl(webpage.url) {
                             if case let .color(color) = wallpaper {
-                                topColor = color
-                            } else if case let .gradient(topColorValue, bottomColorValue, rotationValue) = wallpaper {
-                                topColor = topColorValue
-                                bottomColor = bottomColorValue
+                                colors = [color.rgb]
+                            } else if case let .gradient(colorsValue, rotationValue) = wallpaper {
+                                colors = colorsValue
                                 rotation = rotationValue
                             }
                         }
                         
                         var content: WallpaperPreviewMediaContent?
-                        if let topColor = topColor {
-                            if let bottomColor = bottomColor {
-                                content = .gradient(topColor, bottomColor, rotation)
+                        if !colors.isEmpty {
+                            if colors.count >= 2 {
+                                content = .gradient(colors, rotation)
                             } else {
-                                content = .color(topColor)
+                                content = .color(UIColor(rgb: colors[0]))
                             }
                         }
                         if let content = content {
@@ -254,7 +264,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             file = contentFile
                         }
                         if let file = file {
-                            let media = WallpaperPreviewMedia(content: .file(file, nil, nil, nil, true, isSupported))
+                            let media = WallpaperPreviewMedia(content: .file(file: file, colors: [],  rotation: nil, intensity: nil, true, isSupported))
                             mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                         } else if let settings = settings {
                             let media = WallpaperPreviewMedia(content: .themeSettings(settings))
@@ -280,7 +290,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         case "telegram_message":
                             actionTitle = item.presentationData.strings.Conversation_ViewMessage
                         case "telegram_voicechat":
-                            title = item.presentationData.strings.Conversation_VoiceChat
+                            if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case let .broadcast = channel.info {
+                                title = item.presentationData.strings.Conversation_LiveStream
+                            } else {
+                                title = item.presentationData.strings.Conversation_VoiceChat
+                            }
                             if webpage.url.contains("voicechat=") {
                                 actionTitle = item.presentationData.strings.Conversation_JoinVoiceChatAsSpeaker
                             } else {
@@ -299,9 +313,35 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             break
                     }
                 }
+            } else if let _ = item.message.adAttribute {
+                title = nil
+                subtitle = nil
+                text = item.message.text
+                for attribute in item.message.attributes {
+                    if let attribute = attribute as? TextEntitiesMessageAttribute {
+                        entities = attribute.entities
+                    }
+                }
+                for media in item.message.media {
+                    switch media {
+                    case _ as TelegramMediaImage, _ as TelegramMediaFile:
+                        mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                    default:
+                        break
+                    }
+                }
+
+                if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                    actionTitle = item.presentationData.strings.Conversation_ViewBot
+                } else if let author = item.message.author as? TelegramChannel, case .group = author.info {
+                    actionTitle = item.presentationData.strings.Conversation_ViewGroup
+                } else {
+                    actionTitle = item.presentationData.strings.Conversation_ViewChannel
+                }
+                displayLine = false
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, true, layoutConstants, preparePosition, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, displayLine, layoutConstants, preparePosition, constrainedSize)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
@@ -347,9 +387,22 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+        guard let item = self.item else {
+            return .none
+        }
         if self.bounds.contains(point) {
             let contentNodeFrame = self.contentNode.frame
             let result = self.contentNode.tapActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY), gesture: gesture, isEstimating: isEstimating)
+
+            if item.message.adAttribute != nil {
+                if case .none = result {
+                    if self.contentNode.hasActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY)) {
+                        return .ignore
+                    }
+                }
+                return result
+            }
+
             switch result {
                 case .none:
                     break

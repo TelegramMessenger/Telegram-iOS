@@ -5,11 +5,11 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramAudio
 import UniversalMediaPlayer
 import AccountContext
 import PhotoResources
+import UIKitRuntimeUtils
 
 public enum NativeVideoContentId: Hashable {
     case message(UInt32, MediaId)

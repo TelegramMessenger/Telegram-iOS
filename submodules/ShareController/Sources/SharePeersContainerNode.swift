@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
@@ -173,7 +172,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         var hasOtherAccounts = false
         if switchableAccounts.count > 1, let info = switchableAccounts.first(where: { $0.account.id == context.account.id }) {
             hasOtherAccounts = true
-            self.contentTitleAccountNode.setPeer(context: context, theme: theme, peer: info.peer, emptyColor: nil, synchronousLoad: false)
+            self.contentTitleAccountNode.setPeer(context: context, theme: theme, peer: EnginePeer(info.peer), emptyColor: nil, synchronousLoad: false)
         } else {
             self.contentTitleAccountNode.isHidden = true
         }

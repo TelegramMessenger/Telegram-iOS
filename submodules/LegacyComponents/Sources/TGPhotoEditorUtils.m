@@ -7,14 +7,14 @@
 #import <Accelerate/Accelerate.h>
 
 const CGSize TGPhotoEditorResultImageMaxSize = { 1280, 1280 };
-const CGSize TGPhotoEditorScreenImageHardLimitSize = { 750, 750 };
+const CGSize TGPhotoEditorScreenImageHardLimitSize = { 1280, 1280 };
+const CGSize TGPhotoEditorScreenImageHardLimitLegacySize = { 750, 750 };
 
 CGSize TGPhotoEditorScreenImageMaxSize()
 {
     CGSize screenSize = TGScreenSize();
-    CGFloat maxSide = MIN(TGPhotoEditorScreenImageHardLimitSize.width, TGScreenScaling() * MIN(screenSize.width, screenSize.height));
-    
-    return CGSizeMake(maxSide, maxSide);
+    CGSize limitSize = screenSize.width == 320 ? TGPhotoEditorScreenImageHardLimitLegacySize : TGPhotoEditorScreenImageHardLimitSize;
+    return limitSize;
 }
 
 CGSize TGPhotoThumbnailSizeForCurrentScreen()

@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -88,17 +87,17 @@ private enum ConfirmPhoneNumberCodeEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ConfirmPhoneNumberCodeControllerArguments
         switch self {
-            case let .codeEntry(theme, strings, title, text):
+            case let .codeEntry(_, _, title, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ConfirmPhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
-            case let .codeInfo(theme, strings, phoneNumber, nextOptionText):
+            case let .codeInfo(_, strings, phoneNumber, nextOptionText):
                 let formattedNumber = formatPhoneNumber(phoneNumber)
                 let stringAndRanges = strings.CancelResetAccount_TextSMS(formattedNumber)
                 var result = ""
-                result += stringAndRanges.0
+                result += stringAndRanges.string
                 if let range = result.range(of: formattedNumber) {
                     result.insert("*", at: range.upperBound)
                     result.insert("*", at: range.upperBound)
@@ -158,7 +157,7 @@ private func timeoutSignal(codeData: CancelAccountResetData) -> Signal<Int32?, N
     }
 }
 
-protocol ConfirmPhoneNumberCodeController: class {
+protocol ConfirmPhoneNumberCodeController: AnyObject {
     func applyCode(_ code: Int)
 }
 
@@ -216,7 +215,7 @@ public func confirmPhoneNumberCodeController(context: AccountContext, phoneNumbe
             |> take(1)
             |> mapToSignal { _ -> Signal<Void, NoError> in
                 return Signal { subscriber in
-                    return requestNextCancelAccountResetOption(network: context.account.network, phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
+                    return context.engine.auth.requestNextCancelAccountResetOption(phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
                         currentDataPromise?.set(.single(next))
                     }, error: { error in
                         
@@ -242,7 +241,7 @@ public func confirmPhoneNumberCodeController(context: AccountContext, phoneNumbe
             }
         }
         if let code = code {
-            confirmPhoneDisposable.set((requestCancelAccountReset(network: context.account.network, phoneCodeHash: codeData.hash, phoneCode: code)
+            confirmPhoneDisposable.set((context.engine.auth.requestCancelAccountReset(phoneCodeHash: codeData.hash, phoneCode: code)
             |> deliverOnMainQueue).start(error: { error in
                 updateState { state in
                     var state = state
@@ -269,7 +268,7 @@ public func confirmPhoneNumberCodeController(context: AccountContext, phoneNumbe
                     return state
                 }
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CancelResetAccount_Success(formatPhoneNumber(phoneNumber)).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CancelResetAccount_Success(formatPhoneNumber(phoneNumber)).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 dismissImpl?()
             }))
         }

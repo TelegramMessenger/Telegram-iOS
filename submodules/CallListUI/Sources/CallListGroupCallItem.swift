@@ -1,11 +1,9 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -61,7 +59,7 @@ class CallListGroupCallItem: ListViewItem {
     let presentationData: ItemListPresentationData
     let context: AccountContext
     let style: ItemListStyle
-    let peer: Peer
+    let peer: EnginePeer
     let isActive: Bool
     let editing: Bool
     let interaction: CallListNodeInteraction
@@ -70,7 +68,7 @@ class CallListGroupCallItem: ListViewItem {
     let headerAccessoryItem: ListViewAccessoryItem?
     let header: ListViewItemHeader?
     
-    init(presentationData: ItemListPresentationData, context: AccountContext, style: ItemListStyle, peer: Peer, isActive: Bool, editing: Bool, interaction: CallListNodeInteraction) {
+    init(presentationData: ItemListPresentationData, context: AccountContext, style: ItemListStyle, peer: EnginePeer, isActive: Bool, editing: Bool, interaction: CallListNodeInteraction) {
         self.presentationData = presentationData
         self.context = context
         self.style = style
@@ -467,9 +465,9 @@ class CallListGroupCallItemNode: ItemListRevealOptionsItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.3, removeOnCompletion: false)
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let (item, _, _, _, _) = self.layoutParams {
-            return item.header
+            return item.header.flatMap { [$0] }
         } else {
             return nil
         }

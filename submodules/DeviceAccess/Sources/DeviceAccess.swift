@@ -3,7 +3,6 @@ import UIKit
 import AVFoundation
 import Display
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Photos
 import CoreLocation
@@ -85,6 +84,10 @@ public final class DeviceAccess {
     
     public static func isMicrophoneAccessAuthorized() -> Bool? {
         return AVAudioSession.sharedInstance().recordPermission == .granted
+    }
+    
+    public static func isCameraAccessAuthorized() -> Bool {
+        return PGCamera.cameraAuthorizationStatus() == PGCameraAuthorizationStatusAuthorized
     }
     
     public static func authorizationStatus(applicationInForeground: Signal<Bool, NoError>? = nil, siriAuthorization: (() -> AccessType)? = nil, subject: DeviceAccessSubject) -> Signal<AccessType, NoError> {
@@ -250,27 +253,31 @@ public final class DeviceAccess {
         }
     }
     
-    public static func authorizeAccess(to subject: DeviceAccessSubject, registerForNotifications: ((@escaping (Bool) -> Void) -> Void)? = nil, requestSiriAuthorization: ((@escaping (Bool) -> Void) -> Void)? = nil, locationManager: LocationManager? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
+    public static func authorizeAccess(to subject: DeviceAccessSubject, onlyCheck: Bool = false, registerForNotifications: ((@escaping (Bool) -> Void) -> Void)? = nil, requestSiriAuthorization: ((@escaping (Bool) -> Void) -> Void)? = nil, locationManager: LocationManager? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
             switch subject {
                 case let .camera(cameraSubject):
                     let status = PGCamera.cameraAuthorizationStatus()
                     if status == PGCameraAuthorizationStatusNotDetermined {
-                        AVCaptureDevice.requestAccess(for: AVMediaType.video) { response in
-                            Queue.mainQueue().async {
-                                completion(response)
-                                if !response, let presentationData = presentationData {
-                                    let text: String
-                                    switch cameraSubject {
-                                        case .video:
-                                            text = presentationData.strings.AccessDenied_Camera
-                                        case .videoCall:
-                                            text = presentationData.strings.AccessDenied_VideoCallCamera
+                        if !onlyCheck {
+                            AVCaptureDevice.requestAccess(for: AVMediaType.video) { response in
+                                Queue.mainQueue().async {
+                                    completion(response)
+                                    if !response, let presentationData = presentationData {
+                                        let text: String
+                                        switch cameraSubject {
+                                            case .video:
+                                                text = presentationData.strings.AccessDenied_Camera
+                                            case .videoCall:
+                                                text = presentationData.strings.AccessDenied_VideoCallCamera
+                                        }
+                                        present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                                            openSettings()
+                                        })]), nil)
                                     }
-                                    present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                                        openSettings()
-                                    })]), nil)
                                 }
                             }
+                        } else {
+                            completion(true)
                         }
                     } else if status == PGCameraAuthorizationStatusRestricted || status == PGCameraAuthorizationStatusDenied, let presentationData = presentationData {
                         let text: String
@@ -353,7 +360,7 @@ public final class DeviceAccess {
                             switch status {
                                 case .restricted, .denied, .notDetermined:
                                     value = false
-                                case .authorized:
+                                case .authorized, .limited:
                                     value = true
                                 @unknown default:
                                     fatalError()
@@ -408,8 +415,6 @@ public final class DeviceAccess {
                                     locationManager?.requestAlwaysAuthorization(completion: { status in
                                         completion(status == .authorizedAlways)
                                     })
-                                default:
-                                    break
                             }
                         @unknown default:
                             fatalError()

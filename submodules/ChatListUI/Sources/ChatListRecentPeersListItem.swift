@@ -5,7 +5,6 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ChatListSearchRecentPeersNode
 import ContextUI
@@ -123,9 +122,9 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                         peersNode.updateThemeAndStrings(theme: item.theme, strings: item.strings)
                     } else {
                         peersNode = ChatListSearchRecentPeersNode(context: item.context, theme: item.theme, mode: .list, strings: item.strings, peerSelected: { peer in
-                            self?.item?.peerSelected(peer)
+                            self?.item?.peerSelected(peer._asPeer())
                         }, peerContextAction: { peer, node, gesture in
-                            self?.item?.peerContextAction(peer, node, gesture)
+                            self?.item?.peerContextAction(peer._asPeer(), node, gesture)
                         }, isPeerSelected: { _ in
                             return false
                         })
@@ -154,9 +153,9 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
-    override public func header() -> ListViewItemHeader? {
+    override public func headers() -> [ListViewItemHeader]? {
         if let item = self.item {
-            return item.header
+            return item.header.flatMap { [$0] }
         } else {
             return nil
         }

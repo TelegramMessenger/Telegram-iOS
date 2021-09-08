@@ -2,10 +2,10 @@
 
 @interface SPipe : NSObject
 
-@property (nonatomic, copy, readonly) SSignal *(^signalProducer)();
-@property (nonatomic, copy, readonly) void (^sink)(id);
+@property (nonatomic, copy, readonly) SSignal * _Nonnull (^ _Nonnull signalProducer)();
+@property (nonatomic, copy, readonly) void (^ _Nonnull sink)(id _Nullable);
 
-- (instancetype)initWithReplay:(bool)replay;
+- (instancetype _Nonnull)initWithReplay:(bool)replay;
 
 @end
 

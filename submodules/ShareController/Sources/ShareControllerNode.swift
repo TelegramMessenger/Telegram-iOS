@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import TelegramIntents
@@ -379,7 +378,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                         let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.35)
                         animation.fillMode = .both
                         if !fastOut {
-                            animation.beginTime = CACurrentMediaTime() + 0.1
+                            animation.beginTime = contentNode.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.1
                         }
                         contentNode.layer.add(animation, forKey: "opacity")
                     }
@@ -743,7 +742,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }, extendedInitialReveal: self.presetText != nil, segmentedValues: self.segmentedValues)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
-            let _ = (recentlySearchedPeers(postbox: context.account.postbox)
+            let _ = (context.engine.peers.recentlySearchedPeers()
             |> take(1)
             |> deliverOnMainQueue).start(next: { peers in
                 if let strongSelf = self {
@@ -956,8 +955,6 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             }
             if let status = status {
                 contentNode.state = .progress(status)
-            } else {
-                
             }
         }, completed: { [weak self] in
             guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {

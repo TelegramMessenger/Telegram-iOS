@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public struct IntentsSettings: PreferencesEntry, Equatable {
@@ -88,7 +89,7 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
 }
 
 
-public func updateIntentsSettingsInteractively(accountManager: AccountManager, _ f: @escaping (IntentsSettings) -> IntentsSettings) -> Signal<(IntentsSettings?, IntentsSettings?), NoError> {
+public func updateIntentsSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (IntentsSettings) -> IntentsSettings) -> Signal<(IntentsSettings?, IntentsSettings?), NoError> {
     return accountManager.transaction { transaction -> (IntentsSettings?, IntentsSettings?) in
         var previousSettings: IntentsSettings? = nil
         var updatedSettings: IntentsSettings? = nil

@@ -32,6 +32,8 @@ public final class ListViewTransactionQueue {
                     }
                 }
             })
+        } else {
+            assert(true)
         }
     }
     

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
@@ -46,7 +45,7 @@ final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPan
         }
         let banDescription: String
         if untilDate != 0 && untilDate != Int32.max {
-            banDescription = interfaceState.strings.Conversation_RestrictedInlineTimed(stringForFullDate(timestamp: untilDate, strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat)).0
+            banDescription = interfaceState.strings.Conversation_RestrictedInlineTimed(stringForFullDate(timestamp: untilDate, strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat)).string
         } else if personal {
             banDescription = interfaceState.strings.Conversation_RestrictedInline
         } else {
@@ -72,7 +71,10 @@ final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPan
     
     func animateIn() {
         let position = self.containerNode.layer.position
-        self.containerNode.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (self.containerNode.bounds.height)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.containerNode.position = CGPoint(x: position.x, y: position.y + (self.containerNode.bounds.height))
+        ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
+            self.containerNode.position = position
+        }
     }
     
     override func animateOut(completion: @escaping () -> Void) {

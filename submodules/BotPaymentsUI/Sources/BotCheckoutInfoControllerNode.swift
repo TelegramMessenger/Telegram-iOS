@@ -3,8 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
-import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -97,7 +95,7 @@ enum BotCheckoutInfoControllerStatus {
 final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
     private let invoice: BotPaymentInvoice
-    private let messageId: MessageId
+    private let messageId: EngineMessage.Id
     private var focus: BotCheckoutInfoControllerFocus?
     
     private let dismiss: () -> Void
@@ -125,7 +123,20 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     private let verifyDisposable = MetaDisposable()
     private var isVerifying = false
     
-    init(context: AccountContext, invoice: BotPaymentInvoice, messageId: MessageId, formInfo: BotPaymentRequestedInfo, focus: BotCheckoutInfoControllerFocus, theme: PresentationTheme, strings: PresentationStrings, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutInfoControllerStatus) -> Void, formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(
+        context: AccountContext,
+        invoice: BotPaymentInvoice,
+        messageId: EngineMessage.Id,
+        formInfo: BotPaymentRequestedInfo,
+        focus: BotCheckoutInfoControllerFocus,
+        theme: PresentationTheme,
+        strings: PresentationStrings,
+        dismiss: @escaping () -> Void,
+        openCountrySelection: @escaping () -> Void,
+        updateStatus: @escaping (BotCheckoutInfoControllerStatus) -> Void,
+        formInfoUpdated: @escaping (BotPaymentRequestedInfo, BotPaymentValidatedFormInfo) -> Void,
+        present: @escaping (ViewController, Any?) -> Void
+    ) {
         self.context = context
         self.invoice = invoice
         self.messageId = messageId
@@ -338,7 +349,7 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
     func verify() {
         self.isVerifying = true
         let formInfo = self.collectFormInfo()
-        self.verifyDisposable.set((validateBotPaymentForm(account: self.context.account, saveInfo: self.saveInfoItem.isOn, messageId: self.messageId, formInfo: formInfo) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.verifyDisposable.set((self.context.engine.payments.validateBotPaymentForm(saveInfo: self.saveInfoItem.isOn, messageId: self.messageId, formInfo: formInfo) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.formInfoUpdated(formInfo, result)
             }

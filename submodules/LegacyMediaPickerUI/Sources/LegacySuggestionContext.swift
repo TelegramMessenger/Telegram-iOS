@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import LegacyComponents
@@ -17,7 +16,7 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
                 let disposable = searchPeerMembers(context: context, peerId: peerId, chatLocation: chatLocation, query: query, scope: .mention).start(next: { peers in
                     let users = NSMutableArray()
                     for peer in peers {
-                        if let peer = peer as? TelegramUser {
+                        if case let .user(peer) = peer {
                             let user = TGUser()
                             user.uid = peer.id.id._internalGetInt32Value()
                             user.firstName = peer.firstName
@@ -30,23 +29,23 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
                         }
                     }
                     
-                    subscriber?.putNext(users)
-                    subscriber?.putCompletion()
+                    subscriber.putNext(users)
+                    subscriber.putCompletion()
                 })
                 
                 return SBlockDisposable {
                     disposable.dispose()
                 }
             } else {
-                subscriber?.putNext(NSArray())
-                subscriber?.putCompletion()
+                subscriber.putNext(NSArray())
+                subscriber.putCompletion()
                 return nil
             }
         }
     }
     suggestionContext.hashtagListSignal = { query in
         return SSignal { subscriber in
-            let disposable = (recentlyUsedHashtags(postbox: context.account.postbox) |> map { hashtags -> [String] in
+            let disposable = (context.engine.messages.recentlyUsedHashtags() |> map { hashtags -> [String] in
                 let normalizedQuery = query?.lowercased()
                 var result: [String] = []
                 if let normalizedQuery = normalizedQuery {
@@ -60,8 +59,8 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
             }
             |> take(1)
             |> deliverOnMainQueue).start(next: { hashtags in
-                subscriber?.putNext(hashtags)
-                subscriber?.putCompletion()
+                subscriber.putNext(hashtags)
+                subscriber.putCompletion()
             })
             
             return SBlockDisposable {
@@ -74,7 +73,7 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
             return SSignal.complete()
         }
         return SSignal { subscriber in
-            let disposable = (searchEmojiKeywords(postbox: context.account.postbox, inputLanguageCode: inputLanguageCode, query: query, completeMatch: query.count < 3)
+            let disposable = (context.engine.stickers.searchEmojiKeywords(inputLanguageCode: inputLanguageCode, query: query, completeMatch: query.count < 3)
             |> map { keywords -> [TGAlphacodeEntry] in
                 var result: [TGAlphacodeEntry] = []
                 for keyword in keywords {
@@ -84,10 +83,10 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
                 }
                 return result
             }).start(next: { result in
-                subscriber?.putNext(result)
-                subscriber?.putCompletion()
+                subscriber.putNext(result)
+                subscriber.putCompletion()
             }, error: nil, completed: {
-                subscriber?.putCompletion()
+                subscriber.putCompletion()
             })
             
             return SBlockDisposable {

@@ -5,7 +5,6 @@ import ContextUI
 import AccountContext
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import AlertUI
 import PresentationDataUtils
@@ -61,7 +60,7 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(currentPeerId), peekData: nil))
                         }
                     } else {
-                        var createSignal = createSecretChat(account: context.account, peerId: peerId)
+                        var createSignal = context.engine.peers.createSecretChat(peerId: peerId)
                         var cancelImpl: (() -> Void)?
                         let progressSignal = Signal<Never, NoError> { subscriber in
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }

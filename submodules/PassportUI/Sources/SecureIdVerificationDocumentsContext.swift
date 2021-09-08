@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 
 private final class DocumentContext {
@@ -56,10 +55,7 @@ final class SecureIdVerificationDocumentsContext {
                                         }
                                 }
                             }
-                        }, error: { [weak self] _ in
-                            if let strongSelf = self {
-                                
-                            }
+                        }, error: { _ in
                         }))
                     }
                 case .remote:

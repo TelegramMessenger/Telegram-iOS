@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import Postbox
 import Display
 import UniversalMediaPlayer
@@ -236,7 +235,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                             case .Remote:
                                 text = dataSizeString(fileSize, forceDecimal: true, formatting: formatting)
                             case let .Fetching(_, progress):
-                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true, formatting: formatting), dataSizeString(fileSize, forceDecimal: true, formatting: formatting)).0
+                                text = strings.DownloadingStatus(dataSizeString(Int64(Float(fileSize) * progress), forceDecimal: true, formatting: formatting), dataSizeString(fileSize, forceDecimal: true, formatting: formatting)).string
                             default:
                                 text = ""
                         }

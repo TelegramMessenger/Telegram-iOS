@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
@@ -16,7 +15,10 @@ public enum ChatMessageItemContent: Sequence {
     case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes)
     case group(messages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)])
     
-    func effectivelyIncoming(_ accountPeerId: PeerId) -> Bool {
+    func effectivelyIncoming(_ accountPeerId: PeerId, associatedData: ChatMessageItemAssociatedData? = nil) -> Bool {
+        if let subject = associatedData?.subject, case .forwardedMessages = subject {
+            return false
+        }
         switch self {
             case let .message(message, _, _, _):
                 return message.effectivelyIncoming(accountPeerId)
@@ -192,9 +194,8 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
     let lhsHeader: ChatMessageDateHeader?
     let rhsHeader: ChatMessageDateHeader?
     if let lhs = lhs as? ChatMessageItem {
-        lhsHeader = lhs.header
+        lhsHeader = lhs.dateHeader
     } else if let _ = lhs as? ChatHoleItem {
-        //lhsHeader = lhs.header
         lhsHeader = nil
     } else if let lhs = lhs as? ChatUnreadItem {
         lhsHeader = lhs.header
@@ -205,7 +206,7 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
     }
     if let rhs = rhs {
         if let rhs = rhs as? ChatMessageItem {
-            rhsHeader = rhs.header
+            rhsHeader = rhs.dateHeader
         } else if let _ = rhs as? ChatHoleItem {
             //rhsHeader = rhs.header
             rhsHeader = nil
@@ -257,8 +258,10 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let effectiveAuthorId: PeerId?
     let additionalContent: ChatMessageItemAdditionalContent?
     
-    public let accessoryItem: ListViewAccessoryItem?
-    let header: ChatMessageDateHeader
+    let dateHeader: ChatMessageDateHeader
+    let avatarHeader: ChatMessageAvatarHeader?
+
+    let headers: [ListViewItemHeader]
     
     var message: Message {
         switch self.content {
@@ -288,7 +291,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.disableDate = disableDate
         self.additionalContent = additionalContent
         
-        var accessoryItem: ListViewAccessoryItem?
+        var avatarHeader: ChatMessageAvatarHeader?
         let incoming = content.effectivelyIncoming(self.context.account.peerId)
         
         var effectiveAuthor: Peer?
@@ -325,7 +328,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             isScheduledMessages = true
         }
         
-        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
+        self.dateHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
             let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
@@ -355,11 +358,21 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
             if !hasActionMedia && !isBroadcastChannel {
                 if let effectiveAuthor = effectiveAuthor {
-                    accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, forwardInfo: message.forwardInfo, emptyColor: presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill, controllerInteraction: controllerInteraction)
+                    //accessoryItem = ChatMessageAvatarAccessoryItem(context: context, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), messageTimestamp: content.index.timestamp, forwardInfo: message.forwardInfo, emptyColor: presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill, controllerInteraction: controllerInteraction)
+                    avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), message: message, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction)
                 }
             }
         }
-        self.accessoryItem = accessoryItem
+        self.avatarHeader = avatarHeader
+        
+        var headers: [ListViewItemHeader] = [self.dateHeader]
+        if case .forwardedMessages = associatedData.subject {
+            headers = []
+        }
+        if let avatarHeader = self.avatarHeader {
+            headers.append(avatarHeader)
+        }
+        self.headers = headers
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -434,7 +447,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         let configure = {
             let node = (viewClassName as! ChatMessageItemView.Type).init()
-            node.setupItem(self)
+            node.setupItem(self, synchronousLoad: synchronousLoads)
             
             let nodeLayout = node.asyncLayout()
             let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
@@ -449,7 +462,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { _ in apply(.None, synchronousLoads) })
+                    return (nil, { _ in apply(.None, ListViewItemApply(isOnScreen: false), synchronousLoads) })
                 })
             }
         }
@@ -467,25 +480,25 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         var mergedBottom: ChatMessageMerge = .none
         var dateAtBottom = false
         if let top = top as? ChatMessageItem {
-            if top.header.id != self.header.id {
+            if top.dateHeader.id != self.dateHeader.id {
                 mergedBottom = .none
             } else {
                 mergedBottom = messagesShouldBeMerged(accountPeerId: self.context.account.peerId, message, top.message)
             }
         }
         if let bottom = bottom as? ChatMessageItem {
-            if bottom.header.id != self.header.id {
+            if bottom.dateHeader.id != self.dateHeader.id {
                 mergedTop = .none
                 dateAtBottom = true
             } else {
                 mergedTop = messagesShouldBeMerged(accountPeerId: self.context.account.peerId, bottom.message, message)
             }
         } else if let bottom = bottom as? ChatUnreadItem {
-            if bottom.header.id != self.header.id {
+            if bottom.header.id != self.dateHeader.id {
                 dateAtBottom = true
             }
         } else if let bottom = bottom as? ChatReplyCountItem {
-            if bottom.header.id != self.header.id {
+            if bottom.header.id != self.dateHeader.id {
                 dateAtBottom = true
             }
         } else if let _ = bottom as? ChatHoleItem {
@@ -500,7 +513,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatMessageItemView {
-                nodeValue.setupItem(self)
+                nodeValue.setupItem(self, synchronousLoad: false)
                 
                 let nodeLayout = nodeValue.asyncLayout()
                 
@@ -509,8 +522,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                     
                     let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !self.disableDate)
                     Queue.mainQueue().async {
-                        completion(layout, { _ in
-                            apply(animation, false)
+                        completion(layout, { info in
+                            apply(animation, info, false)
                             if let nodeValue = node() as? ChatMessageItemView {
                                 nodeValue.safeInsets = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
                                 nodeValue.updateSelectionState(animated: false)

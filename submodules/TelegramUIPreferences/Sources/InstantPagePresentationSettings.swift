@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public enum InstantPageThemeType: Int32 {
@@ -98,7 +99,7 @@ public final class InstantPagePresentationSettings: PreferencesEntry, Equatable 
     }
 }
 
-public func updateInstantPagePresentationSettingsInteractively(accountManager: AccountManager, _ f: @escaping (InstantPagePresentationSettings) -> InstantPagePresentationSettings) -> Signal<Void, NoError> {
+public func updateInstantPagePresentationSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (InstantPagePresentationSettings) -> InstantPagePresentationSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.instantPagePresentationSettings, { entry in
             let currentSettings: InstantPagePresentationSettings

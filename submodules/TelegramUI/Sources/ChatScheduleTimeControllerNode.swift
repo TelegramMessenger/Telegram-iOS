@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
@@ -272,19 +271,19 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         switch mode {
             case .scheduledMessages:
                 if calendar.isDateInToday(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendToday(time).0
+                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendToday(time).string
                 } else if calendar.isDateInTomorrow(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendTomorrow(time).0
+                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendTomorrow(time).string
                 } else {
-                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendOn(self.dateFormatter.string(from: date), time).0
+                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendOn(self.dateFormatter.string(from: date), time).string
                 }
             case .reminders:
                 if calendar.isDateInToday(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindToday(time).0
+                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindToday(time).string
                 } else if calendar.isDateInTomorrow(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindTomorrow(time).0
+                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindTomorrow(time).string
                 } else {
-                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindOn(self.dateFormatter.string(from: date), time).0
+                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindOn(self.dateFormatter.string(from: date), time).string
                 }
         }
     }
@@ -314,10 +313,16 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
         
         let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-        
         let dimPosition = self.dimNode.layer.position
-        self.dimNode.layer.animatePosition(from: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), to: dimPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        self.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+        let targetBounds = self.bounds
+        self.bounds = self.bounds.offsetBy(dx: 0.0, dy: -offset)
+        self.dimNode.position = CGPoint(x: dimPosition.x, y: dimPosition.y - offset)
+        transition.animateView({
+            self.bounds = targetBounds
+            self.dimNode.position = dimPosition
+        })
     }
     
     func animateOut(completion: (() -> Void)? = nil) {

@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -38,15 +37,6 @@ private enum GroupStickerPackSection: Int32 {
 private enum GroupStickerPackEntryId: Hashable {
     case index(Int32)
     case pack(ItemCollectionId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .index(index):
-                return index.hashValue
-            case let .pack(id):
-                return id.hashValue
-        }
-    }
     
     static func ==(lhs: GroupStickerPackEntryId, rhs: GroupStickerPackEntryId) -> Bool {
         switch lhs {
@@ -241,8 +231,8 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
                 })
             case let .currentPack(_, theme, strings, content):
                 return GroupStickerPackCurrentItem(theme: theme, strings: strings, account: arguments.account, content: content, sectionId: self.section, action: {
-                    if case let .found(found) = content {
-                        arguments.openStickerPack(found.packInfo)
+                    if case let .found(packInfo, _, _) = content {
+                        arguments.openStickerPack(packInfo)
                     }
                 })
         }
@@ -323,7 +313,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     
     let initialData = Promise<InitialStickerPackData?>()
     if let currentPackInfo = currentPackInfo {
-        initialData.set(cachedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .id(id: currentPackInfo.id.id, accessHash: currentPackInfo.accessHash), forceRemote: false)
+        initialData.set(context.engine.stickers.cachedStickerPack(reference: .id(id: currentPackInfo.id.id, accessHash: currentPackInfo.accessHash), forceRemote: false)
         |> map { result -> InitialStickerPackData? in
             switch result {
                 case .none:
@@ -363,7 +353,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
                     }
                 }
                 return .single((searchText, .searching))
-                |> then((loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .name(searchText.lowercased()), forceActualized: false) |> delay(0.3, queue: Queue.concurrentDefaultQueue()))
+                |> then((context.engine.stickers.loadedStickerPack(reference: .name(searchText.lowercased()), forceActualized: false) |> delay(0.3, queue: Queue.concurrentDefaultQueue()))
                 |> mapToSignal { value -> Signal<(String, GroupStickerPackSearchState), NoError> in
                     switch value {
                         case .fetching:
@@ -402,10 +392,10 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     }, updateSearchText: { text in
         searchText.set(text)
     }, openStickersBot: {
-        resolveDisposable.set((resolvePeerByName(account: context.account, name: "stickers") |> deliverOnMainQueue).start(next: { peerId in
-            if let peerId = peerId {
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers") |> deliverOnMainQueue).start(next: { peer in
+            if let peer = peer {
                 dismissImpl?()
-                navigateToChatControllerImpl?(peerId)
+                navigateToChatControllerImpl?(peer.id)
             }
         }))
     })
@@ -448,7 +438,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
                             state.isSaving = true
                             return state
                         }
-                        saveDisposable.set((updateGroupSpecificStickerset(postbox: context.account.postbox, network: context.account.network, peerId: peerId, info: info)
+                        saveDisposable.set((context.engine.peers.updateGroupSpecificStickerset(peerId: peerId, info: info)
                         |> deliverOnMainQueue).start(error: { _ in
                             updateState { state in
                                 var state = state

@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
@@ -106,10 +105,10 @@ class ChatImageGalleryItem: GalleryItem {
     let location: MessageHistoryEntryLocation?
     let displayInfoOnTop: Bool
     let performAction: (GalleryControllerInteractionTapAction) -> Void
-    let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
+    let openActionOptions: (GalleryControllerInteractionTapAction, Message) -> Void
     let present: (ViewController, Any?) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, displayInfoOnTop: Bool, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, displayInfoOnTop: Bool, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
@@ -142,7 +141,7 @@ class ChatImageGalleryItem: GalleryItem {
         }
         
         if let location = self.location {
-            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").string))
         }
                 
         if self.displayInfoOnTop {
@@ -155,7 +154,7 @@ class ChatImageGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatImageGalleryItemNode, let location = self.location {
-            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").string))
         
             if self.displayInfoOnTop {
                 node.titleContentView?.setMessage(self.message, presentationData: self.presentationData, accountPeerId: self.context.account.peerId)
@@ -206,7 +205,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let dataDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         
         self.imageNode = TransformImageNode()
@@ -353,7 +352,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         |> delay(0.15, queue: Queue.mainQueue())
         let progressDisposable = progressSignal.start()
         
-        let signal = stickerPacksAttachedToMedia(account: context.account, media: media)
+        let signal = context.engine.stickers.stickerPacksAttachedToMedia(media: media)
         |> afterDisposed {
             Queue.mainQueue().async {
                 progressDisposable.dispose()
@@ -421,7 +420,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         strongSelf.statusNode.alpha = 1.0
                         strongSelf.statusNodeContainer.isUserInteractionEnabled = true
                         strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-                    case let .Fetching(isActive, progress):
+                    case let .Fetching(_, progress):
                         strongSelf.statusNode.isHidden = false
                         strongSelf.statusNode.alpha = 1.0
                         strongSelf.statusNodeContainer.isUserInteractionEnabled = true
@@ -487,7 +486,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             surfaceCopyView.frame = transformedSurfaceFrame
         }
         
-        self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
+        //self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         copyView.frame = transformedSelfFrame
         
         copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
@@ -597,7 +596,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     override func visibilityUpdated(isVisible: Bool) {
         super.visibilityUpdated(isVisible: isVisible)
         
-        if let (context, mediaReference) = self.contextAndMedia, let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
+        if let (_, mediaReference) = self.contextAndMedia, let _ = mediaReference.concrete(TelegramMediaFile.self) {
             if isVisible {
             } else {
                 self.fetchDisposable.set(nil)

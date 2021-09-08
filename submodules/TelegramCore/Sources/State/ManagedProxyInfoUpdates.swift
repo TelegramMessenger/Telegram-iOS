@@ -4,7 +4,6 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
-import SyncCore
 
 public final class PromoChatListItem: AdditionalChatListItem {
     public enum Kind: Equatable {

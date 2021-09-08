@@ -6,18 +6,11 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
-        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
-        "//submodules/Postbox:Postbox",
-        "//submodules/TelegramCore:TelegramCore",
-        "//submodules/SyncCore:SyncCore",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
-        "//submodules/Display:Display",
-        "//submodules/YuvConversion:YuvConversion",
-        "//submodules/StickerResources:StickerResources",
-        "//submodules/MediaResources:MediaResources",
-        "//submodules/Tuples:Tuples",
-        "//submodules/GZip:GZip",
         "//submodules/rlottie:RLottieBinding",
         "//submodules/lottie-ios:Lottie",
         "//submodules/AppBundle:AppBundle",

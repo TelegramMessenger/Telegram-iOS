@@ -3,6 +3,8 @@ import UIKit
 import AsyncDisplayKit
 
 final class AlertControllerNode: ASDisplayNode {
+    var existingAlertControllerNode: AlertControllerNode?
+    
     private let centerDimView: UIImageView
     private let topDimView: UIView
     private let bottomDimView: UIView
@@ -90,18 +92,35 @@ final class AlertControllerNode: ASDisplayNode {
     }
     
     func animateIn() {
-        self.centerDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.topDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.bottomDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.leftDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.rightDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { [weak self] finished in
-            if finished {
-                self?.centerDimView.backgroundColor = nil
-                self?.centerDimView.image = generateStretchableFilledCircleImage(radius: 16.0, color: nil, backgroundColor: UIColor(white: 0.0, alpha: 0.5))
+        if let previousNode = self.existingAlertControllerNode {
+            let transition =  ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring)
+            
+            previousNode.position = previousNode.position.offsetBy(dx: -previousNode.frame.width, dy: 0.0)
+            self.addSubnode(previousNode)
+        
+            let position = self.position
+            self.position = position.offsetBy(dx: self.frame.width, dy: 0.0)
+            transition.animateView {
+                self.position = position
+            } completion: { _ in
+                previousNode.removeFromSupernode()
             }
-        })
-        self.containerNode.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, removeOnCompletion: true, additive: false, completion: nil)
+
+            self.existingAlertControllerNode = nil
+        } else {
+            self.centerDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.topDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.bottomDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.leftDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.rightDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { [weak self] finished in
+                if finished {
+                    self?.centerDimView.backgroundColor = nil
+                    self?.centerDimView.image = generateStretchableFilledCircleImage(radius: 16.0, color: nil, backgroundColor: UIColor(white: 0.0, alpha: 0.5))
+                }
+            })
+            self.containerNode.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, removeOnCompletion: true, additive: false, completion: nil)
+        }
     }
     
     func animateOut(completion: @escaping () -> Void) {

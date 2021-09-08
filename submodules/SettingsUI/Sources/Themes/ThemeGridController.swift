@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
@@ -149,6 +148,47 @@ final class ThemeGridController: ViewController {
                 let controller = ThemeColorsGridController(context: strongSelf.context)
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
             }
+
+            /*if let strongSelf = self {
+                let _ = (strongSelf.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+
+                    let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
+                    let themeReference: PresentationThemeReference
+                    if autoNightModeTriggered {
+                        themeReference = settings.automaticThemeSwitchSetting.theme
+                    } else {
+                        themeReference = settings.theme
+                    }
+
+                    let controller = ThemeAccentColorController(context: strongSelf.context, mode: .background(themeReference: themeReference))
+                    controller.completion = { [weak self] in
+                        if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { controller in
+                                if controller is ThemeColorsGridController {
+                                    return false
+                                }
+                                return true
+                            }
+                            navigationController.setViewControllers(controllers, animated: false)
+                            controllers = controllers.filter { controller in
+                                if controller is ThemeAccentColorController {
+                                    return false
+                                }
+                                return true
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
+                        }
+                    }
+                    strongSelf.push(controller)
+                })
+            }*/
         }, emptyStateUpdated: { [weak self] empty in
             if let strongSelf = self {
                 if empty != strongSelf.isEmpty {
@@ -239,9 +279,16 @@ final class ThemeGridController: ViewController {
                             strongSelf.present(controller, in: .window(.root))
                             
                             let _ = resetWallpapers(account: strongSelf.context.account).start(completed: { [weak self, weak controller] in
-                                let presentationData = strongSelf.presentationData
                                 let _ = updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
                                     return current.withUpdatedThemeSpecificChatWallpapers([:])
+                                }).start()
+
+                                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction in
+                                    WallpapersState.update(transaction: transaction, { state in
+                                        var state = state
+                                        state.wallpapers.removeAll()
+                                        return state
+                                    })
                                 }).start()
                                 
                                 let _ = (telegramWallpapers(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network)
@@ -296,13 +343,13 @@ final class ThemeGridController: ViewController {
         for wallpaper in wallpapers {
             var item: String?
             switch wallpaper {
-                case let .file(_, _, _, _, isPattern, _, slug, _, settings):
+                case let .file(file):
                     var options: [String] = []
-                    if isPattern {
-                        if let color = settings.color {
-                            options.append("bg_color=\(UIColor(rgb: color).hexString)")
+                    if file.isPattern {
+                        if file.settings.colors.count >= 1 {
+                            options.append("bg_color=\(UIColor(rgb: file.settings.colors[0]).hexString)")
                         }
-                        if let intensity = settings.intensity {
+                        if let intensity = file.settings.intensity {
                             options.append("intensity=\(intensity)")
                         }
                     }
@@ -311,7 +358,7 @@ final class ThemeGridController: ViewController {
                     if !options.isEmpty {
                         optionsString = "?\(options.joined(separator: "&"))"
                     }
-                    item = slug + optionsString
+                    item = file.slug + optionsString
                 case let .color(color):
                     item = "\(UIColor(rgb: color).hexString)"
                 default:
@@ -339,7 +386,7 @@ final class ThemeGridController: ViewController {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, transition: transition)
     }
     
     func activateSearch() {
@@ -375,7 +422,9 @@ final class ThemeGridController: ViewController {
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
         self.searchContentNode?.setIsEnabled(false, animated: true)
         self.controllerNode.updateState { state in
-            return state.withUpdatedEditing(true)
+            var state = state
+            state.editing = true
+            return state
         }
     }
     
@@ -384,7 +433,9 @@ final class ThemeGridController: ViewController {
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         self.searchContentNode?.setIsEnabled(true, animated: true)
         self.controllerNode.updateState { state in
-            return state.withUpdatedEditing(false)
+            var state = state
+            state.editing = false
+            return state
         }
     }
 }

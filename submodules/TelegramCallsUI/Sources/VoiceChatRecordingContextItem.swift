@@ -22,14 +22,14 @@ func generateStartRecordingIcon(color: UIColor) -> UIImage? {
 
 final class VoiceChatRecordingContextItem: ContextMenuCustomItem {
     fileprivate let timestamp: Int32
-    fileprivate let action: (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void
+    fileprivate let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void
     
-    init(timestamp: Int32, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+    init(timestamp: Int32, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void) {
         self.timestamp = timestamp
         self.action = action
     }
     
-    func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
         return VoiceChatRecordingContextItemNode(presentationData: presentationData, item: self, getController: getController, actionSelected: actionSelected)
     }
 }
@@ -94,7 +94,7 @@ class VoiceChatRecordingIconNode: ASDisplayNode {
 private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMenuCustomNode {
     private let item: VoiceChatRecordingContextItem
     private let presentationData: PresentationData
-    private let getController: () -> ContextController?
+    private let getController: () -> ContextControllerProtocol?
     private let actionSelected: (ContextMenuActionResult) -> Void
     
     private let backgroundNode: ASDisplayNode
@@ -108,7 +108,7 @@ private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMen
     
     private var pointerInteraction: PointerInteraction?
 
-    init(presentationData: PresentationData, item: VoiceChatRecordingContextItem, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
+    init(presentationData: PresentationData, item: VoiceChatRecordingContextItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
         self.item = item
         self.presentationData = presentationData
         self.getController = getController

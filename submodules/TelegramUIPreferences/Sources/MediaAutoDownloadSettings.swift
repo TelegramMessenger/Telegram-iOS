@@ -3,7 +3,6 @@ import UIKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 
 public enum MediaAutoDownloadNetworkType {
     case wifi
@@ -258,7 +257,7 @@ private func presetsWithAutodownloadSettings(_ autodownloadSettings: Autodownloa
     return MediaAutoDownloadPresets(low: categoriesWithAutodownloadPreset(autodownloadSettings.lowPreset, preset: .low), medium: categoriesWithAutodownloadPreset(autodownloadSettings.mediumPreset, preset: .medium), high: categoriesWithAutodownloadPreset(autodownloadSettings.highPreset, preset: .high))
 }
 
-public func updateMediaDownloadSettingsInteractively(accountManager: AccountManager, _ f: @escaping (MediaAutoDownloadSettings) -> MediaAutoDownloadSettings) -> Signal<Void, NoError> {
+public func updateMediaDownloadSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (MediaAutoDownloadSettings) -> MediaAutoDownloadSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, { entry in
             let currentSettings: MediaAutoDownloadSettings

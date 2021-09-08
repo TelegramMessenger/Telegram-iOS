@@ -46,7 +46,7 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
             
             if let output = filter.outputImage {
                 let size = Int(output.extent.width)
-                let bytesPerRow = (4 * Int(size) + 15) & (~15)
+                let bytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(size))
                 let length = bytesPerRow * size
                 let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue)
                 

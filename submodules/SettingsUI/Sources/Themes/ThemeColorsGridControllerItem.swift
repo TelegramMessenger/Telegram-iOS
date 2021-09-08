@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
@@ -47,7 +46,7 @@ final class ThemeColorsGridControllerItemNode: GridItemNode {
     private var interaction: ThemeColorsGridControllerInteraction?
     
     override init() {
-        self.wallpaperNode = SettingsThemeWallpaperNode()
+        self.wallpaperNode = SettingsThemeWallpaperNode(displayLoading: false)
         super.init()
         
         self.addSubnode(self.wallpaperNode)

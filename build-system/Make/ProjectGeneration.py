@@ -10,7 +10,7 @@ def remove_directory(path):
         shutil.rmtree(path)
 
 
-def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, configuration_path, bazel_app_arguments):
+def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments):
     project_path = os.path.join(build_environment.base_path, 'build-input/gen/project')
     app_target = 'Telegram'
 
@@ -81,6 +81,8 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
         bazel_build_arguments += ['--//Telegram:disableExtensions']
     if disable_provisioning_profiles:
         bazel_build_arguments += ['--//Telegram:disableProvisioningProfiles']
+    if generate_dsym:
+        bazel_build_arguments += ['--apple_generate_dsym']
 
     call_executable([
         tulsi_path,

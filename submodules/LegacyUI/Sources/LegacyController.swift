@@ -332,7 +332,7 @@ open class LegacyController: ViewController, PresentableController {
     private let sizeClass: SVariable = SVariable()
     public var enableSizeClassSignal: Bool = false
     public var sizeClassSignal: SSignal {
-        return self.sizeClass.signal()!
+        return self.sizeClass.signal()
     }
     private var enableContainerLayoutUpdates = false
     
@@ -478,7 +478,7 @@ open class LegacyController: ViewController, PresentableController {
         
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
         if let legacyTelegramController = self.legacyController as? TGViewController {
             var duration: TimeInterval = 0.0
             if case let .animated(transitionDuration, _) = transition {

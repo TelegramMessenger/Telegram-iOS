@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramStringFormatting
@@ -874,7 +873,7 @@ public func groupStatsController(context: AccountContext, peerId: PeerId, cached
             let _ = (context.account.postbox.loadedPeerWithId(peerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { peer in
-                if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                     navigationController.pushViewController(controller)
                 }
             })
@@ -901,7 +900,7 @@ public func groupStatsController(context: AccountContext, peerId: PeerId, cached
     }
     promotePeerImpl = { [weak controller] participantPeerId in
         if let navigationController = controller?.navigationController as? NavigationController {
-            let _ = (fetchChannelParticipant(account: context.account, peerId: peerId, participantId: participantPeerId)
+            let _ = (context.engine.peers.fetchChannelParticipant(peerId: peerId, participantId: participantPeerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { participant in
                 if let participant = participant, let controller = context.sharedContext.makeChannelAdminController(context: context, peerId: peerId, adminId: participantPeerId, initialParticipant: participant) {

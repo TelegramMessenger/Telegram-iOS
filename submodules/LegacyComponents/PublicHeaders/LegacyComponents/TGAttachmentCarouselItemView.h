@@ -10,14 +10,13 @@
 @class TGViewController;
 @class TGAttachmentCameraView;
 @class TGVideoEditAdjustments;
-@protocol TGModernGalleryTransitionHostScrollView;
 @protocol TGPhotoPaintStickersContext;
 
 @interface TGAttachmentCarouselCollectionView : UICollectionView
 
 @end
 
-@interface TGAttachmentCarouselItemView : TGMenuSheetItemView <TGModernGalleryTransitionHostScrollView>
+@interface TGAttachmentCarouselItemView : TGMenuSheetItemView
 
 @property (nonatomic, weak) TGViewController *parentController;
 
@@ -43,9 +42,9 @@
 @property (nonatomic, assign) bool openEditor;
 
 @property (nonatomic, copy) void (^cameraPressed)(TGAttachmentCameraView *cameraView);
-@property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles, bool silentPosting, int32_t scheduleTime);
+@property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles, bool silentPosting, int32_t scheduleTime, bool isFromPicker);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
-@property (nonatomic, copy) void (^avatarVideoCompletionBlock)(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments);
+@property (nonatomic, copy) void (^avatarVideoCompletionBlock)(UIImage *image, id asset, TGVideoEditAdjustments *adjustments);
 
 @property (nonatomic, copy) void (^editorOpened)(void);
 @property (nonatomic, copy) void (^editorClosed)(void);
@@ -61,5 +60,8 @@
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping allowSelection:(bool)allowSelection allowEditing:(bool)allowEditing document:(bool)document selectionLimit:(int)selectionLimit;
+
+- (void)saveStartImage;
+- (UIView *)getItemSnapshot:(NSString *)uniqueId;
 
 @end

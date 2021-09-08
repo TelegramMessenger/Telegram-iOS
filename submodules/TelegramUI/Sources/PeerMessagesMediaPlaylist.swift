@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import AccountContext
 import MusicAlbumArtResources
@@ -30,14 +29,6 @@ private enum PeerMessagesMediaPlaylistNavigation {
 
 struct MessageMediaPlaylistItemStableId: Hashable {
     let stableId: UInt32
-    
-    var hashValue: Int {
-        return self.stableId.hashValue
-    }
-    
-    static func ==(lhs: MessageMediaPlaylistItemStableId, rhs: MessageMediaPlaylistItemStableId) -> Bool {
-        return lhs.stableId == rhs.stableId
-    }
 }
 
 private func extractFileMedia(_ message: Message) -> TelegramMediaFile? {
@@ -59,7 +50,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
     let message: Message
     
     init(message: Message) {
-        self.id = PeerMessagesMediaPlaylistItemId(messageId: message.id)
+        self.id = PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index)
         self.message = message
     }
     
@@ -737,12 +728,6 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 }
                                 
                                 if case .all = looping {
-                                    let viewIndex: HistoryViewInputAnchor
-                                    if case .earlier = navigation {
-                                        viewIndex = .upperBound
-                                    } else {
-                                        viewIndex = .lowerBound
-                                    }
                                     return .single((nil, messages.count, false))
                                 } else {
                                     if hasMore {
@@ -808,7 +793,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 default:
                     break
             }
-            let _ = markMessageContentAsConsumedInteractively(postbox: self.context.account.postbox, messageId: item.message.id).start()
+            let _ = self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: item.message.id).start()
         }
     }
 }

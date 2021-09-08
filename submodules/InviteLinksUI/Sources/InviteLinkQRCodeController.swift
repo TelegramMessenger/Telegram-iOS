@@ -4,12 +4,12 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AppBundle
 import AsyncDisplayKit
-import SyncCore
 import Display
 import QrCode
 import AccountContext
 import SolidRoundedButtonNode
 import AnimatedStickerNode
+import TelegramCore
 
 private func shareQrCode(context: AccountContext, link: String, view: UIView) {
     let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Chat/Links/QrLogo")))
@@ -143,7 +143,7 @@ public final class InviteLinkQRCodeController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 
     class Node: ViewControllerTracingNode, UIScrollViewDelegate {

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import AccountContext
 
 func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {
@@ -17,6 +16,8 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     
     var inhibitTitlePanelDisplay = false
     switch chatPresentationInterfaceState.subject {
+    case .forwardedMessages:
+        return nil
     case .scheduledMessages, .pinnedMessages:
         inhibitTitlePanelDisplay = true
     default:
@@ -32,9 +33,12 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         loop: for context in chatPresentationInterfaceState.titlePanelContexts.reversed() {
             switch context {
                 case .pinnedMessage:
-                    if let pinnedMessage = chatPresentationInterfaceState.pinnedMessage, pinnedMessage.topMessageId != chatPresentationInterfaceState.interfaceState.messageActionsState.closedPinnedMessageId, !chatPresentationInterfaceState.pendingUnpinnedAllMessages {
-                        selectedContext = context
-                        break loop
+                    if case .pinnedMessages = chatPresentationInterfaceState.subject {
+                    } else {
+                        if let pinnedMessage = chatPresentationInterfaceState.pinnedMessage, pinnedMessage.topMessageId != chatPresentationInterfaceState.interfaceState.messageActionsState.closedPinnedMessageId, !chatPresentationInterfaceState.pendingUnpinnedAllMessages {
+                            selectedContext = context
+                            break loop
+                        }
                     }
                 case .chatInfo, .requestInProgress, .toastAlert:
                     selectedContext = context

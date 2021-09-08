@@ -230,32 +230,27 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
         }
         
         let effect: UIBlurEffect? = edge != nil ? UIBlurEffect(style: .light) : nil
-        if true {
-            if let edge = edge {
-                self.minimizedBlurView?.isHidden = false
-                
-                switch edge {
-                    case .left:
-                        break
-                    case .right:
-                        break
+        
+        if let edge = edge {
+            self.minimizedBlurView?.isHidden = false
+
+            switch edge {
+                case .left:
+                    break
+                case .right:
+                    break
+            }
+        }
+
+        UIView.animate(withDuration: 0.35, animations: {
+            self.minimizedBlurView?.effect = effect
+            self.minimizedArrowView?.alpha = edge != nil ? 1.0 : 0.0;
+        }, completion: { [weak self] finished in
+            if let strongSelf = self {
+                if finished && edge == nil {
+                    strongSelf.minimizedBlurView?.isHidden = true
                 }
             }
-            
-            UIView.animate(withDuration: 0.35, animations: {
-                self.minimizedBlurView?.effect = effect
-                self.minimizedArrowView?.alpha = edge != nil ? 1.0 : 0.0;
-            }, completion: { [weak self] finished in
-                if let strongSelf = self {
-                    if finished && edge == nil {
-                        strongSelf.minimizedBlurView?.isHidden = true
-                    }
-                }
-            })
-        } else {
-            self.minimizedBlurView?.effect = effect;
-            self.minimizedBlurView?.isHidden = edge == nil
-            self.minimizedArrowView?.alpha = edge != nil ? 1.0 : 0.0
-        }
+        })
     }
 }

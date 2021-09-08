@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Display
 
@@ -111,7 +110,10 @@ public func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureId
                         if buffer.data.count < range.count {
                             buffer.data.count = range.count
                         }
-                        buffer.data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                        buffer.data.withUnsafeMutableBytes { buffer -> Void in
+                            guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                                return
+                            }
                             data.copyBytes(to: bytes, from: range)
                         }
                     }
@@ -120,7 +122,10 @@ public func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureId
                         if buffer.data.count < resourceOffset + range.count {
                             buffer.data.count = resourceOffset + range.count
                         }
-                        buffer.data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                        buffer.data.withUnsafeMutableBytes { buffer -> Void in
+                            guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                                return
+                            }
                             data.copyBytes(to: bytes.advanced(by: resourceOffset), from: range)
                         }
                     }

@@ -155,6 +155,316 @@ private final class TipValueNode: ASDisplayNode {
     }
 }
 
+private final class FormatterImpl: NSObject, UITextFieldDelegate {
+    private struct Representation {
+        private let format: CurrencyFormat
+        private var caretIndex: Int = 0
+        private var wholePart: [Int] = []
+        private var decimalPart: [Int] = []
+
+        init(string: String, format: CurrencyFormat) {
+            self.format = format
+
+            var isDecimalPart = false
+            for c in string {
+                if c.isNumber {
+                    if let value = Int(String(c)) {
+                        if isDecimalPart {
+                            self.decimalPart.append(value)
+                        } else {
+                            self.wholePart.append(value)
+                        }
+                    }
+                } else if String(c) == format.decimalSeparator {
+                    isDecimalPart = true
+                }
+            }
+
+            while self.wholePart.count > 1 {
+                if self.wholePart[0] != 0 {
+                    break
+                } else {
+                    self.wholePart.removeFirst()
+                }
+            }
+            if self.wholePart.isEmpty {
+                self.wholePart = [0]
+            }
+
+            while self.decimalPart.count > 1 {
+                if self.decimalPart[self.decimalPart.count - 1] != 0 {
+                    break
+                } else {
+                    self.decimalPart.removeLast()
+                }
+            }
+            while self.decimalPart.count < format.decimalDigits {
+                self.decimalPart.append(0)
+            }
+
+            self.caretIndex = self.wholePart.count
+        }
+
+        var minCaretIndex: Int {
+            for i in 0 ..< self.wholePart.count {
+                if self.wholePart[i] != 0 {
+                    return i
+                }
+            }
+            return self.wholePart.count
+        }
+
+        mutating func moveCaret(offset: Int) {
+            self.caretIndex = max(self.minCaretIndex, min(self.caretIndex + offset, self.wholePart.count + self.decimalPart.count))
+        }
+
+        mutating func normalize() {
+            while self.wholePart.count > 1 {
+                if self.wholePart[0] != 0 {
+                    break
+                } else {
+                    self.wholePart.removeFirst()
+                    self.moveCaret(offset: -1)
+                }
+            }
+            if self.wholePart.isEmpty {
+                self.wholePart = [0]
+            }
+
+            while self.decimalPart.count < format.decimalDigits {
+                self.decimalPart.append(0)
+            }
+            while self.decimalPart.count > format.decimalDigits {
+                self.decimalPart.removeLast()
+            }
+
+            self.caretIndex = max(self.minCaretIndex, min(self.caretIndex, self.wholePart.count + self.decimalPart.count))
+        }
+
+        mutating func backspace() {
+            if self.caretIndex > self.wholePart.count {
+                let decimalIndex = self.caretIndex - self.wholePart.count
+                if decimalIndex > 0 {
+                    self.decimalPart.remove(at: decimalIndex - 1)
+
+                    self.moveCaret(offset: -1)
+                    self.normalize()
+                }
+            } else {
+                if self.caretIndex > 0 {
+                    self.wholePart.remove(at: self.caretIndex - 1)
+
+                    self.moveCaret(offset: -1)
+                    self.normalize()
+                }
+            }
+        }
+
+        mutating func insert(letter: String) {
+            if letter == "." || letter == "," {
+                if self.caretIndex == self.wholePart.count {
+                    return
+                } else if self.caretIndex < self.wholePart.count {
+                    for i in (self.caretIndex ..< self.wholePart.count).reversed() {
+                        self.decimalPart.insert(self.wholePart[i], at: 0)
+                        self.wholePart.remove(at: i)
+                    }
+                }
+
+                self.normalize()
+            } else if letter.count == 1 && letter[letter.startIndex].isNumber {
+                if let value = Int(letter) {
+                    if self.caretIndex <= self.wholePart.count {
+                        self.wholePart.insert(value, at: self.caretIndex)
+                    } else {
+                        let decimalIndex = self.caretIndex - self.wholePart.count
+                        self.decimalPart.insert(value, at: decimalIndex)
+                    }
+                    self.moveCaret(offset: 1)
+                    self.normalize()
+                }
+            }
+        }
+
+        var string: String {
+            var result = ""
+
+            for digit in self.wholePart {
+                result.append("\(digit)")
+            }
+            result.append(self.format.decimalSeparator)
+            for digit in self.decimalPart {
+                result.append("\(digit)")
+            }
+
+            return result
+        }
+
+        var stringCaretIndex: Int {
+            var logicalIndex = 0
+            var resolvedIndex = 0
+
+            if logicalIndex == self.caretIndex {
+                return resolvedIndex
+            }
+
+            for _ in self.wholePart {
+                logicalIndex += 1
+                resolvedIndex += 1
+
+                if logicalIndex == self.caretIndex {
+                    return resolvedIndex
+                }
+            }
+
+            resolvedIndex += 1
+
+            for _ in self.decimalPart {
+                logicalIndex += 1
+                resolvedIndex += 1
+
+                if logicalIndex == self.caretIndex {
+                    return resolvedIndex
+                }
+            }
+
+            return resolvedIndex
+        }
+
+        var numericalValue: Int64 {
+            var result: Int64 = 0
+
+            for digit in self.wholePart {
+                result *= 10
+                result += Int64(digit)
+            }
+            for digit in self.decimalPart {
+                result *= 10
+                result += Int64(digit)
+            }
+
+            return result
+        }
+    }
+
+    private let format: CurrencyFormat
+    private let currency: String
+    private let maxNumericalValue: Int64
+    private let updated: (Int64) -> Void
+    private let focusUpdated: (Bool) -> Void
+
+    private var representation: Representation
+
+    private var previousResolvedCaretIndex: Int = 0
+    private var ignoreTextSelection: Bool = false
+    private var enableTextSelectionProcessing: Bool = false
+
+    init?(textField: UITextField, currency: String, maxNumericalValue: Int64, initialValue: String, updated: @escaping (Int64) -> Void, focusUpdated: @escaping (Bool) -> Void) {
+        guard let format = CurrencyFormat(currency: currency) else {
+            return nil
+        }
+        self.format = format
+        self.currency = currency
+        self.maxNumericalValue = maxNumericalValue
+        self.updated = updated
+        self.focusUpdated = focusUpdated
+
+        self.representation = Representation(string: initialValue, format: format)
+
+        super.init()
+
+        textField.text = self.representation.string
+        self.previousResolvedCaretIndex = self.representation.stringCaretIndex
+    }
+
+    func reset(textField: UITextField, initialValue: String) {
+        self.representation = Representation(string: initialValue, format: self.format)
+        self.resetFromRepresentation(textField: textField, notifyUpdated: false)
+    }
+
+    private func resetFromRepresentation(textField: UITextField, notifyUpdated: Bool) {
+        self.ignoreTextSelection = true
+
+        if self.representation.numericalValue > self.maxNumericalValue {
+            self.representation = Representation(string: formatCurrencyAmountCustom(self.maxNumericalValue, currency: self.currency).0, format: self.format)
+        }
+
+        textField.text = self.representation.string
+        self.previousResolvedCaretIndex = self.representation.stringCaretIndex
+
+        if self.enableTextSelectionProcessing {
+            let stringCaretIndex = self.representation.stringCaretIndex
+            if let caretPosition = textField.position(from: textField.beginningOfDocument, offset: stringCaretIndex) {
+                textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
+            }
+        }
+        self.ignoreTextSelection = false
+
+        if notifyUpdated {
+            self.updated(self.representation.numericalValue)
+        }
+    }
+
+    @objc public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if string.count == 1 {
+            self.representation.insert(letter: string)
+            self.resetFromRepresentation(textField: textField, notifyUpdated: true)
+        } else if string.count == 0 {
+            self.representation.backspace()
+            self.resetFromRepresentation(textField: textField, notifyUpdated: true)
+        }
+
+        return false
+    }
+
+    @objc public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        return false
+    }
+
+    @objc public func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.enableTextSelectionProcessing = true
+        self.focusUpdated(true)
+
+        let stringCaretIndex = self.representation.stringCaretIndex
+        self.previousResolvedCaretIndex = stringCaretIndex
+        if let caretPosition = textField.position(from: textField.beginningOfDocument, offset: stringCaretIndex) {
+            self.ignoreTextSelection = true
+            textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
+            DispatchQueue.main.async {
+                textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
+                self.ignoreTextSelection = false
+            }
+        }
+    }
+
+    @objc public func textFieldDidChangeSelection(_ textField: UITextField) {
+        if self.ignoreTextSelection {
+            return
+        }
+        if !self.enableTextSelectionProcessing {
+            return
+        }
+
+        if let selectedTextRange = textField.selectedTextRange {
+            let index = textField.offset(from: textField.beginningOfDocument, to: selectedTextRange.end)
+            if self.previousResolvedCaretIndex != index {
+                self.representation.moveCaret(offset: self.previousResolvedCaretIndex < index ? 1 : -1)
+
+                let stringCaretIndex = self.representation.stringCaretIndex
+                self.previousResolvedCaretIndex = stringCaretIndex
+                if let caretPosition = textField.position(from: textField.beginningOfDocument, offset: stringCaretIndex) {
+                        textField.selectedTextRange = textField.textRange(from: caretPosition, to: caretPosition)
+                }
+            }
+        }
+    }
+
+    @objc public func textFieldDidEndEditing(_ textField: UITextField) {
+        self.enableTextSelectionProcessing = false
+        self.focusUpdated(false)
+    }
+}
+
 class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
     private let backgroundNode: ASDisplayNode
     let titleNode: TextNode
@@ -167,8 +477,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
     private var valueNodes: [TipValueNode] = []
     
     private var item: BotCheckoutTipItem?
-
-    private var formatterDelegate: CurrencyUITextFieldDelegate?
+    private var formatter: FormatterImpl?
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -178,6 +487,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
 
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
+        self.labelNode.isHidden = true
 
         self.tipMeasurementNode = ImmediateTextNode()
         self.tipCurrencyNode = ImmediateTextNode()
@@ -248,8 +558,25 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((labelsContentHeight - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - leftInset - labelLayout.size.width, y: floor((labelsContentHeight - labelLayout.size.height) / 2.0)), size: labelLayout.size)
 
-                    if strongSelf.formatterDelegate == nil {
-                        strongSelf.formatterDelegate = CurrencyUITextFieldDelegate(formatter: CurrencyFormatter(currency: item.currency, { formatter in
+                    if strongSelf.formatter == nil {
+                        strongSelf.formatter = FormatterImpl(textField: strongSelf.textNode.textField, currency: item.currency, maxNumericalValue: item.maxValue, initialValue: item.value, updated: { value in
+                            guard let strongSelf = self, let item = strongSelf.item else {
+                                return
+                            }
+                            if item.numericValue != value {
+                                item.updateValue(value)
+                            }
+                        }, focusUpdated: { value in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if value {
+                                strongSelf.item?.updatedFocus(true)
+                            }
+                        })
+                        strongSelf.textNode.textField.delegate = strongSelf.formatter
+
+                        /*strongSelf.formatterDelegate = CurrencyUITextFieldDelegate(formatter: CurrencyFormatter(currency: item.currency, { formatter in
                             formatter.maxValue = currencyToFractionalAmount(value: item.maxValue, currency: item.currency) ?? 10000.0
                             formatter.minValue = 0.0
                             formatter.hasDecimals = true
@@ -263,20 +590,10 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                             strongSelf.textFieldTextChanged(strongSelf.textNode.textField)
                         }
 
+                        strongSelf.textNode.textField.delegate = strongSelf.formatterDelegate*/
+
                         strongSelf.textNode.clipsToBounds = true
-                        strongSelf.textNode.textField.delegate = strongSelf.formatterDelegate
-
-                        /*let toolbar: UIToolbar = UIToolbar()
-                        toolbar.tintColor = item.theme.rootController.navigationBar.accentTextColor
-                        toolbar.barTintColor = item.theme.rootController.navigationBar.backgroundColor
-                        toolbar.barStyle = .default
-                        toolbar.items = [
-                            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: self, action: nil),
-                            UIBarButtonItem(title: item.strings.Common_Done, style: .done, target: strongSelf, action: #selector(strongSelf.dismissKeyboard))
-                        ]
-                        toolbar.sizeToFit()
-
-                        strongSelf.textNode.textField.inputAccessoryView = toolbar*/
+                        //strongSelf.textNode.textField.delegate = strongSelf
                     }
 
                     strongSelf.textNode.textField.typingAttributes = [NSAttributedString.Key.font: titleFont]
@@ -297,8 +614,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                     //let currencySymbolOnTheLeft = true
 
                     if strongSelf.textNode.textField.text ?? "" != currencyText.0 {
-                        strongSelf.textNode.textField.text = currencyText.0
-                        strongSelf.labelNode.isHidden = !currencyText.0.isEmpty
+                        strongSelf.formatter?.reset(textField: strongSelf.textNode.textField, initialValue: currencyText.0)
                     }
 
                     strongSelf.tipMeasurementNode.attributedText = NSAttributedString(string: currencyText.0, font: titleFont, textColor: textColor)
@@ -334,10 +650,14 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                         }
                         let (nodeMinWidth, nodeApply) = valueNode.update(theme: item.theme, text: variantText, isHighlighted: item.value == variantText, height: valueHeight)
                         valueNode.action = {
-                            guard let strongSelf = self else {
+                            guard let strongSelf = self, let item = strongSelf.item else {
                                 return
                             }
-                            strongSelf.item?.updateValue(variantValue)
+                            if item.numericValue == variantValue {
+                                item.updateValue(0)
+                            } else {
+                                item.updateValue(variantValue)
+                            }
                         }
                         totalMinWidth += nodeMinWidth
                         variantLayouts.append((nodeMinWidth, nodeApply))
@@ -390,7 +710,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
 
     @objc private func textFieldTextChanged(_ textField: UITextField) {
         let text = textField.text ?? ""
-        self.labelNode.isHidden = !text.isEmpty
+        //self.labelNode.isHidden = !text.isEmpty
 
         guard let item = self.item else {
             return
@@ -401,7 +721,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
             return
         }
 
-        var cleanText = ""
+        /*var cleanText = ""
         for c in text {
             if c.isNumber {
                 cleanText.append(c)
@@ -424,7 +744,7 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
                 }
             }
             item.updateValue(value)
-        }
+        }*/
     }
 
     @objc public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {

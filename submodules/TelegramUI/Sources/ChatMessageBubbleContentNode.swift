@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import TelegramPresentationData
 import AccountContext
@@ -200,6 +199,15 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     }
     
     func updateIsExtractedToContextPreview(_ value: Bool) {
+    }
+
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    }
+
+    func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    }
+
+    func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
     }
     
     func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {

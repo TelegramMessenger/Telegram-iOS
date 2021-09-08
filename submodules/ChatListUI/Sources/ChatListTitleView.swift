@@ -5,6 +5,8 @@ import Display
 import TelegramPresentationData
 import ActivityIndicator
 
+private let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
+
 struct NetworkStatusTitle: Equatable {
     let text: String
     let activity: Bool
@@ -40,7 +42,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         self._title = title
         
         if self._title != oldValue {
-            self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
             self.buttonView.accessibilityLabel = self.title.text
             self.activityIndicator.isHidden = !self.title.activity
            
@@ -101,7 +103,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
     
     var theme: PresentationTheme {
         didSet {
-            self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: Font.bold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
             
             self.lockView.updateTheme(self.theme)
             

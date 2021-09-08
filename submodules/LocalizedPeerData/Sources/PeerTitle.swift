@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -59,5 +58,15 @@ public extension Peer {
         default:
             return ""
         }
+    }
+}
+
+public extension EnginePeer {
+    var compactDisplayTitle: String {
+        return self._asPeer().compactDisplayTitle
+    }
+
+    func displayTitle(strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) -> String {
+        return self._asPeer().displayTitle(strings: strings, displayOrder: displayOrder)
     }
 }

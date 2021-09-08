@@ -39,8 +39,9 @@ NSString *const TGAttachmentVideoCellIdentifier = @"AttachmentVideoCell";
         
         _adjustmentsDisposable = [[SMetaDisposable alloc] init];
         
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _durationLabel.accessibilityIgnoresInvertColors = true;
+        }
     }
     return self;
 }

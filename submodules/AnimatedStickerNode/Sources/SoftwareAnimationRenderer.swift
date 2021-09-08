@@ -13,21 +13,31 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
         queue.async { [weak self] in
             switch type {
             case .argb:
-                let calculatedBytesPerRow = (4 * Int(width) + 15) & (~15)
+                let calculatedBytesPerRow =  DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(width))
                 assert(bytesPerRow == calculatedBytesPerRow)
             case .yuva:
                 break
             }
             
-            let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, bytesPerRow in
+            let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, contextBytesPerRow in
                 switch type {
                 case .yuva:
-                    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                        decodeYUVAToRGBA(bytes, pixelData, Int32(width), Int32(height), Int32(bytesPerRow))
+                    data.withUnsafeBytes { bytes -> Void in
+                        guard let baseAddress = bytes.baseAddress else {
+                            return
+                        }
+                        if bytesPerRow * height > bytes.count {
+                            assert(false)
+                            return
+                        }
+                        decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(width), Int32(height), Int32(contextBytesPerRow))
                     }
                 case .argb:
-                    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-                        memcpy(pixelData, bytes, data.count)
+                    data.withUnsafeBytes { bytes -> Void in
+                        guard let baseAddress = bytes.baseAddress else {
+                            return
+                        }
+                        memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
                     }
                 }
             })

@@ -3,9 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import AccountContext
 
@@ -20,13 +18,13 @@ public final class BotReceiptController: ViewController {
     }
     
     private let context: AccountContext
-    private let messageId: MessageId
+    private let messageId: EngineMessage.Id
     
     private var presentationData: PresentationData
     
     private var didPlayPresentationAnimation = false
     
-    public init(context: AccountContext, messageId: MessageId) {
+    public init(context: AccountContext, messageId: EngineMessage.Id) {
         self.context = context
         self.messageId = messageId
         
@@ -48,11 +46,7 @@ public final class BotReceiptController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        let displayNode = BotReceiptControllerNode(controller: nil, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
-            if let strongSelf = self {
-                strongSelf.navigationOffset = offset
-            }
-        }, context: self.context, messageId: self.messageId, dismissAnimated: { [weak self] in
+        let displayNode = BotReceiptControllerNode(controller: nil, navigationBar: self.navigationBar!, context: self.context, messageId: self.messageId, dismissAnimated: { [weak self] in
             self?.dismiss()
         })
         
@@ -79,7 +73,7 @@ public final class BotReceiptController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, additionalInsets: UIEdgeInsets())
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, additionalInsets: UIEdgeInsets())
     }
     
     @objc private func cancelPressed() {

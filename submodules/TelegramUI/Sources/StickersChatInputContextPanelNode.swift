@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -11,6 +10,7 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
+import ContextUI
 
 private struct StickersChatInputContextPanelEntryStableId: Hashable {
     let ids: [MediaId]
@@ -91,7 +91,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         self.listView.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).0
+            return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.stickersInteraction = StickersChatInputContextPanelInteraction()
@@ -130,12 +130,16 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                         |> deliverOnMainQueue
                         |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                var menuItems: [PeekControllerMenuItem] = []
+                                var menuItems: [ContextMenuItem] = []
                                 menuItems = [
-                                    PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {  _, _ in
-                                        return controllerInteraction.sendSticker(.standalone(media: item.file), nil, true, itemNode, itemNode.bounds)
-                                    }),
-                                    PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
+                                    .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                    f(.default)
+                                    
+                                    let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, false, nil, true, itemNode, itemNode.bounds)
+                                    })),
+                                    .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                        f(.default)
+                                        
                                         if let strongSelf = self {
                                             if isStarred {
                                                 let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -143,9 +147,10 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                 let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                             }
                                         }
-                                        return true
-                                    }),
-                                    PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
+                                    })),
+                                    .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_ViewPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                        f(.default)
+                                    
                                         if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                             loop: for attribute in item.file.attributes {
                                                 switch attribute {
@@ -153,11 +158,10 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                     if let packReference = packReference {
                                                         let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                                                return controllerInteraction.sendSticker(file, nil, true, sourceNode, sourceRect)
+                                                                return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect)
                                                             } else {
                                                                 return false
                                                             }
-                                                            
                                                         })
                                                         
                                                         controllerInteraction.navigationController()?.view.window?.endEditing(true)
@@ -169,9 +173,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                 }
                                             }
                                         }
-                                        return true
-                                    }),
-                                    PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
+                                    }))
                                 ]
                                 return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                             } else {
@@ -184,7 +186,8 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
             return nil
         }, present: { [weak self] content, sourceNode in
             if let strongSelf = self {
-                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.theme), content: content, sourceNode: {
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
                     return sourceNode
                 })
                 strongSelf.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
@@ -299,7 +302,10 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                     
                     if let topItemOffset = topItemOffset {
                         let position = strongSelf.listView.layer.position
-                        strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        strongSelf.listView.position = CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset))
+                        ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
+                            strongSelf.listView.position = position
+                        }
                     }
                 }
             })

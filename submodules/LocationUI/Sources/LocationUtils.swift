@@ -1,10 +1,10 @@
 import Foundation
 import SwiftSignalKit
-import SyncCore
 import TelegramCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import MapKit
+import AccountContext
 
 extension TelegramMediaMap {
     convenience init(coordinate: CLLocationCoordinate2D, liveBroadcastingTimeout: Int32? = nil, proximityNotificationRadius: Int32? = nil) {
@@ -32,17 +32,17 @@ public func ==(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool
     return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
 }
 
-public func nearbyVenues(account: Account, latitude: Double, longitude: Double, query: String? = nil) -> Signal<[TelegramMediaMap], NoError> {
-    return account.postbox.transaction { transaction -> SearchBotsConfiguration in
+public func nearbyVenues(context: AccountContext, latitude: Double, longitude: Double, query: String? = nil) -> Signal<[TelegramMediaMap], NoError> {
+    return context.account.postbox.transaction { transaction -> SearchBotsConfiguration in
         return currentSearchBotsConfiguration(transaction: transaction)
     } |> mapToSignal { searchBotsConfiguration in
-        return resolvePeerByName(account: account, name: searchBotsConfiguration.venueBotUsername ?? "foursquare")
+        return context.engine.peers.resolvePeerByName(name: searchBotsConfiguration.venueBotUsername ?? "foursquare")
         |> take(1)
-        |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
-            guard let peerId = peerId else {
+        |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
+            guard let peer = peer else {
                 return .single(nil)
             }
-            return requestChatContextResults(account: account, botId: peerId, peerId: account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
+            return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
             |> map { results -> ChatContextResultCollection? in
                 return results?.results
             }
@@ -86,7 +86,7 @@ func stringForEstimatedDuration(strings: PresentationStrings, eta: Double) -> St
         } else {
             string = strings.Map_ETAMinutes(minutes)
         }
-        return strings.Map_DirectionsDriveEta(string).0
+        return strings.Map_DirectionsDriveEta(string).string
     } else {
         return nil
     }

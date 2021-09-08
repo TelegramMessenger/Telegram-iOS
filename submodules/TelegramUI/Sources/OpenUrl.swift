@@ -2,7 +2,6 @@ import Foundation
 import Display
 import SafariServices
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import MtProtoKit
@@ -193,7 +192,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         case .info:
                             let _ = (context.account.postbox.loadedPeerWithId(peerId)
                             |> deliverOnMainQueue).start(next: { peer in
-                                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                                if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                                     context.sharedContext.applicationBindings.dismissNativeController()
                                     navigationController?.pushViewController(infoController)
                                 }
@@ -439,7 +438,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         }
                         
                         if valid {
-                            if let botId = botId, let scope = scope, let publicKey = publicKey, let callbackUrl = callbackUrl {
+                            if let botId = botId, let scope = scope, let publicKey = publicKey {
                                 if scope.hasPrefix("{") && scope.hasSuffix("}") {
                                     opaquePayload = Data()
                                     if opaqueNonce.isEmpty {
@@ -481,7 +480,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(idValue)))
                             }
                             |> deliverOnMainQueue).start(next: { peer in
-                                if let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                                if let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                                     navigationController?.pushViewController(controller)
                                 }
                             })
@@ -678,7 +677,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                 }
             } else {
-                if parsedUrl.host == "settings" {
+                if parsedUrl.host == "importStickers" {
+                    handleResolvedUrl(.importStickers)
+                } else if parsedUrl.host == "settings" {
                     if let path = parsedUrl.pathComponents.last {
                         var section: ResolvedUrlSettingsSection?
                         switch path {
@@ -730,7 +731,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             if let window = navigationController?.view.window {
                                 let controller = SFSafariViewController(url: parsedUrl)
                                 if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                                    controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.backgroundColor
+                                    controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
                                     controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
                                 }
                                 window.rootViewController?.present(controller, animated: true)

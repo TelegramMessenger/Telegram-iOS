@@ -16,7 +16,14 @@
 }
 
 - (NSString *)description {
-    return [NSString stringWithFormat:@"res_pq nonce:%@ serverNonce:%@ pq:%@ fingerprints:%@", _nonce, _serverNonce, _pq, _serverPublicKeyFingerprints];
+    NSMutableString *fingerprintsString = [[NSMutableString alloc] init];
+    for (NSNumber *value in _serverPublicKeyFingerprints) {
+        if (fingerprintsString.length != 0) {
+            [fingerprintsString appendString:@"\n"];
+        }
+        [fingerprintsString appendFormat:@"%llx", [value longLongValue]];
+    }
+    return [NSString stringWithFormat:@"res_pq nonce:%@ serverNonce:%@ pq:%@ fingerprints:%@", _nonce, _serverNonce, _pq, fingerprintsString];
 }
 
 @end

@@ -1815,14 +1815,14 @@ public struct help {
     
     }
     public enum AppUpdate: TypeConstructorDescription {
-        case appUpdate(flags: Int32, id: Int32, version: String, text: String, entities: [Api.MessageEntity], document: Api.Document?, url: String?)
+        case appUpdate(flags: Int32, id: Int32, version: String, text: String, entities: [Api.MessageEntity], document: Api.Document?, url: String?, sticker: Api.Document?)
         case noAppUpdate
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url):
+                case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url, let sticker):
                     if boxed {
-                        buffer.appendInt32(497489295)
+                        buffer.appendInt32(-860107216)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -1835,6 +1835,7 @@ public struct help {
                     }
                     if Int(flags) & Int(1 << 1) != 0 {document!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {sticker!.serialize(buffer, true)}
                     break
                 case .noAppUpdate:
                     if boxed {
@@ -1847,8 +1848,8 @@ public struct help {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url):
-                return ("appUpdate", [("flags", flags), ("id", id), ("version", version), ("text", text), ("entities", entities), ("document", document), ("url", url)])
+                case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url, let sticker):
+                return ("appUpdate", [("flags", flags), ("id", id), ("version", version), ("text", text), ("entities", entities), ("document", document), ("url", url), ("sticker", sticker)])
                 case .noAppUpdate:
                 return ("noAppUpdate", [])
     }
@@ -1873,6 +1874,10 @@ public struct help {
             } }
             var _7: String?
             if Int(_1!) & Int(1 << 2) != 0 {_7 = parseString(reader) }
+            var _8: Api.Document?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -1880,8 +1885,9 @@ public struct help {
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.help.AppUpdate.appUpdate(flags: _1!, id: _2!, version: _3!, text: _4!, entities: _5!, document: _6, url: _7)
+            let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.help.AppUpdate.appUpdate(flags: _1!, id: _2!, version: _3!, text: _4!, entities: _5!, document: _6, url: _7, sticker: _8)
             }
             else {
                 return nil

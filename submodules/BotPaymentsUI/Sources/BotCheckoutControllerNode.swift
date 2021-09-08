@@ -2,9 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import PassKit
 import TelegramPresentationData
@@ -328,7 +326,7 @@ private func currentTotalPrice(paymentForm: BotPaymentForm?, validatedFormInfo: 
     return totalPrice
 }
 
-private func botCheckoutControllerEntries(presentationData: PresentationData, state: BotCheckoutControllerState, invoice: TelegramMediaInvoice, paymentForm: BotPaymentForm?, formInfo: BotPaymentRequestedInfo?, validatedFormInfo: BotPaymentValidatedFormInfo?, currentShippingOptionId: String?, currentPaymentMethod: BotCheckoutPaymentMethod?, currentTip: Int64?, botPeer: Peer?) -> [BotCheckoutEntry] {
+private func botCheckoutControllerEntries(presentationData: PresentationData, state: BotCheckoutControllerState, invoice: TelegramMediaInvoice, paymentForm: BotPaymentForm?, formInfo: BotPaymentRequestedInfo?, validatedFormInfo: BotPaymentValidatedFormInfo?, currentShippingOptionId: String?, currentPaymentMethod: BotCheckoutPaymentMethod?, currentTip: Int64?, botPeer: EnginePeer?) -> [BotCheckoutEntry] {
     var entries: [BotCheckoutEntry] = []
     
     var botName = ""
@@ -460,7 +458,9 @@ private func formSupportApplePay(_ paymentForm: BotPaymentForm) -> Bool {
         "sberbank",
         "yandex",
         "privatbank",
-        "tranzzo"
+        "tranzzo",
+        "paymaster",
+        "smartglocal",
     ])
     if !applePayProviders.contains(nativeProvider.name) {
         return false
@@ -503,10 +503,10 @@ private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutP
 final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthorizationViewControllerDelegate {
     private weak var controller: BotCheckoutController?
     private let context: AccountContext
-    private let messageId: MessageId
+    private let messageId: EngineMessage.Id
     private let present: (ViewController, Any?) -> Void
     private let dismissAnimated: () -> Void
-    private let completed: (String, MessageId?) -> Void
+    private let completed: (String, EngineMessage.Id?) -> Void
     
     private var stateValue = BotCheckoutControllerState()
     private let state = ValuePromise(BotCheckoutControllerState(), ignoreRepeated: true)
@@ -537,7 +537,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private var passwordTip: String?
     private var passwordTipDisposable: Disposable?
     
-    init(controller: BotCheckoutController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, MessageId?) -> Void) {
+    init(controller: BotCheckoutController?, navigationBar: NavigationBar, context: AccountContext, invoice: TelegramMediaInvoice, messageId: EngineMessage.Id, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, EngineMessage.Id?) -> Void) {
         self.controller = controller
         self.context = context
         self.messageId = messageId
@@ -565,14 +565,22 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             ensureTipInputVisibleImpl?()
         })
 
-        let paymentBotPeer = paymentFormAndInfo.get()
-        |> map { paymentFormAndInfo -> PeerId? in
-            return paymentFormAndInfo?.0.paymentBotId
+        let paymentBotPeer: Signal<EnginePeer?, NoError> = paymentFormAndInfo.get()
+        |> map { paymentFormAndInfo -> EnginePeer.Id? in
+            if let paymentBotId = paymentFormAndInfo?.0.paymentBotId {
+                return paymentBotId
+            } else {
+                return nil
+            }
         }
         |> distinctUntilChanged
-        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
-            return context.account.postbox.transaction { transaction -> Peer? in
-                return peerId.flatMap(transaction.getPeer)
+        |> mapToSignal { peerId -> Signal<EnginePeer?, NoError> in
+            if let peerId = peerId {
+                return context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )
+            } else {
+                return .single(nil)
             }
         }
         
@@ -584,7 +592,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         }
 
         self.actionButtonPanelNode = ASDisplayNode()
-        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.actionButtonPanelNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
 
         self.actionButtonPanelSeparator = ASDisplayNode()
         self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
@@ -597,12 +605,13 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         self.inProgressDimNode.isUserInteractionEnabled = false
         self.inProgressDimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
         
-        super.init(controller: nil, navigationBar: navigationBar, updateNavigationOffset: updateNavigationOffset, state: signal)
+        super.init(controller: nil, navigationBar: navigationBar, state: signal)
         
         self.arguments = arguments
         
         openInfoImpl = { [weak self] focus in
             if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo {
+                strongSelf.controller?.view.endEditing(true)
                 strongSelf.present(BotCheckoutInfoController(context: context, invoice: paymentFormValue.invoice, messageId: messageId, initialFormInfo: currentFormInfo, focus: focus, formInfoUpdated: { formInfo, validatedInfo in
                     if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue {
                         strongSelf.currentFormInfo = formInfo
@@ -684,7 +693,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                                     controller.dismiss()
                                                 }
                                                 switch update {
-                                                    case .noPassword, .awaitingEmailConfirmation:
+                                                    case .noPassword, .awaitingEmailConfirmation, .pendingPasswordReset:
                                                         break
                                                     case .passwordSet:
                                                         var updatedToken = webToken
@@ -752,7 +761,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                                     controller.dismiss()
                                                 }
                                                 switch update {
-                                                    case .noPassword, .awaitingEmailConfirmation:
+                                                    case .noPassword, .awaitingEmailConfirmation, .pendingPasswordReset:
                                                         break
                                                     case .passwordSet:
                                                         var updatedToken = webToken
@@ -808,7 +817,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                                             controller.dismiss()
                                         }
                                         switch update {
-                                            case .noPassword, .awaitingEmailConfirmation:
+                                            case .noPassword, .awaitingEmailConfirmation, .pendingPasswordReset:
                                                 break
                                             case .passwordSet:
                                                 var updatedToken = token
@@ -877,6 +886,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         openPaymentMethodImpl = { [weak self] in
             if let strongSelf = self, let paymentForm = strongSelf.paymentFormValue {
+                strongSelf.controller?.view.endEditing(true)
                 let methods = availablePaymentMethods(form: paymentForm, current: strongSelf.currentPaymentMethod)
                 if methods.isEmpty {
                     openNewCard()
@@ -892,6 +902,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         openShippingMethodImpl = { [weak self] in
             if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let shippingOptions = strongSelf.currentValidatedFormInfo?.shippingOptions, !shippingOptions.isEmpty {
+                strongSelf.controller?.view.endEditing(true)
                 strongSelf.present(BotCheckoutPaymentShippingOptionSheetController(context: strongSelf.context, currency: paymentFormValue.invoice.currency, options: shippingOptions, currentId: strongSelf.currentShippingOptionId, applyValue: { id in
                     if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo {
                         strongSelf.currentShippingOptionId = id
@@ -940,7 +951,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         
         self.listNode.supernode?.insertSubnode(self.inProgressDimNode, aboveSubnode: self.listNode)
 
-        self.passwordTipDisposable = (twoStepVerificationConfiguration(account: self.context.account)
+        self.passwordTipDisposable = (self.context.engine.auth.twoStepVerificationConfiguration()
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
@@ -948,7 +959,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             switch value {
             case .notSet:
                 break
-            case let .set(hint, _, _, _):
+            case let .set(hint, _, _, _, _):
                 if !hint.isEmpty {
                     strongSelf.passwordTip = hint
                 }
@@ -967,7 +978,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         let totalAmount = currentTotalPrice(paymentForm: self.paymentFormValue, validatedFormInfo: self.currentValidatedFormInfo, currentShippingOptionId: self.currentShippingOptionId, currentTip: self.currentTipAmount)
         let payString: String
         if let paymentForm = self.paymentFormValue, totalAmount > 0 {
-            payString = self.presentationData.strings.Checkout_PayPrice(formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)).0
+            payString = self.presentationData.strings.Checkout_PayPrice(formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)).string
         } else {
             payString = self.presentationData.strings.CheckoutInfo_Pay
         }
@@ -1065,7 +1076,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                             if let savedCredentialsToken = savedCredentialsToken {
                                 credentials = .saved(id: id, tempPassword: savedCredentialsToken.token)
                             } else {
-                                let _ = (cachedTwoStepPasswordToken(postbox: self.context.account.postbox)
+                                let _ = (self.context.engine.auth.cachedTwoStepPasswordToken()
                                 |> deliverOnMainQueue).start(next: { [weak self] token in
                                     if let strongSelf = self {
                                         let timestamp = strongSelf.context.account.network.getApproximateRemoteTimestamp()
@@ -1120,9 +1131,10 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     }
                     
                     let botPeerId = self.messageId.peerId
-                    let _ = (self.context.account.postbox.transaction({ transaction -> Peer? in
-                        return transaction.getPeer(botPeerId)
-                    }) |> deliverOnMainQueue).start(next: { [weak self] botPeer in
+                    let _ = (context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: botPeerId)
+                    )
+                    |> deliverOnMainQueue).start(next: { [weak self] botPeer in
                         if let strongSelf = self, let botPeer = botPeer {
                             let request = PKPaymentRequest()
                             
@@ -1188,14 +1200,17 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         }
         
         if !liabilityNoticeAccepted {
-            let messageId = self.messageId
-            let botPeer: Signal<Peer?, NoError> = self.context.account.postbox.transaction { transaction -> Peer? in
-                if let message = transaction.getMessage(messageId) {
-                    return message.author
-                }
-                return nil
-            }
-            let _ = (combineLatest(ApplicationSpecificNotice.getBotPaymentLiability(accountManager: self.context.sharedContext.accountManager, peerId: paymentForm.paymentBotId), botPeer, self.context.account.postbox.loadedPeerWithId(paymentForm.providerId))
+            let botPeer: Signal<EnginePeer?, NoError> = context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: paymentForm.paymentBotId)
+            )
+            let providerPeer: Signal<EnginePeer?, NoError> = context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: paymentForm.providerId)
+            )
+            let _ = (combineLatest(
+                ApplicationSpecificNotice.getBotPaymentLiability(accountManager: self.context.sharedContext.accountManager, peerId: paymentForm.paymentBotId),
+                botPeer,
+                providerPeer
+            )
             |> deliverOnMainQueue).start(next: { [weak self] value, botPeer, providerPeer in
                 if let strongSelf = self, let botPeer = botPeer {
                     if value {
@@ -1203,7 +1218,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     } else {
                         let paymentText = strongSelf.presentationData.strings.Checkout_PaymentLiabilityAlert
                             .replacingOccurrences(of: "{target}", with: botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
-                            .replacingOccurrences(of: "{payment_system}", with: providerPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
+                            .replacingOccurrences(of: "{payment_system}", with: providerPeer?.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder) ?? "")
 
                         strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: paymentText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
@@ -1229,7 +1244,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             let totalAmount = currentTotalPrice(paymentForm: paymentForm, validatedFormInfo: self.currentValidatedFormInfo, currentShippingOptionId: self.currentShippingOptionId, currentTip: self.currentTipAmount)
             let currencyValue = formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)
 
-            self.payDisposable.set((sendBotPaymentForm(account: self.context.account, messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
+            self.payDisposable.set((self.context.engine.payments.sendBotPaymentForm(messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     strongSelf.inProgressDimNode.isUserInteractionEnabled = false
                     strongSelf.inProgressDimNode.alpha = 0.0
@@ -1244,7 +1259,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                         applePayController.presentingViewController?.dismiss(animated: true, completion: nil)
                     }
 
-                    let proceedWithCompletion: (Bool, MessageId?) -> Void = { success, receiptMessageId in
+                    let proceedWithCompletion: (Bool, EngineMessage.Id?) -> Void = { success, receiptMessageId in
                         guard let strongSelf = self else {
                             return
                         }
@@ -1324,12 +1339,12 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 let alertText: String
                 if requiresBiometrics {
                     if let biometricAuthentication = LocalAuth.biometricAuthentication, case .faceId = biometricAuthentication {
-                        alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndFaceId(durationString).0
+                        alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndFaceId(durationString).string
                     } else {
-                        alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndTouchId(durationString).0
+                        alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeoutAndTouchId(durationString).string
                     }
                 } else {
-                    alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeout(durationString).0
+                    alertText = strongSelf.presentationData.strings.Checkout_SavePasswordTimeout(durationString).string
                 }
                 
                 strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: alertText, actions: [
@@ -1340,7 +1355,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     }),
                     TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
                         if let strongSelf = self {
-                            let _ = cacheTwoStepPasswordToken(postbox: strongSelf.context.account.postbox, token: token).start()
+                            let _ = strongSelf.context.engine.auth.cacheTwoStepPasswordToken(token: token).start()
                             strongSelf.pay(savedCredentialsToken: token)
                         }
                     })

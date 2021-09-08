@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -89,13 +88,13 @@ private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChangePhoneNumberCodeControllerArguments
         switch self {
-            case let .codeEntry(theme, strings, title, text):
+            case let .codeEntry(_, _, title, text):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ChangePhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateEntryText(updatedText)
                 }, action: {
                     arguments.next()
                 })
-            case let .codeInfo(theme, text):
+            case let .codeInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -173,7 +172,7 @@ private func timeoutSignal(codeData: ChangeAccountPhoneNumberData) -> Signal<Int
     }
 }
 
-public protocol ChangePhoneNumberCodeController: class {
+public protocol ChangePhoneNumberCodeController: AnyObject {
     func applyCode(_ code: Int)
 }
 
@@ -230,7 +229,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
                     |> take(1)
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return Signal { subscriber in
-                            return requestNextChangeAccountPhoneNumberVerification(account: context.account, phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
+                            return context.engine.accountData.requestNextChangeAccountPhoneNumberVerification(phoneNumber: phoneNumber, phoneCodeHash: data.hash).start(next: { next in
                                 currentDataPromise?.set(.single(next))
                             }, error: { error in
                                 
@@ -254,7 +253,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
             }
         }
         if let code = code {
-            changePhoneDisposable.set((requestChangeAccountPhoneNumber(account: context.account, phoneNumber: phoneNumber, phoneCodeHash: codeData.hash, phoneCode: code) |> deliverOnMainQueue).start(error: { error in
+            changePhoneDisposable.set((context.engine.accountData.requestChangeAccountPhoneNumber(phoneNumber: phoneNumber, phoneCodeHash: codeData.hash, phoneCode: code) |> deliverOnMainQueue).start(error: { error in
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
@@ -277,6 +276,9 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
                 }
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+                
+                let _ = dismissServerProvidedSuggestion(account: context.account, suggestion: .validatePhoneNumber).start()
+                
                 dismissImpl?()
             }))
         }

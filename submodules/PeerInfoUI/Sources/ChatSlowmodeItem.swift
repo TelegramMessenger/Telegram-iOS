@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import TelegramPresentationData
 import LegacyComponents
@@ -252,7 +251,7 @@ class ChatSlowmodeItemNode: ListViewItemNode {
                         let _ = apply()
                     }
                     
-                    var textNodes: [(TextNode, CGSize)] = textLayoutAndApply.map { layout, apply -> (TextNode, CGSize) in
+                    let textNodes: [(TextNode, CGSize)] = textLayoutAndApply.map { layout, apply -> (TextNode, CGSize) in
                         let node = apply()
                         return (node, layout.size)
                     }

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import CoreLocation
 import MapKit
 import AccountContext
@@ -63,9 +62,20 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
     var options: [OpenInOption] = []
     switch item {
         case let .url(url):
-            options.append(OpenInOption(identifier: "safari", application: .safari, action: {
-                return .openUrl(url: url)
-            }))
+            var skipSafari = false
+            if url.contains("youtube.com/") || url.contains("youtu.be/") {
+                let updatedUrl = url.replacingOccurrences(of: "https://", with: "youtube://").replacingOccurrences(of: "http://", with: "youtube://")
+                options.append(OpenInOption(identifier: "youtube", application: .other(title: "YouTube", identifier: 544007664, scheme: "youtube", store: nil), action: {
+                    return .openUrl(url: updatedUrl)
+                }))
+                skipSafari = true
+            }
+            
+            if !skipSafari {
+                options.append(OpenInOption(identifier: "safari", application: .safari, action: {
+                    return .openUrl(url: url)
+                }))
+            }
 
             options.append(OpenInOption(identifier: "chrome", application: .other(title: "Chrome", identifier: 535886823, scheme: "googlechrome", store: nil), action: {
                 if let url = URL(string: url), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) {
@@ -238,6 +248,15 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                     return .openUrl(url: "yandexnavi://build_route_on_map?lat_to=\(lat)&lon_to=\(lon)")
                 }))
             }
+            
+            options.append(OpenInOption(identifier: "2gis", application: .other(title: "2GIS", identifier: 481627348, scheme: "dgis", store: nil), action: {
+                let coordinates = "\(lon),\(lat)"
+                if withDirections {
+                    return .openUrl(url: "dgis://2gis.ru/routeSearch/to/\(coordinates)/go")
+                } else {
+                    return .openUrl(url: "dgis://2gis.ru/geo/\(coordinates)")
+                }
+            }))
             
             options.append(OpenInOption(identifier: "moovit", application: .other(title: "Moovit", identifier: 498477945, scheme: "moovit", store: nil), action: {
                 if withDirections {

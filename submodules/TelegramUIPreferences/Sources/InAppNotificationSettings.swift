@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
-import SyncCore
+import TelegramCore
 
 public enum TotalUnreadCountDisplayStyle: Int32 {
     case filtered = 0
@@ -103,7 +103,7 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateInAppNotificationSettingsInteractively(accountManager: AccountManager, _ f: @escaping (InAppNotificationSettings) -> InAppNotificationSettings) -> Signal<Void, NoError> {
+public func updateInAppNotificationSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (InAppNotificationSettings) -> InAppNotificationSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings, { entry in
             let currentSettings: InAppNotificationSettings

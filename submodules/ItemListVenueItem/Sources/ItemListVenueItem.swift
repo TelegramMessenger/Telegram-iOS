@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import LocationResources
@@ -298,7 +297,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.topStripeNode.removeFromSupernode()
                             }
                             if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.addSubnode(strongSelf.bottomStripeNode)
+                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
                             }
                             if strongSelf.maskNode.supernode != nil {
                                 strongSelf.maskNode.removeFromSupernode()
@@ -457,7 +456,11 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
         self.item?.infoAction?()
     }
     
-    override public func header() -> ListViewItemHeader? {
-        return self.item?.header
+    override public func headers() -> [ListViewItemHeader]? {
+        if let item = self.item {
+            return item.header.flatMap { [$0] }
+        } else {
+            return nil
+        }
     }
 }

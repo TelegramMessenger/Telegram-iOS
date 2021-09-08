@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import FFMpegBinding
 
 private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
@@ -49,7 +48,10 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     fetchDisposable.dispose()
     
     if let fetchedData = fetchedData {
-        fetchedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        fetchedData.withUnsafeBytes { byteBuffer -> Void in
+            guard let bytes = byteBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                return
+            }
             memcpy(buffer, bytes, fetchedData.count)
         }
         let fetchedCount = Int32(fetchedData.count)

@@ -153,6 +153,7 @@ NSString *const kGPUImageCropFragmentShaderString =  SHADER_STRING
             cropTextureCoordinates[7] = minY;
         }; break;
         case kGPUImageFlipHorizonal: // Works for me
+        case kGPUImageRotate180FlipHorizontal:
         {
             cropTextureCoordinates[0] = maxX; // 1,0
             cropTextureCoordinates[1] = minY;

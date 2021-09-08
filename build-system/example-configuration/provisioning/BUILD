@@ -8,4 +8,5 @@ exports_files([
 	"WatchApp.mobileprovision",
 	"WatchExtension.mobileprovision",
 	"Widget.mobileprovision",
+	"BroadcastUpload.mobileprovision",
 ])

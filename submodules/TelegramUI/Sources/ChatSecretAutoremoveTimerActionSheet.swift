@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import UIKit
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
@@ -20,7 +19,6 @@ final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetControlle
     
     init(context: AccountContext, currentValue: Int32, availableValues: [Int32]? = nil, applyValue: @escaping (Int32) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let theme = presentationData.theme
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))

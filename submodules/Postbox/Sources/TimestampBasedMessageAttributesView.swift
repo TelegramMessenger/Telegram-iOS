@@ -7,6 +7,8 @@ final class MutableTimestampBasedMessageAttributesView {
     init(postbox: Postbox, tag: UInt16) {
         self.tag = tag
         self.head = postbox.timestampBasedMessageAttributesTable.head(tag: tag)
+
+        postboxLog("MutableTimestampBasedMessageAttributesView: tag: \(tag) head: \(String(describing: self.head))")
     }
     
     func replay(postbox: Postbox, operations: [TimestampBasedMessageAttributesOperation]) -> Bool {

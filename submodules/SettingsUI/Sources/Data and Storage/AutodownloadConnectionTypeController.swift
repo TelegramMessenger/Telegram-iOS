@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -145,31 +144,31 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! AutodownloadMediaConnectionTypeControllerArguments
         switch self {
-            case let .master(theme, text, value):
+            case let .master(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleMaster(value)
                 })
-            case let .dataUsageHeader(theme, text):
+            case let .dataUsageHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .dataUsageItem(theme, strings, value, customPosition, enabled):
                 return AutodownloadDataUsagePickerItem(theme: theme, strings: strings, value: value, customPosition: customPosition, enabled: enabled, sectionId: self.section, updated: { preset in
                     arguments.changePreset(preset)
                 })
-            case let .typesHeader(theme, text):
+            case let .typesHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .photos(theme, text, value, enabled):
+            case let .photos(_, text, value, enabled):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.photo)
                 })
-            case let .videos(theme, text, value, enabled):
+            case let .videos(_, text, value, enabled):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.video)
                 })
-            case let .files(theme, text, value, enabled):
+            case let .files(_, text, value, enabled):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.file)
                 })
-            case let .voiceMessagesInfo(theme, text):
+            case let .voiceMessagesInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -202,7 +201,7 @@ private func stringForAutomaticDownloadPeers(strings: PresentationStrings, decim
     
     if peers.contacts && peers.otherPrivate && peers.groups && peers.channels {
         if let size = size {
-            return strings.AutoDownloadSettings_UpToForAll(size).0
+            return strings.AutoDownloadSettings_UpToForAll(size).string
         } else {
             return strings.AutoDownloadSettings_OnForAll
         }
@@ -238,9 +237,9 @@ private func stringForAutomaticDownloadPeers(strings: PresentationStrings, decim
         }
         
         if let size = size {
-            return strings.AutoDownloadSettings_UpToFor(size, string).0
+            return strings.AutoDownloadSettings_UpToFor(size, string).string
         } else {
-            return strings.AutoDownloadSettings_OnFor(string).0
+            return strings.AutoDownloadSettings_OnFor(string).string
         }
     }
 }
@@ -279,7 +278,6 @@ private func autodownloadMediaConnectionTypeControllerEntries(presentationData: 
 
 func autodownloadMediaConnectionTypeController(context: AccountContext, connectionType: AutomaticDownloadConnectionType) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController) -> Void)?
     
     let arguments = AutodownloadMediaConnectionTypeControllerArguments(toggleMaster: { value in
         let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
@@ -356,9 +354,6 @@ func autodownloadMediaConnectionTypeController(context: AccountContext, connecti
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)
         }
-    }
-    presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }
     return controller
 }

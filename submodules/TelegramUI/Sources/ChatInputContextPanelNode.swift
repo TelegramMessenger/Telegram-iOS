@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
@@ -33,5 +32,9 @@ class ChatInputContextPanelNode: ASDisplayNode {
     
     func animateOut(completion: @escaping () -> Void) {
         completion()
+    }
+    
+    var topItemFrame: CGRect? {
+        return nil
     }
 }

@@ -28,36 +28,37 @@ private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQue
     }
 }
 
-private protocol BroadcastPartSource: class {
-    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable
+private enum BroadcastPartSubject {
+    case audio
+    case video(channelId: Int32, quality: OngoingGroupCallContext.VideoChannel.Quality)
+}
+
+private protocol BroadcastPartSource: AnyObject {
+    func requestTime(completion: @escaping (Int64) -> Void) -> Disposable
+    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, subject: BroadcastPartSubject, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable
 }
 
 private final class NetworkBroadcastPartSource: BroadcastPartSource {
     private let queue: Queue
-    private let account: Account
+    private let engine: TelegramEngine
     private let callId: Int64
     private let accessHash: Int64
     private var dataSource: AudioBroadcastDataSource?
-
-    #if DEBUG
-    private let debugDumpDirectory: TempBoxDirectory?
-    #endif
     
-    init(queue: Queue, account: Account, callId: Int64, accessHash: Int64) {
+    init(queue: Queue, engine: TelegramEngine, callId: Int64, accessHash: Int64) {
         self.queue = queue
-        self.account = account
+        self.engine = engine
         self.callId = callId
         self.accessHash = accessHash
-
-        #if DEBUG
-        self.debugDumpDirectory = nil
-        /*let debugDumpDirectory = TempBox.shared.tempDirectory()
-        self.debugDumpDirectory = debugDumpDirectory
-        print("Debug streaming dump path: \(debugDumpDirectory.path)")*/
-        #endif
     }
-    
-    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
+
+    func requestTime(completion: @escaping (Int64) -> Void) -> Disposable {
+        return engine.calls.serverTime().start(next: { result in
+            completion(result)
+        })
+    }
+
+    func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, subject: BroadcastPartSubject, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable {
         let timestampIdMilliseconds: Int64
         if timestampMilliseconds != 0 {
             timestampIdMilliseconds = timestampMilliseconds
@@ -69,11 +70,12 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         if let dataSourceValue = self.dataSource {
             dataSource = .single(dataSourceValue)
         } else {
-            dataSource = getAudioBroadcastDataSource(account: self.account, callId: self.callId, accessHash: self.accessHash)
+            dataSource = self.engine.calls.getAudioBroadcastDataSource(callId: self.callId, accessHash: self.accessHash)
         }
 
         let callId = self.callId
         let accessHash = self.accessHash
+        let engine = self.engine
         
         let queue = self.queue
         let signal = dataSource
@@ -81,18 +83,29 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         |> mapToSignal { [weak self] dataSource -> Signal<GetAudioBroadcastPartResult?, NoError> in
             if let dataSource = dataSource {
                 self?.dataSource = dataSource
-                return getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
-                |> map(Optional.init)
+                switch subject {
+                case .audio:
+                    return engine.calls.getAudioBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds)
+                    |> map(Optional.init)
+                case let .video(channelId, quality):
+                    let mappedQuality: Int32
+                    switch quality {
+                    case .thumbnail:
+                        mappedQuality = 0
+                    case .medium:
+                        mappedQuality = 1
+                    case .full:
+                        mappedQuality = 2
+                    }
+                    return engine.calls.getVideoBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds, channelId: channelId, quality: mappedQuality)
+                    |> map(Optional.init)
+                }
             } else {
                 return .single(nil)
                 |> delay(2.0, queue: queue)
             }
         }
         |> deliverOn(self.queue)
-
-        #if DEBUG
-        let debugDumpDirectory = self.debugDumpDirectory
-        #endif
             
         return signal.start(next: { result in
             guard let result = result else {
@@ -102,12 +115,6 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             let part: OngoingGroupCallBroadcastPart
             switch result.status {
             case let .data(dataValue):
-                #if DEBUG
-                if let debugDumpDirectory = debugDumpDirectory {
-                    let _ = try? dataValue.write(to: URL(fileURLWithPath: debugDumpDirectory.path + "/" + "\(timestampIdMilliseconds).ogg"))
-                }
-                #endif
-
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
             case .notReady:
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
@@ -137,12 +144,12 @@ private final class OngoingGroupCallBroadcastPartTaskImpl : NSObject, OngoingGro
 
 public final class OngoingGroupCallContext {
     public struct AudioStreamData {
-        public var account: Account
+        public var engine: TelegramEngine
         public var callId: Int64
         public var accessHash: Int64
         
-        public init(account: Account, callId: Int64, accessHash: Int64) {
-            self.account = account
+        public init(engine: TelegramEngine, callId: Int64, accessHash: Int64) {
+            self.engine = engine
             self.callId = callId
             self.accessHash = accessHash
         }
@@ -154,6 +161,12 @@ public final class OngoingGroupCallContext {
         case broadcast
     }
     
+    public enum VideoContentType {
+        case none
+        case generic
+        case screencast
+    }
+    
     public struct NetworkState: Equatable {
         public var isConnected: Bool
         public var isTransitioningFromBroadcastToRtc: Bool
@@ -162,6 +175,177 @@ public final class OngoingGroupCallContext {
     public enum AudioLevelKey: Hashable {
         case local
         case source(UInt32)
+    }
+
+    public struct MediaChannelDescription {
+        public enum Kind {
+            case audio
+            case video
+        }
+
+        public var kind: Kind
+        public var audioSsrc: UInt32
+        public var videoDescription: String?
+
+        public init(kind: Kind, audioSsrc: UInt32, videoDescription: String?) {
+            self.kind = kind
+            self.audioSsrc = audioSsrc
+            self.videoDescription = videoDescription
+        }
+    }
+
+    public struct VideoChannel: Equatable {
+        public enum Quality {
+            case thumbnail
+            case medium
+            case full
+        }
+
+        public struct SsrcGroup: Equatable {
+            public var semantics: String
+            public var ssrcs: [UInt32]
+
+            public init(semantics: String, ssrcs: [UInt32]) {
+                self.semantics = semantics
+                self.ssrcs = ssrcs
+            }
+        }
+
+        public var audioSsrc: UInt32
+        public var endpointId: String
+        public var ssrcGroups: [SsrcGroup]
+        public var minQuality: Quality
+        public var maxQuality: Quality
+
+        public init(audioSsrc: UInt32, endpointId: String, ssrcGroups: [SsrcGroup], minQuality: Quality, maxQuality: Quality) {
+            self.audioSsrc = audioSsrc
+            self.endpointId = endpointId
+            self.ssrcGroups = ssrcGroups
+            self.minQuality = minQuality
+            self.maxQuality = maxQuality
+        }
+    }
+
+    public final class VideoFrameData {
+        public final class NativeBuffer {
+            public let pixelBuffer: CVPixelBuffer
+
+            init(pixelBuffer: CVPixelBuffer) {
+                self.pixelBuffer = pixelBuffer
+            }
+        }
+
+        public final class NV12Buffer {
+            private let wrapped: CallVideoFrameNV12Buffer
+
+            public var width: Int {
+                return Int(self.wrapped.width)
+            }
+
+            public var height: Int {
+                return Int(self.wrapped.height)
+            }
+
+            public var y: Data {
+                return self.wrapped.y
+            }
+
+            public var strideY: Int {
+                return Int(self.wrapped.strideY)
+            }
+
+            public var uv: Data {
+                return self.wrapped.uv
+            }
+
+            public var strideUV: Int {
+                return Int(self.wrapped.strideUV)
+            }
+
+            init(wrapped: CallVideoFrameNV12Buffer) {
+                self.wrapped = wrapped
+            }
+        }
+
+        public final class I420Buffer {
+            private let wrapped: CallVideoFrameI420Buffer
+
+            public var width: Int {
+                return Int(self.wrapped.width)
+            }
+
+            public var height: Int {
+                return Int(self.wrapped.height)
+            }
+
+            public var y: Data {
+                return self.wrapped.y
+            }
+
+            public var strideY: Int {
+                return Int(self.wrapped.strideY)
+            }
+
+            public var u: Data {
+                return self.wrapped.u
+            }
+
+            public var strideU: Int {
+                return Int(self.wrapped.strideU)
+            }
+
+            public var v: Data {
+                return self.wrapped.v
+            }
+
+            public var strideV: Int {
+                return Int(self.wrapped.strideV)
+            }
+
+            init(wrapped: CallVideoFrameI420Buffer) {
+                self.wrapped = wrapped
+            }
+        }
+
+        public enum Buffer {
+            case native(NativeBuffer)
+            case nv12(NV12Buffer)
+            case i420(I420Buffer)
+        }
+
+        public let buffer: Buffer
+        public let width: Int
+        public let height: Int
+        public let orientation: OngoingCallVideoOrientation
+        public let mirrorHorizontally: Bool
+        public let mirrorVertically: Bool
+
+        init(frameData: CallVideoFrameData) {
+            if let nativeBuffer = frameData.buffer as? CallVideoFrameNativePixelBuffer {
+                self.buffer = .native(NativeBuffer(pixelBuffer: nativeBuffer.pixelBuffer))
+            } else if let nv12Buffer = frameData.buffer as? CallVideoFrameNV12Buffer {
+                self.buffer = .nv12(NV12Buffer(wrapped: nv12Buffer))
+            } else if let i420Buffer = frameData.buffer as? CallVideoFrameI420Buffer {
+                self.buffer = .i420(I420Buffer(wrapped: i420Buffer))
+            } else {
+                preconditionFailure()
+            }
+
+            self.width = Int(frameData.width)
+            self.height = Int(frameData.height)
+            self.orientation = OngoingCallVideoOrientation(frameData.orientation)
+            self.mirrorHorizontally = frameData.mirrorHorizontally
+            self.mirrorVertically = frameData.mirrorVertically
+        }
+    }
+
+    public struct Stats {
+        public struct IncomingVideoStats {
+            public var receivingQuality: Int
+            public var availableQuality: Int
+        }
+
+        public var incomingVideoStats: [String: IncomingVideoStats]
     }
     
     private final class Impl {
@@ -175,25 +359,34 @@ public final class OngoingGroupCallContext {
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
         let isNoiseSuppressionEnabled = ValuePromise<Bool>(true, ignoreRepeated: true)
         let audioLevels = ValuePipe<[(AudioLevelKey, Float, Bool)]>()
-        
-        let videoSources = ValuePromise<Set<UInt32>>(Set(), ignoreRepeated: true)
+
+        private var currentRequestedVideoChannels: [VideoChannel] = []
         
         private var broadcastPartsSource: BroadcastPartSource?
         
-        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, enableVideo: Bool, enableNoiseSuppression: Bool) {
+        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
             
             if let audioStreamData = audioStreamData {
-                let broadcastPartsSource = NetworkBroadcastPartSource(queue: queue, account: audioStreamData.account, callId: audioStreamData.callId, accessHash: audioStreamData.accessHash)
+                let broadcastPartsSource = NetworkBroadcastPartSource(queue: queue, engine: audioStreamData.engine, callId: audioStreamData.callId, accessHash: audioStreamData.accessHash)
                 self.broadcastPartsSource = broadcastPartsSource
             }
             
             let broadcastPartsSource = self.broadcastPartsSource
             
-            let videoSources = self.videoSources
+            let _videoContentType: OngoingGroupCallVideoContentType
+            switch videoContentType {
+            case .generic:
+                _videoContentType = .generic
+            case .screencast:
+                _videoContentType = .screencast
+            case .none:
+                _videoContentType = .none
+            }
+
             self.context = GroupCallThreadLocalContext(
                 queue: ContextQueueImpl(queue: queue),
                 networkStateUpdated: { state in
@@ -205,25 +398,82 @@ public final class OngoingGroupCallContext {
                 inputDeviceId: inputDeviceId,
                 outputDeviceId: outputDeviceId,
                 videoCapturer: video?.impl,
-                incomingVideoSourcesUpdated: { ssrcs in
-                    videoSources.set(Set(ssrcs.map { $0.uint32Value }))
+                requestMediaChannelDescriptions: { ssrcs, completion in
+                    final class OngoingGroupCallMediaChannelDescriptionTaskImpl : NSObject, OngoingGroupCallMediaChannelDescriptionTask {
+                        private let disposable: Disposable
+
+                        init(disposable: Disposable) {
+                            self.disposable = disposable
+                        }
+
+                        func cancel() {
+                            self.disposable.dispose()
+                        }
+                    }
+
+                    let disposable = requestMediaChannelDescriptions(Set(ssrcs.map { $0.uint32Value }), { channels in
+                        completion(channels.map { channel -> OngoingGroupCallMediaChannelDescription in
+                            let mappedType: OngoingGroupCallMediaChannelType
+                            switch channel.kind {
+                            case .audio:
+                                mappedType = .audio
+                            case .video:
+                                mappedType = .video
+                            }
+                            return OngoingGroupCallMediaChannelDescription(
+                                type: mappedType,
+                                audioSsrc: channel.audioSsrc,
+                                videoDescription: channel.videoDescription
+                            )
+                        })
+                    })
+
+                    return OngoingGroupCallMediaChannelDescriptionTaskImpl(disposable: disposable)
                 },
-                participantDescriptionsRequired: { ssrcs in
-                    participantDescriptionsRequired(Set(ssrcs.map { $0.uint32Value }))
+                requestCurrentTime: { completion in
+                    let disposable = MetaDisposable()
+
+                    queue.async {
+                        disposable.set(broadcastPartsSource?.requestTime(completion: completion))
+                    }
+
+                    return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
                 },
-                requestBroadcastPart: { timestampMilliseconds, durationMilliseconds, completion in
+                requestAudioBroadcastPart: { timestampMilliseconds, durationMilliseconds, completion in
                     let disposable = MetaDisposable()
                     
                     queue.async {
-                        disposable.set(broadcastPartsSource?.requestPart(timestampMilliseconds: timestampMilliseconds, durationMilliseconds: durationMilliseconds, completion: completion, rejoinNeeded: {
+                        disposable.set(broadcastPartsSource?.requestPart(timestampMilliseconds: timestampMilliseconds, durationMilliseconds: durationMilliseconds, subject: .audio, completion: completion, rejoinNeeded: {
                             rejoinNeeded()
                         }))
                     }
                     
                     return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
                 },
+                requestVideoBroadcastPart: { timestampMilliseconds, durationMilliseconds, channelId, quality, completion in
+                    let disposable = MetaDisposable()
+
+                    queue.async {
+                        let mappedQuality: OngoingGroupCallContext.VideoChannel.Quality
+                        switch quality {
+                        case .thumbnail:
+                            mappedQuality = .thumbnail
+                        case .medium:
+                            mappedQuality = .medium
+                        case .full:
+                            mappedQuality = .full
+                        @unknown default:
+                            mappedQuality = .thumbnail
+                        }
+                        disposable.set(broadcastPartsSource?.requestPart(timestampMilliseconds: timestampMilliseconds, durationMilliseconds: durationMilliseconds, subject: .video(channelId: channelId, quality: mappedQuality), completion: completion, rejoinNeeded: {
+                            rejoinNeeded()
+                        }))
+                    }
+
+                    return OngoingGroupCallBroadcastPartTaskImpl(disposable: disposable)
+                },
                 outgoingAudioBitrateKbit: outgoingAudioBitrateKbit ?? 32,
-                enableVideo: enableVideo,
+                videoContentType: _videoContentType,
                 enableNoiseSuppression: enableNoiseSuppression
             )
             
@@ -271,10 +521,8 @@ public final class OngoingGroupCallContext {
         deinit {
         }
         
-        func setJoinResponse(payload: String, participants: [(UInt32, String?)]) {
-            self.context.setJoinResponsePayload(payload, participants: participants.map { participant -> OngoingGroupCallParticipantDescription in
-                return OngoingGroupCallParticipantDescription(audioSsrc: participant.0, jsonParams: participant.1)
-            })
+        func setJoinResponse(payload: String) {
+            self.context.setJoinResponsePayload(payload)
         }
         
         func addSsrcs(ssrcs: [UInt32]) {
@@ -288,22 +536,51 @@ public final class OngoingGroupCallContext {
                 return ssrc as NSNumber
             })
         }
+
+        func removeIncomingVideoSource(_ ssrc: UInt32) {
+            self.context.removeIncomingVideoSource(ssrc)
+        }
         
         func setVolume(ssrc: UInt32, volume: Double) {
             self.context.setVolumeForSsrc(ssrc, volume: volume)
         }
-        
-        func setFullSizeVideoSsrc(ssrc: UInt32?) {
-            self.context.setFullSizeVideoSsrc(ssrc ?? 0)
-        }
-        
-        func addParticipants(participants: [(UInt32, String?)]) {
-            if participants.isEmpty {
-                return
+
+        func setRequestedVideoChannels(_ channels: [VideoChannel]) {
+            if self.currentRequestedVideoChannels != channels {
+                self.currentRequestedVideoChannels = channels
+
+                self.context.setRequestedVideoChannels(channels.map { channel -> OngoingGroupCallRequestedVideoChannel in
+                    let mappedMinQuality: OngoingGroupCallRequestedVideoQuality
+                    switch channel.minQuality {
+                    case .thumbnail:
+                        mappedMinQuality = .thumbnail
+                    case .medium:
+                        mappedMinQuality = .medium
+                    case .full:
+                        mappedMinQuality = .full
+                    }
+                    let mappedMaxQuality: OngoingGroupCallRequestedVideoQuality
+                    switch channel.maxQuality {
+                    case .thumbnail:
+                        mappedMaxQuality = .thumbnail
+                    case .medium:
+                        mappedMaxQuality = .medium
+                    case .full:
+                        mappedMaxQuality = .full
+                    }
+                    return OngoingGroupCallRequestedVideoChannel(
+                        audioSsrc: channel.audioSsrc,
+                        endpointId: channel.endpointId,
+                        ssrcGroups: channel.ssrcGroups.map { group in
+                            return OngoingGroupCallSsrcGroup(
+                                semantics: group.semantics,
+                                ssrcs: group.ssrcs.map { $0 as NSNumber })
+                        },
+                        minQuality: mappedMinQuality,
+                        maxQuality: mappedMaxQuality
+                    )
+                })
             }
-            self.context.addParticipants(participants.map { participant -> OngoingGroupCallParticipantDescription in
-                return OngoingGroupCallParticipantDescription(audioSsrc: participant.0, jsonParams: participant.1)
-            })
         }
         
         func stop() {
@@ -379,77 +656,157 @@ public final class OngoingGroupCallContext {
             self.context.switchAudioOutput(deviceId)
         }
         
-        func makeIncomingVideoView(source: UInt32, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
-            self.context.makeIncomingVideoView(withSsrc: source, completion: { view in
-                if let view = view {
+        func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
+            self.context.makeIncomingVideoView(withEndpointId: endpointId, requestClone: requestClone, completion: { mainView, cloneView in
+                if let mainView = mainView {
                     #if os(iOS)
-                    completion(OngoingCallContextPresentationCallVideoView(
-                        view: view,
-                        setOnFirstFrameReceived: { [weak view] f in
-                            view?.setOnFirstFrameReceived(f)
+                    let mainVideoView = OngoingCallContextPresentationCallVideoView(
+                        view: mainView,
+                        setOnFirstFrameReceived: { [weak mainView] f in
+                            mainView?.setOnFirstFrameReceived(f)
                         },
-                        getOrientation: { [weak view] in
-                            if let view = view {
-                                return OngoingCallVideoOrientation(view.orientation)
+                        getOrientation: { [weak mainView] in
+                            if let mainView = mainView {
+                                return OngoingCallVideoOrientation(mainView.orientation)
                             } else {
                                 return .rotation0
                             }
                         },
-                        getAspect: { [weak view] in
-                            if let view = view {
-                                return view.aspect
+                        getAspect: { [weak mainView] in
+                            if let mainView = mainView {
+                                return mainView.aspect
                             } else {
                                 return 0.0
                             }
                         },
-                        setOnOrientationUpdated: { [weak view] f in
-                            view?.setOnOrientationUpdated { value, aspect in
+                        setOnOrientationUpdated: { [weak mainView] f in
+                            mainView?.setOnOrientationUpdated { value, aspect in
                                 f?(OngoingCallVideoOrientation(value), aspect)
                             }
                         },
-                        setOnIsMirroredUpdated: { [weak view] f in
-                            view?.setOnIsMirroredUpdated { value in
+                        setOnIsMirroredUpdated: { [weak mainView] f in
+                            mainView?.setOnIsMirroredUpdated { value in
                                 f?(value)
                             }
+                        },
+                        updateIsEnabled: { [weak mainView] value in
+                            mainView?.updateIsEnabled(value)
                         }
-                    ))
+                    )
+                    var cloneVideoView: OngoingCallContextPresentationCallVideoView?
+                    if let cloneView = cloneView {
+                        cloneVideoView = OngoingCallContextPresentationCallVideoView(
+                            view: cloneView,
+                            setOnFirstFrameReceived: { [weak cloneView] f in
+                                cloneView?.setOnFirstFrameReceived(f)
+                            },
+                            getOrientation: { [weak cloneView] in
+                                if let cloneView = cloneView {
+                                    return OngoingCallVideoOrientation(cloneView.orientation)
+                                } else {
+                                    return .rotation0
+                                }
+                            },
+                            getAspect: { [weak cloneView] in
+                                if let cloneView = cloneView {
+                                    return cloneView.aspect
+                                } else {
+                                    return 0.0
+                                }
+                            },
+                            setOnOrientationUpdated: { [weak cloneView] f in
+                                cloneView?.setOnOrientationUpdated { value, aspect in
+                                    f?(OngoingCallVideoOrientation(value), aspect)
+                                }
+                            },
+                            setOnIsMirroredUpdated: { [weak cloneView] f in
+                                cloneView?.setOnIsMirroredUpdated { value in
+                                    f?(value)
+                                }
+                            },
+                            updateIsEnabled: { [weak cloneView] value in
+                                cloneView?.updateIsEnabled(value)
+                            }
+                        )
+                    }
+                    completion(mainVideoView, cloneVideoView)
                     #else
-                    completion(OngoingCallContextPresentationCallVideoView(
-                        view: view,
-                        setOnFirstFrameReceived: { [weak view] f in
-                            view?.setOnFirstFrameReceived(f)
+                    let mainVideoView = OngoingCallContextPresentationCallVideoView(
+                        view: mainView,
+                        setOnFirstFrameReceived: { [weak mainView] f in
+                            mainView?.setOnFirstFrameReceived(f)
                         },
-                        getOrientation: { [weak view] in
-                            if let view = view {
-                                return OngoingCallVideoOrientation(view.orientation)
+                        getOrientation: { [weak mainView] in
+                            if let mainView = mainView {
+                                return OngoingCallVideoOrientation(mainView.orientation)
                             } else {
                                 return .rotation0
                             }
                         },
-                        getAspect: { [weak view] in
-                            if let view = view {
-                                return view.aspect
+                        getAspect: { [weak mainView] in
+                            if let mainView = mainView {
+                                return mainView.aspect
                             } else {
                                 return 0.0
                             }
                         },
-                        setOnOrientationUpdated: { [weak view] f in
-                            view?.setOnOrientationUpdated { value, aspect in
+                        setOnOrientationUpdated: { [weak mainView] f in
+                            mainView?.setOnOrientationUpdated { value, aspect in
                                 f?(OngoingCallVideoOrientation(value), aspect)
                             }
-                        }, setVideoContentMode: { [weak view] mode in
-                            view?.setVideoContentMode(mode)
+                        }, setVideoContentMode: { [weak mainView] mode in
+                            mainView?.setVideoContentMode(mode)
                         },
-                        setOnIsMirroredUpdated: { [weak view] f in
-                            view?.setOnIsMirroredUpdated { value in
+                        setOnIsMirroredUpdated: { [weak mainView] f in
+                            mainView?.setOnIsMirroredUpdated { value in
                                 f?(value)
                             }
+                        }, setIsPaused: { [weak mainView] paused in
+                            mainView?.setIsPaused(paused)
+                        }, renderToSize: { [weak mainView] size, animated in
+                            mainView?.render(to: size, animated: animated)
                         }
-                    ))
+                    )
+                    completion(mainVideoView, nil)
                     #endif
                 } else {
-                    completion(nil)
+                    completion(nil, nil)
                 }
+            })
+        }
+
+        func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
+            let queue = self.queue
+            return Signal { [weak self] subscriber in
+                let disposable = MetaDisposable()
+
+                queue.async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let innerDisposable = strongSelf.context.addVideoOutput(withEndpointId: endpointId) { videoFrameData in
+                        subscriber.putNext(OngoingGroupCallContext.VideoFrameData(frameData: videoFrameData))
+                    }
+                    disposable.set(ActionDisposable {
+                        innerDisposable.dispose()
+                    })
+                }
+
+                return disposable
+            }
+        }
+
+        func addExternalAudioData(data: Data) {
+            self.context.addExternalAudioData(data)
+        }
+
+        func getStats(completion: @escaping (Stats) -> Void) {
+            self.context.getStats({ stats in
+                var incomingVideoStats: [String: Stats.IncomingVideoStats] = [:]
+                for (key, value) in stats.incomingVideoStats {
+                    incomingVideoStats[key] = Stats.IncomingVideoStats(receivingQuality: Int(value.receivingQuality), availableQuality: Int(value.availableQuality))
+                }
+                completion(Stats(incomingVideoStats: incomingVideoStats))
             })
         }
     }
@@ -517,22 +874,10 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public var videoSources: Signal<Set<UInt32>, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            self.impl.with { impl in
-                disposable.set(impl.videoSources.get().start(next: { value in
-                    subscriber.putNext(value)
-                }))
-            }
-            return disposable
-        }
-    }
-    
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, participantDescriptionsRequired: @escaping (Set<UInt32>) -> Void, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, enableVideo: Bool, enableNoiseSuppression: Bool) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, audioStreamData: AudioStreamData?, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, participantDescriptionsRequired: participantDescriptionsRequired, audioStreamData: audioStreamData, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, enableVideo: enableVideo, enableNoiseSuppression: enableNoiseSuppression)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, video: video, requestMediaChannelDescriptions: requestMediaChannelDescriptions, audioStreamData: audioStreamData, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: videoContentType, enableNoiseSuppression: enableNoiseSuppression)
         })
     }
     
@@ -576,9 +921,9 @@ public final class OngoingGroupCallContext {
             impl.switchAudioOutput(deviceId)
         }
     }
-    public func setJoinResponse(payload: String, participants: [(UInt32, String?)]) {
+    public func setJoinResponse(payload: String) {
         self.impl.with { impl in
-            impl.setJoinResponse(payload: payload, participants: participants)
+            impl.setJoinResponse(payload: payload)
         }
     }
     
@@ -593,22 +938,22 @@ public final class OngoingGroupCallContext {
             impl.removeSsrcs(ssrcs: ssrcs)
         }
     }
+
+    public func removeIncomingVideoSource(_ ssrc: UInt32) {
+        self.impl.with { impl in
+            impl.removeIncomingVideoSource(ssrc)
+        }
+    }
     
     public func setVolume(ssrc: UInt32, volume: Double) {
         self.impl.with { impl in
             impl.setVolume(ssrc: ssrc, volume: volume)
         }
     }
-    
-    public func setFullSizeVideoSsrc(ssrc: UInt32?) {
+
+    public func setRequestedVideoChannels(_ channels: [VideoChannel]) {
         self.impl.with { impl in
-            impl.setFullSizeVideoSsrc(ssrc: ssrc)
-        }
-    }
-    
-    public func addParticipants(participants: [(UInt32, String?)]) {
-        self.impl.with { impl in
-            impl.addParticipants(participants: participants)
+            impl.setRequestedVideoChannels(channels)
         }
     }
     
@@ -618,9 +963,33 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public func makeIncomingVideoView(source: UInt32, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
+    public func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
         self.impl.with { impl in
-            impl.makeIncomingVideoView(source: source, completion: completion)
+            impl.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: completion)
+        }
+    }
+
+    public func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.video(endpointId: endpointId).start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+
+    public func addExternalAudioData(data: Data) {
+        self.impl.with { impl in
+            impl.addExternalAudioData(data: data)
+        }
+    }
+
+    public func getStats(completion: @escaping (Stats) -> Void) {
+        self.impl.with { impl in
+            impl.getStats(completion: completion)
         }
     }
 }

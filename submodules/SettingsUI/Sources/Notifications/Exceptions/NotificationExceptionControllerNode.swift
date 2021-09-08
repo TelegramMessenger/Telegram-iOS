@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -344,7 +343,7 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
                             
                             let dateString = formatter.string(from: Date(timeIntervalSince1970: Double(until)))
                             
-                            title = presentationData.strings.Notification_Exceptions_MutedUntil(dateString).0
+                            title = presentationData.strings.Notification_Exceptions_MutedUntil(dateString).string
                         } else {
                             muted = true
                             title = presentationData.strings.Notification_Exceptions_AlwaysOff
@@ -363,7 +362,7 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
                         break
                     default:
                         let soundName = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: value.settings.messageSound)
-                        title += (title.isEmpty ? presentationData.strings.Notification_Exceptions_Sound(soundName).0 : ", \(presentationData.strings.Notification_Exceptions_Sound(soundName).0)")
+                        title += (title.isEmpty ? presentationData.strings.Notification_Exceptions_Sound(soundName).string : ", \(presentationData.strings.Notification_Exceptions_Sound(soundName).string)")
                 }
                 switch value.settings.displayPreviews {
                     case .default:
@@ -530,7 +529,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: icon, title: strings.Notification_Exceptions_AddException, alwaysPlain: true, sectionId: self.section, editing: editing, action: {
                     arguments.selectPeer()
                 })
-            case let .peer(_, peer, theme, strings, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing, isSearching):
+            case let .peer(_, peer, _, _, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing, isSearching):
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(value, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -543,7 +542,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 })
-            case let .removeAll(theme, strings):
+            case let .removeAll(_, strings):
                 return ItemListActionItem(presentationData: presentationData, title: strings.Notification_Exceptions_DeleteAll, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.removeAll()
                 })
@@ -717,7 +716,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         self.listNode = ListView()
         self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()
@@ -780,16 +779,16 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         let presentationData = context.sharedContext.currentPresentationData.modify {$0}
         
         let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
-            return updatePeerNotificationSoundInteractive(account: context.account, peerId: peerId, sound: sound) |> deliverOnMainQueue
+            return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
         }
         
-        let updatePeerNotificationInterval:(PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
-            return updatePeerMuteSetting(account: context.account, peerId: peerId, muteInterval: muteInterval) |> deliverOnMainQueue
+        let updatePeerNotificationInterval: (PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
+            return context.engine.peers.updatePeerMuteSetting(peerId: peerId, muteInterval: muteInterval) |> deliverOnMainQueue
         }
         
         let updatePeerDisplayPreviews:(PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = {
             peerId, displayPreviews in
-            return updatePeerDisplayPreviewsSetting(account: context.account, peerId: peerId, displayPreviews: displayPreviews) |> deliverOnMainQueue
+            return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, displayPreviews: displayPreviews) |> deliverOnMainQueue
         }
         
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -842,13 +841,11 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                         updateNotificationsView({})
                     })
                 }, removePeerFromExceptions: {
-                    let _ = (context.account.postbox.transaction { transaction -> Peer? in
-                        updatePeerMuteSetting(transaction: transaction, peerId: peerId, muteInterval: nil)
-                        updatePeerDisplayPreviewsSetting(transaction: transaction, peerId: peerId, displayPreviews: .default)
-                        updatePeerNotificationSoundInteractive(transaction: transaction, peerId: peerId, sound: .default)
+                    let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: [peerId])
+                    |> map { _ -> Peer? in }
+                    |> then(context.account.postbox.transaction { transaction -> Peer? in
                         return transaction.getPeer(peerId)
-                    }
-                    |> deliverOnMainQueue).start(next: { peer in
+                    })).start(next: { peer in
                         guard let peer = peer else {
                             return
                         }
@@ -917,11 +914,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 updateState { value in
                     return value.withUpdatedPeerMuteInterval(peer, nil).withUpdatedPeerSound(peer, .default).withUpdatedPeerDisplayPreviews(peer, .default)
                 }
-                _ = (context.account.postbox.transaction { transaction in
-                    updatePeerNotificationSoundInteractive(transaction: transaction, peerId: peer.id, sound: .default)
-                    updatePeerMuteSetting(transaction: transaction, peerId: peer.id, muteInterval: nil)
-                    updatePeerDisplayPreviewsSetting(transaction: transaction, peerId: peer.id, displayPreviews: .default)
-                }
+                let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: [peer.id])
                 |> deliverOnMainQueue).start(completed: {
                     updateNotificationsView({})
                 })
@@ -953,13 +946,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                             }
                             return state
                         }
-                        let _ = (context.account.postbox.transaction { transaction -> Void in
-                            for value in values {
-                                updatePeerNotificationSoundInteractive(transaction: transaction, peerId: value.peer.id, sound: .default)
-                                updatePeerMuteSetting(transaction: transaction, peerId: value.peer.id, muteInterval: nil)
-                                updatePeerDisplayPreviewsSetting(transaction: transaction, peerId: value.peer.id, displayPreviews: .default)
-                            }
-                        }
+                        let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: values.map(\.peer.id))
                         |> deliverOnMainQueue).start(completed: {
                             updateNotificationsView({})
                         })
@@ -1177,7 +1164,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()
@@ -1279,7 +1266,7 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
             }
         })
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }

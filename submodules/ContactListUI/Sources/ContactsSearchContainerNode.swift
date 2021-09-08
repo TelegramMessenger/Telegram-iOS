@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
@@ -239,7 +238,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         self.listNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         self.listNode.isHidden = true
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()
@@ -269,7 +268,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                 if categories.contains(.global) {
                     foundRemoteContacts = .single(previousFoundRemoteContacts.with({ $0 }))
                     |> then(
-                        searchPeers(account: context.account, query: query)
+                        context.engine.peers.searchPeers(query: query)
                         |> map { ($0.0, $0.1) }
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     )
@@ -414,7 +413,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
             }
         }))
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }

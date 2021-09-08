@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ProgressNavigationButtonNode
@@ -90,7 +89,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
             }
         }
         
-        loadServerCountryCodes(accountManager: self.context.sharedContext.accountManager, network: self.context.account.network, completion: { [weak self] in
+        loadServerCountryCodes(accountManager: self.context.sharedContext.accountManager, engine: self.context.engine, completion: { [weak self] in
             if let strongSelf = self {
                 strongSelf.controllerNode.updateCountryCode()
             }
@@ -123,7 +122,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
         }
         if !number.isEmpty {
             self.inProgress = true
-            self.requestDisposable.set((requestChangeAccountPhoneNumberVerification(account: self.context.account, phoneNumber: self.controllerNode.currentNumber) |> deliverOnMainQueue).start(next: { [weak self] next in
+            self.requestDisposable.set((self.context.engine.accountData.requestChangeAccountPhoneNumberVerification(phoneNumber: self.controllerNode.currentNumber) |> deliverOnMainQueue).start(next: { [weak self] next in
                 if let strongSelf = self {
                     strongSelf.inProgress = false
                     (strongSelf.navigationController as? NavigationController)?.pushViewController(changePhoneNumberCodeController(context: strongSelf.context, phoneNumber: strongSelf.controllerNode.currentNumber, codeData: next))
@@ -144,7 +143,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
                             text = presentationData.strings.Login_InvalidPhoneError
                             actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneNumberOccupied:
-                            text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(phoneNumber)).0
+                            text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(phoneNumber)).string
                             actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneBanned:
                             text = presentationData.strings.Login_PhoneBannedError
@@ -160,7 +159,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
                                 let carrier = CTCarrier()
                                 let mnc = carrier.mobileNetworkCode ?? "none"
                                 
-                                strongSelf.presentEmailComposeController(address: "login@stel.com", subject: presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).0, body: presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).0)
+                                strongSelf.presentEmailComposeController(address: "login@stel.com", subject: presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).string, body: presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string)
                             }))
                         case .generic:
                             text = presentationData.strings.Login_UnknownError

@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -71,14 +70,14 @@ private enum ResetPasswordEntry: ItemListNodeEntry, Equatable {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ResetPasswordControllerArguments
         switch self {
-            case let .code(theme, strings, text, value):
+            case let .code(theme, _, text, value):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: text, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: "", type: .number, spacing: 10.0, tag: ResetPasswordEntryTag.code, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateCodeText(updatedText)
                 }, action: {
                 })
-            case let .codeInfo(theme, text):
+            case let .codeInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .helpInfo(theme, text):
+            case let .helpInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { action in
                     if case .tap = action {
                         arguments.openHelp()
@@ -100,10 +99,10 @@ private func resetPasswordControllerEntries(presentationData: PresentationData, 
     entries.append(.codeInfo(presentationData.theme, presentationData.strings.TwoStepAuth_RecoveryCodeHelp))
     
     let stringData = presentationData.strings.TwoStepAuth_RecoveryEmailUnavailable(pattern)
-    var string = stringData.0
-    if let (_, range) = stringData.1.first {
-        string.insert(contentsOf: "]()", at: string.index(string.startIndex, offsetBy: range.upperBound))
-        string.insert(contentsOf: "[", at: string.index(string.startIndex, offsetBy: range.lowerBound))
+    var string = stringData.string
+    if let range = stringData.ranges.first {
+        string.insert(contentsOf: "]()", at: string.index(string.startIndex, offsetBy: range.range.upperBound))
+        string.insert(contentsOf: "[", at: string.index(string.startIndex, offsetBy: range.range.lowerBound))
     }
     entries.append(.helpInfo(presentationData.theme, string))
     
@@ -115,7 +114,7 @@ public enum ResetPasswordState: Equatable {
     case pendingVerification(emailPattern: String)
 }
 
-public func resetPasswordController(context: AccountContext, emailPattern: String, completion: @escaping () -> Void) -> ViewController {
+public func resetPasswordController(context: AccountContext, emailPattern: String, completion: @escaping (Bool) -> Void) -> ViewController {
     let statePromise = ValuePromise(ResetPasswordControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ResetPasswordControllerState())
     let updateState: ((ResetPasswordControllerState) -> ResetPasswordControllerState) -> Void = { f in
@@ -138,7 +137,20 @@ public func resetPasswordController(context: AccountContext, emailPattern: Strin
         }
     }, openHelp: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.TwoStepAuth_RecoveryFailed, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+
+        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetTitle, text: presentationData.strings.TwoStepAuth_RecoveryEmailResetText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.TwoStepAuth_RecoveryUnavailableResetAction, action: {
+            let _ = (context.engine.auth.requestTwoStepPasswordReset()
+            |> deliverOnMainQueue).start(next: { result in
+                switch result {
+                case .done, .waitingForReset:
+                    completion(false)
+                case .declined:
+                    break
+                case .error:
+                    break
+                }
+            })
+        })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
     var initialFocusImpl: (() -> Void)?
@@ -166,7 +178,7 @@ public func resetPasswordController(context: AccountContext, emailPattern: Strin
                         state.checking = true
                         return state
                     }
-                    saveDisposable.set((recoverTwoStepVerificationPassword(network: context.account.network, code: state.code)
+                    saveDisposable.set((context.engine.auth.performPasswordRecovery(code: state.code, updatedPassword: .none)
                     |> deliverOnMainQueue).start(error: { error in
                         updateState { state in
                             var state = state
@@ -177,7 +189,7 @@ public func resetPasswordController(context: AccountContext, emailPattern: Strin
                         switch error {
                             case .invalidCode:
                                 text = presentationData.strings.TwoStepAuth_RecoveryCodeInvalid
-                            case .codeExpired:
+                            case .expired:
                                 text = presentationData.strings.TwoStepAuth_RecoveryCodeExpired
                             case .limitExceeded:
                                 text = presentationData.strings.TwoStepAuth_FloodError
@@ -187,7 +199,7 @@ public func resetPasswordController(context: AccountContext, emailPattern: Strin
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     }, completed: {
-                        completion()
+                        completion(true)
                     }))
                 }
             })

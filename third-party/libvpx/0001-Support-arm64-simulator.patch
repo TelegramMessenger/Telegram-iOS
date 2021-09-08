@@ -1,113 +1,59 @@
-From 012fe706a281cc5e9586dc0ad7b0c59baf84feb1 Mon Sep 17 00:00:00 2001
+From 75cd2d63c8f39466706fcf635ddffa4686968a33 Mon Sep 17 00:00:00 2001
 From: Ali <>
-Date: Wed, 30 Dec 2020 00:13:06 +0400
-Subject: [PATCH] Support arm64 simulator
+Date: Mon, 17 May 2021 02:17:45 +0400
+Subject: [PATCH] Support arm64 iOS simulator
 
 ---
- build/make/configure.sh | 73 ++++++++++++++++++++++++++++++++++++++++-
- configure               |  3 +-
- 2 files changed, 74 insertions(+), 2 deletions(-)
+ build/make/configure.sh | 18 ++++++++++++++----
+ configure               |  1 +
+ 2 files changed, 15 insertions(+), 4 deletions(-)
 
 diff --git a/build/make/configure.sh b/build/make/configure.sh
-index c4e938fc7..ccd7066a5 100644
+index 81d30a16c..eb15e4b07 100644
 --- a/build/make/configure.sh
 +++ b/build/make/configure.sh
-@@ -852,6 +852,14 @@ process_common_toolchain() {
-   # Handle darwin variants. Newer SDKs allow targeting older
-   # platforms, so use the newest one available.
-   case ${toolchain} in
-+    arm64-iphonesimulator*)
-+      add_cflags "-miphonesimulator-version-min=${IOS_VERSION_MIN}"
-+      iphonesimulator_sdk_dir="$(show_darwin_sdk_path iphonesimulator)"
-+      if [ -d "${iphonesimulator_sdk_dir}" ]; then
-+        add_cflags  "-isysroot ${iphonesimulator_sdk_dir}"
-+        add_ldflags "-isysroot ${iphonesimulator_sdk_dir}"
-+      fi
-+      ;;
-     arm*-darwin-*)
-       add_cflags "-miphoneos-version-min=${IOS_VERSION_MIN}"
-       iphoneos_sdk_dir="$(show_darwin_sdk_path iphoneos)"
-@@ -945,7 +953,7 @@ process_common_toolchain() {
- 
-   # Process ARM architecture variants
-   case ${toolchain} in
--    arm*)
-+    arm*|arm64-iphonesimulator-gcc)
-       # on arm, isa versions are supersets
-       case ${tgt_isa} in
-         arm64|armv8)
-@@ -1155,6 +1163,69 @@ EOF
-           asm_conversion_cmd="${source_path_mk}/build/make/ads2gas_apple.pl"
+@@ -1095,9 +1095,14 @@ EOF
+           soft_enable unit_tests
            ;;
  
-+        iphonesimulator*)
-+          if ! enabled external_build; then
-+            XCRUN_FIND="xcrun --sdk iphonesimulator --find"
-+            CXX="$(${XCRUN_FIND} clang++)"
-+            CC="$(${XCRUN_FIND} clang)"
-+            AR="$(${XCRUN_FIND} ar)"
-+            AS="$(${XCRUN_FIND} as)"
-+            STRIP="$(${XCRUN_FIND} strip)"
-+            NM="$(${XCRUN_FIND} nm)"
-+            RANLIB="$(${XCRUN_FIND} ranlib)"
-+            AS_SFX=.S
-+            LD="${CXX:-$(${XCRUN_FIND} ld)}"
-+
-+            # ASFLAGS is written here instead of using check_add_asflags
-+            # because we need to overwrite all of ASFLAGS and purge the
-+            # options that were put in above
-+            ASFLAGS="-arch ${tgt_isa} -g"
-+
-+            add_cflags -arch ${tgt_isa}
-+            add_ldflags -arch ${tgt_isa}
-+
-+            add_cflags --target=arm64-apple-ios7.0-simulator
-+            add_ldflags --target=arm64-apple-ios7.0-simulator
-+
-+            alt_libc="$(show_darwin_sdk_path iphonesimulator)"
-+            if [ -d "${alt_libc}" ]; then
-+              add_cflags -isysroot ${alt_libc}
+-        darwin)
++        darwin|iphonesimulator)
+           if ! enabled external_build; then
+-            XCRUN_FIND="xcrun --sdk iphoneos --find"
++            sdk_platform_name="iphoneos"
++            if [ "${tgt_os}" == "iphonesimulator" ]; then
++              sdk_platform_name="iphonesimulator"
 +            fi
 +
-+            if [ "${LD}" = "${CXX}" ]; then
-+              add_ldflags -miphonesimulator-version-min="${IOS_VERSION_MIN}"
-+            else
-+              add_ldflags -ios_version_min "${IOS_VERSION_MIN}"
++            XCRUN_FIND="xcrun --sdk $sdk_platform_name --find"
+             CXX="$(${XCRUN_FIND} clang++)"
+             CC="$(${XCRUN_FIND} clang)"
+             AR="$(${XCRUN_FIND} ar)"
+@@ -1116,7 +1121,12 @@ EOF
+             add_cflags -arch ${tgt_isa}
+             add_ldflags -arch ${tgt_isa}
+ 
+-            alt_libc="$(show_darwin_sdk_path iphoneos)"
++            if [ "${tgt_os}" == "iphonesimulator" ]; then
++              add_cflags --target=arm64-apple-ios7.0-simulator
++              add_ldflags --target=arm64-apple-ios7.0-simulator
 +            fi
 +
-+            for d in lib usr/lib usr/lib/system; do
-+              try_dir="${alt_libc}/${d}"
-+              [ -d "${try_dir}" ] && add_ldflags -L"${try_dir}"
-+            done
-+
-+            case ${tgt_isa} in
-+              armv7|armv7s|armv8|arm64)
-+                if enabled neon && ! check_xcode_minimum_version; then
-+                  soft_disable neon
-+                  log_echo "  neon disabled: upgrade Xcode (need v6.3+)."
-+                  if enabled neon_asm; then
-+                    soft_disable neon_asm
-+                    log_echo "  neon_asm disabled: upgrade Xcode (need v6.3+)."
-+                  fi
-+                fi
-+                ;;
-+            esac
-+
-+            if [ "$(show_darwin_sdk_major_version iphoneos)" -gt 8 ]; then
-+              check_add_cflags -fembed-bitcode
-+              check_add_asflags -fembed-bitcode
-+              check_add_ldflags -fembed-bitcode
-+            fi
-+          fi
-+
-+          asm_conversion_cmd="${source_path}/build/make/ads2gas_apple.pl"
-+          ;;
-+
-         linux*)
-           enable_feature linux
-           if enabled rvct; then
++            alt_libc="$(show_darwin_sdk_path $sdk_platform_name)"
+             if [ -d "${alt_libc}" ]; then
+               add_cflags -isysroot ${alt_libc}
+             fi
+@@ -1145,7 +1155,7 @@ EOF
+                 ;;
+             esac
+ 
+-            if [ "$(show_darwin_sdk_major_version iphoneos)" -gt 8 ]; then
++            if [ "$(show_darwin_sdk_major_version $sdk_platform_name)" -gt 8 ]; then
+               check_add_cflags -fembed-bitcode
+               check_add_asflags -fembed-bitcode
+               check_add_ldflags -fembed-bitcode
 diff --git a/configure b/configure
-index f7e11aaf2..af625ee35 100755
+index da631a45e..1c6042038 100755
 --- a/configure
 +++ b/configure
 @@ -100,6 +100,7 @@ EOF
@@ -118,15 +64,6 @@ index f7e11aaf2..af625ee35 100755
  all_platforms="${all_platforms} arm64-linux-gcc"
  all_platforms="${all_platforms} arm64-win64-gcc"
  all_platforms="${all_platforms} arm64-win64-vs15"
-@@ -735,7 +736,7 @@ process_toolchain() {
-             soft_enable libyuv
-             # GTestLog must be modified to use Android logging utilities.
-         ;;
--        *-darwin-*)
-+        *-darwin-*|arm64-iphonesimulator-*)
-             check_add_cxxflags -std=c++11
-             # iOS/ARM builds do not work with gtest. This does not match
-             # x86 targets.
 -- 
-2.24.3 (Apple Git-128)
+2.30.1 (Apple Git-130)
 

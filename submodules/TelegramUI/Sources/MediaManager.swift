@@ -4,7 +4,6 @@ import AVFoundation
 import MobileCoreServices
 import Postbox
 import TelegramCore
-import SyncCore
 import MediaPlayer
 import TelegramAudio
 import UniversalMediaPlayer
@@ -61,7 +60,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     private let queue = Queue.mainQueue()
     
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let inForeground: Signal<Bool, NoError>
     private let presentationData: Signal<PresentationData, NoError>
     
@@ -189,7 +188,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     public let galleryHiddenMediaManager: GalleryHiddenMediaManager = GalleryHiddenMediaManagerImpl()
     
-    init(accountManager: AccountManager, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>) {
+    init(accountManager: AccountManager<TelegramAccountManagerTypes>, inForeground: Signal<Bool, NoError>, presentationData: Signal<PresentationData, NoError>) {
         self.accountManager = accountManager
         self.inForeground = inForeground
         self.presentationData = presentationData
@@ -417,7 +416,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             if let (account, stateOrLoading, type) = accountStateAndType {
                 switch type {
                     case .music:
-                        minimumStoreDuration = 15.0 * 60.0
+                        minimumStoreDuration = 10.0 * 60.0
                     case .voice:
                         minimumStoreDuration = 5.0 * 60.0
                     case .file:

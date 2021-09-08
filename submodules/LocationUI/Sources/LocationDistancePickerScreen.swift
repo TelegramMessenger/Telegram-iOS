@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AccountContext
 import SolidRoundedButtonNode
@@ -91,7 +90,7 @@ final class LocationDistancePickerScreen: ViewController {
             self?.dismiss()
         }
         
-        self.controllerNode.update()
+        let _ = self.controllerNode.update()
     }
     
     override public func loadView() {
@@ -115,7 +114,7 @@ final class LocationDistancePickerScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
 
@@ -394,10 +393,10 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             let distance = self.usesMetricSystem ? "\(formattedValue) \(self.presentationData.strings.Location_ProximityNotification_DistanceKM)" : "\(formattedValue) \(self.presentationData.strings.Location_ProximityNotification_DistanceMI)"
             
-            let shortTitle = self.presentationData.strings.Location_ProximityNotification_Notify(distance).0
+            let shortTitle = self.presentationData.strings.Location_ProximityNotification_Notify(distance).string
             var longTitle: String?
             if let displayTitle = self.compactDisplayTitle, let (layout, _) = self.containerLayout {
-                let title = self.presentationData.strings.Location_ProximityNotification_NotifyLong(displayTitle, distance).0
+                let title = self.presentationData.strings.Location_ProximityNotification_NotifyLong(displayTitle, distance).string
                 let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
                 
                 self.measureButtonTitleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: .black)
@@ -408,7 +407,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             self.doneButton.title = longTitle ?? shortTitle
     
-            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Location_ProximityNotification_AlreadyClose(distance).0, font: Font.regular(14.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Location_ProximityNotification_AlreadyClose(distance).string, font: Font.regular(14.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
             if let (layout, navigationBarHeight) = self.containerLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
@@ -464,7 +463,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             pickerView.selectRow(1, inComponent: 1, animated: true)
         }
         self.updateDoneButtonTitle()
-        self.update()
+        let _ = self.update()
     }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
@@ -552,7 +551,12 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
         let offset = self.contentContainerNode.frame.height
-        self.wrappingScrollNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        let position = self.wrappingScrollNode.position
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+        self.wrappingScrollNode.position = CGPoint(x: position.x, y: position.y + offset)
+        transition.animateView({
+            self.wrappingScrollNode.position = position
+        })
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
@@ -597,7 +601,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        var hadValidLayout = self.containerLayout != nil
+        let hadValidLayout = self.containerLayout != nil
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.statusBar, .input])

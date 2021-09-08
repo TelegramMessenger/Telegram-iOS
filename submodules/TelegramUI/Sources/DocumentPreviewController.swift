@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import QuickLook
 import Display
 import TelegramPresentationData
@@ -40,7 +39,7 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
         
         super.init(nibName: nil, bundle: nil)
         
-        self.navigationBar.barTintColor = theme.rootController.navigationBar.backgroundColor
+        self.navigationBar.barTintColor = theme.rootController.navigationBar.opaqueBackgroundColor
         self.navigationBar.tintColor = theme.rootController.navigationBar.accentTextColor
         self.navigationBar.shadowImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
@@ -51,8 +50,7 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
         self.navigationBar.titleTextAttributes = [NSAttributedString.Key.font: Font.semibold(17.0), NSAttributedString.Key.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
         
         let controller = QLPreviewController(nibName: nil, bundle: nil)
-        controller.navigation_setDismiss({ [weak self] in
-            //self?.cancelPressed()
+        controller.navigation_setDismiss({
         }, rootController: self)
         controller.delegate = self
         controller.dataSource = self
@@ -127,26 +125,6 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
         self.delegate = self
         self.dataSource = self
         
-        /*self.navigationBar.barTintColor = theme.rootController.navigationBar.backgroundColor
-        self.navigationBar.tintColor = theme.rootController.navigationBar.accentTextColor
-        self.navigationBar.shadowImage = generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.rootController.navigationBar.separatorColor.cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: UIScreenPixel)))
-        })
-        self.navigationBar.isTranslucent = false
-        self.navigationBar.titleTextAttributes = [NSAttributedString.Key.font: Font.semibold(17.0), NSAttributedString.Key.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
-        controller.navigationItem.setLeftBarButton(UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
-        self.setViewControllers([controller], animated: false)*/
-        
-        var pathExtension: String?
-        if let fileName = self.file.fileName {
-            let pathExtensionCandidate = (fileName as NSString).pathExtension
-            if !pathExtensionCandidate.isEmpty {
-                pathExtension = pathExtensionCandidate
-            }
-        }
-        
         if let path = self.postbox.mediaBox.completedResourcePath(self.file.resource) {
             var updatedPath = path
             if let fileName = self.file.fileName {
@@ -201,9 +179,9 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
 func presentDocumentPreviewController(rootController: UIViewController, theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile) {
     if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
         let navigationBar = UINavigationBar.appearance(whenContainedInInstancesOf: [QLPreviewController.self])
-        navigationBar.barTintColor = theme.rootController.navigationBar.backgroundColor
+        navigationBar.barTintColor = theme.rootController.navigationBar.opaqueBackgroundColor
         navigationBar.setBackgroundImage(generateImage(CGSize(width: 1.0, height: 1.0), rotatedContext: { size, context in
-            context.setFillColor(theme.rootController.navigationBar.backgroundColor.cgColor)
+            context.setFillColor(theme.rootController.navigationBar.opaqueBackgroundColor.cgColor)
             context.fill(CGRect(origin: CGPoint(), size: size))
         }), for: .default)
         navigationBar.isTranslucent = true

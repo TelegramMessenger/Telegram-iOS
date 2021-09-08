@@ -52,6 +52,7 @@
     NSMutableSet *_processedMessageIdsSet;
     NSMutableArray *_scheduledMessageConfirmations;
     NSMutableDictionary *_containerMessagesMappingDict;
+    NSMutableSet *_sentMessageIdsSet;
 }
 
 @end
@@ -76,6 +77,7 @@
         _scheduledMessageConfirmations = [[NSMutableArray alloc] init];
         
         _processedMessageIdsSet = [[NSMutableSet alloc] init];
+        _sentMessageIdsSet = [[NSMutableSet alloc] init];
         _containerMessagesMappingDict = [[NSMutableDictionary alloc] init];
     }
     return self;
@@ -136,6 +138,14 @@
 - (void)setMessageProcessed:(int64_t)messageId
 {
     [_processedMessageIdsSet addObject:@(messageId)];
+}
+
+- (bool)wasMessageSentOnce:(int64_t)messageId {
+    return [_sentMessageIdsSet containsObject:@(messageId)];
+}
+
+- (void)setMessageWasSentOnce:(int64_t)messageId {
+    [_sentMessageIdsSet addObject:@(messageId)];
 }
 
 - (void)scheduleMessageConfirmation:(int64_t)messageId size:(NSInteger)size

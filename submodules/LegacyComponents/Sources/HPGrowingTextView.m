@@ -63,12 +63,6 @@ NSString *TGMentionBoldAttributeName = @"TGMentionBoldAttributeName";
 
 - (void)commonInitialiser
 {
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
-    {
-        [HPTextViewInternal addTextViewMethods];
-    });
-    
     CGRect frame = self.frame;
     frame.origin = CGPointZero;
     _internalTextView = [[HPTextViewInternal alloc] initWithKeyCommandController:_keyCommandController];

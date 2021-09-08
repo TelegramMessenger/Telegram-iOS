@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -37,32 +36,6 @@ private enum ChatRecentActionsFilterSection: Int32 {
 private enum ChatRecentActionsFilterEntryStableId: Hashable {
     case index(Int32)
     case peer(PeerId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .index(index):
-                return index.hashValue
-            case let .peer(peerId):
-                return peerId.hashValue
-        }
-    }
-    
-    static func ==(lhs: ChatRecentActionsFilterEntryStableId, rhs: ChatRecentActionsFilterEntryStableId) -> Bool {
-        switch lhs {
-            case let .index(index):
-                if case .index(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .peer(peerId):
-                if case .peer(peerId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
@@ -306,7 +279,7 @@ private func channelRecentActionsFilterControllerEntries(presentationData: Prese
             ([.editMessages], presentationData.strings.Channel_AdminLogFilter_EventsEditedMessages),
             ([.pinnedMessages], presentationData.strings.Channel_AdminLogFilter_EventsPinned),
             ([.leave], presentationData.strings.Channel_AdminLogFilter_EventsLeaving),
-            ([.calls], presentationData.strings.Channel_AdminLogFilter_EventsCalls)
+            ([.calls], presentationData.strings.Channel_AdminLogFilter_EventsLiveStreams)
         ]
     }
     
@@ -449,7 +422,7 @@ public func channelRecentActionsFilterController(context: AccountContext, peer: 
     
     adminsPromise.set(.single(nil))
     
-    let (membersDisposable, _) = context.peerChannelMemberCategoriesContextsManager.admins(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peer.id) { membersState in
+    let (membersDisposable, _) = context.peerChannelMemberCategoriesContextsManager.admins(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peer.id) { membersState in
         if case .loading = membersState.loadingState, membersState.list.isEmpty {
             adminsPromise.set(.single(nil))
         } else {

@@ -3,21 +3,25 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import AccountContext
+import TelegramUIPreferences
+import TelegramPresentationData
 
 public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public let containerNode: MediaNavigationAccessoryContainerNode
     
     public var close: (() -> Void)?
-    public var toggleRate: (() -> Void)?
+    public var setRate: ((AudioPlaybackRate) -> Void)?
     public var togglePlayPause: (() -> Void)?
     public var tapAction: (() -> Void)?
     public var playPrevious: (() -> Void)?
     public var playNext: (() -> Void)?
     
-    public init(context: AccountContext) {
-        self.containerNode = MediaNavigationAccessoryContainerNode(context: context)
+    public var getController: (() -> ViewController?)?
+    public var presentInGlobalOverlay: ((ViewController) -> Void)?
+    
+    public init(context: AccountContext, presentationData: PresentationData, displayBackground: Bool = false) {
+        self.containerNode = MediaNavigationAccessoryContainerNode(context: context, presentationData: presentationData, displayBackground: displayBackground)
         
         super.init()
         
@@ -28,8 +32,8 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
                 close()
             }
         }
-        self.containerNode.headerNode.toggleRate = { [weak self] in
-            self?.toggleRate?()
+        self.containerNode.headerNode.setRate = { [weak self] rate in
+            self?.setRate?(rate)
         }
         self.containerNode.headerNode.togglePlayPause = { [weak self] in
             if let strongSelf = self, let togglePlayPause = strongSelf.togglePlayPause {
@@ -51,6 +55,20 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
                 playNext()
             }
         }
+        
+        self.containerNode.headerNode.getController = { [weak self] in
+            if let strongSelf = self, let getController = strongSelf.getController {
+                return getController()
+            } else {
+                return nil
+            }
+        }
+        
+        self.containerNode.headerNode.presentInGlobalOverlay = { [weak self] c in
+            if let strongSelf = self, let presentInGlobalOverlay = strongSelf.presentInGlobalOverlay {
+                presentInGlobalOverlay(c)
+            }
+        }
     }
     
     public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -61,6 +79,9 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public func animateIn(transition: ContainedViewLayoutTransition) {
         self.clipsToBounds = true
         let contentPosition = self.containerNode.layer.position
+
+        self.containerNode.animateIn(transition: transition)
+        
         transition.animatePosition(node: self.containerNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), completion: { [weak self] _ in
             self?.clipsToBounds = false
         })
@@ -69,6 +90,9 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public func animateOut(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         self.clipsToBounds = true
         let contentPosition = self.containerNode.layer.position
+
+        self.containerNode.animateOut(transition: transition)
+
         transition.animatePosition(node: self.containerNode, to: CGPoint(x: contentPosition.x, y: contentPosition.y - 37.0), removeOnCompletion: false, completion: { [weak self] _ in
             self?.clipsToBounds = false
             completion()

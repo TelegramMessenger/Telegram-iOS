@@ -8,14 +8,15 @@ public enum ListViewItemHeaderStickDirection {
     case bottom
 }
 
-public typealias ListViewItemHeaderId = Int64
-
-public protocol ListViewItemHeader: class {
-    var id: ListViewItemHeaderId { get }
+public protocol ListViewItemHeader: AnyObject {
+    var id: ListViewItemNode.HeaderId { get }
     var stickDirection: ListViewItemHeaderStickDirection { get }
     var height: CGFloat { get }
+    var stickOverInsets: Bool { get }
+
+    func combinesWith(other: ListViewItemHeader) -> Bool
     
-    func node() -> ListViewItemHeaderNode
+    func node(synchronousLoad: Bool) -> ListViewItemHeaderNode
     func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?)
 }
 
@@ -26,6 +27,7 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     final private(set) var internalStickLocationDistanceFactor: CGFloat = 0.0
     final var internalStickLocationDistance: CGFloat = 0.0
     private var isFlashingOnScrolling = false
+    weak var attachedToItemNode: ListViewItemNode?
     
     var item: ListViewItemHeader?
     
@@ -113,6 +115,11 @@ open class ListViewItemHeaderNode: ASDisplayNode {
         self.alpha = 0.0
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
         self.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
+    }
+
+    open func animateAdded(duration: Double) {
+        self.layer.animateAlpha(from: 0.0, to: self.alpha, duration: 0.2)
+        self.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
     }
     
     private var cachedLayout: (CGSize, CGFloat, CGFloat)?

@@ -3,12 +3,15 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ChatTitleActivityNode
+
+private let constructiveColor: UIColor = UIColor(rgb: 0x34c759)
 
 final class VoiceChatTitleNode: ASDisplayNode {
     private var theme: PresentationTheme
     
     private let titleNode: ASTextNode
-    private let infoNode: ASTextNode
+    private let infoNode: ChatTitleActivityNode
     let recordingIconNode: VoiceChatRecordingIconNode
     
     public var isRecording: Bool = false {
@@ -28,11 +31,7 @@ final class VoiceChatTitleNode: ASDisplayNode {
         self.titleNode.truncationMode = .byTruncatingTail
         self.titleNode.isOpaque = false
         
-        self.infoNode = ASTextNode()
-        self.infoNode.displaysAsynchronously = false
-        self.infoNode.maximumNumberOfLines = 1
-        self.infoNode.truncationMode = .byTruncatingTail
-        self.infoNode.isOpaque = false
+        self.infoNode = ChatTitleActivityNode()
         
         self.recordingIconNode = VoiceChatRecordingIconNode(hasBackground: false)
         
@@ -65,7 +64,10 @@ final class VoiceChatTitleNode: ASDisplayNode {
         self.tapped?()
     }
     
-    func update(size: CGSize, title: String, subtitle: String, slide: Bool, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, title: String, subtitle: String, speaking: Bool, slide: Bool, transition: ContainedViewLayoutTransition) {
+        guard !size.width.isZero else {
+            return
+        }
         var titleUpdated = false
         if let previousTitle = self.titleNode.attributedText?.string {
             titleUpdated = previousTitle != title
@@ -91,11 +93,18 @@ final class VoiceChatTitleNode: ASDisplayNode {
         }
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: UIColor(rgb: 0xffffff))
-        self.infoNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.5))
+            
+        var state = ChatTitleActivityNodeState.none
+        if speaking {
+            state = .recordingVoice(NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: constructiveColor), constructiveColor)
+        } else {
+            state = .info(NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.5)), .generic)
+        }
+        let _ = self.infoNode.transitionToState(state, animation: .slide)
         
         let constrainedSize = CGSize(width: size.width - 140.0, height: size.height)
         let titleSize = self.titleNode.measure(constrainedSize)
-        let infoSize = self.infoNode.measure(constrainedSize)
+        let infoSize = self.infoNode.updateLayout(constrainedSize, offset: 1.0, alignment: .center)
         let titleInfoSpacing: CGFloat = 0.0
         
         let combinedHeight = titleSize.height + infoSize.height + titleInfoSpacing

@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import LocalizedPeerData
 import TelegramStringFormatting
@@ -25,7 +24,7 @@ private enum ChatReportPeerTitleButton: Equatable {
                 return strings.Conversation_BlockUser
             case let .addContact(name):
                 if let name = name {
-                    return strings.Conversation_AddNameToContacts(name).0
+                    return strings.Conversation_AddNameToContacts(name).string
                 } else {
                     return strings.Conversation_AddToContacts
                 }
@@ -106,21 +105,19 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
     private var theme: PresentationTheme?
     
     private let labelNode: ImmediateTextNode
-    private let filledBackgroundFillNode: LinkHighlightingNode
-    private let filledBackgroundNode: LinkHighlightingNode
+
+    private let backgroundNode: NavigationBackgroundNode
     
     init(openInvitePeer: @escaping () -> Void) {
         self.labelNode = ImmediateTextNode()
         self.labelNode.maximumNumberOfLines = 1
         self.labelNode.textAlignment = .center
-        
-        self.filledBackgroundFillNode = LinkHighlightingNode(color: .clear)
-        self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
+
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
         
         super.init()
         
-        self.addSubnode(self.filledBackgroundFillNode)
-        self.addSubnode(self.filledBackgroundNode)
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
         
         self.labelNode.highlightAttributeAction = { attributes in
@@ -153,18 +150,18 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
         let bottomInset: CGFloat = 6.0
         let sideInset: CGFloat = 16.0
         
-        let stringAndRanges: (String, [(Int, NSRange)])
+        let stringAndRanges: PresentationStrings.FormattedString
         if let channel = chatPeer as? TelegramChannel, case .broadcast = channel.info {
             stringAndRanges = strings.Conversation_NoticeInvitedByInChannel(invitedBy.compactDisplayTitle)
         } else {
             stringAndRanges = strings.Conversation_NoticeInvitedByInGroup(invitedBy.compactDisplayTitle)
         }
         
-        let attributedString = NSMutableAttributedString(string: stringAndRanges.0, font: Font.regular(13.0), textColor: primaryTextColor)
+        let attributedString = NSMutableAttributedString(string: stringAndRanges.string, font: Font.regular(13.0), textColor: primaryTextColor)
         
         let boldAttributes = [NSAttributedString.Key.font: Font.semibold(13.0), NSAttributedString.Key(rawValue: "_Link"): true as NSNumber]
-        for (_, range) in stringAndRanges.1 {
-            attributedString.addAttributes(boldAttributes, range: range)
+        for range in stringAndRanges.ranges {
+            attributedString.addAttributes(boldAttributes, range: range.range)
         }
         
         self.labelNode.attributedText = attributedString
@@ -191,19 +188,15 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
             labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
         }
         
-        let backgroundLayout = self.filledBackgroundNode.asyncLayout()
-        let backgroundFillLayout = self.filledBackgroundFillNode.asyncLayout()
-        let backgroundApply = backgroundLayout(theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic, labelRects, 10.0, 10.0, 0.0)
-        let backgroundFillApply = backgroundFillLayout(theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillFloating, labelRects, 10.0, 10.0, 0.0)
-        backgroundApply()
-        backgroundFillApply()
-        
         let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
         
         let labelFrame = CGRect(origin: CGPoint(x: floor((width - labelLayout.size.width) / 2.0), y: topInset + floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
         self.labelNode.frame = labelFrame
-        self.filledBackgroundNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
-        self.filledBackgroundFillNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
+
+        let backgroundFrame = labelFrame.offsetBy(dx: 0.0, dy: 1.0).insetBy(dx: -5.0, dy: -2.0)
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: theme, wallpaper: wallpaper), enableBlur: dateFillNeedsBlur(theme: theme, wallpaper: wallpaper), transition: .immediate)
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.backgroundNode.bounds.size.height / 2.0, transition: transition)
         
         return topInset + backgroundSize.height + bottomInset
     }
@@ -258,11 +251,11 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
         
         let stringAndRanges = strings.Conversation_PeerNearbyDistance(chatPeer.compactDisplayTitle, shortStringForDistance(strings: strings, distance: distance))
         
-        let attributedString = NSMutableAttributedString(string: stringAndRanges.0, font: Font.regular(13.0), textColor: primaryTextColor)
+        let attributedString = NSMutableAttributedString(string: stringAndRanges.string, font: Font.regular(13.0), textColor: primaryTextColor)
         
         let boldAttributes = [NSAttributedString.Key.font: Font.semibold(13.0), NSAttributedString.Key(rawValue: "_Link"): true as NSNumber]
-        for (_, range) in stringAndRanges.1.prefix(1) {
-            attributedString.addAttributes(boldAttributes, range: range)
+        for range in stringAndRanges.ranges.prefix(1) {
+            attributedString.addAttributes(boldAttributes, range: range.range)
         }
         
         self.labelNode.attributedText = attributedString
@@ -305,7 +298,6 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
 }
 
 final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
-    private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     
     private let closeButton: HighlightableButtonNode
@@ -317,8 +309,6 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var peerNearbyInfoNode: ChatInfoTitlePanelPeerNearbyInfoNode?
     
     override init() {
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
@@ -327,23 +317,21 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.closeButton.displaysAsynchronously = false
         
         super.init()
-        
-        self.addSubnode(self.backgroundNode)
+
         self.addSubnode(self.separatorNode)
         
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
         self.addSubnode(self.closeButton)
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
         if interfaceState.theme !== self.theme {
             self.theme = interfaceState.theme
             
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelEncircledCloseIconImage(interfaceState.theme), for: [])
-            self.backgroundNode.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
-            self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
+            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         }
-        
+
         var panelHeight: CGFloat = 40.0
         
         let contentRightInset: CGFloat = 14.0 + rightInset
@@ -437,10 +425,9 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 }
             }
         }
-        
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: panelHeight)))
-        
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
+
+        let initialPanelHeight = panelHeight
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         
         var chatPeer: Peer?
         if let renderedPeer = interfaceState.renderedPeer {
@@ -502,7 +489,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             })
         }
         
-        return panelHeight
+        return LayoutResult(backgroundHeight: initialPanelHeight, insetHeight: panelHeight)
     }
     
     @objc func buttonPressed(_ view: UIButton) {
@@ -534,6 +521,11 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let result = self.closeButton.hitTest(CGPoint(x: point.x - self.closeButton.frame.minX, y: point.y - self.closeButton.frame.minY), with: event) {
             return result
+        }
+        if let inviteInfoNode = self.inviteInfoNode {
+            if let result = inviteInfoNode.view.hitTest(self.view.convert(point, to: inviteInfoNode.view), with: event) {
+                return result
+            }
         }
         return super.hitTest(point, with: event)
     }

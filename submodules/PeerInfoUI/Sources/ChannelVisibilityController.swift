@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -499,8 +498,8 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     break
                 case .initialSetup, .generic:
                     entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader.uppercased() : presentationData.strings.Channel_Edit_LinkItem.uppercased()))
-                    entries.append(.typePublic(presentationData.theme, isGroup ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_LinkTypePublic, selectedType == .publicChannel))
-                    entries.append(.typePrivate(presentationData.theme, isGroup ? presentationData.strings.Channel_Setup_TypePrivate : presentationData.strings.Channel_Setup_LinkTypePrivate, selectedType == .privateChannel))
+                    entries.append(.typePublic(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypePublic : presentationData.strings.Channel_Setup_LinkTypePublic, selectedType == .publicChannel))
+                    entries.append(.typePrivate(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypePrivate : presentationData.strings.Channel_Setup_LinkTypePrivate, selectedType == .privateChannel))
             
                     switch selectedType {
                         case .publicChannel:
@@ -561,9 +560,17 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                             text = presentationData.strings.Channel_Username_InvalidStartsWithNumber
                                         }
                                     case .startsWithUnderscore:
-                                        text = presentationData.strings.Channel_Username_InvalidCharacters
+                                        if isGroup {
+                                            text = presentationData.strings.Group_Username_InvalidStartsWithUnderscore
+                                        } else {
+                                            text = presentationData.strings.Channel_Username_InvalidStartsWithUnderscore
+                                        }
                                     case .endsWithUnderscore:
-                                        text = presentationData.strings.Channel_Username_InvalidCharacters
+                                        if isGroup {
+                                            text = presentationData.strings.Group_Username_InvalidEndsWithUnderscore
+                                        } else {
+                                            text = presentationData.strings.Channel_Username_InvalidEndsWithUnderscore
+                                        }
                                     case .tooShort:
                                         if isGroup {
                                             text = presentationData.strings.Group_Username_InvalidTooShort
@@ -576,7 +583,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                             case let .availability(availability):
                                 switch availability {
                                     case .available:
-                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).0
+                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).string
                                     case .invalid:
                                         text = presentationData.strings.Channel_Username_InvalidCharacters
                                     case .taken:
@@ -697,9 +704,9 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                         case .startsWithDigit:
                                             text = presentationData.strings.Group_Username_InvalidStartsWithNumber
                                         case .startsWithUnderscore:
-                                            text = presentationData.strings.Channel_Username_InvalidCharacters
+                                            text = presentationData.strings.Channel_Username_InvalidStartsWithUnderscore
                                         case .endsWithUnderscore:
-                                            text = presentationData.strings.Channel_Username_InvalidCharacters
+                                            text = presentationData.strings.Channel_Username_InvalidEndsWithUnderscore
                                         case .tooShort:
                                             text = presentationData.strings.Group_Username_InvalidTooShort
                                         case .invalidCharacters:
@@ -708,7 +715,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                 case let .availability(availability):
                                     switch availability {
                                     case .available:
-                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).0
+                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).string
                                     case .invalid:
                                         text = presentationData.strings.Channel_Username_InvalidCharacters
                                     case .taken:
@@ -818,9 +825,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     }
     
     let peersDisablingAddressNameAssignment = Promise<[Peer]?>()
-    peersDisablingAddressNameAssignment.set(.single(nil) |> then(context.engine.peerNames.channelAddressNameAssignmentAvailability(peerId: peerId.namespace == Namespaces.Peer.CloudChannel ? peerId : nil) |> mapToSignal { result -> Signal<[Peer]?, NoError> in
+    peersDisablingAddressNameAssignment.set(.single(nil) |> then(context.engine.peers.channelAddressNameAssignmentAvailability(peerId: peerId.namespace == Namespaces.Peer.CloudChannel ? peerId : nil) |> mapToSignal { result -> Signal<[Peer]?, NoError> in
         if case .addressNameLimitReached = result {
-            return context.engine.peerNames.adminedPublicChannels(scope: .all)
+            return context.engine.peers.adminedPublicChannels(scope: .all)
             |> map(Optional.init)
         } else {
             return .single([])
@@ -871,7 +878,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                 return state.withUpdatedEditingPublicLinkText(text)
             }
             
-            checkAddressNameDisposable.set((context.engine.peerNames.validateAddressNameInteractive(domain: .peer(peerId), name: text)
+            checkAddressNameDisposable.set((context.engine.peers.validateAddressNameInteractive(domain: .peer(peerId), name: text)
             |> deliverOnMainQueue).start(next: { result in
                 updateState { state in
                     return state.withUpdatedAddressNameValidationStatus(result)
@@ -893,7 +900,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             return state.withUpdatedRevokingPeerId(peerId)
         }
         
-        revokeAddressNameDisposable.set((context.engine.peerNames.updateAddressName(domain: .peer(peerId), name: nil) |> deliverOnMainQueue).start(error: { _ in
+        revokeAddressNameDisposable.set((context.engine.peers.updateAddressName(domain: .peer(peerId), name: nil) |> deliverOnMainQueue).start(error: { _ in
             updateState { state in
                 return state.withUpdatedRevokingPeerId(nil)
             }
@@ -1027,7 +1034,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                         }
                                     }
                                     if revoke {
-                                        revokeLinkDisposable.set((revokePeerExportedInvitation(account: context.account, peerId: peerId, link: link) |> deliverOnMainQueue).start(completed: {
+                                        revokeLinkDisposable.set((context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: link) |> deliverOnMainQueue).start(completed: {
                                             updateState {
                                                 $0.withUpdatedRevokingPrivateLink(false)
                                             }
@@ -1101,7 +1108,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         }
                         _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
                         
-                        updateAddressNameDisposable.set((context.engine.peerNames.updateAddressName(domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
+                        updateAddressNameDisposable.set((context.engine.peers.updateAddressName(domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                             |> deliverOnMainQueue).start(error: { _ in
                                 updateState { state in
                                     return state.withUpdatedUpdatingAddressName(false)
@@ -1171,9 +1178,9 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         }
                         _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
                         
-                        let signal = convertGroupToSupergroup(account: context.account, peerId: peerId)
+                        let signal = context.engine.peers.convertGroupToSupergroup(peerId: peerId)
                         |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
-                            return context.engine.peerNames.updateAddressName(domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
+                            return context.engine.peers.updateAddressName(domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
                             |> `catch` { _ -> Signal<Void, NoError> in
                                 return .complete()
                             }
@@ -1357,7 +1364,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true))
                     } else {
                         selectionController.displayProgress = true
-                        let _ = (addChannelMembers(account: context.account, peerId: peerId, memberIds: filteredPeerIds)
+                        let _ = (context.engine.peers.addChannelMembers(peerId: peerId, memberIds: filteredPeerIds)
                         |> deliverOnMainQueue).start(error: { [weak selectionController] _ in
                             guard let selectionController = selectionController, let navigationController = selectionController.navigationController as? NavigationController else {
                                 return

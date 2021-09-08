@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -155,7 +154,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             if self.peerMedia {
                 self.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
             } else {
-                self.deleteButton.isEnabled = true
+                self.deleteButton.isEnabled = !actions.disableDelete
             }
             self.shareButton.isEnabled = !actions.options.intersection([.forward]).isEmpty
             self.reportButton.isEnabled = !actions.options.intersection([.report]).isEmpty

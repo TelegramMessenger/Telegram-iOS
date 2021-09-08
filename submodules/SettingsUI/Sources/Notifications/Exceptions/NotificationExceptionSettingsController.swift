@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
@@ -38,9 +37,9 @@ private enum NotificationPeerExceptionEntryId : Hashable {
     case soundClassicHeader
     case none
     case `default`
-    
-    var hashValue: Int {
-        return 0
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(0)
     }
 }
 

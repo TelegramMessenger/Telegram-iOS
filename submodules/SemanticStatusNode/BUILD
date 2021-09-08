@@ -6,6 +6,9 @@ swift_library(
     srcs = glob([
 		"Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/Display:Display",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
@@ -13,6 +16,7 @@ swift_library(
         "//submodules/GZip:GZip",
         "//submodules/rlottie:RLottieBinding",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode"
     ],
     visibility = [
         "//visibility:public",

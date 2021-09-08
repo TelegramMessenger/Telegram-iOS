@@ -4,12 +4,11 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import Display
 import TelegramAudio
 import UniversalMediaPlayer
 
-public protocol UniversalVideoContentNode: class {
+public protocol UniversalVideoContentNode: AnyObject {
     var ready: Signal<Void, NoError> { get }
     var status: Signal<MediaPlayerStatus, NoError> { get }
     var bufferingStatus: Signal<(IndexSet, Int)?, NoError> { get }
@@ -48,7 +47,7 @@ public extension UniversalVideoContent {
     }
 }
 
-public protocol UniversalVideoDecoration: class {
+public protocol UniversalVideoDecoration: AnyObject {
     var backgroundNode: ASDisplayNode? { get }
     var contentContainerNode: ASDisplayNode { get }
     var foregroundNode: ASDisplayNode? { get }

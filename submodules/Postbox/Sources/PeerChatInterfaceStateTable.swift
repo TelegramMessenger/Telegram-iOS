@@ -5,7 +5,7 @@ final class PeerChatInterfaceStateTable: Table {
         return ValueBoxTable(id: id, keyType: .int64, compactValuesOnCreation: false)
     }
     
-    private var states: [PeerId: PeerChatInterfaceState?] = [:]
+    private var states: [PeerId: StoredPeerChatInterfaceState?] = [:]
     private var peerIdsWithUpdatedStates = Set<PeerId>()
     
     private let sharedKey = ValueBoxKey(length: 8)
@@ -15,10 +15,10 @@ final class PeerChatInterfaceStateTable: Table {
         return sharedKey
     }
     
-    func get(_ peerId: PeerId) -> PeerChatInterfaceState? {
+    func get(_ peerId: PeerId) -> StoredPeerChatInterfaceState? {
         if let cachedValue = self.states[peerId] {
             return cachedValue
-        } else if let value = self.valueBox.get(self.table, key: self.key(peerId, sharedKey: self.sharedKey)), let state = PostboxDecoder(buffer: value).decodeRootObject() as? PeerChatInterfaceState {
+        } else if let value = self.valueBox.get(self.table, key: self.key(peerId, sharedKey: self.sharedKey)), let state = try? AdaptedPostboxDecoder().decode(StoredPeerChatInterfaceState.self, from: value.makeData()) {
             self.states[peerId] = state
             return state
         } else {
@@ -27,18 +27,14 @@ final class PeerChatInterfaceStateTable: Table {
         }
     }
     
-    func set(_ peerId: PeerId, state: PeerChatInterfaceState?) -> (updated: Bool, updatedEmbeddedState: Bool) {
+    func set(_ peerId: PeerId, state: StoredPeerChatInterfaceState?) -> (updated: Bool, updatedEmbeddedState: Bool) {
         let currentState = self.get(peerId)
         var updated = false
         var updatedEmbeddedState = false
         if let currentState = currentState, let state = state {
-            if !currentState.isEqual(to: state) {
+            if currentState != state {
                 updated = true
-                if let currentEmbeddedState = currentState.chatListEmbeddedState, let embeddedState = state.chatListEmbeddedState {
-                    if !currentEmbeddedState.isEqual(to: embeddedState) {
-                        updatedEmbeddedState = true
-                    }
-                } else if (currentState.chatListEmbeddedState != nil) != (state.chatListEmbeddedState != nil) {
+                if currentState.overrideChatTimestamp != state.overrideChatTimestamp {
                     updatedEmbeddedState = true
                 }
             }
@@ -60,13 +56,10 @@ final class PeerChatInterfaceStateTable: Table {
     
     override func beforeCommit() {
         if !self.peerIdsWithUpdatedStates.isEmpty {
-            let sharedEncoder = PostboxEncoder()
             for peerId in self.peerIdsWithUpdatedStates {
                 if let state = self.states[peerId] {
-                    if let state = state {
-                    sharedEncoder.reset()
-                    sharedEncoder.encodeRootObject(state)
-                    self.valueBox.set(self.table, key: self.key(peerId, sharedKey: self.sharedKey), value: sharedEncoder.readBufferNoCopy())
+                    if let state = state, let data = try? AdaptedPostboxEncoder().encode(state) {
+                        self.valueBox.set(self.table, key: self.key(peerId, sharedKey: self.sharedKey), value: ReadBuffer(data: data))
                     } else {
                         self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: self.sharedKey), secure: false)
                     }

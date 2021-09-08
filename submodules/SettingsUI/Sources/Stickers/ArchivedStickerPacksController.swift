@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -44,32 +43,6 @@ private enum ArchivedStickerPacksSection: Int32 {
 private enum ArchivedStickerPacksEntryId: Hashable {
     case index(Int32)
     case pack(ItemCollectionId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .index(index):
-                return index.hashValue
-            case let .pack(id):
-                return id.hashValue
-        }
-    }
-    
-    static func ==(lhs: ArchivedStickerPacksEntryId, rhs: ArchivedStickerPacksEntryId) -> Bool {
-        switch lhs {
-            case let .index(index):
-                if case .index(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .pack(id):
-                if case .pack(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
@@ -158,9 +131,9 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ArchivedStickerPacksControllerArguments
         switch self {
-            case let .info(theme, text):
+            case let .info(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .pack(_, theme, strings, info, topItem, count, animatedStickers, enabled, editing):
+            case let .pack(_, _, _, info, topItem, count, animatedStickers, enabled, editing):
                 return ItemListStickerPackItem(presentationData: presentationData, account: arguments.account, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: .installation(installed: false), editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
@@ -268,7 +241,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
             namespace = .masks
     }
     let stickerPacks = Promise<[ArchivedStickerPackItem]?>()
-    stickerPacks.set(.single(archived) |> then(archivedStickerPacks(account: context.account, namespace: namespace) |> map(Optional.init)))
+    stickerPacks.set(.single(archived) |> then(context.engine.stickers.archivedStickerPacks(namespace: namespace) |> map(Optional.init)))
     
     actionsDisposable.add(stickerPacks.get().start(next: { packs in
         updatedPacks(packs)
@@ -302,17 +275,16 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
         if !add {
             return
         }
-        let _ = (loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
+        let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
         |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
             switch result {
             case let .result(info, items, installed):
                 if installed {
                     return .complete()
                 } else {
-                    return addStickerPackInteractively(postbox: context.account.postbox, info: info, items: items)
+                    return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
                         |> ignoreValues
                         |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                            return .complete()
                         }
                         |> then(.single((info, items)))
                 }
@@ -336,7 +308,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                 }
             }
             
-            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                 return true
             }), nil)
             
@@ -390,7 +362,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                     
                     return .complete()
             }
-            removePackDisposables.set((removeArchivedStickerPack(account: context.account, info: info) |> then(applyPacks) |> deliverOnMainQueue).start(completed: {
+            removePackDisposables.set((context.engine.stickers.removeArchivedStickerPack(info: info) |> then(applyPacks) |> deliverOnMainQueue).start(completed: {
                 updateState { state in
                     var removingPackIds = state.removingPackIds
                     removingPackIds.remove(info.id)

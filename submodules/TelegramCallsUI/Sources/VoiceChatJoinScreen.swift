@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -72,7 +71,7 @@ public final class VoiceChatJoinScreen: ViewController {
         let context = self.context
         let peerId = self.peerId
         let invite = self.invite
-        let signal = updatedCurrentPeerGroupCall(account: context.account, peerId: peerId)
+        let signal = context.engine.calls.updatedCurrentPeerGroupCall(peerId: peerId)
         |> castError(GetCurrentGroupCallError.self)
         |> mapToSignal { call -> Signal<(Peer, GroupCallSummary)?, GetCurrentGroupCallError> in
             if let call = call {
@@ -80,7 +79,7 @@ public final class VoiceChatJoinScreen: ViewController {
                     return transaction.getPeer(peerId)
                 }
                 |> castError(GetCurrentGroupCallError.self)
-                return combineLatest(peer, getCurrentGroupCall(account: context.account, callId: call.id, accessHash: call.accessHash))
+                return combineLatest(peer, context.engine.calls.getCurrentGroupCall(callId: call.id, accessHash: call.accessHash))
                 |> map { peer, call -> (Peer, GroupCallSummary)? in
                     if let peer = peer, let call = call {
                         return (peer, call)
@@ -125,7 +124,7 @@ public final class VoiceChatJoinScreen: ViewController {
             currentGroupCall = .single(nil)
         }
             
-        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, cachedGroupCallDisplayAsAvailablePeers(account: context.account, peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData, currentGroupCall).start(next: { [weak self] peerAndCall, availablePeers, cachedData, currentGroupCallIdAndCanUnmute in
+        self.disposable.set(combineLatest(queue: Queue.mainQueue(), signal, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId) |> castError(GetCurrentGroupCallError.self), cachedData, currentGroupCall).start(next: { [weak self] peerAndCall, availablePeers, cachedData, currentGroupCallIdAndCanUnmute in
             if let strongSelf = self {
                 if let (peer, call) = peerAndCall {
                     if let (currentGroupCall, currentGroupCallId, canUnmute) = currentGroupCallIdAndCanUnmute, call.info.id == currentGroupCallId {
@@ -183,7 +182,7 @@ public final class VoiceChatJoinScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 
     class Node: ViewControllerTracingNode, UIScrollViewDelegate {
@@ -515,10 +514,16 @@ public final class VoiceChatJoinScreen: ViewController {
                 self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
                 
                 let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-                
                 let dimPosition = self.dimNode.layer.position
-                self.dimNode.layer.animatePosition(from: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), to: dimPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                self.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+                let targetBounds = self.bounds
+                self.bounds = self.bounds.offsetBy(dx: 0.0, dy: -offset)
+                self.dimNode.position = CGPoint(x: dimPosition.x, y: dimPosition.y - offset)
+                transition.animateView({
+                    self.bounds = targetBounds
+                    self.dimNode.position = dimPosition
+                })
             }
         }
         
@@ -664,7 +669,7 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
         super.init()
         
         self.addSubnode(self.avatarNode)
-        self.avatarNode.setPeer(context: context, theme: theme, peer: peer, emptyColor: theme.list.mediaPlaceholderColor)
+        self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), emptyColor: theme.list.mediaPlaceholderColor)
         
         self.addSubnode(self.titleNode)
         self.titleNode.attributedText = NSAttributedString(string: title ?? peer.displayTitle(strings: strings, displayOrder: displayOrder), font: Font.semibold(16.0), textColor: theme.actionSheet.primaryTextColor)

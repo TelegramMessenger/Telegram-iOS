@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
-import SyncCore
 import AccountContext
 
 func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: AccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> AccessoryPanelNode? {
@@ -11,6 +10,13 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
     }
     if chatPresentationInterfaceState.search != nil {
         return nil
+    }
+    
+    switch chatPresentationInterfaceState.subject {
+        case .pinnedMessages, .forwardedMessages:
+            return nil
+        default:
+            break
     }
     
     if let editMessage = chatPresentationInterfaceState.interfaceState.editMessage {
@@ -50,10 +56,10 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
     } else if let forwardMessageIds = chatPresentationInterfaceState.interfaceState.forwardMessageIds {
         if let forwardPanelNode = currentPanel as? ForwardAccessoryPanelNode, forwardPanelNode.messageIds == forwardMessageIds {
             forwardPanelNode.interfaceInteraction = interfaceInteraction
-            forwardPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+            forwardPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, forwardOptionsState: chatPresentationInterfaceState.interfaceState.forwardOptionsState)
             return forwardPanelNode
         } else {
-            let panelNode = ForwardAccessoryPanelNode(context: context, messageIds: forwardMessageIds, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+            let panelNode = ForwardAccessoryPanelNode(context: context, messageIds: forwardMessageIds, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, forwardOptionsState: chatPresentationInterfaceState.interfaceState.forwardOptionsState)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }

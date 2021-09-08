@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramAudio
 import LegacyComponents
 import UniversalMediaPlayer
@@ -225,7 +224,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
             self.audioSessionDisposable.set(self.audioSessionManager.push(audioSessionType: .play, activate: { [weak self] _ in
                 self?.hasAudioSession = true
                 self?.player.play()
-            }, deactivate: { [weak self] in
+            }, deactivate: { [weak self] _ in
                 self?.hasAudioSession = false
                 self?.player.pause()
                 return .complete()

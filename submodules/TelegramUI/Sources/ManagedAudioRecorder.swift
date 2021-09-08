@@ -3,7 +3,6 @@ import SwiftSignalKit
 import CoreMedia
 import AVFoundation
 import TelegramCore
-import SyncCore
 import TelegramAudio
 import UniversalMediaPlayer
 import AccountContext
@@ -403,7 +402,7 @@ final class ManagedAudioRecorderContext {
                         strongSelf.audioSessionAcquired(headset: state.isHeadsetConnected)
                     }
                 }
-            }, deactivate: { [weak self] in
+            }, deactivate: { [weak self] _ in
                 return Signal { subscriber in
                     queue.async {
                         if let strongSelf = self {
@@ -596,8 +595,8 @@ final class ManagedAudioRecorderContext {
     
     func takeData() -> RecordedAudioData? {
         if self.oggWriter.writeFrame(nil, frameByteCount: 0) {
-            var scaledSamplesMemory = malloc(100 * 2)!
-            var scaledSamples: UnsafeMutablePointer<Int16> = scaledSamplesMemory.assumingMemoryBound(to: Int16.self)
+            let scaledSamplesMemory = malloc(100 * 2)!
+            let scaledSamples: UnsafeMutablePointer<Int16> = scaledSamplesMemory.assumingMemoryBound(to: Int16.self)
             defer {
                 free(scaledSamplesMemory)
             }

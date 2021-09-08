@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import MergeLists
 import AccountContext
@@ -15,26 +14,7 @@ import ListMessageItem
 
 private enum ChatHistorySearchEntryStableId: Hashable {
     case messageId(MessageId)
-    
-    static func ==(lhs: ChatHistorySearchEntryStableId, rhs: ChatHistorySearchEntryStableId) -> Bool {
-        switch lhs {
-            case let .messageId(messageId):
-                if case .messageId(messageId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case let .messageId(messageId):
-                return messageId.hashValue
-        }
-    }
 }
-
 
 private enum ChatHistorySearchEntry: Comparable, Identifiable {
     case message(Message, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationFontSize)
@@ -159,7 +139,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.emptyResultsTitleNode = ImmediateTextNode()
@@ -194,7 +174,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
             if let strongSelf = self {
                 let signal: Signal<([ChatHistorySearchEntry], [MessageId: Message])?, NoError>
                 if let query = query, !query.isEmpty {
-                    let foundRemoteMessages: Signal<[Message], NoError> = searchMessages(account: context.account, location: .peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: nil, maxDate: nil), query: query, state: nil)
+                    let foundRemoteMessages: Signal<[Message], NoError> = context.engine.messages.searchMessages(location: .peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: nil, maxDate: nil), query: query, state: nil)
                     |> map { $0.0.messages }
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     
@@ -231,7 +211,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
             }
         }))
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
         
@@ -330,7 +310,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
                         strongSelf.dimNode.isHidden = displayingResults
                         strongSelf.backgroundColor = displayingResults ? strongSelf.presentationData.theme.list.plainBackgroundColor : nil
                         
-                        strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.SharedMedia_SearchNoResultsDescription(transition.query).0, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
+                        strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.SharedMedia_SearchNoResultsDescription(transition.query).string, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
                         
                         let emptyResults = displayingResults && strongSelf.currentEntries?.isEmpty ?? false
                         strongSelf.emptyResultsTitleNode.isHidden = !emptyResults

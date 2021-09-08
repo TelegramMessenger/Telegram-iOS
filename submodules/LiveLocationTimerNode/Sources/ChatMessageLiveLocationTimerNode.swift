@@ -4,8 +4,8 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
-private let textFont = Font.with(size: 13.0, design: .round, traits: [.bold])
-private let smallTextFont = Font.with(size: 11.0, design: .round, traits: [.bold])
+private let textFont = Font.with(size: 13.0, design: .round, weight: .bold)
+private let smallTextFont = Font.with(size: 11.0, design: .round, weight: .bold)
 
 private class ChatMessageLiveLocationTimerNodeParams: NSObject {
     let backgroundColor: UIColor
@@ -76,7 +76,7 @@ public final class ChatMessageLiveLocationTimerNode: ASDisplayNode {
             let string: String
             if intRemaining > 60 * 60 {
                 let hours = Int32(round(remaining / (60.0 * 60.0)))
-                string = strings.Map_LiveLocationShortHour("\(hours)").0
+                string = strings.Map_LiveLocationShortHour("\(hours)").string
             } else {
                 let minutes = Int32(round(remaining / (60.0)))
                 string = "\(minutes)"

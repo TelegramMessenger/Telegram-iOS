@@ -4,7 +4,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import TelegramUIPreferences
 import MediaResources
@@ -130,11 +129,11 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
         let thumbnailImage = generateScaledImage(image: croppedImage, size: thumbnailDimensions, scale: 1.0)
         
         if let data = croppedImage.jpegData(compressionQuality: 0.8), let thumbnailImage = thumbnailImage, let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
-            let thumbnailResource = LocalFileMediaResource(fileId: arc4random64())
+            let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             context.sharedContext.accountManager.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
             context.account.postbox.mediaBox.storeResourceData(thumbnailResource.id, data: thumbnailData)
             
-            let resource = LocalFileMediaResource(fileId: arc4random64())
+            let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
             context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
             
@@ -174,7 +173,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
             }
             
             let apply: () -> Void = {
-                let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), color: nil, intensity: nil)
+                let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: nil)
                 let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)], settings)
                 updateWallpaper(wallpaper)
                 DispatchQueue.main.async {

@@ -325,12 +325,12 @@ func generateGradientColors(color: UIColor) -> (UIColor, UIColor) {
     }
     
     if let colors = nearest?.colors {
-        var colorHsb = color.hsb
-        var similarColorHsb = UIColor(rgb: colors.0).hsb
-        var complementingColorHsb = UIColor(rgb: colors.1).hsb
+        let colorHsb = color.hsb
+        let similarColorHsb = UIColor(rgb: colors.0).hsb
+        let complementingColorHsb = UIColor(rgb: colors.1).hsb
         
-        var correction = (similarColorHsb.0 > 0.0 ? colorHsb.0 / similarColorHsb.0 : 1.0, similarColorHsb.1 > 0.0 ? colorHsb.1 / similarColorHsb.1 : 1.0, similarColorHsb.2 > 0.0 ? colorHsb.2 / similarColorHsb.2 : 1.0)
-        var correctedComplementingColor = UIColor(hue: min(1.0, complementingColorHsb.0 * correction.0), saturation: min(1.0, complementingColorHsb.1 * correction.1), brightness: min(1.0, complementingColorHsb.2 * correction.2), alpha: 1.0)
+        let correction = (similarColorHsb.0 > 0.0 ? colorHsb.0 / similarColorHsb.0 : 1.0, similarColorHsb.1 > 0.0 ? colorHsb.1 / similarColorHsb.1 : 1.0, similarColorHsb.2 > 0.0 ? colorHsb.2 / similarColorHsb.2 : 1.0)
+        let correctedComplementingColor = UIColor(hue: min(1.0, complementingColorHsb.0 * correction.0), saturation: min(1.0, complementingColorHsb.1 * correction.1), brightness: min(1.0, complementingColorHsb.2 * correction.2), alpha: 1.0)
         return (color, correctedComplementingColor)
     } else {
         return (color, color)

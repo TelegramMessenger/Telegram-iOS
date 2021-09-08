@@ -10,34 +10,51 @@ import AnimatedStickerNode
 import AccountContext
 import TelegramPresentationData
 import PresentationDataUtils
+import TelegramCore
 
 public enum TwoFactorAuthSplashMode {
     case intro
     case done
+    case recoveryDone(recoveredAccountData: RecoveredAccountData?, syncContacts: Bool, isPasswordSet: Bool)
+    case remember
 }
 
 public final class TwoFactorAuthSplashScreen: ViewController {
-    private let context: AccountContext
+    private let sharedContext: SharedAccountContext
+    private let engine: SomeTelegramEngine
     private var presentationData: PresentationData
     private var mode: TwoFactorAuthSplashMode
     
-    public init(context: AccountContext, mode: TwoFactorAuthSplashMode) {
-        self.context = context
+    public init(sharedContext: SharedAccountContext, engine: SomeTelegramEngine, mode: TwoFactorAuthSplashMode, presentation: ViewControllerNavigationPresentation = .modalInLargeLayout) {
+        self.sharedContext = sharedContext
+        self.engine = engine
         self.mode = mode
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
         
         let defaultTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
-        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
+        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Common_Back, close: self.presentationData.strings.Common_Close)))
+
+        self.navigationPresentation = presentation
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-        self.navigationPresentation = .modalInLargeLayout
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        let hasBackButton: Bool
+        switch mode {
+            case .done, .remember:
+                hasBackButton = false
+            default:
+                hasBackButton = true
+        }
+        if hasBackButton {
+            self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        } else {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: ASDisplayNode())
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -48,19 +65,31 @@ public final class TwoFactorAuthSplashScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TwoFactorAuthSplashScreenNode(context: self.context, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
+        self.displayNode = TwoFactorAuthSplashScreenNode(sharedContext: self.sharedContext, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             switch strongSelf.mode {
             case .intro:
-                strongSelf.push(TwoFactorDataInputScreen(context: strongSelf.context, mode: .password, stateUpdated: { _ in
-                }))
-            case .done:
+                strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .password, stateUpdated: { _ in
+                }, presentation: strongSelf.navigationPresentation))
+            case .done, .remember:
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {
                     return
                 }
                 navigationController.filterController(strongSelf, animated: true)
+            case let .recoveryDone(recoveredAccountData, syncContacts, _):
+                guard let navigationController = strongSelf.navigationController as? NavigationController else {
+                    return
+                }
+                switch strongSelf.engine {
+                case let .unauthorized(engine):
+                    if let recoveredAccountData = recoveredAccountData {
+                        let _ = loginWithRecoveredAccountData(accountManager: strongSelf.sharedContext.accountManager, account: engine.account, recoveredAccountData: recoveredAccountData, syncContacts: syncContacts).start()
+                    }
+                case .authorized:
+                    navigationController.filterController(strongSelf, animated: true)
+                }
             }
         })
         
@@ -70,7 +99,7 @@ public final class TwoFactorAuthSplashScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! TwoFactorAuthSplashScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
+        (self.displayNode as! TwoFactorAuthSplashScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
 
@@ -82,7 +111,8 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
     private var animationOffset: CGPoint = CGPoint()
     private let animationNode: AnimatedStickerNode
     private let titleNode: ImmediateTextNode
-    private let textNode: ImmediateTextNode
+    private let textNodes: [ImmediateTextNode]
+    private let textArrowNodes: [ASImageNode]
     let buttonNode: SolidRoundedButtonNode
     
     var inProgress: Bool = false {
@@ -92,14 +122,14 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         }
     }
     
-    init(context: AccountContext, presentationData: PresentationData, mode: TwoFactorAuthSplashMode, action: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, presentationData: PresentationData, mode: TwoFactorAuthSplashMode, action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
         
         self.animationNode = AnimatedStickerNode()
         
         let title: String
-        let text: NSAttributedString
+        let texts: [NSAttributedString]
         let buttonText: String
         
         let textFont = Font.regular(16.0)
@@ -108,7 +138,7 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         switch mode {
         case .intro:
             title = self.presentationData.strings.TwoFactorSetup_Intro_Title
-            text = NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Intro_Text, font: textFont, textColor: textColor)
+            texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Intro_Text, font: textFont, textColor: textColor)]
             buttonText = self.presentationData.strings.TwoFactorSetup_Intro_Action
             
             if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
@@ -118,10 +148,45 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
             }
         case .done:
             title = self.presentationData.strings.TwoFactorSetup_Done_Title
-            text = NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Done_Text, font: textFont, textColor: textColor)
+            texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Done_Text, font: textFont, textColor: textColor)]
             buttonText = self.presentationData.strings.TwoFactorSetup_Done_Action
             
             if let path = getAppBundle().path(forResource: "TwoFactorSetupDone", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
+                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.visibility = true
+            }
+        case let .recoveryDone(_, _, isPasswordSet):
+            title = isPasswordSet ? self.presentationData.strings.TwoFactorSetup_ResetDone_Title : self.presentationData.strings.TwoFactorSetup_ResetDone_TitleNoPassword
+
+            let rawText = isPasswordSet ? self.presentationData.strings.TwoFactorSetup_ResetDone_Text : self.presentationData.strings.TwoFactorSetup_ResetDone_TextNoPassword
+
+            var splitTexts: [String] = [""]
+            var index = rawText.startIndex
+            while index != rawText.endIndex {
+                let c = rawText[index]
+                if c == ">" {
+                    splitTexts.append("")
+                } else {
+                    splitTexts[splitTexts.count - 1].append(c)
+                }
+                index = rawText.index(after: index)
+            }
+            
+            texts = splitTexts.map { NSAttributedString(string: $0, font: textFont, textColor: textColor) }
+            buttonText = self.presentationData.strings.TwoFactorSetup_ResetDone_Action
+
+            if let path = getAppBundle().path(forResource: isPasswordSet ? "TwoFactorSetupDone" : "TwoFactorRemovePasswordDone", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: isPasswordSet ? .loop : .once, mode: .direct(cachePathPrefix: nil))
+                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.visibility = true
+            }
+        case .remember:
+            title = self.presentationData.strings.TwoFactorRemember_Done_Title
+            texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorRemember_Done_Text, font: textFont, textColor: textColor)]
+            buttonText = self.presentationData.strings.TwoFactorRemember_Done_Action
+            
+            if let path = getAppBundle().path(forResource: "TwoFactorSetupRememberSuccess", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
@@ -134,12 +199,27 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.textAlignment = .center
         
-        self.textNode = ImmediateTextNode()
-        self.textNode.displaysAsynchronously = false
-        self.textNode.attributedText = text
-        self.textNode.maximumNumberOfLines = 0
-        self.textNode.lineSpacing = 0.1
-        self.textNode.textAlignment = .center
+        self.textNodes = texts.map { text in
+            let textNode = ImmediateTextNode()
+
+            textNode.displaysAsynchronously = false
+            textNode.attributedText = text
+            textNode.maximumNumberOfLines = 0
+            textNode.lineSpacing = 0.1
+            textNode.textAlignment = .center
+
+            return textNode
+        }
+
+        let arrowImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Search/DownButton"), color: presentationData.theme.list.itemPrimaryTextColor)
+        self.textArrowNodes = (0 ..< self.textNodes.count - 1).map { _ in
+            let iconNode = ASImageNode()
+
+            iconNode.image = arrowImage
+            iconNode.alpha = 0.34
+
+            return iconNode
+        }
         
         self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: self.presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
         self.buttonNode.isHidden = buttonText.isEmpty
@@ -150,7 +230,8 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         
         self.addSubnode(self.animationNode)
         self.addSubnode(self.titleNode)
-        self.addSubnode(self.textNode)
+        self.textNodes.forEach(self.addSubnode)
+        self.textArrowNodes.forEach(self.addSubnode)
         self.addSubnode(self.buttonNode)
         
         self.buttonNode.pressed = {
@@ -179,9 +260,17 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
+        let textSizes = self.textNodes.map {
+            $0.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
+        }
+        var combinedTextHeight: CGFloat = 0.0
+        let textSpacing: CGFloat = 32.0
+        for textSize in textSizes {
+            combinedTextHeight += textSize.height
+        }
+        combinedTextHeight += CGFloat(max(0, textSizes.count - 1)) * textSpacing
         
-        let contentHeight = iconSize.height + iconSpacing + titleSize.height + titleSpacing + textSize.height
+        let contentHeight = iconSize.height + iconSpacing + titleSize.height + titleSpacing + combinedTextHeight
         var contentVerticalOrigin = floor((layout.size.height - contentHeight - iconSize.height / 2.0) / 2.0)
         
         let minimalBottomInset: CGFloat = 60.0
@@ -191,9 +280,9 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         
         let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
-        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        let _ = self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
-        var maxContentVerticalOrigin = buttonFrame.minY - 12.0 - contentHeight
+        let maxContentVerticalOrigin = buttonFrame.minY - 12.0 - contentHeight
         
         contentVerticalOrigin = min(contentVerticalOrigin, maxContentVerticalOrigin)
         
@@ -202,7 +291,20 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         transition.updateFrameAdditive(node: self.animationNode, frame: iconFrame)
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
-        let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
-        transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+
+        var nextTextOrigin: CGFloat = titleFrame.maxY + titleSpacing
+        for i in 0 ..< self.textNodes.count {
+            let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSizes[i].width) / 2.0), y: nextTextOrigin), size: textSizes[i])
+            transition.updateFrameAdditive(node: self.textNodes[i], frame: textFrame)
+
+            if i != 0 {
+                if let image = self.textArrowNodes[i - 1].image {
+                    let scaledImageSize = CGSize(width: floor(image.size.width * 0.7), height: floor(image.size.height * 0.7))
+                    self.textArrowNodes[i - 1].frame = CGRect(origin: CGPoint(x: floor((layout.size.width - scaledImageSize.width) / 2.0), y: nextTextOrigin - textSpacing + floor((textSpacing - scaledImageSize.height) / 2.0)), size: scaledImageSize)
+                }
+            }
+
+            nextTextOrigin = textFrame.maxY + textSpacing
+        }
     }
 }

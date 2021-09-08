@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import MapKit
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -226,10 +225,10 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                     arguments.toggleVisibility(!stop)
                 })
             case let .user(_, _, strings, dateTimeFormat, nameDisplayOrder, peer):
-                var text = strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0
+                var text = strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).string
                 let isSelfPeer = peer.peer.0.id == arguments.context.account.peerId
                 if isSelfPeer {
-                    text = strings.PeopleNearby_VisibleUntil(humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: peer.expires)).0
+                    text = strings.PeopleNearby_VisibleUntil(humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: peer.expires).string).string
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: !isSelfPeer, sectionId: self.section, action: {
                     if !isSelfPeer {
@@ -251,9 +250,9 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .group(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, highlighted):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text("\(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0), \(memberCount > 0 ? strings.Conversation_StatusMembers(memberCount) : strings.PeopleNearby_NoMembers)", .secondary)
+                    text = .text("\(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).string), \(memberCount > 0 ? strings.Conversation_StatusMembers(memberCount) : strings.PeopleNearby_NoMembers)", .secondary)
                 } else {
-                    text = .text(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0, .secondary)
+                    text = .text(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).string, .secondary)
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, highlighted: highlighted, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
@@ -265,9 +264,9 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .channel(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, highlighted):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text("\(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0), \(strings.Conversation_StatusSubscribers(memberCount))", .secondary)
+                    text = .text("\(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).string), \(strings.Conversation_StatusSubscribers(memberCount))", .secondary)
                 } else {
-                    text = .text(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0, .secondary)
+                    text = .text(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).string, .secondary)
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, highlighted: highlighted, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
@@ -388,52 +387,8 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 }
 
 private func peerNearbyContextMenuItems(context: AccountContext, peerId: PeerId, present: @escaping (ViewController) -> Void) -> Signal<[ContextMenuItem], NoError> {
-    let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
-    return context.account.postbox.transaction { transaction -> [ContextMenuItem] in
-        var items: [ContextMenuItem] = []
-//        
-//        let peer = transaction.getPeer(peerId)
-//        
-//        if let peer = peer as? TelegramUser {
-//            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Context_AddToContacts, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-//                f(.default)
-//            })))
-//        } else {
-//            items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeopleNearby_Context_JoinGroup, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-//                let _ = (joinChannel(account: context.account, peerId: peerId) |> deliverOnMainQueue).start(next: { participant in
-//                    f(.default)
-//                }, error: { error in
-////                    if let strongSelf = self {
-////                        if case .tooMuchJoined = error {
-////                            if let parentNavigationController = strongSelf.parentNavigationController {
-////                                let context = strongSelf.context
-////                                let link = strongSelf.link
-////                                let navigateToPeer = strongSelf.navigateToPeer
-////                                let resolvedState = strongSelf.resolvedState
-////                                parentNavigationController.pushViewController(oldChannelsController(context: strongSelf.context, intent: .join, completed: { [weak parentNavigationController] value in
-////                                    if value {
-////                                        (parentNavigationController?.viewControllers.last as? ViewController)?.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: navigateToPeer, parentNavigationController: parentNavigationController, resolvedState: resolvedState), in: .window(.root))
-////                                    }
-////                                }))
-////                            } else {
-////                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Join_ChannelsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-////                            }
-////                            strongSelf.dismiss()
-////                        }
-////                    }
-//                })
-//            })))
-//            
-//            items.append(.action(ContextMenuActionItem(text: presentationData.strings.PeopleNearby_Context_UnrelatedLocation, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-//                    let _ = (TelegramCore.reportPeer(account: context.account, peerId: peerId, reason: .irrelevantLocation)
-//                    |> deliverOnMainQueue).start(completed: {
-//                        let _ = ApplicationSpecificNotice.setIrrelevantPeerGeoReport(postbox: context.account.postbox, peerId: peerId).start()
-//                        
-//                        present(textAlertController(context: context, title: nil, text: presentationData.strings.ReportPeer_AlertSuccess, actions: [TextAlertAction(type: TextAlertActionType.defaultAction, title: presentationData.strings.Common_OK, action: {})]))
-//                    })
-//                    f(.default)
-//            })))
-//        }
+    return context.account.postbox.transaction { _ -> [ContextMenuItem] in
+        let items: [ContextMenuItem] = []
         
         return items
     }
@@ -512,7 +467,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         cancelImpl = {
             checkCreationAvailabilityDisposable.set(nil)
         }
-        checkCreationAvailabilityDisposable.set((context.engine.peerNames.checkPublicChannelCreationAvailability(location: true)
+        checkCreationAvailabilityDisposable.set((context.engine.peers.checkPublicChannelCreationAvailability(location: true)
         |> afterDisposed {
             Queue.mainQueue().async {
                 progressDisposable.dispose()
@@ -643,7 +598,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         controller?.clearItemNodesHighlight(animated: true)
     }
     navigateToProfileImpl = { [weak controller] peer, distance in
-        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .nearbyPeer(distance: distance), avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false) {
+        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .nearbyPeer(distance: distance), avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false) {
             navigationController.pushViewController(controller)
         }
     }

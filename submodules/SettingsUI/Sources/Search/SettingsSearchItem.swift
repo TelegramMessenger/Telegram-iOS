@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
@@ -241,24 +240,6 @@ private func preparedSettingsSearchContainerTransition(theme: PresentationTheme,
 
 private enum SettingsSearchRecentEntryStableId: Hashable {
     case recent(SettingsSearchableItemId)
-    
-    static func ==(lhs: SettingsSearchRecentEntryStableId, rhs: SettingsSearchRecentEntryStableId) -> Bool {
-        switch lhs {
-            case let .recent(id):
-                if case .recent(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case let .recent(id):
-                return id.hashValue
-        }
-    }
 }
 
 private enum SettingsSearchRecentEntry: Comparable, Identifiable {
@@ -371,14 +352,14 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
         self.listNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.listNode.isHidden = true
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         self.recentListNode = ListView()
         self.recentListNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.recentListNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()
@@ -535,11 +516,11 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
                 }
             })
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.listNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
         
-        self.recentListNode.beganInteractiveDragging = { [weak self] in
+        self.recentListNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
     }

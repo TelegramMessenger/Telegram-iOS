@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
@@ -1107,15 +1106,15 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
                     
                     if item.peer.id == item.context.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
-                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
+                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.peer), overrideImage: .savedMessagesIcon, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
                     } else if item.peer.id.isReplies {
-                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: .repliesIcon, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
+                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.peer), overrideImage: .repliesIcon, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
                     } else {
                         var overrideImage: AvatarNodeImageOverride?
                         if item.peer.isDeleted {
                             overrideImage = .deletedIcon
                         }
-                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
+                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(item.peer), overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: layout.contentSize.height + UIScreenPixel + UIScreenPixel))
@@ -1328,8 +1327,12 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
-        return self.layoutParams?.0.header
+    override public func headers() -> [ListViewItemHeader]? {
+        if let item = self.layoutParams?.0 {
+            return item.header.flatMap { [$0] }
+        } else {
+            return nil
+        }
     }
     
     override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
@@ -1350,10 +1353,11 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
 }
 
 public final class ItemListPeerItemHeader: ListViewItemHeader {
-    public let id: Int64
+    public let id: ListViewItemNode.HeaderId
     public let text: String
     public let additionalText: String
     public let stickDirection: ListViewItemHeaderStickDirection = .topEdge
+    public let stickOverInsets: Bool = true
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let actionTitle: String?
@@ -1364,14 +1368,22 @@ public final class ItemListPeerItemHeader: ListViewItemHeader {
     public init(theme: PresentationTheme, strings: PresentationStrings, text: String, additionalText: String, actionTitle: String? = nil, id: Int64, action: (() -> Void)? = nil) {
         self.text = text
         self.additionalText = additionalText
-        self.id = id
+        self.id = ListViewItemNode.HeaderId(space: 0, id: id)
         self.theme = theme
         self.strings = strings
         self.actionTitle = actionTitle
         self.action = action
     }
+
+    public func combinesWith(other: ListViewItemHeader) -> Bool {
+        if let other = other as? ItemListPeerItemHeader, other.id == self.id {
+            return true
+        } else {
+            return false
+        }
+    }
     
-    public func node() -> ListViewItemHeaderNode {
+    public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ItemListPeerItemHeaderNode(theme: self.theme, strings: self.strings, text: self.text, additionalText: self.additionalText, actionTitle: self.actionTitle, action: self.action)
     }
     
@@ -1408,7 +1420,7 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.backgroundNode.backgroundColor = theme.list.blocksBackgroundColor
         
         self.snappedBackgroundNode = ASDisplayNode()
-        self.snappedBackgroundNode.backgroundColor = theme.rootController.navigationBar.backgroundColor
+        self.snappedBackgroundNode.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor
         self.snappedBackgroundNode.alpha = 0.0
         
         self.separatorNode = ASDisplayNode()
@@ -1467,7 +1479,7 @@ public final class ItemListPeerItemHeaderNode: ListViewItemHeaderNode, ItemListH
         self.theme = theme
         
         self.backgroundNode.backgroundColor = theme.list.blocksBackgroundColor
-        self.snappedBackgroundNode.backgroundColor = theme.rootController.navigationBar.backgroundColor
+        self.snappedBackgroundNode.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor
         self.separatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
         
         let titleFont = Font.regular(13.0)

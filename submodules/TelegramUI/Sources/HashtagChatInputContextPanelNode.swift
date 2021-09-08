@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -77,7 +76,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView.limitHitTestToNodes = true
         self.listView.view.disablesInteractiveTransitionGestureRecognizer = true
         self.listView.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).0
+            return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
@@ -141,7 +140,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
             }
         }, removeRequested: { [weak self] text in
             if let strongSelf = self {
-                let _ = removeRecentlyUsedHashtag(postbox: strongSelf.context.account.postbox, string: text).start()
+                let _ = strongSelf.context.engine.messages.removeRecentlyUsedHashtag(string: text).start()
                 strongSelf.revealedHashtag = nil
             }
         })
@@ -190,7 +189,10 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                     
                     if let topItemOffset = topItemOffset {
                         let position = strongSelf.listView.layer.position
-                        strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        strongSelf.listView.position = CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset))
+                        ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring).animateView {
+                            strongSelf.listView.position = position
+                        }
                     }
                 }
             })
@@ -256,5 +258,14 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         let listViewFrame = self.listView.frame
         return self.listView.hitTest(CGPoint(x: point.x - listViewFrame.minX, y: point.y - listViewFrame.minY), with: event)
     }
+    
+    override var topItemFrame: CGRect? {
+        var topItemFrame: CGRect?
+        self.listView.forEachItemNode { itemNode in
+            if topItemFrame == nil {
+                topItemFrame = itemNode.frame
+            }
+        }
+        return topItemFrame
+    }
 }
-

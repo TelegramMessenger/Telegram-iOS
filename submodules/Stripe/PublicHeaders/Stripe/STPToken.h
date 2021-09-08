@@ -21,7 +21,7 @@
 /**
  *  You cannot directly instantiate an `STPToken`. You should only use one that has been returned from an `STPAPIClient` callback.
  */
-- (nonnull instancetype) init __attribute__((unavailable("You cannot directly instantiate an STPToken. You should only use one that has been returned from an STPAPIClient callback.")));
+- (nonnull instancetype) init;
 
 /**
  *  The value of the token. You can store this value on your server and use it to make charges and customers. @see

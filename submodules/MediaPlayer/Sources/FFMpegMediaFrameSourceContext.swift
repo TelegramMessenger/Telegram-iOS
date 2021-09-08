@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import CoreMedia
 import TelegramCore
-import SyncCore
 import FFMpegBinding
 
 private struct StreamContext {
@@ -336,13 +335,6 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.preferSoftwareDecoding = preferSoftwareDecoding
         self.fetchAutomatically = fetchAutomatically
         self.maximumFetchSize = maximumFetchSize
-        
-        var preferSoftwareAudioDecoding = false
-        if case let .media(media, _) = resourceReference, let file = media.media as? TelegramMediaFile {
-            if file.isInstantVideo {
-                preferSoftwareAudioDecoding = true
-            }
-        }
         
         if self.tempFilePath == nil {
             self.keepDataDisposable.set(postbox.mediaBox.keepResource(id: resourceReference.resource.id).start())

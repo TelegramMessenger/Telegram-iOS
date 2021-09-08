@@ -5,11 +5,10 @@ import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 
 class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
-    private let interactiveFileNode: ChatMessageInteractiveFileNode
+    let interactiveFileNode: ChatMessageInteractiveFileNode
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {

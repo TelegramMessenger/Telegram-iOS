@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 import MtProtoKit
-import SyncCore
 
 public struct StatsDateRange: Equatable {
     public let minDate: Int32

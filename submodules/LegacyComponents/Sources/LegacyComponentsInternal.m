@@ -70,20 +70,6 @@ int iosMinorVersion()
     return version;
 }
 
-NSString *TGEncodeText(NSString *string, int key)
-{
-    NSMutableString *result = [[NSMutableString alloc] init];
-    
-    for (int i = 0; i < (int)[string length]; i++)
-    {
-        unichar c = [string characterAtIndex:i];
-        c += key;
-        [result appendString:[NSString stringWithCharacters:&c length:1]];
-    }
-    
-    return result;
-}
-
 int deviceMemorySize()
 {
     static int memorySize = 0;

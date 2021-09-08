@@ -7,6 +7,8 @@
 - (void)prepareForReuse
 {
     [self _recycleItemContentView];
+
+    [super prepareForReuse];
 }
 
 - (void)_recycleItemContentView

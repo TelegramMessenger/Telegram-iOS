@@ -2,9 +2,7 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -12,6 +10,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import TextFormat
+import Postbox
 
 private struct OrderedLinkedListItemOrderingId: RawRepresentable, Hashable {
     var rawValue: Int
@@ -261,8 +260,8 @@ private enum CreatePollEntry: ItemListNodeEntry {
         switch self {
         case .text:
             return CreatePollEntryTag.text
-        case let .option(option):
-            return CreatePollEntryTag.option(option.id)
+        case let .option(id, _, _, _, _, _, _, _, _):
+            return CreatePollEntryTag.option(id)
         default:
             break
         }
@@ -277,8 +276,8 @@ private enum CreatePollEntry: ItemListNodeEntry {
             return .text
         case .optionsHeader:
             return .optionsHeader
-        case let .option(option):
-            return .option(option.id)
+        case let .option(id, _, _, _, _, _, _, _, _):
+            return .option(id)
         case .optionsInfo:
             return .optionsInfo
         case .anonymousVotes:
@@ -306,7 +305,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
             return 1
         case .optionsHeader:
             return 2
-        case let .option(option):
+        case .option:
             return 3
         case .optionsInfo:
             return 1001
@@ -329,10 +328,10 @@ private enum CreatePollEntry: ItemListNodeEntry {
     
     static func <(lhs: CreatePollEntry, rhs: CreatePollEntry) -> Bool {
         switch lhs {
-        case let .option(lhsOption):
+        case let .option(_, lhsOrdering, _, _, _, _, _, _, _):
             switch rhs {
-            case let .option(rhsOption):
-                return lhsOption.ordering < rhsOption.ordering
+            case let .option(_, rhsOrdering, _, _, _, _, _, _, _):
+                return lhsOrdering < rhsOrdering
             default:
                 break
             }
@@ -424,7 +423,7 @@ private struct CreatePollControllerState: Equatable {
     var isEditingSolution: Bool = false
 }
 
-private func createPollControllerEntries(presentationData: PresentationData, peer: Peer, state: CreatePollControllerState, limitsConfiguration: LimitsConfiguration, defaultIsQuiz: Bool?) -> [CreatePollEntry] {
+private func createPollControllerEntries(presentationData: PresentationData, peer: EnginePeer, state: CreatePollControllerState, limitsConfiguration: EngineConfiguration.Limits, defaultIsQuiz: Bool?) -> [CreatePollEntry] {
     var entries: [CreatePollEntry] = []
     
     var textLimitText = ItemListSectionHeaderAccessoryText(value: "", color: .generic)
@@ -454,7 +453,7 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
     }
     
     var canBePublic = true
-    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+    if case let .channel(channel) = peer, case .broadcast = channel.info {
         canBePublic = false
     }
     
@@ -484,7 +483,7 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
     return entries
 }
 
-public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bool? = nil, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
+public func createPollController(context: AccountContext, peer: EnginePeer, isQuiz: Bool? = nil, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
     var initialState = CreatePollControllerState()
     if let isQuiz = isQuiz {
         initialState.isQuiz = isQuiz
@@ -743,12 +742,13 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
     })
     
     let previousOptionIds = Atomic<[Int]?>(value: nil)
-    
-    let limitsKey = PostboxViewKey.preferences(keys: Set([PreferencesKeys.limitsConfiguration]))
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, context.account.postbox.combinedView(keys: [limitsKey]))
-    |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let limitsConfiguration: LimitsConfiguration = (combinedView.views[limitsKey] as? PreferencesView)?.values[PreferencesKeys.limitsConfiguration] as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
-        
+
+    let signal = combineLatest(queue: .mainQueue(),
+        context.sharedContext.presentationData,
+        statePromise.get(),
+        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.Limits())
+    )
+    |> map { presentationData, state, limitsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var enabled = true
         if processPollText(state.text).isEmpty {
             enabled = false
@@ -825,7 +825,7 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             
             dismissImpl?()
             
-            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: arc4random64()), publicity: publicity, kind: kind, text: processPollText(state.text), options: options, correctAnswers: correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: resolvedSolution), isClosed: false, deadlineTimeout: deadlineTimeout)), replyToMessageId: nil, localGroupingKey: nil))
+            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min ... Int64.max)), publicity: publicity, kind: kind, text: processPollText(state.text), options: options, correctAnswers: correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: resolvedSolution), isClosed: false, deadlineTimeout: deadlineTimeout)), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
         })
         
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
@@ -993,17 +993,16 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
     }
     controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [CreatePollEntry]) -> Signal<Bool, NoError> in
         let fromEntry = entries[fromIndex]
-        guard case let .option(option) = fromEntry else {
+        guard case let .option(id, _, _, _, _, _, _, _, _) = fromEntry else {
             return .single(false)
         }
-        let id = option.id
         var referenceId: Int?
         var beforeAll = false
         var afterAll = false
         if toIndex < entries.count {
             switch entries[toIndex] {
-                case let .option(toOption):
-                    referenceId = toOption.id
+                case let .option(toId, _, _, _, _, _, _, _, _):
+                    referenceId = toId
                 default:
                     if entries[toIndex] < fromEntry {
                         beforeAll = true

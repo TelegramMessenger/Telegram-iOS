@@ -29,15 +29,6 @@
     return self;
 }
 
-+ (void)addTextViewMethods
-{
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
-    {
-        InjectInstanceMethodFromAnotherClass([HPTextViewInternal class], [HPTextViewInternal class], @selector(textViewAdjustScrollRange:animated:), NSSelectorFromString(TGEncodeText(@"`tdspmmSbohfUpWjtjcmf;bojnbufe;", -1)));
-    });
-}
-
 - (void)setText:(NSString *)text
 {
     BOOL originalValue = self.scrollEnabled;
@@ -62,25 +53,6 @@
 - (void)setScrollable:(BOOL)isScrollable
 {
     [super setScrollEnabled:isScrollable];
-}
-
-- (void)textViewAdjustScrollRange:(NSRange)range animated:(BOOL)animated
-{
-    static SEL selector = NULL;
-    static void (*impl)(id, SEL, NSRange, BOOL) = NULL;
-    
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
-    {
-        Method method = class_getInstanceMethod([UITextView class], selector);
-        if (method != NULL)
-            impl = (void (*)(id, SEL, NSRange, BOOL))method_getImplementation(method);
-    });
-    
-    animated = false;
-    
-    if (impl != NULL)
-        impl(self, selector, range, animated);
 }
 
 - (void)scrollRectToVisible:(CGRect)__unused rect animated:(BOOL)__unused animated

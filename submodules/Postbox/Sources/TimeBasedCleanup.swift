@@ -170,7 +170,7 @@ private final class TimeBasedCleanupImpl {
         let generalPaths = self.generalPaths
         let shortLivedPaths = self.shortLivedPaths
         let scanOnce = Signal<Never, NoError> { subscriber in
-            DispatchQueue.global(qos: .utility).async {
+            DispatchQueue.global(qos: .background).async {
                 var removedShortLivedCount: Int = 0
                 var removedGeneralCount: Int = 0
                 var removedGeneralLimitCount: Int = 0

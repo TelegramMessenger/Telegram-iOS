@@ -5,7 +5,7 @@ import TelegramApi
 import MtProtoKit
 
 func managedAnimatedEmojiUpdates(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    let poll = loadedStickerPack(postbox: postbox, network: network, reference: .animatedEmoji, forceActualized: true)
+    let poll = _internal_loadedStickerPack(postbox: postbox, network: network, reference: .animatedEmoji, forceActualized: true)
     |> mapToSignal { _ -> Signal<Void, NoError> in
         return .complete()
     }

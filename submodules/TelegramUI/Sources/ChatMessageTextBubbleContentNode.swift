@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TextFormat
 import UrlEscaping
@@ -91,7 +90,12 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let message = item.message
                 
-                let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+                let incoming: Bool
+                if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                    incoming = false
+                } else {
+                    incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+                }
                 
                 var maxTextWidth = CGFloat.greatestFiniteMagnitude
                 for media in item.message.media {
@@ -135,7 +139,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: dateReactionCount)
+                let dateFormat: MessageTimestampStatusFormat
+                if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                    dateFormat = .minimal
+                } else {
+                    dateFormat = .regular
+                }
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, reactionCount: dateReactionCount)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 var displayStatus = false
@@ -297,11 +307,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var statusFrame: CGRect?
                 if let statusSize = statusSize {
-                    if forceStatusNewline {
-                        statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSize.width, y: textFrameWithoutInsets.maxY), size: statusSize)
-                    } else {
-                        statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSize.width, y: textFrameWithoutInsets.maxY - statusSize.height), size: statusSize)
-                    }
+                    statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSize.width, y: textFrameWithoutInsets.maxY - statusSize.height), size: statusSize)
                 }
                 
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
@@ -639,5 +645,25 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func getStatusNode() -> ASDisplayNode? {
         return self.statusNode
+    }
+
+    func animateFrom(sourceView: UIView, scrollOffset: CGFloat, widthDifference: CGFloat, transition: CombinedTransition) {
+        self.view.addSubview(sourceView)
+
+        sourceView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak sourceView] _ in
+            sourceView?.removeFromSuperview()
+        })
+        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08)
+
+        let offset = CGPoint(
+            x: sourceView.frame.minX - (self.textNode.frame.minX - 0.0),
+            y: sourceView.frame.minY - (self.textNode.frame.minY - 3.0) - scrollOffset
+        )
+
+        transition.vertical.animatePositionAdditive(node: self.textNode, offset: offset)
+        transition.updatePosition(layer: sourceView.layer, position: CGPoint(x: sourceView.layer.position.x - offset.x, y: sourceView.layer.position.y - offset.y))
+
+        self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        transition.horizontal.animatePositionAdditive(node: self.statusNode, offset: CGPoint(x: -widthDifference, y: 0.0))
     }
 }

@@ -68,7 +68,7 @@ private let upperLimitDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
 private let controlFont = Font.regular(17.0)
 private let dayFont = Font.regular(13.0)
 private let dateFont = Font.with(size: 17.0, design: .regular, traits: .monospacedNumbers)
-private let selectedDateFont = Font.with(size: 17.0, design: .regular, traits: [.bold, .monospacedNumbers])
+private let selectedDateFont = Font.with(size: 17.0, design: .regular, weight: .bold, traits: .monospacedNumbers)
 
 private var calendar: Calendar = {
     var calendar = Calendar(identifier: .gregorian)

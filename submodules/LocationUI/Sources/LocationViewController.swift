@@ -3,7 +3,6 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -192,7 +191,7 @@ public final class LocationViewController: ViewController {
                         return state
                     }
                     
-                    let _ = requestEditLiveLocation(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: 0).start(completed: { [weak self] in
+                    let _ = context.engine.messages.requestEditLiveLocation(messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: 0).start(completed: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
@@ -227,7 +226,7 @@ public final class LocationViewController: ViewController {
                     strongSelf.present(c, in: .window(.root), with: a)
                 }, openSettings: {
                     context.sharedContext.applicationBindings.openSettings()
-                }) { [weak self] authorized in
+                }, { [weak self] authorized in
                     guard let strongSelf = self, authorized else {
                         return
                     }
@@ -261,7 +260,7 @@ public final class LocationViewController: ViewController {
                                     return state
                                 }
                                 
-                                let _ = requestEditLiveLocation(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance).start(completed: { [weak self] in
+                                let _ = context.engine.messages.requestEditLiveLocation(messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance).start(completed: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -277,9 +276,9 @@ public final class LocationViewController: ViewController {
                                 var text: String
                                 let distanceString = shortStringForDistance(strings: strongSelf.presentationData.strings, distance: distance)
                                 if let compactDisplayTitle = compactDisplayTitle {
-                                    text = strongSelf.presentationData.strings.Location_ProximityAlertSetText(compactDisplayTitle, distanceString).0
+                                    text = strongSelf.presentationData.strings.Location_ProximityAlertSetText(compactDisplayTitle, distanceString).string
                                 } else {
-                                    text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).0
+                                    text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).string
                                 }
                                 
                                 strongSelf.dismissAllTooltips()
@@ -312,7 +311,7 @@ public final class LocationViewController: ViewController {
                         })
                         strongSelf.present(controller, in: .window(.root))
                     })
-                }
+                })
             }
         }, updateSendActionHighlight: { [weak self] highlighted in
             guard let strongSelf = self else {
@@ -327,7 +326,7 @@ public final class LocationViewController: ViewController {
                 strongSelf.present(c, in: .window(.root), with: a)
             }, openSettings: {
                 context.sharedContext.applicationBindings.openSettings()
-            }) { [weak self] authorized in
+            }, { [weak self] authorized in
                 guard let strongSelf = self, authorized else {
                     return
                 }
@@ -352,9 +351,9 @@ public final class LocationViewController: ViewController {
                         var text: String
                         let distanceString = shortStringForDistance(strings: strongSelf.presentationData.strings, distance: distance)
                         if let compactDisplayTitle = compactDisplayTitle {
-                            text = strongSelf.presentationData.strings.Location_ProximityAlertSetText(compactDisplayTitle, distanceString).0
+                            text = strongSelf.presentationData.strings.Location_ProximityAlertSetText(compactDisplayTitle, distanceString).string
                         } else {
-                            text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).0
+                            text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).string
                         }
                         
                         strongSelf.dismissAllTooltips()
@@ -380,7 +379,7 @@ public final class LocationViewController: ViewController {
                         let controller = ActionSheetController(presentationData: strongSelf.presentationData)
                         var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
                         if let user = peer as? TelegramUser {
-                            title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(user.compactDisplayTitle).0
+                            title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(user.compactDisplayTitle).string
                         }
                         
                         let sendLiveLocationImpl: (Int32) -> Void = { [weak controller] period in
@@ -416,7 +415,7 @@ public final class LocationViewController: ViewController {
                         strongSelf.present(controller, in: .window(.root))
                     })
                 }
-            }
+            })
         }, stopLiveLocation: { [weak self] in
             params.stopLiveLocation(nil)
             self?.dismiss()
@@ -495,7 +494,7 @@ public final class LocationViewController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
     
-        self.controllerNode.containerLayoutUpdated(layout, navigationHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc private func cancelPressed() {

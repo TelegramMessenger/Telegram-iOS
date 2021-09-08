@@ -2,6 +2,8 @@
 
 @interface TGCameraTimeCodeView : UIView
 
+@property (nonatomic, assign) UIInterfaceOrientation interfaceOrientation;
+
 @property (nonatomic, copy) NSTimeInterval(^requestedRecordingDuration)(void);
 
 - (void)startRecording;

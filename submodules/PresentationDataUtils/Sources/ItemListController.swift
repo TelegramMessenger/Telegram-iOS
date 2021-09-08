@@ -4,7 +4,6 @@ import AlertUI
 import AccountContext
 import SwiftSignalKit
 import ItemListUI
-import PresentationDataUtils
 
 public extension ItemListController {
     convenience init<ItemGenerationArguments>(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState, ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {

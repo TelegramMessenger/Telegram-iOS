@@ -5,7 +5,6 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import Postbox
-import SyncCore
 import TelegramCore
 import AccountContext
 import ContextUI
@@ -39,7 +38,7 @@ final class PeerInfoPaneWrapper {
     }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        if let (currentSize, currentSideInset, currentBottomInset, visibleHeight, currentIsScrollingLockedAtTop, currentExpandProgress, currentPresentationData) = self.appliedParams {
+        if let (currentSize, currentSideInset, currentBottomInset, _, currentIsScrollingLockedAtTop, currentExpandProgress, currentPresentationData) = self.appliedParams {
             if currentSize == size && currentSideInset == sideInset && currentBottomInset == bottomInset, currentIsScrollingLockedAtTop == isScrollingLockedAtTop && currentExpandProgress == expandProgress && currentPresentationData === presentationData {
                 return
             }
@@ -181,11 +180,9 @@ final class PeerInfoPaneTabsContainerNode: ASDisplayNode {
             self.currentParams = (paneList, selectedPane, presentationData)
             for specifier in paneList {
                 let paneNode: PeerInfoPaneTabsContainerPaneNode
-                var wasAdded = false
                 if let current = self.paneNodes[specifier.key] {
                     paneNode = current
                 } else {
-                    wasAdded = true
                     paneNode = PeerInfoPaneTabsContainerPaneNode(pressed: { [weak self] in
                         self?.paneSelected(specifier.key)
                     })
@@ -433,7 +430,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     
     weak var parentController: ViewController?
     
-    private let coveringBackgroundNode: ASDisplayNode
+    private let coveringBackgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
     private let tabsContainerNode: PeerInfoPaneTabsContainerNode
     private let tabsSeparatorNode: ASDisplayNode
@@ -477,8 +474,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
-        self.coveringBackgroundNode = ASDisplayNode()
-        self.coveringBackgroundNode.isLayerBacked = true
+        self.coveringBackgroundNode = NavigationBackgroundNode(color: .clear)
+        self.coveringBackgroundNode.isUserInteractionEnabled = false
         
         self.tabsContainerNode = PeerInfoPaneTabsContainerNode()
         
@@ -598,7 +595,6 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                         directionIsToRight = translation.x > size.width / 2.0
                     }
                 }
-                var updated = false
                 if let directionIsToRight = directionIsToRight {
                     var updatedIndex = currentIndex
                     if directionIsToRight {
@@ -609,7 +605,6 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                     let switchToKey = availablePanes[updatedIndex]
                     if switchToKey != self.currentPaneKey && self.currentPanes[switchToKey] != nil{
                         self.currentPaneKey = switchToKey
-                        updated = true
                     }
                 }
                 self.transitionFraction = 0.0
@@ -692,7 +687,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         transition.updateAlpha(node: self.coveringBackgroundNode, alpha: expansionFraction)
         
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-        self.coveringBackgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.coveringBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.tabsSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
@@ -700,6 +695,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.coveringBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: tabsHeight + UIScreenPixel)))
+        self.coveringBackgroundNode.update(size: self.coveringBackgroundNode.bounds.size, transition: transition)
         
         transition.updateFrame(node: self.tabsSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: tabsHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
         
@@ -787,8 +783,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         var paneSwitchAnimationOffset: CGFloat = 0.0
         
         var updatedCurrentIndex = currentIndex
-        var animatePaneTransitionOffset: CGFloat?
-        if let pendingSwitchToPaneKey = self.pendingSwitchToPaneKey, let pane = self.currentPanes[pendingSwitchToPaneKey] {
+        if let pendingSwitchToPaneKey = self.pendingSwitchToPaneKey, let _ = self.currentPanes[pendingSwitchToPaneKey] {
             self.pendingSwitchToPaneKey = nil
             previousPaneKey = self.currentPaneKey
             self.currentPaneKey = pendingSwitchToPaneKey
@@ -821,7 +816,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                         return
                     }
                     pane.isAnimatingOut = false
-                    if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
+                    if let (_, _, _, _, _, _, data) = strongSelf.currentParams {
                         if let availablePanes = data?.availablePanes, let currentPaneKey = strongSelf.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey), let paneIndex = availablePanes.firstIndex(of: key), abs(paneIndex - currentIndex) <= 1 {
                         } else {
                             if let pane = strongSelf.currentPanes.removeValue(forKey: key) {
@@ -838,7 +833,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                     transition.animateFrame(node: pane.node, from: paneFrame, to: paneFrame.offsetBy(dx: -paneSwitchAnimationOffset, dy: 0.0), completion: isAnimatingOut ? nil : { _ in
                         paneCompletion()
                     })
-                } else if let previousPaneKey = previousPaneKey, key == self.currentPaneKey {
+                } else if let _ = previousPaneKey, key == self.currentPaneKey {
                     pane.node.frame = adjustedFrame
                     let isAnimatingOut = pane.isAnimatingOut
                     pane.isAnimatingOut = true

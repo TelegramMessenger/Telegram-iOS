@@ -32,7 +32,6 @@ public func materialize<T, E>(signal: Signal<SignalEvent<T, E>, NoError>) -> Sig
                     subscriber.putCompletion()
             }
         }, error: { _ in
-            subscriber.putCompletion()
         }, completed: {
             subscriber.putCompletion()
         })

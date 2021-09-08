@@ -573,7 +573,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         if (!transportContext.didSendActualizationPingAfterConnection)
         {
             if (MTLogEnabled()) {
-                MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to connection context update task]", (int)self);
+                MTLog(@"[MTTcpTransport#%" PRIxPTR " unlocking transaction processing due to connection context update task]", (intptr_t)self);
             }
             transportContext.isWaitingForTransactionToBecomeReady = false;
             transportContext.transactionLockTime = 0.0;
@@ -581,7 +581,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         else if (CFAbsoluteTimeGetCurrent() > transportContext.transactionLockTime + 1.0)
         {
             if (MTLogEnabled()) {
-                MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to timeout]", (int)self);
+                MTLog(@"[MTTcpTransport#%" PRIxPTR " unlocking transaction processing due to timeout]", (intptr_t)self);
             }
             transportContext.isWaitingForTransactionToBecomeReady = false;
             transportContext.transactionLockTime = 0.0;
@@ -589,7 +589,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         else
         {
             if (MTLogEnabled()) {
-                MTLog(@"[MTTcpTransport#%x skipping transaction request]", (int)self);
+                MTLog(@"[MTTcpTransport#%" PRIxPTR " skipping transaction request]", (intptr_t)self);
             }
             transportContext.requestAnotherTransactionWhenReady = true;
             

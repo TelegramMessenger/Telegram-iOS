@@ -41,6 +41,8 @@ private func cancelOtherGestures(gesture: ContextGesture, view: UIView) {
         for recognizer in gestureRecognizers {
             if let recognizer = recognizer as? ContextGesture, recognizer !== gesture {
                 recognizer.cancel()
+            } else if let recognizer = recognizer as? ListViewTapGestureRecognizer {
+                recognizer.cancel()
             }
         }
     }

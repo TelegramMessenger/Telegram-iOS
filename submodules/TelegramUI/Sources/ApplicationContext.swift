@@ -5,7 +5,6 @@ import TelegramUIPreferences
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import Display
 import LegacyComponents
 import DeviceAccess
@@ -36,6 +35,8 @@ final class UnauthorizedApplicationContext {
     let isReady = Promise<Bool>()
     
     var authorizationCompleted: Bool = false
+
+    private var serviceNotificationEventsDisposable: Disposable?
     
     init(apiId: Int32, apiHash: String, sharedContext: SharedAccountContextImpl, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)])) {
         self.sharedContext = sharedContext
@@ -71,6 +72,20 @@ final class UnauthorizedApplicationContext {
         }, { result in
             ApplicationSpecificNotice.setPermissionWarning(accountManager: sharedContext.accountManager, permission: .cellularData, value: 0)
         })
+
+        self.serviceNotificationEventsDisposable = (account.serviceNotificationEvents
+        |> deliverOnMainQueue).start(next: { [weak self] text in
+            if let strongSelf = self {
+                let presentationData = strongSelf.sharedContext.currentPresentationData.with { $0 }
+                let alertController = textAlertController(sharedContext: strongSelf.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+
+                (strongSelf.rootController.viewControllers.last as? ViewController)?.present(alertController, in: .window(.root))
+            }
+        })
+    }
+
+    deinit {
+        self.serviceNotificationEventsDisposable?.dispose()
     }
 }
 
@@ -133,7 +148,7 @@ final class AuthorizedApplicationContext {
     private var showCallsTabDisposable: Disposable?
     private var enablePostboxTransactionsDiposable: Disposable?
     
-    init(sharedApplicationContext: SharedApplicationContext, mainWindow: Window1, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContextImpl, accountManager: AccountManager, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
+    init(sharedApplicationContext: SharedApplicationContext, mainWindow: Window1, watchManagerArguments: Signal<WatchManagerArguments?, NoError>, context: AccountContextImpl, accountManager: AccountManager<TelegramAccountManagerTypes>, showCallsTab: Bool, reinitializedNotificationSettings: @escaping () -> Void) {
         self.sharedApplicationContext = sharedApplicationContext
         
         setupLegacyComponents(context: context)
@@ -391,7 +406,7 @@ final class AuthorizedApplicationContext {
                                         
                                         var processed = false
                                         for media in firstMessage.media {
-                                            if let action = media as? TelegramMediaAction, case let .geoProximityReached(fromId, toId, distance) = action.action {
+                                            if let action = media as? TelegramMediaAction, case .geoProximityReached = action.action {
                                                 strongSelf.context.sharedContext.openLocationScreen(context: strongSelf.context, messageId: firstMessage.id, navigationController: strongSelf.rootController)
                                                 processed = true
                                                 break
@@ -445,13 +460,13 @@ final class AuthorizedApplicationContext {
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = (acceptTermsOfService(account: strongSelf.context.account, id: termsOfServiceUpdate.id)
+                    let _ = (strongSelf.context.engine.accountData.acceptTermsOfService(id: termsOfServiceUpdate.id)
                     |> deliverOnMainQueue).start(completed: {
                         controller?.dismiss()
                         if let strongSelf = self, let botName = botName {
-                            strongSelf.termsOfServiceProceedToBotDisposable.set((resolvePeerByName(account: strongSelf.context.account, name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
-                                if let strongSelf = self, let peerId = peerId {
-                                    self?.rootController.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)))
+                            strongSelf.termsOfServiceProceedToBotDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+                                if let strongSelf = self, let peer = peer {
+                                    self?.rootController.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peer.id)))
                                 }
                             }))
                         }
@@ -464,7 +479,7 @@ final class AuthorizedApplicationContext {
                     }
                     let accountId = strongSelf.context.account.id
                     let accountManager = strongSelf.context.sharedContext.accountManager
-                    let _ = (deleteAccount(account: strongSelf.context.account)
+                    let _ = (strongSelf.context.engine.auth.deleteAccount()
                     |> deliverOnMainQueue).start(error: { _ in
                         guard let strongSelf = self else {
                             return
@@ -596,7 +611,7 @@ final class AuthorizedApplicationContext {
                             switch state {
                                 case .contacts:
                                     splitTest.addEvent(.ContactsRequest)
-                                    DeviceAccess.authorizeAccess(to: .contacts, presentationData: context.sharedContext.currentPresentationData.with { $0 }) { result in
+                                    DeviceAccess.authorizeAccess(to: .contacts, presentationData: context.sharedContext.currentPresentationData.with { $0 }, { result in
                                         if result {
                                             splitTest.addEvent(.ContactsAllowed)
                                         } else {
@@ -604,12 +619,12 @@ final class AuthorizedApplicationContext {
                                         }
                                         permissionsPosition.set(position + 1)
                                         ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .contacts, value: 0)
-                                    }
+                                    })
                                 case .notifications:
                                     splitTest.addEvent(.NotificationsRequest)
                                     DeviceAccess.authorizeAccess(to: .notifications, registerForNotifications: { result in
                                         context.sharedContext.applicationBindings.registerForNotifications(result)
-                                    }) { result in
+                                    }, { result in
                                         if result {
                                             splitTest.addEvent(.NotificationsAllowed)
                                         } else {
@@ -617,7 +632,7 @@ final class AuthorizedApplicationContext {
                                         }
                                         permissionsPosition.set(position + 1)
                                         ApplicationSpecificNotice.setPermissionWarning(accountManager: context.sharedContext.accountManager, permission: .notifications, value: 0)
-                                    }
+                                    })
                                 case .cellularData:
                                     DeviceAccess.authorizeAccess(to: .cellularData, presentationData: context.sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
                                         if let strongSelf = self {
@@ -632,9 +647,9 @@ final class AuthorizedApplicationContext {
                                 case .siri:
                                     DeviceAccess.authorizeAccess(to: .siri, requestSiriAuthorization: { completion in
                                         return context.sharedContext.applicationBindings.requestSiriAuthorization(completion)
-                                    }) { result in
+                                    }, { result in
                                         permissionsPosition.set(position + 1)
-                                    }
+                                    })
                                 default:
                                     break
                             }
@@ -743,7 +758,7 @@ final class AuthorizedApplicationContext {
                         }
                         
                         let navigateToMessage = {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true, timecode: nil)))
                         }
                         
                         if chatIsVisible {
@@ -822,7 +837,7 @@ final class AuthorizedApplicationContext {
         
         if visiblePeerId != peerId || messageId != nil {
             if self.rootController.rootTabController != nil {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap { .message(id: $0, highlight: true) }, activateInput: activateInput))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap { .message(id: $0, highlight: true, timecode: nil) }, activateInput: activateInput))
             } else {
                 self.scheduledOpenChatWithPeerId = (peerId, messageId, activateInput)
             }
@@ -855,21 +870,21 @@ final class AuthorizedApplicationContext {
     func switchAccount() {
         let _ = (activeAccountsAndPeers(context: self.context)
         |> take(1)
-        |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
+        |> map { primaryAndAccounts -> (AccountContext, Peer, Int32)? in
             return primaryAndAccounts.1.first
         }
-        |> map { accountAndPeer -> Account? in
-            if let (account, _, _) = accountAndPeer {
-                return account
+        |> map { accountAndPeer -> AccountContext? in
+            if let (context, _, _) = accountAndPeer {
+                return context
             } else {
                 return nil
             }
         }
-        |> deliverOnMainQueue).start(next: { [weak self] account in
-            guard let strongSelf = self, let account = account else {
+        |> deliverOnMainQueue).start(next: { [weak self] context in
+            guard let strongSelf = self, let context = context else {
                 return
             }
-            strongSelf.context.sharedContext.switchToAccount(id: account.id, fromSettingsController: nil, withChatListController: nil)
+            strongSelf.context.sharedContext.switchToAccount(id: context.account.id, fromSettingsController: nil, withChatListController: nil)
         })
     }
     

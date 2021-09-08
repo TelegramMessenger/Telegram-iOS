@@ -192,12 +192,12 @@ genrule(
 
         PATH="$$PATH:$$YASM_DIR" "$$SOURCE_PATH/build-ffmpeg-bazel.sh" "$$VARIANT" "$$BUILD_ARCH" "$$BUILD_DIR" "$$SOURCE_PATH"
     """ + "\n" + "\n".join([
-        "cp \"$$BUILD_DIR/FFmpeg-iOS/include/{header_path}\" \"$(location Public/ffmpeg/{header_path})\"".format(header_path = header_path) for header_path in ffmpeg_header_paths
+        "cp \"$$BUILD_DIR/FFmpeg-iOS/include/{header_path}\" \"$(location Public/third_party/ffmpeg/{header_path})\"".format(header_path = header_path) for header_path in ffmpeg_header_paths
     ]) + "\n" + "\n".join([
         "cp \"$$BUILD_DIR/FFmpeg-iOS/lib/{lib}\" \"$(location {lib})\"".format(lib = lib) for lib in ffmpeg_libs
     ]),
     outs = [
-        "Public/ffmpeg/{}".format(header_path) for header_path in ffmpeg_header_paths
+        "Public/third_party/ffmpeg/{}".format(header_path) for header_path in ffmpeg_header_paths
     ] + ffmpeg_libs,
     tools = [
         "//third-party/yasm:yasm.tar",
@@ -219,9 +219,10 @@ objc_library(
     name = "ffmpeg",
     module_name = "ffmpeg",
     enable_modules = True,
-    hdrs = ["Public/ffmpeg/" + x for x in ffmpeg_header_paths],
+    hdrs = ["Public/third_party/ffmpeg/" + x for x in ffmpeg_header_paths],
     includes = [
-        "Public/ffmpeg",
+        "Public",
+        "Public/third_party/ffmpeg",
     ],
     sdk_dylibs = [
         "libbz2",

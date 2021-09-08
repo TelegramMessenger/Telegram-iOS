@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import UIKit
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
@@ -21,7 +20,6 @@ final class PeerBanTimeoutController: ActionSheetController {
     
     init(context: AccountContext, currentValue: Int32, applyValue: @escaping (Int32?) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let theme = presentationData.theme
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))

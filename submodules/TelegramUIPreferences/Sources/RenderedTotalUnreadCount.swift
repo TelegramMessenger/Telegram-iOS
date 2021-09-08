@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public enum RenderedTotalUnreadCountType {
@@ -21,7 +22,7 @@ public func renderedTotalUnreadCount(inAppSettings: InAppNotificationSettings, t
     return (totalUnreadState.count(for: inAppSettings.totalUnreadCountDisplayStyle.category, in: inAppSettings.totalUnreadCountDisplayCategory.statsType, with: inAppSettings.totalUnreadCountIncludeTags), type)
 }
 
-public func renderedTotalUnreadCount(accountManager: AccountManager, postbox: Postbox) -> Signal<(Int32, RenderedTotalUnreadCountType), NoError> {
+public func renderedTotalUnreadCount(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox) -> Signal<(Int32, RenderedTotalUnreadCountType), NoError> {
     let unreadCountsKey = PostboxViewKey.unreadCounts(items: [.total(nil)])
     return combineLatest(accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings]), postbox.combinedView(keys: [unreadCountsKey]))
     |> map { sharedData, view -> (Int32, RenderedTotalUnreadCountType) in

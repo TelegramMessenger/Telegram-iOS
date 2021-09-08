@@ -345,8 +345,9 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
 {
     CGSize referenceSize = [self referenceViewSize];
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     CGRect containerFrame = [TGPhotoCropController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation hasArbitraryRotation:_cropView.hasArbitraryRotation hasOnScreenNavigation:hasOnScreenNavigation];
     containerFrame = CGRectInset(containerFrame, TGPhotoCropAreaInsetSize.width, TGPhotoCropAreaInsetSize.height);
@@ -502,13 +503,10 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
 
 - (id)currentResultRepresentation
 {
-    if (_transitionOutView != nil && [_transitionOutView isKindOfClass:[UIImageView class]])
-    {
+    if (_transitionOutView != nil && [_transitionOutView isKindOfClass:[UIImageView class]]) {
         return ((UIImageView *)_transitionOutView).image;
-    }
-    else
-    {
-        return [_cropView croppedImageWithMaxSize:CGSizeMake(750, 750)];
+    } else {
+        return [_cropView croppedImageWithMaxSize:TGPhotoEditorScreenImageMaxSize()];
     }
 }
 
@@ -764,8 +762,9 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     _wrapperView.frame = CGRectMake((referenceSize.width - screenSide) / 2, (referenceSize.height - screenSide) / 2, screenSide, screenSide);
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2 , (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);

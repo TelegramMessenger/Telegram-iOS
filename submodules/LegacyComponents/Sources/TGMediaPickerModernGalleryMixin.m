@@ -330,8 +330,13 @@
 - (void)updateWithFetchResult:(TGMediaAssetFetchResult *)fetchResult
 {
     TGMediaAsset *currentAsset = ((TGMediaPickerGalleryItem *)_galleryController.currentItem).asset;
-    bool exists = ([fetchResult indexOfAsset:currentAsset] != NSNotFound);
     
+    bool exists;
+    if ([currentAsset isKindOfClass:[TGCameraCapturedVideo class]]) {
+        exists = [fetchResult indexOfAsset:((TGCameraCapturedVideo *)currentAsset).originalAsset] != NSNotFound;
+    } else {
+        exists =  ([fetchResult indexOfAsset:currentAsset] != NSNotFound);
+    }
     if (!exists)
     {
         _galleryModel.dismiss(true, false);
@@ -365,7 +370,7 @@
         {
             case TGMediaAssetVideoType:
             {
-                galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
+                galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:(id<TGMediaEditableItem,TGMediaSelectableItem>)asset];
             }
                 break;
                 
@@ -381,7 +386,7 @@
 //                if (asset.subtypes & TGMediaAssetSubtypePhotoLive)
 //                    galleryItem = [[TGMediaPickerGalleryVideoItem alloc] initWithAsset:asset];
 //                else
-                galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:asset];
+                galleryItem = [[TGMediaPickerGalleryPhotoItem alloc] initWithAsset:(id<TGMediaEditableItem,TGMediaSelectableItem>)asset];
             }
                 break;
         }

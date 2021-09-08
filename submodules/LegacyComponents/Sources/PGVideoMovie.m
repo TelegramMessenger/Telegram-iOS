@@ -1,5 +1,6 @@
 #import "PGVideoMovie.h"
 #import "GPUImageFilter.h"
+#import "LegacyComponentsInternal.h"
 
 GLfloat kColorConversion601Default[] = {
     1.164,  1.164, 1.164,
@@ -226,7 +227,20 @@ NSString *const kYUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRIN
         else {
             [pixBuffAttributes setObject:@(kCVPixelFormatType_32BGRA) forKey:(id)kCVPixelBufferPixelFormatTypeKey];
         }
-        playerItemOutput = [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:pixBuffAttributes];
+        if (iosMajorVersion() >= 10) {
+            NSDictionary *hdVideoProperties = @
+            {
+            AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+            AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+            AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
+            };
+            [pixBuffAttributes setObject:hdVideoProperties forKey:AVVideoColorPropertiesKey];
+            playerItemOutput = [[AVPlayerItemVideoOutput alloc] initWithOutputSettings:pixBuffAttributes];
+            
+            
+        } else {
+            playerItemOutput = [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:pixBuffAttributes];
+        }
         [playerItemOutput setDelegate:self queue:videoProcessingQueue];
 
         [_playerItem addOutput:playerItemOutput];

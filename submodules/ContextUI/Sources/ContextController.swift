@@ -6,10 +6,17 @@ import TelegramPresentationData
 import TextSelectionNode
 import ReactionSelectionNode
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 
 private let animationDurationFactor: Double = 1.0
+
+public protocol ContextControllerProtocol {
+    var useComplexItemsTransitionAnimation: Bool { get set }
+    var immediateItemsTransitionAnimation: Bool { get set }
+    
+    func setItems(_ items: Signal<[ContextMenuItem], NoError>)
+    func dismiss(completion: (() -> Void)?)
+}
 
 public enum ContextMenuActionItemTextLayout {
     case singleLine
@@ -66,9 +73,9 @@ public final class ContextMenuActionItem {
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
-    public let action: (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void
+    public let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void
     
-    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, textFont: ContextMenuActionItemFont = .regular, badge: ContextMenuActionBadge? = nil, icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: @escaping (ContextController, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, textFont: ContextMenuActionItemFont = .regular, badge: ContextMenuActionBadge? = nil, icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void) {
         self.text = text
         self.textColor = textColor
         self.textFont = textFont
@@ -86,7 +93,7 @@ public protocol ContextMenuCustomNode: ASDisplayNode {
 }
 
 public protocol ContextMenuCustomItem {
-    func node(presentationData: PresentationData, getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode
 }
 
 public enum ContextMenuItem {
@@ -113,7 +120,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private let reactionSelected: (ReactionContextItem.Reaction) -> Void
     private let beganAnimatingOut: () -> Void
     private let attemptTransitionControllerIntoNavigation: () -> Void
-    private let getController: () -> ContextController?
+    fileprivate var dismissedForCancel: (() -> Void)?
+    private let getController: () -> ContextControllerProtocol?
     private weak var gesture: ContextGesture?
     private var displayTextSelectionTip: Bool
     
@@ -151,6 +159,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let hapticFeedback = HapticFeedback()
     
+    private var animatedIn = false
     private var isAnimatingOut = false
     
     private let itemsDisposable = MetaDisposable()
@@ -471,6 +480,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     @objc private func dimNodeTapped() {
+        guard self.animatedIn else {
+            return
+        }
+        self.dismissedForCancel?()
         self.beginDismiss(.default)
     }
     
@@ -490,7 +503,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             
             if let takenViewInfo = takenViewInfo, let parentSupernode = takenViewInfo.contentContainingNode.supernode {
                 self.contentContainerNode.contentNode = .extracted(node: takenViewInfo.contentContainingNode, keepInPlace: source.keepInPlace)
-                if source.keepInPlace {
+                if source.keepInPlace || takenViewInfo.maskView != nil {
+                    self.clippingNode.view.mask = takenViewInfo.maskView
                     self.clippingNode.addSubnode(self.contentContainerNode)
                 } else {
                     self.scrollNode.addSubnode(self.contentContainerNode)
@@ -642,18 +656,32 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     
                     self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
                     let contentContainerOffset = CGPoint(x: localContentSourceFrame.center.x - self.contentContainerNode.frame.center.x, y: localContentSourceFrame.center.y - self.contentContainerNode.frame.center.y)
-                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { [weak self] _ in
+                        self?.animatedIn = true
+                    })
                 }
             case let .extracted(extracted, keepInPlace):
                 let springDuration: Double = 0.42 * animationDurationFactor
-                let springDamping: CGFloat = 104.0
+                var springDamping: CGFloat = 104.0
+                if case let .extracted(source) = self.source, source.centerVertically {
+                    springDamping = 124.0
+                }
                 
                 self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
                 self.actionsContainerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
-                
+                 
                 if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
                     let contentParentNode = extracted
                     let localSourceFrame = self.view.convert(originalProjectedContentViewFrame.1, to: self.scrollNode.view)
+                   
+                    var actionsDuration = springDuration
+                    var actionsOffset: CGFloat = 0.0
+                    var contentDuration = springDuration
+                    if case let .extracted(source) = self.source, source.centerVertically {
+                        actionsOffset = -(originalProjectedContentViewFrame.1.height - originalProjectedContentViewFrame.0.height) * 0.57
+                        actionsDuration *= 1.0
+                        contentDuration *= 0.9
+                    }
                     
                     let localContentSourceFrame: CGRect
                     if keepInPlace {
@@ -666,9 +694,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         reactionContextNode.animateIn(from: CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: contentParentNode.contentRect.size))
                     }
                     
-                    self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+                    self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y + actionsOffset)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: actionsDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
                     let contentContainerOffset = CGPoint(x: localContentSourceFrame.center.x - self.contentContainerNode.frame.center.x - contentParentNode.contentRect.minX, y: localContentSourceFrame.center.y - self.contentContainerNode.frame.center.y - contentParentNode.contentRect.minY)
-                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: contentDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { [weak self] _ in
+                        self?.clippingNode.view.mask = nil
+                        self?.animatedIn = true
+                    })
                     contentParentNode.applyAbsoluteOffsetSpring?(-contentContainerOffset.y, springDuration, springDamping)
                 }
                 
@@ -711,13 +742,17 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         }
                     }
                     self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
-                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+                    self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { [weak self] _ in
+                        self?.animatedIn = true
+                    })
                 }
             }
         }
     }
     
     func animateOut(result initialResult: ContextMenuActionResult, completion: @escaping () -> Void) {
+        self.isUserInteractionEnabled = false
+        
         self.beganAnimatingOut()
         
         var transitionDuration: Double = 0.2
@@ -828,11 +863,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 updatedContentAreaInScreenSpace.origin.x = 0.0
                 updatedContentAreaInScreenSpace.size.width = self.bounds.width
                 
+                self.clippingNode.view.mask = putBackInfo.maskView
                 self.clippingNode.layer.animateFrame(from: self.clippingNode.frame, to: updatedContentAreaInScreenSpace, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
                 self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: updatedContentAreaInScreenSpace.minY, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
             }
             
-            let intermediateCompletion: () -> Void = { [weak contentParentNode] in
+            let intermediateCompletion: () -> Void = { [weak self, weak contentParentNode] in
                 if completedEffect && completedContentNode && completedActionsNode {
                     switch result {
                     case .default, .custom:
@@ -844,6 +880,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     case .dismissWithoutContent:
                         break
                     }
+                    
+                    self?.clippingNode.view.mask = nil
                     
                     completion()
                 }
@@ -911,14 +949,19 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     localContentSourceFrame = localSourceFrame
                 }
                 
-                self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y), duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true)
+                var actionsOffset: CGFloat = 0.0
+                if case let .extracted(source) = self.source, source.centerVertically {
+                    actionsOffset = -localSourceFrame.width * 0.6
+                }
+                
+                self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y + actionsOffset), duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true)
                 let contentContainerOffset = CGPoint(x: localContentSourceFrame.center.x - self.contentContainerNode.frame.center.x - contentParentNode.contentRect.minX, y: localContentSourceFrame.center.y - self.contentContainerNode.frame.center.y - contentParentNode.contentRect.minY)
                 self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: contentContainerOffset, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true, completion: { _ in
                     completedContentNode = true
                     intermediateCompletion()
                 })
                 contentParentNode.updateAbsoluteRect?(self.contentContainerNode.frame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y + contentContainerOffset.y), self.bounds.size)
-                contentParentNode.applyAbsoluteOffset?(-contentContainerOffset.y, transitionCurve, transitionDuration)
+                contentParentNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: -contentContainerOffset.y), transitionCurve, transitionDuration)
                 
                 if let reactionContextNode = self.reactionContextNode {
                     reactionContextNode.animateOut(to: CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: contentParentNode.contentRect.size), animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)
@@ -926,7 +969,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 
                 contentParentNode.willUpdateIsExtractedToContextPreview?(false, .animated(duration: 0.2, curve: .easeInOut))
             } else {
-                if let snapshotView = contentParentNode.contentNode.view.snapshotContentTree() {
+                if let snapshotView = contentParentNode.contentNode.view.snapshotContentTree(keepTransform: true) {
                     self.contentContainerNode.view.addSubview(snapshotView)
                 }
                 
@@ -979,10 +1022,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             var completedEffect = false
             var completedContentNode = false
             var completedActionsNode = false
-            var targetNode: ASDisplayNode?
             
             if let transitionInfo = transitionInfo, let (sourceNode, sourceNodeRect) = transitionInfo.sourceNode() {
-                targetNode = sourceNode
                 let projectedFrame = convertFrame(sourceNodeRect, from: sourceNode.view, to: self.view)
                 self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
                 
@@ -1059,17 +1100,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 animateOutToItem = false
             }
             
-            if animateOutToItem, let targetNode = targetNode, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
-                let actionsSideInset: CGFloat = (validLayout?.safeInsets.left ?? 0.0) + 11.0
+            if animateOutToItem, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
                 
                 let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
-                
-                if let snapshotView = targetNode.view.snapshotContentTree(unhide: true, keepTransform: true), false {
-                    self.view.addSubview(snapshotView)
-                    snapshotView.layer.animatePosition(from: CGPoint(x: self.contentContainerNode.frame.midX, y: self.contentContainerNode.frame.minY + localSourceFrame.height / 2.0), to: localSourceFrame.center, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
-                    snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false, completion: { _ in
-                    })
-                }
                 
                 self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y), duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true)
                 let contentContainerOffset = CGPoint(x: localSourceFrame.center.x - self.contentContainerNode.frame.center.x, y: localSourceFrame.center.y - self.contentContainerNode.frame.center.y)
@@ -1143,6 +1176,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     private func setItems(items: [ContextMenuItem]) {
+        if let _ = self.currentItems, !self.didCompleteAnimationIn && self.getController()?.immediateItemsTransitionAnimation == true {
+            return
+        }
+        
         self.currentItems = items
         
         let previousActionsContainerNode = self.actionsContainerNode
@@ -1157,7 +1194,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if let layout = self.validLayout {
             self.updateLayout(layout: layout, transition: .animated(duration: 0.3, curve: .spring), previousActionsContainerNode: previousActionsContainerNode)
-            
         } else {
             previousActionsContainerNode.removeFromSupernode()
         }
@@ -1311,6 +1347,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                 }
             case let .extracted(contentParentNode, keepInPlace):
+                var centerVertically = false
+                if case let .extracted(source) = self.source, source.centerVertically {
+                    centerVertically = true
+                }
                 let contentActionsSpacing: CGFloat = keepInPlace ? 16.0 : 8.0
                 if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
                     let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
@@ -1324,13 +1364,17 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let maximumActionsFrameOrigin = max(60.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - actionsSize.height)
                     let preferredActionsX: CGFloat
                     let originalActionsY: CGFloat
-                    if keepInPlace {
+                    if centerVertically {
+                        originalActionsY = min(originalProjectedContentViewFrame.1.maxY + contentActionsSpacing, maximumActionsFrameOrigin)
+                        preferredActionsX = originalProjectedContentViewFrame.1.maxX - actionsSize.width
+                    } else if keepInPlace {
                         originalActionsY = originalProjectedContentViewFrame.1.minY - contentActionsSpacing - actionsSize.height
                         preferredActionsX = max(actionsSideInset, originalProjectedContentViewFrame.1.maxX - actionsSize.width)
                     } else {
                         originalActionsY = min(originalProjectedContentViewFrame.1.maxY + contentActionsSpacing, maximumActionsFrameOrigin)
                         preferredActionsX = originalProjectedContentViewFrame.1.minX
                     }
+
                     var originalActionsFrame = CGRect(origin: CGPoint(x: max(actionsSideInset, min(layout.size.width - actionsSize.width - actionsSideInset, preferredActionsX)), y: originalActionsY), size: actionsSize)
                     let originalContentX: CGFloat = originalProjectedContentViewFrame.1.minX
                     let originalContentY: CGFloat
@@ -1358,7 +1402,20 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     
                     var overflowOffset: CGFloat
                     var contentContainerFrame: CGRect
-                    if keepInPlace {
+                    if centerVertically {
+                        overflowOffset = 0.0
+                        if layout.size.width > layout.size.height, case .compact = layout.metrics.widthClass {
+                            let totalWidth = originalContentFrame.width + originalActionsFrame.width + contentActionsSpacing
+                            contentContainerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - totalWidth) / 2.0 + originalContentFrame.width * 0.1), y: floor((layout.size.height - originalContentFrame.height) / 2.0)), size: originalContentFrame.size)
+                            originalActionsFrame.origin.x = contentContainerFrame.maxX + contentActionsSpacing + 14.0
+                            originalActionsFrame.origin.y = contentContainerFrame.origin.y
+                            contentHeight = layout.size.height
+                        } else {
+                            let totalHeight = originalContentFrame.height + originalActionsFrame.height
+                            contentContainerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - originalContentFrame.width) / 2.0), y: floor((layout.size.height - totalHeight) / 2.0)), size: originalContentFrame.size)
+                            originalActionsFrame.origin.y = contentContainerFrame.maxY + contentActionsSpacing
+                        }
+                    } else if keepInPlace {
                         overflowOffset = min(0.0, originalActionsFrame.minY - contentTopInset)
                         contentContainerFrame = originalContentFrame.offsetBy(dx: -contentParentNode.contentRect.minX, dy: -contentParentNode.contentRect.minY)
                         if !overflowOffset.isZero {
@@ -1382,14 +1439,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     } else {
                         overflowOffset = min(0.0, originalContentFrame.minY - contentTopInset)
                         contentContainerFrame = originalContentFrame.offsetBy(dx: -contentParentNode.contentRect.minX, dy: -overflowOffset - contentParentNode.contentRect.minY)
-                    }
-                    
-                    if case let .extracted(source) = self.source, source.centerVertically {
-                        let totalHeight = contentContainerFrame.height + originalActionsFrame.height
-                        let updatedOrigin = floor((layout.size.height - totalHeight) / 2.0)
-                        let delta = updatedOrigin - contentContainerFrame.origin.y
-                        contentContainerFrame.origin.y = updatedOrigin
-                        originalActionsFrame.origin.y += delta
+                        
+                        if contentContainerFrame.maxX > layout.size.width {
+                            contentContainerFrame = CGRect(origin: CGPoint(x: layout.size.width - contentContainerFrame.width - 11.0, y: contentContainerFrame.minY), size: contentContainerFrame.size)
+                        }
                     }
                     
                     let scrollContentSize = CGSize(width: layout.size.width, height: contentHeight)
@@ -1563,7 +1616,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
             
         if let previousActionsContainerNode = previousActionsContainerNode {
-            if transition.isAnimated {
+            if transition.isAnimated && self.getController()?.immediateItemsTransitionAnimation == false {
                 if previousActionsContainerNode.hasAdditionalActions && !self.actionsContainerNode.hasAdditionalActions && self.getController()?.useComplexItemsTransitionAnimation == true {
                     var initialFrame = self.actionsContainerNode.frame
                     let delta = (previousActionsContainerNode.frame.height - self.actionsContainerNode.frame.height)
@@ -1677,29 +1730,41 @@ public final class ContextControllerReferenceViewInfo {
     }
 }
 
-public protocol ContextReferenceContentSource: class {
+public protocol ContextReferenceContentSource: AnyObject {
+    var shouldBeDismissed: Signal<Bool, NoError> { get }
+    
     func transitionInfo() -> ContextControllerReferenceViewInfo?
+}
+
+public extension ContextReferenceContentSource {
+    var shouldBeDismissed: Signal<Bool, NoError> {
+        return .single(false)
+    }
 }
 
 public final class ContextControllerTakeViewInfo {
     public let contentContainingNode: ContextExtractedContentContainingNode
     public let contentAreaInScreenSpace: CGRect
+    public let maskView: UIView?
     
-    public init(contentContainingNode: ContextExtractedContentContainingNode, contentAreaInScreenSpace: CGRect) {
+    public init(contentContainingNode: ContextExtractedContentContainingNode, contentAreaInScreenSpace: CGRect, maskView: UIView? = nil) {
         self.contentContainingNode = contentContainingNode
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
+        self.maskView = maskView
     }
 }
 
 public final class ContextControllerPutBackViewInfo {
     public let contentAreaInScreenSpace: CGRect
+    public let maskView: UIView?
     
-    public init(contentAreaInScreenSpace: CGRect) {
+    public init(contentAreaInScreenSpace: CGRect, maskView: UIView? = nil) {
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
+        self.maskView = maskView
     }
 }
 
-public protocol ContextExtractedContentSource: class {
+public protocol ContextExtractedContentSource: AnyObject {
     var centerVertically: Bool { get }
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
@@ -1730,7 +1795,7 @@ public final class ContextControllerTakeControllerInfo {
     }
 }
 
-public protocol ContextControllerContentSource: class {
+public protocol ContextControllerContentSource: AnyObject {
     var controller: ViewController { get }
     var navigationController: NavigationController? { get }
     var passthroughTouches: Bool { get }
@@ -1746,7 +1811,7 @@ public enum ContextContentSource {
     case controller(ContextControllerContentSource)
 }
 
-public final class ContextController: ViewController, StandalonePresentableController {
+public final class ContextController: ViewController, StandalonePresentableController, ContextControllerProtocol {
     private let account: Account
     private var presentationData: PresentationData
     private let source: ContextContentSource
@@ -1771,8 +1836,14 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var reactionSelected: ((ReactionContextItem.Reaction) -> Void)?
     public var dismissed: (() -> Void)?
+    public var dismissedForCancel: (() -> Void)? {
+        didSet {
+            self.controllerNode.dismissedForCancel = self.dismissedForCancel
+        }
+    }
     
     public var useComplexItemsTransitionAnimation = false
+    public var immediateItemsTransitionAnimation = false
     
     private var shouldBeDismissedDisposable: Disposable?
     
@@ -1789,8 +1860,18 @@ public final class ContextController: ViewController, StandalonePresentableContr
         super.init(navigationBarPresentationData: nil)
               
         switch source {
-            case .reference:
+            case let .reference(referenceSource):
                 self.statusBar.statusBarStyle = .Ignore
+                
+                self.shouldBeDismissedDisposable = (referenceSource.shouldBeDismissed
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.dismiss(result: .default, completion: {})
+                })
             case let .extracted(extractedSource):
                 if extractedSource.blurBackground {
                     self.statusBar.statusBarStyle = .Hide
@@ -1825,7 +1906,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     override public func loadDisplayNode() {
         self.displayNode = ContextControllerNode(account: self.account, controller: self, presentationData: self.presentationData, source: self.source, items: self.items, reactionItems: self.reactionItems, beginDismiss: { [weak self] result in
             self?.dismiss(result: result, completion: nil)
-            }, recognizer: self.recognizer, gesture: self.gesture, reactionSelected: { [weak self] value in
+        }, recognizer: self.recognizer, gesture: self.gesture, reactionSelected: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -1846,7 +1927,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
                 break
             }
         }, displayTextSelectionTip: self.displayTextSelectionTip)
-        
+        self.controllerNode.dismissedForCancel = self.dismissedForCancel
         self.displayNodeDidLoad()
         
         self._ready.set(combineLatest(queue: .mainQueue(), self.controllerNode.itemsReady.get(), self.controllerNode.contentReady.get())

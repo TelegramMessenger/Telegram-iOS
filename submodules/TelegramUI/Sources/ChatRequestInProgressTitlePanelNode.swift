@@ -19,12 +19,12 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.titleNode.maximumNumberOfLines = 1
         
         super.init()
-        
+
         self.addSubnode(self.titleNode)
         self.addSubnode(self.separatorNode)
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
         if interfaceState.strings !== self.strings {
             self.strings = interfaceState.strings
             
@@ -34,8 +34,8 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
         if interfaceState.theme !== self.theme {
             self.theme = interfaceState.theme
             
-            self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
-            self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
+
+            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
         }
         
         let panelHeight: CGFloat = 40.0
@@ -43,8 +43,8 @@ final class ChatRequestInProgressTitlePanelNode: ChatTitleAccessoryPanelNode {
         let titleSize = self.titleNode.updateLayout(CGSize(width: width - leftInset - rightInset, height: 100.0))
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: floor((panelHeight - titleSize.height) / 2.0)), size: titleSize))
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
         
-        return panelHeight
+        return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
     }
 }

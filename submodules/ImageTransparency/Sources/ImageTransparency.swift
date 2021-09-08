@@ -29,7 +29,7 @@ private func generateHistogram(cgImage: CGImage) -> ([[vImagePixelCount]], Int)?
     }
     assert(error == kvImageNoError)
     
-    let histogramBins = (0...3).map { _ in
+    let histogramBins: [[vImagePixelCount]] = (0...3).map { _ in
         return [vImagePixelCount](repeating: 0, count: 256)
     }
     var mutableHistogram: [UnsafeMutablePointer<vImagePixelCount>?] = histogramBins.map {
@@ -92,14 +92,19 @@ public func imageRequiresInversion(_ cgImage: CGImage) -> Bool {
         }
         
         if hasAlpha {
+            let probingContext = DrawingContext(size: CGSize(width: cgImage.width, height: cgImage.height))
+            probingContext.withContext { c in
+                c.draw(cgImage, in: CGRect(origin: CGPoint(), size: probingContext.size))
+            }
+
             var matching: Int = 0
             var total: Int = 0
-            for y in 0 ..< Int(context.size.height) {
-                for x in 0 ..< Int(context.size.width) {
+            for y in 0 ..< Int(probingContext.size.height) {
+                for x in 0 ..< Int(probingContext.size.width) {
                     var saturation: CGFloat = 0.0
                     var brightness: CGFloat = 0.0
                     var alpha: CGFloat = 0.0
-                    if context.colorAt(CGPoint(x: x, y: y)).getHue(nil, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
+                    if probingContext.colorAt(CGPoint(x: x, y: y)).getHue(nil, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
                         if alpha < 1.0 {
                             hasAlpha = true
                         }

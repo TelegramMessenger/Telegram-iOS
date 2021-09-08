@@ -29,16 +29,44 @@ final class OrderedItemListTable: Table {
         let key = ValueBoxKey(length: 1 + 4 + 4)
         key.setUInt8(0, value: OrderedItemListKeyNamespace.indexToId.rawValue)
         key.setInt32(1, value: collectionId)
-        key.setUInt32(5, value: itemIndex)
+        key.setUInt32(1 + 4, value: itemIndex)
         return key
+    }
+
+    private func keyIndexToIdLowerBound(collectionId: Int32) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 1 + 4 + 4)
+        key.setUInt8(0, value: OrderedItemListKeyNamespace.indexToId.rawValue)
+        key.setInt32(1, value: collectionId)
+        return key
+    }
+
+    private func keyIndexToIdUpperBound(collectionId: Int32) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 1 + 4 + 4)
+        key.setUInt8(0, value: OrderedItemListKeyNamespace.indexToId.rawValue)
+        key.setInt32(1, value: collectionId)
+        return key.successor
     }
     
     private func keyIdToIndex(collectionId: Int32, id: MemoryBuffer) -> ValueBoxKey {
         let key = ValueBoxKey(length: 1 + 4 + id.length)
         key.setUInt8(0, value: OrderedItemListKeyNamespace.idToIndex.rawValue)
         key.setInt32(1, value: collectionId)
-        memcpy(key.memory.advanced(by: 5), id.memory, id.length)
+        memcpy(key.memory.advanced(by: 1 + 4), id.memory, id.length)
         return key
+    }
+
+    private func keyIdToIndexLowerBound(collectionId: Int32) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 1 + 4)
+        key.setUInt8(0, value: OrderedItemListKeyNamespace.idToIndex.rawValue)
+        key.setInt32(1, value: collectionId)
+        return key
+    }
+
+    private func keyIdToIndexUpperBound(collectionId: Int32) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 1 + 4)
+        key.setUInt8(0, value: OrderedItemListKeyNamespace.idToIndex.rawValue)
+        key.setInt32(1, value: collectionId)
+        return key.successor
     }
     
     func getItemIds(collectionId: Int32) -> [MemoryBuffer] {
@@ -119,6 +147,8 @@ final class OrderedItemListTable: Table {
             self.indexTable.remove(collectionId: collectionId, id: id)
         }
         
+
+        assert(Set(items.map({ $0.id.makeData() })).count == items.count)
         for i in 0 ..< items.count {
             self.valueBox.set(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(i)), value: items[i].id)
             var indexValue: UInt32 = UInt32(i)

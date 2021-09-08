@@ -4,8 +4,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
-import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
@@ -142,7 +140,7 @@ final class BotCheckoutNativeCardEntryController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc func cancelPressed() {

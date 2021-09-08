@@ -126,7 +126,7 @@ public class ImageNode: ASDisplayNode {
     private let hasImage: ValuePromise<Bool>?
     private var first = true
     private let enableEmpty: Bool
-    private let enableAnimatedTransition: Bool
+    public var enableAnimatedTransition: Bool
     
     private let _contentReady = Promise<Bool>()
     private var didSetReady: Bool = false

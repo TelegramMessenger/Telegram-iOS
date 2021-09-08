@@ -657,7 +657,7 @@ NSString *suffix = @"";
         [platform isEqualToString:@"iPad8,2"] ||
         [platform isEqualToString:@"iPad8,3"] ||
         [platform isEqualToString:@"iPad8,4"])
-        return @"iPad Pro 11 inch (3rd gen)";
+        return @"iPad Pro 11 inch";
     
     if ([platform isEqualToString:@"iPad8,5"] ||
         [platform isEqualToString:@"iPad8,6"] ||
@@ -667,7 +667,7 @@ NSString *suffix = @"";
     
     if ([platform isEqualToString:@"iPad8,9"] ||
         [platform isEqualToString:@"iPad8,10"])
-        return @"iPad Pro 11 inch (4th gen)";
+        return @"iPad Pro 11 inch (2th gen)";
     
     if ([platform isEqualToString:@"iPad8,11"] ||
         [platform isEqualToString:@"iPad8,12"])
@@ -688,6 +688,18 @@ NSString *suffix = @"";
     if ([platform isEqualToString:@"iPad13,1"] ||
         [platform isEqualToString:@"iPad13,2"])
         return @"iPad Air (4th gen)";
+    
+    if ([platform isEqualToString:@"iPad13,4"] ||
+        [platform isEqualToString:@"iPad13,5"] ||
+        [platform isEqualToString:@"iPad13,6"] ||
+        [platform isEqualToString:@"iPad13,7"])
+        return @"iPad Pro 11 inch (3th gen)";
+    
+    if ([platform isEqualToString:@"iPad13,8"] ||
+        [platform isEqualToString:@"iPad13,9"] ||
+        [platform isEqualToString:@"iPad13,10"] ||
+        [platform isEqualToString:@"iPad13,11"])
+        return @"iPad Pro 12.9 inch (5th gen)";
             
     if ([platform hasPrefix:@"iPhone"])
         return @"Unknown iPhone";

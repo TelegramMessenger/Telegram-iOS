@@ -117,13 +117,13 @@ final class CallControllerToastContainerNode: ASDisplayNode {
                     toastContent = CallControllerToastItemNode.Content(
                         key: .camera,
                         image: .camera,
-                        text: strings.Call_CameraOff(self.title).0
+                        text: strings.Call_CameraOff(self.title).string
                     )
                 case .microphone:
                     toastContent = CallControllerToastItemNode.Content(
                         key: .microphone,
                         image: .microphone,
-                        text: strings.Call_MicrophoneOff(self.title).0
+                        text: strings.Call_MicrophoneOff(self.title).string
                     )
                 case .mute:
                     toastContent = CallControllerToastItemNode.Content(
@@ -135,7 +135,7 @@ final class CallControllerToastContainerNode: ASDisplayNode {
                     toastContent = CallControllerToastItemNode.Content(
                         key: .battery,
                         image: .battery,
-                        text: strings.Call_BatteryLow(self.title).0
+                        text: strings.Call_BatteryLow(self.title).string
                     )
             }
             let toastHeight = toastNode.update(width: width, content: toastContent, transition: toastTransition)
@@ -222,9 +222,6 @@ private class CallControllerToastItemNode: ASDisplayNode {
         self.clipNode = ASDisplayNode()
         self.clipNode.clipsToBounds = true
         self.clipNode.layer.cornerRadius = 14.0
-        if #available(iOS 13.0, *) {
-            self.clipNode.layer.cornerCurve = .continuous
-        }
         
         self.effectView = UIVisualEffectView()
         self.effectView.effect = UIBlurEffect(style: .light)
@@ -246,6 +243,14 @@ private class CallControllerToastItemNode: ASDisplayNode {
         self.clipNode.view.addSubview(self.effectView)
         self.clipNode.addSubnode(self.iconNode)
         self.clipNode.addSubnode(self.textNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.clipNode.layer.cornerCurve = .continuous
+        }
     }
     
     func update(width: CGFloat, content: Content, transition: ContainedViewLayoutTransition) -> CGFloat {

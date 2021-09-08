@@ -4,7 +4,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 import TelegramCore
-import SyncCore
 import TelegramUIPreferences
 import PersistentStringHash
 
@@ -47,7 +46,13 @@ public func cachedWallpaper(account: Account, slug: String, settings: WallpaperS
                     let key = ValueBoxKey(length: 8)
                     key.setInt64(0, value: Int64(bitPattern: slug.persistentHashValue))
                     let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedWallpapers, key: key)
-                    if let wallpaper = wallpaper {
+                    if var wallpaper = wallpaper {
+                        switch wallpaper {
+                        case let .file(file):
+                            wallpaper = .file(TelegramWallpaper.File(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: file.isPattern, isDark: file.isDark, slug: file.slug, file: file.file.withUpdatedResource(WallpaperDataResource(slug: slug)), settings: file.settings))
+                        default:
+                            break
+                        }
                         let entry = CachedWallpaper(wallpaper: wallpaper)
                         transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
                         if let settings = settings {

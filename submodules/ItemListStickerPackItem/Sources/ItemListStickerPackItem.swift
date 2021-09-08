@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
@@ -122,7 +121,7 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
 
 public enum StickerPackThumbnailItem: Equatable {
     case still(TelegramMediaImageRepresentation)
-    case animated(MediaResource)
+    case animated(MediaResource, PixelDimensions)
     
     public static func ==(lhs: StickerPackThumbnailItem, rhs: StickerPackThumbnailItem) -> Bool {
         switch lhs {
@@ -132,8 +131,8 @@ public enum StickerPackThumbnailItem: Equatable {
             } else {
                 return false
             }
-        case let .animated(lhsResource):
-            if case let .animated(rhsResource) = rhs, lhsResource.isEqual(to: rhsResource) {
+        case let .animated(lhsResource, lhsDimensions):
+            if case let .animated(rhsResource, rhsDimensions) = rhs, lhsResource.isEqual(to: rhsResource), lhsDimensions == rhsDimensions {
                 return true
             } else {
                 return false
@@ -440,7 +439,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             var resourceReference: MediaResourceReference?
             if let thumbnail = item.packInfo.thumbnail {
                 if item.packInfo.flags.contains(.isAnimated) {
-                    thumbnailItem = .animated(thumbnail.resource)
+                    thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions)
                     resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
                 } else {
                     thumbnailItem = .still(thumbnail)
@@ -448,7 +447,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 }
             } else if let item = item.topItem {
                 if item.file.isAnimatedSticker {
-                    thumbnailItem = .animated(item.file.resource)
+                    thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100))
                     resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
                 } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
                     thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
@@ -475,7 +474,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
                             updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: representation.resource, nilIfEmpty: true)
                         }
-                    case let .animated(resource):
+                    case let .animated(resource, _):
                         imageSize = imageBoundingSize
                     
                         if fileUpdated {
@@ -644,7 +643,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.selectionIconNode.image = image
                                 strongSelf.selectionIconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - image.size.width - floor((44.0 - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                             }
-                        case let .check(checked):
+                        case .check:
                             strongSelf.installationActionNode.isHidden = true
                             strongSelf.installationActionImageNode.isHidden = true
                             strongSelf.selectionIconNode.isHidden = true
@@ -707,10 +706,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     let boundingSize = CGSize(width: 34.0, height: 34.0)
                     if let thumbnailItem = thumbnailItem, let imageSize = imageSize {
                         let imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: floor((layout.contentSize.height - imageSize.height) / 2.0)), size: imageSize)
+                        var thumbnailDimensions = PixelDimensions(width: 512, height: 512)
                         switch thumbnailItem {
-                            case .still:
+                            case let .still(representation):
                                 transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
-                            case let .animated(resource):
+                                thumbnailDimensions = representation.dimensions
+                            case let .animated(resource, _):
                                 transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
                                 
                                 let animationNode: AnimatedStickerNode
@@ -734,7 +735,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         if let placeholderNode = strongSelf.placeholderNode {
                             placeholderNode.frame = imageFrame
                             
-                            placeholderNode.update(backgroundColor: nil, foregroundColor: item.presentationData.theme.list.disclosureArrowColor.blitOver(item.presentationData.theme.list.itemBlocksBackgroundColor, alpha: 0.55), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.packInfo.immediateThumbnailData, size: imageFrame.size, imageSize: CGSize(width: 100.0, height: 100.0))
+                            placeholderNode.update(backgroundColor: nil, foregroundColor: item.presentationData.theme.list.disclosureArrowColor.blitOver(item.presentationData.theme.list.itemBlocksBackgroundColor, alpha: 0.55), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.packInfo.immediateThumbnailData, size: imageFrame.size, imageSize: thumbnailDimensions.cgSize)
                         }
                     }
                     

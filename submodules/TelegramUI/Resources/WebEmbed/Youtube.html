@@ -60,6 +60,10 @@
             player.seekTo(timestamp, true);
         }
         
+        function setRate(rate) {
+            player.setPlaybackRate(rate);
+        }
+        
         function updateState() {
             window.location.href = "embed://onState?failed=" + failed + "&playback=" + playbackState + "&position=" + position + "&duration=" + duration + "&download=" + downloadProgress + '&quality=' + quality + '&availableQualities=' + availableQualities + '&storyboard=' + storyboardSpec;
         }

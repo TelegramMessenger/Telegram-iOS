@@ -375,12 +375,20 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     return self;
 }
 
+- (id)initWithCoder:(NSCoder *)coder {
+    return [self init];
+}
+
 - (void)_commonViewControllerInit:(id<LegacyComponentsContext>)context
 {
     assert(context != nil);
     _context = context;
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     self.wantsFullScreenLayout = true;
+#pragma clang diagnostic pop
+
     self.automaticallyManageScrollViewInsets = true;
     self.autoManageStatusBarBackground = true;
     __block bool initializedSizeClass = false;
@@ -467,7 +475,10 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (bool)shouldIgnoreStatusBar
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [self shouldIgnoreStatusBarInOrientation:self.interfaceOrientation];
+#pragma clang diagnostic pop
 }
 
 - (bool)shouldIgnoreNavigationBar
@@ -625,15 +636,21 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad && iosMajorVersion() < 7)
     {
         CGSize size = CGSizeMake(320, 491);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         self.contentSizeForViewInPopover = size;
+#pragma clang diagnostic pop
     }
     
     if ([self.navigationController isKindOfClass:[TGNavigationController class]])
         [(TGNavigationController *)self.navigationController setupNavigationBarForController:self animated:animated];
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [self _updateControllerInsetForOrientation:self.interfaceOrientation force:false notify:true];
     
     [self adjustToInterfaceOrientation:self.interfaceOrientation];
+#pragma clang diagnostic pop
     
     [super viewWillAppear:animated];
     
@@ -695,7 +712,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 {
     float additionalKeyboardHeight = [self _keyboardAdditionalDeltaHeightWhenRotatingFrom:_viewControllerRotatingFromOrientation toOrientation:toInterfaceOrientation];
     
-    CGFloat statusBarHeight = [TGHacks statusBarHeightForOrientation:toInterfaceOrientation];
+    CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
     [self _updateControllerInsetForOrientation:toInterfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:[self _currentKeyboardHeight:toInterfaceOrientation] + additionalKeyboardHeight force:false notify:true];
 }
 
@@ -768,9 +785,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     if ([self isViewLoaded] && !_viewControllerHasEverAppeared && ([self findFirstResponder:self.view] == nil && ![self willCaptureInputShortly]))
         return 0.0f;
     
-    if ([TGHacks isKeyboardVisible])
-        return [TGHacks keyboardHeightForOrientation:orientation];
-    
     return 0.0f;
 }
 
@@ -811,12 +825,18 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         CGFloat minStatusBarHeight = [self prefersStatusBarHidden] ? 0.0f : 20.0f;
         CGFloat statusBarHeight = MAX(minStatusBarHeight, MIN(statusBarFrame.size.width, statusBarFrame.size.height));
         statusBarHeight = MIN(40.0f, statusBarHeight + _additionalStatusBarHeight);
-        
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         CGFloat keyboardHeight = [self _currentKeyboardHeight:self.interfaceOrientation];
+#pragma clang diagnostic pop
         
         [UIView animateWithDuration:0.35 delay:0 options:UIViewAnimationOptionBeginFromCurrentState animations:^
         {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             [self _updateControllerInsetForOrientation:self.interfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:keyboardHeight force:false notify:true];
+#pragma clang diagnostic pop
         } completion:nil];
     }
 }
@@ -857,14 +877,20 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         {
             [UIView performWithoutAnimation:^
             {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                 [self _updateControllerInsetForOrientation:self.interfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:keyboardHeight force:false notify:true];
+#pragma clang diagnostic pop
             }];
         }
         else
         {
             [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionBeginFromCurrentState animations:^
             {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                 [self _updateControllerInsetForOrientation:self.interfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:keyboardHeight force:false notify:true];
+#pragma clang diagnostic pop
             } completion:nil];
         }
     }
@@ -887,14 +913,20 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         {
             [UIView performWithoutAnimation:^
             {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                 [self _updateControllerInsetForOrientation:self.interfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:keyboardHeight force:false notify:true];
+#pragma clang diagnostic pop
             }];
         }
         else
         {
             [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionBeginFromCurrentState animations:^
             {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                 [self _updateControllerInsetForOrientation:self.interfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:keyboardHeight force:false notify:true];
+#pragma clang diagnostic pop
             } completion:nil];
         }
     }
@@ -985,9 +1017,12 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     _additionalNavigationBarHeight = additionalNavigationBarHeight;
     
     CGFloat statusBarHeight = [self _currentStatusBarHeight];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGFloat keyboardHeight = [self _currentKeyboardHeight:self.interfaceOrientation];
     
     [self _updateControllerInsetForOrientation:self.interfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:keyboardHeight force:false notify:true];
+#pragma clang diagnostic pop
 }
 
 - (void)setAdditionalStatusBarHeight:(CGFloat)additionalStatusBarHeight
@@ -995,9 +1030,12 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     _additionalStatusBarHeight = additionalStatusBarHeight;
     
     CGFloat statusBarHeight = [self _currentStatusBarHeight];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGFloat keyboardHeight = [self _currentKeyboardHeight:self.interfaceOrientation];
     
     [self _updateControllerInsetForOrientation:self.interfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:keyboardHeight force:false notify:true];
+#pragma clang diagnostic pop
 }
 
 - (void)setExplicitTableInset:(UIEdgeInsets)explicitTableInset scrollIndicatorInset:(UIEdgeInsets)scrollIndicatorInset
@@ -1006,14 +1044,20 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     _explicitScrollIndicatorInset = scrollIndicatorInset;
     
     CGFloat statusBarHeight = [self _currentStatusBarHeight];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGFloat keyboardHeight = [self _currentKeyboardHeight:self.interfaceOrientation];
     
     [self _updateControllerInsetForOrientation:self.interfaceOrientation statusBarHeight:statusBarHeight keyboardHeight:keyboardHeight force:false notify:true];
+#pragma clang diagnostic pop
 }
 
 - (bool)_updateControllerInset:(bool)force
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [self _updateControllerInsetForOrientation:self.interfaceOrientation force:force notify:true];
+#pragma clang diagnostic pop
 }
 
 - (bool)_updateControllerInsetForOrientation:(UIInterfaceOrientation)orientation force:(bool)force notify:(bool)notify
@@ -1063,8 +1107,9 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         orientation = UIInterfaceOrientationLandscapeLeft;
     
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     return [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
 }
@@ -1096,8 +1141,9 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 - (bool)_updateControllerInsetForOrientation:(UIInterfaceOrientation)orientation statusBarHeight:(CGFloat)statusBarHeight keyboardHeight:(CGFloat)keyboardHeight force:(bool)force notify:(bool)notify
 {
     bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
+    }
     
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     CGFloat navigationBarHeight = ([self navigationBarShouldBeHidden] || [self shouldIgnoreNavigationBar]) ? 0 : [self navigationBarHeightForInterfaceOrientation:orientation];
@@ -1263,12 +1309,15 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         {
             if (navigationBarHidden != self.navigationController.navigationBarHidden)
             {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
                 CGFloat barHeight = [self navigationBarHeightForInterfaceOrientation:self.interfaceOrientation];
-                CGFloat statusBarHeight = [TGHacks statusBarHeightForOrientation:self.interfaceOrientation];
+                CGFloat statusBarHeight = [[UIApplication sharedApplication] statusBarFrame].size.height;
                 if ([self shouldIgnoreStatusBarInOrientation:self.interfaceOrientation])
                     statusBarHeight = 0.0f;
                 
                 CGSize screenSize = [TGViewController screenSizeForInterfaceOrientation:self.interfaceOrientation];
+#pragma clang diagnostic pop
                 
                 if (!navigationBarHidden)
                 {
@@ -1434,13 +1483,6 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 {
     if (TGIsPad() && iosMajorVersion() >= 7)
         viewControllerToPresent.preferredContentSize = [self.navigationController preferredContentSize];
-    
-    if ([viewControllerToPresent isKindOfClass:[TGNavigationController class]])
-    {
-        TGNavigationController *navController = (TGNavigationController *)self.navigationController;
-        if (navController.showCallStatusBar)
-            [(TGNavigationController *)viewControllerToPresent setShowCallStatusBar:true];
-    }
     
     if (iosMajorVersion() >= 8 && self.presentedViewController != nil && [self.presentedViewController isKindOfClass:[UIAlertController class]])
     {

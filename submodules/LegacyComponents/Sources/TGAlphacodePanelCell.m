@@ -95,12 +95,18 @@ NSString *const TGAlphacodePanelCellKind = @"TGAlphacodePanelCell";
     
     CGFloat leftInset = 11.0f;
     CGFloat rightInset = 6.0f;
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGSize titleSize = [_emojiLabel.text sizeWithFont:_emojiLabel.font];
+#pragma clang diagnostic pop
     titleSize.width = CGCeil(MIN((boundsSize.width - leftInset - rightInset) * 3.0f / 4.0f, titleSize.width));
     titleSize.height = CGCeil(titleSize.height);
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     CGSize descriptionSize = [_descriptionLabel.text sizeWithFont:_descriptionLabel.font];
+#pragma clang diagnostic pop
     descriptionSize.width = CGCeil(MIN(boundsSize.width - leftInset - 40.0f, descriptionSize.width));
     
     _emojiLabel.frame = CGRectMake(leftInset, CGFloor((boundsSize.height - titleSize.height) / 2.0f), titleSize.width, titleSize.height);

@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
@@ -20,6 +19,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private var customTitle: String?
     
     public var peerSelected: ((Peer) -> Void)?
+    public var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
     private let filter: ChatListNodePeersFilter
     
     private let attemptSelection: ((Peer) -> Void)?
@@ -58,6 +58,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private let hasContactSelector: Bool
     private let hasGlobalSearch: Bool
     private let pretendPresentedInModal: Bool
+    private let forwardedMessageIds: [EngineMessage.Id]
     
     override public var _presentedInModal: Bool {
         get {
@@ -85,6 +86,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.attemptSelection = params.attemptSelection
         self.createNewGroup = params.createNewGroup
         self.pretendPresentedInModal = params.pretendPresentedInModal
+        self.forwardedMessageIds = params.forwardedMessageIds
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -124,6 +126,10 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
             self?.activateSearch()
         })
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        
+        if params.multipleSelection {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.beginSelection))
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -144,13 +150,19 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
+        self.displayNode = PeerSelectionControllerNode(context: self.context, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, forwardedMessageIds: self.forwardedMessageIds, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
+        }, presentInGlobalOverlay: { [weak self] c, a in
+            self?.presentInGlobalOverlay(c, with: a)
         }, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
         
         self.peerSelectionNode.navigationBar = self.navigationBar
+        
+        self.peerSelectionNode.requestSend = { [weak self] peers, peerMap, text, mode, forwardOptionsState in
+            self?.multiplePeersSelected?(peers, peerMap, text, mode, forwardOptionsState)
+        }
         
         self.peerSelectionNode.requestDeactivateSearch = { [weak self] in
             self?.deactivateSearch()
@@ -217,7 +229,12 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.peerSelectionNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, actualNavigationBarHeight: self.navigationHeight, transition: transition)
+        self.peerSelectionNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, actualNavigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+    }
+    
+    @objc private func beginSelection() {
+        self.navigationItem.rightBarButtonItem = nil
+        self.peerSelectionNode.beginSelection()
     }
     
     @objc func cancelPressed() {

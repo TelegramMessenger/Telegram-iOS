@@ -5,7 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import MergeLists
 import TelegramUIPreferences
@@ -249,10 +248,14 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             var updatedThemeReference = false
             var updatedAccentColor = false
             var updatedTheme = false
+            var updatedWallpaper = false
             var updatedSelected = false
             
             if currentItem?.themeReference != item.themeReference {
                 updatedThemeReference = true
+            }
+            if currentItem?.wallpaper != item.wallpaper {
+                updatedWallpaper = true
             }
             if currentItem == nil || currentItem?.accentColor != item.accentColor {
                 updatedAccentColor = true
@@ -265,7 +268,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             }
             
             let title = NSAttributedString(string: item.title, font: item.selected ? selectedTextFont : textFont, textColor: item.selected ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor)
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let (_, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 116.0, height: 116.0), insets: UIEdgeInsets())
             return (itemLayout, { animated in
@@ -278,7 +281,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         }
                         strongSelf.containerNode.isGestureEnabled = false
                     } else {
-                        if updatedThemeReference || updatedAccentColor {
+                        if updatedThemeReference || updatedAccentColor || updatedWallpaper {
                             strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: item.themeReference, color: item.accentColor, wallpaper: item.wallpaper))
                         }
                         strongSelf.containerNode.isGestureEnabled = true
@@ -530,8 +533,6 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     }
 
     func asyncLayout() -> (_ item: ThemeSettingsThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let currentItem = self.item
-        
         return { item, params, neighbors in
             let contentSize: CGSize
             let insets: UIEdgeInsets
@@ -545,8 +546,6 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
 
             return (layout, { [weak self] in
                 if let strongSelf = self {
-                    let isFirstLayout = currentItem == nil
-                    
                     strongSelf.item = item
                     strongSelf.layoutParams = params
 
@@ -613,28 +612,38 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     
                     var entries: [ThemeSettingsThemeEntry] = []
                     var index: Int = 0
-                    for var theme in item.themes {
-                        if !item.displayUnsupported, case let .cloud(theme) = theme, theme.theme.file == nil {
-                            continue
+                    for theme in item.themes {
+                        if case let .cloud(theme) = theme {
+                            if !item.displayUnsupported && theme.theme.file == nil {
+                                continue
+                            }
                         }
                         let title = themeDisplayName(strings: item.strings, reference: theme)
-                        var accentColor = item.themeSpecificAccentColors[theme.generalThemeReference.index]
-                        if let customThemeIndex = accentColor?.themeIndex {
+                        let accentColor = item.themeSpecificAccentColors[theme.generalThemeReference.index]
+                        /*if let customThemeIndex = accentColor?.themeIndex {
                             if let customTheme = themes[customThemeIndex] {
                                 theme = customTheme
                             }
                             accentColor = nil
+                        }*/
+
+                        var themeWallpaper: TelegramWallpaper?
+                        if case let .cloud(theme) = theme {
+                            themeWallpaper = theme.resolvedWallpaper ?? theme.theme.settings?.wallpaper
                         }
+
+                        let customWallpaper = item.themeSpecificChatWallpapers[theme.generalThemeReference.index]
                         
-                        let wallpaper = accentColor?.wallpaper
+                        let wallpaper = accentColor?.wallpaper ?? customWallpaper ?? themeWallpaper
+
                         entries.append(ThemeSettingsThemeEntry(index: index, themeReference: theme, title: title, accentColor: accentColor, selected: item.currentTheme.index == theme.index, theme: item.theme, wallpaper: wallpaper))
                         index += 1
                     }
                     
-                    let action: (PresentationThemeReference) -> Void = { [weak self, weak item] themeReference in
+                    let action: (PresentationThemeReference) -> Void = { [weak self] themeReference in
                         if let strongSelf = self {
                             strongSelf.item?.updatedTheme(themeReference)
-                            ensureThemeVisible(listNode: strongSelf.listNode, themeReference: themeReference, animated: true)
+                            let _ = ensureThemeVisible(listNode: strongSelf.listNode, themeReference: themeReference, animated: true)
                         }
                     }
                     let previousEntries = strongSelf.entries ?? []

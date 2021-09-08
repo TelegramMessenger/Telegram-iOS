@@ -4,7 +4,6 @@ import UserNotifications
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramCallsUI
@@ -41,7 +40,7 @@ public final class SharedNotificationManager {
     private var inForeground: Bool = false
     private var inForegroundDisposable: Disposable?
     
-    private var accountManager: AccountManager?
+    private var accountManager: AccountManager<TelegramAccountManagerTypes>?
     private var accountsAndKeys: [(Account, Bool, MasterNotificationKey)]?
     private var accountsAndKeysDisposable: Disposable?
     
@@ -397,7 +396,7 @@ public final class SharedNotificationManager {
             
             if !messagesDeleted.isEmpty {
                 let _ = account.postbox.transaction(ignoreDisabled: true, { transaction -> Void in
-                    deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: messagesDeleted)
+                    TelegramEngine(account: account).messages.deleteMessages(transaction: transaction, ids: messagesDeleted)
                 }).start()
             }
             
@@ -430,7 +429,7 @@ public final class SharedNotificationManager {
         self.currentNotificationCall = call
         
         if let notificationCall = call {
-            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle(strings: strings, displayOrder: nameOrder) ?? "").0
+            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle(strings: strings, displayOrder: nameOrder) ?? "").string
             let title: String?
             let body: String
             if let index = rawText.firstIndex(of: "|") {

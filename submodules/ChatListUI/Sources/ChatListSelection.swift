@@ -3,7 +3,7 @@ import UIKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
-import SyncCore
+import AccountContext
 
 enum ChatListSelectionReadOption: Equatable {
     case all(enabled: Bool)
@@ -15,10 +15,10 @@ struct ChatListSelectionOptions: Equatable {
     let delete: Bool
 }
 
-func chatListSelectionOptions(postbox: Postbox, peerIds: Set<PeerId>, filterId: Int32?) -> Signal<ChatListSelectionOptions, NoError> {
+func chatListSelectionOptions(context: AccountContext, peerIds: Set<PeerId>, filterId: Int32?) -> Signal<ChatListSelectionOptions, NoError> {
     if peerIds.isEmpty {
         if let filterId = filterId {
-            return chatListFilterItems(postbox: postbox)
+            return chatListFilterItems(context: context)
             |> map { filterItems -> ChatListSelectionOptions in
                 for (filter, unreadCount, _) in filterItems.1 {
                     if filter.id == filterId {
@@ -30,7 +30,7 @@ func chatListSelectionOptions(postbox: Postbox, peerIds: Set<PeerId>, filterId: 
             |> distinctUntilChanged
         } else {
             let key = PostboxViewKey.unreadCounts(items: [.total(nil)])
-            return postbox.combinedView(keys: [key])
+            return context.account.postbox.combinedView(keys: [key])
             |> map { view -> ChatListSelectionOptions in
                 var hasUnread = false
                 if let unreadCounts = view.views[key] as? UnreadMessageCountsView, let total = unreadCounts.total() {
@@ -48,7 +48,7 @@ func chatListSelectionOptions(postbox: Postbox, peerIds: Set<PeerId>, filterId: 
     } else {
         let items: [UnreadMessageCountsItem] = peerIds.map(UnreadMessageCountsItem.peer)
         let key = PostboxViewKey.unreadCounts(items: items)
-        return postbox.combinedView(keys: [key])
+        return context.account.postbox.combinedView(keys: [key])
         |> map { view -> ChatListSelectionOptions in
             var hasUnread = false
             if let unreadCounts = view.views[key] as? UnreadMessageCountsView {

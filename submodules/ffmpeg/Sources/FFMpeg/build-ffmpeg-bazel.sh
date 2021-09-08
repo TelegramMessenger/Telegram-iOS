@@ -57,6 +57,8 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
 
 #--enable-hwaccel=h264_videotoolbox,hevc_videotoolbox \
 
+EXTRA_CFLAGS="-DCONFIG_SAFE_BITSTREAM_READER=1"
+
 if [ "$1" = "debug" ];
 then
 	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-optimizations --disable-stripping"
@@ -121,7 +123,7 @@ then
 
 		LIBOPUS_PATH="$SOURCE_DIR/libopus"
 
-		CFLAGS="-arch $ARCH"
+		CFLAGS="$EXTRA_CFLAGS -arch $ARCH"
 		if [ "$RAW_ARCH" = "i386" -o "$RAW_ARCH" = "x86_64" ]
 		then
 		    PLATFORM="iPhoneSimulator"

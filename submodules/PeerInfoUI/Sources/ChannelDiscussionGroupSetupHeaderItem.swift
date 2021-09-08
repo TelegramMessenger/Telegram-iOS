@@ -132,7 +132,7 @@ class ChannelDiscussionGroupSetupHeaderItemNode: ListViewItemNode {
             let bold = MarkdownAttributeSet(font: titleBoldFont, textColor: item.theme.list.sectionHeaderTextColor)
             let string: NSAttributedString
             if let title = item.title {
-                string = addAttributesToStringWithRanges(item.isGroup ? item.strings.Channel_CommentsGroup_HeaderGroupSet(title) : item.strings.Channel_CommentsGroup_HeaderSet(title), body: body, argumentAttributes: [0: bold])
+                string = addAttributesToStringWithRanges(item.isGroup ? item.strings.Channel_CommentsGroup_HeaderGroupSet(title)._tuple : item.strings.Channel_CommentsGroup_HeaderSet(title)._tuple, body: body, argumentAttributes: [0: bold])
             } else {
                 string = NSAttributedString(string: item.strings.Channel_CommentsGroup_Header, font: titleFont, textColor: item.theme.list.sectionHeaderTextColor)
             }

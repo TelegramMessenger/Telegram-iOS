@@ -70,7 +70,7 @@ NSData * _Nullable compressJPEGData(UIImage * _Nonnull sourceImage) {
     int width = (int)(sourceImage.size.width * sourceImage.scale);
     int height = (int)(sourceImage.size.height * sourceImage.scale);
     
-    int targetBytesPerRow = ((4 * (int)width) + 15) & (~15);
+    int targetBytesPerRow = ((4 * (int)width) + 31) & (~31);
     uint8_t *targetMemory = malloc((int)(targetBytesPerRow * height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
@@ -86,7 +86,7 @@ NSData * _Nullable compressJPEGData(UIImage * _Nonnull sourceImage) {
     
     UIGraphicsPopContext();
     
-    int bufferBytesPerRow = ((3 * (int)width) + 15) & (~15);
+    int bufferBytesPerRow = ((3 * (int)width) + 31) & (~31);
     uint8_t *buffer = malloc(bufferBytesPerRow * height);
     
     for (int y = 0; y < height; y++) {
@@ -158,7 +158,7 @@ NSData * _Nullable compressMiniThumbnail(UIImage * _Nonnull image, CGSize size) 
     int width = (int)fittedSize.width;
     int height = (int)fittedSize.height;
     
-    int targetBytesPerRow = ((4 * (int)width) + 15) & (~15);
+    int targetBytesPerRow = ((4 * (int)width) + 31) & (~31);
     uint8_t *targetMemory = malloc((int)(targetBytesPerRow * height));
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
@@ -174,7 +174,7 @@ NSData * _Nullable compressMiniThumbnail(UIImage * _Nonnull image, CGSize size) 
     
     UIGraphicsPopContext();
     
-    int bufferBytesPerRow = ((3 * (int)width) + 15) & (~15);
+    int bufferBytesPerRow = ((3 * (int)width) + 31) & (~31);
     uint8_t *buffer = malloc(bufferBytesPerRow * height);
     
     for (int y = 0; y < height; y++) {

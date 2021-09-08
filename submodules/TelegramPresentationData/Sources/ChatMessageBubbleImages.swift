@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import SyncCore
 
 public enum MessageBubbleImageNeighbors {
     case none
@@ -197,8 +196,8 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
             borderWidth = UIScreenPixel + innerExtension
             borderOffset = -innerExtension / 2.0 + UIScreenPixel / 2.0
         } else {
-            borderWidth = UIScreenPixel * 2.0 + innerExtension
-            borderOffset = -innerExtension / 2.0 + UIScreenPixel * 2.0 / 2.0
+            borderWidth = UIScreenPixel + innerExtension
+            borderOffset = -innerExtension / 2.0// + UIScreenPixel * 2.0 / 2.0
         }
         context.setLineWidth(borderWidth)
         
@@ -216,7 +215,6 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         if drawTail {
             let outlineBottomEllipse = bottomEllipse.insetBy(dx: -borderOffset, dy: -borderOffset)
             let outlineInnerTopEllipse = topEllipse.insetBy(dx: borderOffset, dy: borderOffset)
-            let outlineTopEllipse = topEllipse.insetBy(dx: -borderOffset, dy: -borderOffset)
             
             context.setBlendMode(.copy)
             context.setFillColor(UIColor.clear.cgColor)

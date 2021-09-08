@@ -136,6 +136,11 @@ public enum PresentationResourceKey: Int32 {
     case chatInputPanelEncircledCloseIconImage
     case chatInputPanelVerticalSeparatorLineImage
     
+    case chatInputPanelForwardIconImage
+    case chatInputPanelReplyIconImage
+    case chatInputPanelEditIconImage
+    case chatInputPanelWebpageIconImage
+    
     case chatMediaInputPanelHighlightedIconImage
     case chatInputMediaPanelSavedStickersIconImage
     case chatInputMediaPanelRecentStickersIconImage
@@ -239,9 +244,10 @@ public enum PresentationResourceKey: Int32 {
     case groupInfoMembersIcon
     
     case emptyChatListCheckIcon
-    
-    case chatFreeCommentButtonBackground
+
     case chatFreeCommentButtonIcon
+    case chatFreeNavigateButtonIcon
+    case chatFreeShareButtonIcon
 }
 
 public enum PresentationResourceParameterKey: Hashable {

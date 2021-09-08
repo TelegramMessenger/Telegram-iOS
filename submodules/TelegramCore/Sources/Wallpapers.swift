@@ -3,11 +3,10 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-import SyncCore
 
 public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: Bool = false) -> Signal<[TelegramWallpaper], NoError> {
     let fetch: ([TelegramWallpaper]?, Int32?) -> Signal<[TelegramWallpaper], NoError> = { current, hash in
-        network.request(Api.functions.account.getWallPapers(hash: hash ?? 0))
+        network.request(Api.functions.account.getWallPapers(hash: 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<([TelegramWallpaper], Int32), NoError> in
             switch result {
@@ -149,10 +148,10 @@ public func deleteWallpaper(account: Account, wallpaper: TelegramWallpaper) -> S
 }
 
 private func saveUnsaveWallpaper(account: Account, wallpaper: TelegramWallpaper, unsave: Bool) -> Signal<Void, NoError> {
-    guard case let .file(_, _, _, _, _, _, slug, _, settings) = wallpaper else {
+    guard case let .file(file) = wallpaper else {
         return .complete()
     }
-    return account.network.request(Api.functions.account.saveWallPaper(wallpaper: Api.InputWallPaper.inputWallPaperSlug(slug: slug), unsave: unsave ? Api.Bool.boolTrue : Api.Bool.boolFalse, settings: apiWallpaperSettings(settings)))
+    return account.network.request(Api.functions.account.saveWallPaper(wallpaper: Api.InputWallPaper.inputWallPaperSlug(slug: file.slug), unsave: unsave ? Api.Bool.boolTrue : Api.Bool.boolFalse, settings: apiWallpaperSettings(file.settings)))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .complete()
     }
@@ -162,10 +161,16 @@ private func saveUnsaveWallpaper(account: Account, wallpaper: TelegramWallpaper,
 }
 
 public func installWallpaper(account: Account, wallpaper: TelegramWallpaper) -> Signal<Void, NoError> {
-    guard case let .file(_, _, _, _, _, _, slug, _, settings) = wallpaper else {
+    guard case let .file(file) = wallpaper else {
         return .complete()
     }
-    return account.network.request(Api.functions.account.installWallPaper(wallpaper: Api.InputWallPaper.inputWallPaperSlug(slug: slug), settings: apiWallpaperSettings(settings)))
+    let inputWallpaper: Api.InputWallPaper
+    if file.id != 0 && file.accessHash != 0 {
+        inputWallpaper = .inputWallPaper(id: file.id, accessHash: file.accessHash)
+    } else {
+        inputWallpaper = .inputWallPaperSlug(slug: file.slug)
+    }
+    return account.network.request(Api.functions.account.installWallPaper(wallpaper: inputWallpaper, settings: apiWallpaperSettings(file.settings)))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .complete()
     }

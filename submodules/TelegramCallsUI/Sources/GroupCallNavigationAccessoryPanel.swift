@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -41,6 +40,7 @@ public enum GroupCallPanelSource {
 
 public final class GroupCallPanelData {
     public let peerId: PeerId
+    public let isChannel: Bool
     public let info: GroupCallInfo
     public let topParticipants: [GroupCallParticipantsContext.Participant]
     public let participantCount: Int
@@ -49,6 +49,7 @@ public final class GroupCallPanelData {
     
     public init(
         peerId: PeerId,
+        isChannel: Bool,
         info: GroupCallInfo,
         topParticipants: [GroupCallParticipantsContext.Participant],
         participantCount: Int,
@@ -56,6 +57,7 @@ public final class GroupCallPanelData {
         groupCall: PresentationGroupCall?
     ) {
         self.peerId = peerId
+        self.isChannel = isChannel
         self.info = info
         self.topParticipants = topParticipants
         self.participantCount = participantCount
@@ -130,7 +132,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let avatarsNode: AnimatedAvatarSetNode
     private var audioLevelGenerators: [PeerId: FakeAudioLevelGenerator] = [:]
     private var audioLevelGeneratorTimer: SwiftSignalKit.Timer?
-    
+
+    private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     
     private let membersDisposable = MetaDisposable()
@@ -174,13 +177,17 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         self.avatarsContext = AnimatedAvatarSetContext()
         self.avatarsNode = AnimatedAvatarSetNode()
+
+        self.backgroundNode = ASDisplayNode()
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
         super.init()
-        
+
         self.addSubnode(self.contentNode)
+
+        self.contentNode.addSubnode(self.backgroundNode)
         
         self.tapButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -279,8 +286,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
-        
-        self.contentNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+
         self.separatorNode.backgroundColor = presentationData.theme.chat.historyNavigation.strokeColor
         
         self.joinButtonTitleNode.attributedText = NSAttributedString(string: self.joinButtonTitleNode.attributedText?.string ?? "", font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.isScheduled ? .white : presentationData.theme.chat.inputPanel.actionControlForegroundColor)
@@ -354,7 +360,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             }
             self.currentText = membersText
             
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
+            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
             
             self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
             
@@ -378,7 +384,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     }
                     strongSelf.currentText = membersText
                                                             
-                    strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { $0.peer }, animated: false)
+                    strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { EnginePeer($0.peer) }, animated: false)
                     
                     if let (size, leftInset, rightInset) = strongSelf.validLayout {
                         strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
@@ -455,7 +461,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             }
             self.currentText = membersText
             
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
+            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
             
             updateAudioLevels = true
         }
@@ -520,6 +526,11 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         var joinText = self.strings.VoiceChat_PanelJoin
         var title = self.strings.VoiceChat_Title
+        var isChannel = false
+        if let currentData = self.currentData, currentData.isChannel {
+            title = self.strings.VoiceChatChannel_Title
+            isChannel = true
+        }
         var text = self.currentText
         var isScheduled = false
         var isLate = false
@@ -527,10 +538,10 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             isScheduled = true
             if let voiceChatTitle = self.currentData?.info.title {
                 title = voiceChatTitle
-                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOn($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrow($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsToday($0).0 }, yesterdayFormatString: { $0 }))
+                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { isChannel ? self.strings.Conversation_ScheduledLiveStreamStartsOn($0) : self.strings.Conversation_ScheduledVoiceChatStartsOn($0) }, tomorrowFormatString: { isChannel ? self.strings.Conversation_ScheduledLiveStreamStartsTomorrow($0) : self.strings.Conversation_ScheduledVoiceChatStartsTomorrow($0) }, todayFormatString: { isChannel ? self.strings.Conversation_ScheduledLiveStreamStartsToday($0) : self.strings.Conversation_ScheduledVoiceChatStartsToday($0) })).string
             } else {
-                title = self.strings.Conversation_ScheduledVoiceChat
-                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOnShort($0).0 }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrowShort($0).0 }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTodayShort($0).0 }, yesterdayFormatString: { $0 }))
+                title = isChannel ? self.strings.Conversation_ScheduledLiveStream : self.strings.Conversation_ScheduledVoiceChat
+                text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOnShort($0) }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrowShort($0) }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTodayShort($0) })).string
             }
             
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -629,7 +640,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.joinButton.isHidden = self.currentData?.groupCall != nil
         self.micButton.isHidden = self.currentData?.groupCall == nil
         
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: panelHeight)))
     }
     
     public func animateIn(_ transition: ContainedViewLayoutTransition) {
@@ -638,6 +650,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         transition.animatePosition(node: self.contentNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 50.0), completion: { [weak self] _ in
             self?.clipsToBounds = false
         })
+
+        guard let (size, _, _) = self.validLayout else {
+            return
+        }
+
+        transition.animatePositionAdditive(node: self.separatorNode, offset: CGPoint(x: 0.0, y: size.height))
     }
     
     public func animateOut(_ transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -647,6 +665,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             self?.clipsToBounds = false
             completion()
         })
+
+        guard let (size, _, _) = self.validLayout else {
+            return
+        }
+
+        transition.updatePosition(node: self.separatorNode, position: self.separatorNode.position.offsetBy(dx: 0.0, dy: size.height))
     }
     
     func rightButtonSnapshotViews() -> (background: UIView, foreground: UIView)? {

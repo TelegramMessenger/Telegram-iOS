@@ -6,7 +6,6 @@ import TelegramPresentationData
 import TextSelectionNode
 import ReactionSelectionNode
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 
 private func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> CGRect {
@@ -168,6 +167,7 @@ public final class PinchSourceContainerNode: ASDisplayNode, UIGestureRecognizerD
     public var scaleUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     public var animatedOut: (() -> Void)?
     var deactivate: (() -> Void)?
+    public var deactivated: (() -> Void)?
     var updated: ((CGFloat, CGPoint, CGPoint) -> Void)?
 
     override public init() {
@@ -196,6 +196,7 @@ public final class PinchSourceContainerNode: ASDisplayNode, UIGestureRecognizerD
 
             strongSelf.isActive = false
             strongSelf.deactivate?()
+            strongSelf.deactivated?()
         }
 
         self.gesture.updated = { [weak self] scale, pinchLocation, offset in

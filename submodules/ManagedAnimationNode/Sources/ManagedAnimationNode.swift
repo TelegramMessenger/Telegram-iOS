@@ -12,24 +12,29 @@ import SwiftSignalKit
 public final class ManagedAnimationState {
     public let item: ManagedAnimationItem
     private let instance: LottieInstance
+
+    private let displaySize: CGSize
     
     let frameCount: Int
     let fps: Double
     
     var relativeTime: Double = 0.0
     public var frameIndex: Int?
+    public var position: CGFloat {
+        if let frameIndex = frameIndex {
+            return CGFloat(frameIndex) / CGFloat(frameCount)
+        } else {
+            return 0.0
+        }
+    }
     
     public var executedCallbacks = Set<Int>()
     
-    private let renderContext: DrawingContext
-    
     public init?(displaySize: CGSize, item: ManagedAnimationItem, current: ManagedAnimationState?) {
         let resolvedInstance: LottieInstance
-        let renderContext: DrawingContext
         
         if let current = current {
             resolvedInstance = current.instance
-            renderContext = current.renderContext
         } else {
             guard let path = item.source.path else {
                 return nil
@@ -44,20 +49,21 @@ public final class ManagedAnimationState {
                 return nil
             }
             resolvedInstance = instance
-            renderContext = DrawingContext(size: displaySize, scale: UIScreenScale, premultiplied: true, clear: true)
         }
-        
+
+        self.displaySize = displaySize
         self.item = item
         self.instance = resolvedInstance
-        self.renderContext = renderContext
         
         self.frameCount = Int(self.instance.frameCount)
         self.fps = Double(self.instance.frameRate)
     }
     
     func draw() -> UIImage? {
-        self.instance.renderFrame(with: Int32(self.frameIndex ?? 0), into: self.renderContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(self.renderContext.size.width * self.renderContext.scale), height: Int32(self.renderContext.size.height * self.renderContext.scale), bytesPerRow: Int32(self.renderContext.bytesPerRow))
-        return self.renderContext.generateImage()
+        let renderContext = DrawingContext(size: self.displaySize, scale: UIScreenScale, clear: true)
+
+        self.instance.renderFrame(with: Int32(self.frameIndex ?? 0), into: renderContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(renderContext.size.width * renderContext.scale), height: Int32(renderContext.size.height * renderContext.scale), bytesPerRow: Int32(renderContext.bytesPerRow))
+        return renderContext.generateImage()
     }
 }
 
@@ -132,6 +138,11 @@ open class ManagedAnimationNode: ASDisplayNode {
     
     private let imageNode: ASImageNode
     private let displayLink: CADisplayLink
+    
+    public var imageUpdated: ((UIImage) -> Void)?
+    public var image: UIImage? {
+        return self.imageNode.image
+    }
     
     public var state: ManagedAnimationState?
     public var trackStack: [ManagedAnimationItem] = []
@@ -261,6 +272,7 @@ open class ManagedAnimationNode: ASDisplayNode {
                 } else {
                     self.imageNode.image = image
                 }
+                self.imageUpdated?(image)
             }
             
             for (callbackFrame, callback) in state.item.callbacks {

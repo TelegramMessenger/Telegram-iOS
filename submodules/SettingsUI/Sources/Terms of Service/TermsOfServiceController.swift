@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import Display
@@ -36,7 +35,7 @@ public class TermsOfServiceControllerTheme {
 
 public extension TermsOfServiceControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
-        self.init(statusBarStyle: presentationTheme.rootController.statusBarStyle.style, navigationBackground: presentationTheme.rootController.navigationBar.backgroundColor, navigationSeparator: presentationTheme.rootController.navigationBar.separatorColor, listBackground: presentationTheme.list.blocksBackgroundColor, itemBackground: presentationTheme.list.itemBlocksBackgroundColor, itemSeparator: presentationTheme.list.itemBlocksSeparatorColor, primary: presentationTheme.list.itemPrimaryTextColor, accent: presentationTheme.list.itemAccentColor, disabled: presentationTheme.rootController.navigationBar.disabledButtonColor)
+        self.init(statusBarStyle: presentationTheme.rootController.statusBarStyle.style, navigationBackground: presentationTheme.rootController.navigationBar.opaqueBackgroundColor, navigationSeparator: presentationTheme.rootController.navigationBar.separatorColor, listBackground: presentationTheme.list.blocksBackgroundColor, itemBackground: presentationTheme.list.itemBlocksBackgroundColor, itemSeparator: presentationTheme.list.itemBlocksSeparatorColor, primary: presentationTheme.list.itemPrimaryTextColor, accent: presentationTheme.list.itemAccentColor, disabled: presentationTheme.rootController.navigationBar.disabledButtonColor)
     }
 }
 
@@ -114,7 +113,6 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
                 text = strongSelf.presentationData.strings.PrivacyPolicy_DeclineMessage
                 declineTitle = strongSelf.presentationData.strings.PrivacyPolicy_DeclineDeclineAndDelete
             }
-            let theme: PresentationTheme = strongSelf.presentationData.theme
             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.PrivacyPolicy_Decline, text: text, actions: [TextAlertAction(type: .destructiveAction, title: declineTitle, action: {
                 self?.decline()
             }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
@@ -125,8 +123,7 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
             }
             
             if let ageConfirmation = strongSelf.ageConfirmation {
-                let theme: PresentationTheme = strongSelf.presentationData.theme
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationTitle, text: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationMessage("\(ageConfirmation)").0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationAgree, action: {
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationTitle, text: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationMessage("\(ageConfirmation)").string, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.PrivacyPolicy_AgeVerificationAgree, action: {
                     self?.accept(self?.proccessBotNameAfterAccept)
                 })]), in: .window(.root))
             } else {
@@ -145,7 +142,7 @@ public class TermsOfServiceController: ViewController, StandalonePresentableCont
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     override public func viewDidAppear(_ animated: Bool) {

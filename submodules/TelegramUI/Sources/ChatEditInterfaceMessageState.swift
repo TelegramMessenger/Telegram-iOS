@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 
 enum ChatEditInterfaceMessageStateContent: Equatable {
     case plaintext

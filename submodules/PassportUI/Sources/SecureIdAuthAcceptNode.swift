@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AppBundle
@@ -45,7 +44,7 @@ final class SecureIdAuthAcceptNode: ASDisplayNode {
         
         super.init()
         
-        self.backgroundColor = theme.rootController.navigationBar.backgroundColor
+        self.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor
         
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.buttonBackgroundNode)

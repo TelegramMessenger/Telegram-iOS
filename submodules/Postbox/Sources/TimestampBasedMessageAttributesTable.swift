@@ -1,12 +1,16 @@
 import Foundation
 
-public struct TimestampBasedMessageAttributesEntry {
+public struct TimestampBasedMessageAttributesEntry: CustomStringConvertible {
     public let tag: UInt16
     public let timestamp: Int32
     public let messageId: MessageId
     
     public var index: MessageIndex {
         return MessageIndex(id: self.messageId, timestamp: timestamp)
+    }
+
+    public var description: String {
+        return "(tag: \(self.tag), timestamp: \(self.timestamp), messageId: \(self.messageId))"
     }
 }
 
@@ -53,7 +57,11 @@ final class TimestampBasedMessageAttributesTable: Table {
     }
     
     func set(tag: UInt16, id: MessageId, timestamp: Int32, operations: inout [TimestampBasedMessageAttributesOperation]) {
-        if let previousTimestamp = self.indexTable.get(tag: tag, id: id) {
+        let previousTimestamp = self.indexTable.get(tag: tag, id: id)
+
+        postboxLog("TimestampBasedMessageAttributesTable set(tag: \(tag), id: \(id), timestamp: \(timestamp)) previousTimestamp: \(String(describing: previousTimestamp))")
+
+        if let previousTimestamp = previousTimestamp {
             if previousTimestamp == timestamp {
                 return
             } else {
@@ -67,7 +75,11 @@ final class TimestampBasedMessageAttributesTable: Table {
     }
     
     func remove(tag: UInt16, id: MessageId, operations: inout [TimestampBasedMessageAttributesOperation]) {
-        if let previousTimestamp = self.indexTable.get(tag: tag, id: id) {
+        let previousTimestamp = self.indexTable.get(tag: tag, id: id)
+
+        postboxLog("TimestampBasedMessageAttributesTable remove(tag: \(tag), id: \(id)) previousTimestamp: \(String(describing: previousTimestamp))")
+
+        if let previousTimestamp = previousTimestamp {
             self.valueBox.remove(self.table, key: self.key(tag: tag, timestamp: previousTimestamp, id: id), secure: false)
             self.indexTable.remove(tag: tag, id: id)
             operations.append(.remove(TimestampBasedMessageAttributesEntry(tag: tag, timestamp: previousTimestamp, messageId: id)))

@@ -669,7 +669,7 @@ UIImage *normalizeImage(UIImage *image)
     if (image.imageOrientation == UIImageOrientationUp) return image;
     
     UIGraphicsBeginImageContextWithOptions(image.size, NO, image.scale);
-    [image drawInRect:(CGRect){0, 0, image.size}];
+    [image drawInRect:CGRectMake(0, 0, image.size.width, image.size.height)];
     UIImage *normalizedImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     return normalizedImage;

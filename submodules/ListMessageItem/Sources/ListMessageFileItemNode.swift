@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
@@ -88,7 +87,7 @@ private func extensionImage(fileExtension: String?) -> UIImage? {
         return nil
     }
 }
-private let extensionFont = Font.with(size: 15.0, design: .round, traits: [.bold])
+private let extensionFont = Font.with(size: 15.0, design: .round, weight: .bold)
 
 private struct FetchControls {
     let fetch: () -> Void
@@ -1118,8 +1117,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
         }
     }
     
-    override public func header() -> ListViewItemHeader? {
-        return self.item?.header
+    override public func headers() -> [ListViewItemHeader]? {
+        return self.item?.header.flatMap { [$0] }
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

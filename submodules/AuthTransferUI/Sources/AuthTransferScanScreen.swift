@@ -44,7 +44,7 @@ private func generateFrameImage() -> UIImage? {
         context.setLineWidth(4.0)
         context.setLineCap(.round)
         
-        var path = CGMutablePath();
+        let path = CGMutablePath()
         path.move(to: CGPoint(x: 2.0, y: 2.0 + 26.0))
         path.addArc(tangent1End: CGPoint(x: 2.0, y: 2.0), tangent2End: CGPoint(x: 2.0 + 26.0, y: 2.0), radius: 6.0)
         path.addLine(to: CGPoint(x: 2.0 + 26.0, y: 2.0))
@@ -90,7 +90,7 @@ public final class AuthTransferScanScreen: ViewController {
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        let navigationBarTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: .white, primaryTextColor: .white, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
+        let navigationBarTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: .white, primaryTextColor: .white, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Common_Back, close: self.presentationData.strings.Common_Close)))
         
@@ -205,7 +205,7 @@ public final class AuthTransferScanScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! AuthTransferScanScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
+        (self.displayNode as! AuthTransferScanScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
 
@@ -412,8 +412,8 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         let dimAlpha: CGFloat
         let dimRect: CGRect
         let controlsAlpha: CGFloat
-        var centerDimAlpha: CGFloat = 0.0
-        var frameAlpha: CGFloat = 1.0
+        let centerDimAlpha: CGFloat = 0.0
+        let frameAlpha: CGFloat = 1.0
         if let focusedRect = self.focusedRect {
             controlsAlpha = 0.0
             dimAlpha = 1.0

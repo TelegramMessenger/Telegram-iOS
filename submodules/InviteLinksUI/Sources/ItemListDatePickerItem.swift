@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import SyncCore
 import TelegramPresentationData
 import ItemListUI
 import DatePickerNode
@@ -124,7 +123,6 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
             let itemSeparatorColor: UIColor
             
             let leftInset = 16.0 + params.leftInset
-            let rightInset = 16.0 + params.rightInset
             
             let width = min(390.0, params.width - params.leftInset - params.rightInset)
             let cellSize = floor((width - 12.0 * 2.0) / 7.0)

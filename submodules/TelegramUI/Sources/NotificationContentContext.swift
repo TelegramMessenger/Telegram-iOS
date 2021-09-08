@@ -3,7 +3,6 @@ import UserNotifications
 import UserNotificationsUI
 import Display
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
@@ -33,6 +32,7 @@ private func setupSharedLogger(rootPath: String, path: String) {
 }
 
 public struct NotificationViewControllerInitializationData {
+    public let appBundleId: String
     public let appGroupPath: String
     public let apiId: Int32
     public let apiHash: String
@@ -41,7 +41,8 @@ public struct NotificationViewControllerInitializationData {
     public let appVersion: String
     public let bundleData: Data?
     
-    public init(appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?) {
+    public init(appBundleId: String, appGroupPath: String, apiId: Int32, apiHash: String, languagesCategory: String, encryptionParameters: (Data, Data), appVersion: String, bundleData: Data?) {
+        self.appBundleId = appBundleId
         self.appGroupPath = appGroupPath
         self.apiId = apiId
         self.apiHash = apiHash
@@ -82,7 +83,7 @@ public final class NotificationViewControllerImpl {
         let rootPath = rootPathForBasePath(self.initializationData.appGroupPath)
         performAppGroupUpgrades(appGroupPath: self.initializationData.appGroupPath, rootPath: rootPath)
         
-        TempBox.initializeShared(basePath: rootPath, processType: "notification-content", launchSpecificId: arc4random64())
+        TempBox.initializeShared(basePath: rootPath, processType: "notification-content", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
         let logsPath = rootPath + "/notificationcontent-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
@@ -93,7 +94,7 @@ public final class NotificationViewControllerImpl {
         
         if sharedAccountContext == nil {
             initializeAccountManagement()
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false)
             
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
             let semaphore = DispatchSemaphore(value: 0)
@@ -103,7 +104,7 @@ public final class NotificationViewControllerImpl {
             })
             semaphore.wait()
             
-            let applicationBindings = TelegramApplicationBindings(isMainApp: false, containerPath: self.initializationData.appGroupPath, appSpecificScheme: "tgapp", openUrl: { _ in
+            let applicationBindings = TelegramApplicationBindings(isMainApp: false, appBundleId: self.initializationData.appBundleId, containerPath: self.initializationData.appGroupPath, appSpecificScheme: "tgapp", openUrl: { _ in
             }, openUniversalUrl: { _, completion in
                 completion.completion(false)
                 return
@@ -135,7 +136,7 @@ public final class NotificationViewControllerImpl {
                 return nil
             })
             
-            sharedAccountContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+            sharedAccountContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
             
             presentationDataPromise.set(sharedAccountContext!.presentationData)
         }
@@ -202,9 +203,9 @@ public final class NotificationViewControllerImpl {
                 return
             }
             
-            self.applyDisposable.set((sharedAccountContext.activeAccounts
+            self.applyDisposable.set((sharedAccountContext.activeAccountContexts
             |> map { _, accounts, _ -> Account? in
-                return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
+                return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1.account
             }
             |> filter { account in
                 return account != nil
@@ -253,16 +254,16 @@ public final class NotificationViewControllerImpl {
             self.imageInfo = (true, dimensions.cgSize)
             self.updateImageLayout(boundingSize: view.bounds.size)
             
-            self.applyDisposable.set((sharedAccountContext.activeAccounts
-            |> map { _, accounts, _ -> Account? in
-                return accounts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
+            self.applyDisposable.set((sharedAccountContext.activeAccountContexts
+            |> map { _, contexts, _ -> AccountContext? in
+                return contexts.first(where: { $0.0 == AccountRecordId(rawValue: accountIdValue) })?.1
             }
-            |> filter { account in
-                return account != nil
+            |> filter { context in
+                return context != nil
             }
             |> take(1)
-            |> mapToSignal { account -> Signal<(Account, FileMediaReference?), NoError> in
-                guard let account = account else {
+            |> mapToSignal { context -> Signal<(Account, FileMediaReference?), NoError> in
+                guard let account = context?.account else {
                     return .complete()
                 }
                 return account.postbox.messageAtId(messageId)

@@ -15,7 +15,7 @@ private func generateBackgroundImage(theme: PresentationTheme) -> UIImage? {
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         context.setShadow(offset: CGSize(), blur: 10.0, color: UIColor(rgb: 0x000000, alpha: 0.2).cgColor)
-        context.setFillColor(theme.rootController.navigationBar.backgroundColor.cgColor)
+        context.setFillColor(theme.rootController.navigationBar.opaqueBackgroundColor.cgColor)
         let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: panelInset, y: panelInset), size: CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0)), cornerRadius: cornerRadius)
         context.addPath(path.cgPath)
         context.fillPath()

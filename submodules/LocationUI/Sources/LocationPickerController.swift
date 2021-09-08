@@ -3,7 +3,6 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramCore
-import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
@@ -120,14 +119,14 @@ public final class LocationPickerController: ViewController {
                 strongSelf.present(c, in: .window(.root), with: a)
             }, openSettings: {
                 strongSelf.context.sharedContext.applicationBindings.openSettings()
-            }) { [weak self] authorized in
+            }, { [weak self] authorized in
                 guard let strongSelf = self, authorized else {
                     return
                 }
                 let controller = ActionSheetController(presentationData: strongSelf.presentationData)
                 var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
                 if case let .share(peer, _, _) = strongSelf.mode, let receiver = peer as? TelegramUser {
-                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).0
+                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).string
                 }
                 controller.setItemGroups([
                     ActionSheetItemGroup(items: [
@@ -161,7 +160,7 @@ public final class LocationPickerController: ViewController {
                     ])
                 ])
                 strongSelf.present(controller, in: .window(.root))
-            }
+            })
         }, sendVenue: { [weak self] venue in
             guard let strongSelf = self else {
                 return
@@ -319,7 +318,7 @@ public final class LocationPickerController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
     
-        self.controllerNode.containerLayoutUpdated(layout, navigationHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
     @objc private func cancelPressed() {

@@ -12,4 +12,6 @@ public protocol StatusBarHost {
     
     func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool)
     func setStatusBarHidden(_ value: Bool, animated: Bool)
+    
+    var shouldChangeStatusBarStyle: ((UIStatusBarStyle) -> Bool)? { get set }
 }

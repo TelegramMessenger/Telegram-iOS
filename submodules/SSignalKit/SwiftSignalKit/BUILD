@@ -6,6 +6,9 @@ swift_library(
     srcs = glob([
         "Source/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     visibility = [
         "//visibility:public",
     ],

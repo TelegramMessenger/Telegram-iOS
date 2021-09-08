@@ -12,7 +12,6 @@ import Intents
 import OpenSSLEncryptionProvider
 import SwiftSignalKit
 import Postbox
-import SyncCore
 import TelegramCore
 import OpenSSLEncryptionProvider
 import WidgetItemsUtils
@@ -51,9 +50,7 @@ private func setupSharedLogger(rootPath: String, path: String) {
     }
 }
 
-private let accountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInputState: { interfaceState, inputState -> PeerChatInterfaceState? in
-    return interfaceState
-}, fetchResource: { account, resource, ranges, _ in
+private let accountAuxiliaryMethods = AccountAuxiliaryMethods(fetchResource: { account, resource, ranges, _ in
     return nil
 }, fetchResourceMediaReferenceHash: { resource in
     return .single(nil)
@@ -92,7 +89,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     
     let rootPath = rootPathForBasePath(appGroupUrl.path)
     
-    TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: arc4random64())
+    TempBox.initializeShared(basePath: rootPath, processType: "widget", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
     
     let logsPath = rootPath + "/widget-logs"
     let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)

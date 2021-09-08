@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import AccountContext
 import TelegramPresentationData
@@ -15,6 +14,7 @@ import OverlayStatusController
 import PresentationDataUtils
 import SearchBarNode
 import UndoUI
+import ContextUI
 
 private final class FeaturedInteraction {
     let installPack: (ItemCollectionInfo, Bool) -> Void
@@ -95,7 +95,7 @@ private final class FeaturedPackEntry: Identifiable, Comparable {
     
     func item(account: Account, interaction: FeaturedInteraction, isOther: Bool) -> GridItem {
         let info = self.info
-        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: true, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: self.regularInsets, installed: self.installed, unread: self.unread, open: {
+        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: true, fillsRow: false, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: self.regularInsets, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
         }, install: {
             interaction.installPack(info, !self.installed)
@@ -153,16 +153,17 @@ private struct FeaturedTransition {
     let insertions: [GridNodeInsertItem]
     let updates: [GridNodeUpdateItem]
     let initial: Bool
+    let scrollToItem: GridNodeScrollToItem?
 }
 
-private func preparedTransition(from fromEntries: [FeaturedEntry], to toEntries: [FeaturedEntry], account: Account, interaction: FeaturedInteraction, initial: Bool) -> FeaturedTransition {
+private func preparedTransition(from fromEntries: [FeaturedEntry], to toEntries: [FeaturedEntry], account: Account, interaction: FeaturedInteraction, initial: Bool, scrollToItem: GridNodeScrollToItem?) -> FeaturedTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices
     let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
     let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
     
-    return FeaturedTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial)
+    return FeaturedTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial, scrollToItem: scrollToItem)
 }
 
 private func featuredScreenEntries(featuredEntries: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, theme: PresentationTheme, strings: PresentationStrings, fixedUnread: Set<ItemCollectionId>, additionalPacks: [FeaturedStickerPackItem]) -> [FeaturedEntry] {
@@ -212,6 +213,8 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     
     private var searchNode: FeaturedPaneSearchContentNode?
     
+    private weak var peekController: PeekController?
+    
     private let _ready = Promise<Bool>()
     var ready: Promise<Bool> {
         return self._ready
@@ -258,7 +261,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                     }
                 }
                 if !addedRead.isEmpty {
-                    let _ = markFeaturedStickerPacksAsSeenInteractively(postbox: strongSelf.context.account.postbox, ids: addedRead).start()
+                    let _ = strongSelf.context.engine.stickers.markFeaturedStickerPacksAsSeenInteractively(ids: addedRead).start()
                 }
                 
                 if bottomIndex >= strongSelf.gridNode.items.count - 15 {
@@ -278,6 +281,10 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             },
             openSettings: {
             },
+            openTrending: { _ in
+            },
+            dismissTrendingPacks: { _ in
+            },
             toggleSearch: { _, _, _ in
             },
             openPeerSpecificSettings: {
@@ -293,86 +300,10 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 guard let strongSelf = self, let info = info as? StickerPackCollectionInfo else {
                     return
                 }
-                let account = strongSelf.context.account
                 if install {
-                    let _ = addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: []).start()
-                    /*var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                    |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                        switch result {
-                        case let .result(info, items, installed):
-                            if installed {
-                                return .complete()
-                            } else {
-                                return preloadedStickerPackThumbnail(account: account, info: info, items: items)
-                                |> filter { $0 }
-                                |> ignoreValues
-                                |> then(
-                                    addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
-                                    |> ignoreValues
-                                )
-                                |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                                }
-                                |> then(.single((info, items)))
-                            }
-                        case .fetching:
-                            break
-                        case .none:
-                            break
-                        }
-                        return .complete()
-                    }
-                    |> deliverOnMainQueue
-                    
-                    let context = strongSelf.context
-                    var cancelImpl: (() -> Void)?
-                    let progressSignal = Signal<Never, NoError> { subscriber in
-                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                            cancelImpl?()
-                        }))
-                        self?.controller?.present(controller, in: .window(.root))
-                        return ActionDisposable { [weak controller] in
-                            Queue.mainQueue().async() {
-                                controller?.dismiss()
-                            }
-                        }
-                    }
-                    |> runOn(Queue.mainQueue())
-                    |> delay(1.0, queue: Queue.mainQueue())
-                    let progressDisposable = progressSignal.start()
-                    
-                    installSignal = installSignal
-                    |> afterDisposed {
-                        Queue.mainQueue().async {
-                            progressDisposable.dispose()
-                        }
-                    }
-                    cancelImpl = {
-                        self?.installDisposable.set(nil)
-                    }
-                        
-                    strongSelf.installDisposable.set(installSignal.start(next: { info, items in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        
-                        /*var animateInAsReplacement = false
-                        if let navigationController = strongSelf.controllerInteraction.navigationController() {
-                            for controller in navigationController.overlayControllers {
-                                if let controller = controller as? UndoOverlayController {
-                                    controller.dismissWithCommitActionAndReplacementAnimation()
-                                    animateInAsReplacement = true
-                                }
-                            }
-                        }
-                        
-                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                            return true
-                        }))*/
-                    }))*/
+                    let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: []).start()
                 } else {
-                    let _ = (removeStickerPackInteractively(postbox: account.postbox, id: info.id, option: .delete)
+                    let _ = (strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
                     |> deliverOnMainQueue).start(next: { _ in
                     })
                 }
@@ -434,6 +365,8 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             return (items, fixedUnread)
         }
         
+        let highlightedPackId = controller.highlightedPackId
+        
         self.disposable = (combineLatest(queue: .mainQueue(),
             mappedFeatured,
             self.additionalPacks.get(),
@@ -452,7 +385,20 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             let entries = featuredScreenEntries(featuredEntries: featuredEntries.0, installedPacks: installedPacks, theme: presentationData.theme, strings: presentationData.strings, fixedUnread: featuredEntries.1, additionalPacks: additionalPacks)
             let previous = previousEntries.swap(entries)
             
-            return preparedTransition(from: previous ?? [], to: entries, account: context.account, interaction: interaction, initial: previous == nil)
+            var scrollToItem: GridNodeScrollToItem?
+            let initial = previous == nil
+            if initial, let highlightedPackId = highlightedPackId {
+                var index = 0
+                for entry in entries {
+                    if case let .pack(packEntry, _) = entry, packEntry.info.id == highlightedPackId {
+                        scrollToItem = GridNodeScrollToItem(index: index, position: .center(0.0), transition: .immediate, directionHint: .down, adjustForSection: false)
+                        break
+                    }
+                    index += 1
+                }
+            }
+            
+            return preparedTransition(from: previous ?? [], to: entries, account: context.account, interaction: interaction, initial: initial, scrollToItem: scrollToItem)
         }
         |> deliverOnMainQueue).start(next: { [weak self] transition in
             guard let strongSelf = self else {
@@ -535,16 +481,21 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                         |> deliverOnMainQueue
                         |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                             if let strongSelf = self {
-                                var menuItems: [PeekControllerMenuItem] = []
+                                var menuItems: [ContextMenuItem] = []
                                 menuItems = [
-                                    PeekControllerMenuItem(title: strongSelf.presentationData.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
-                                        if let strongSelf = self {
-                                            return strongSelf.sendSticker?(.standalone(media: item.file), node, rect) ?? false
-                                        } else {
-                                            return false
+                                    .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                        if let strongSelf = self, let peekController = strongSelf.peekController {
+                                            if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
+                                            } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), imageNode, imageNode.bounds)
+                                            }
                                         }
-                                    }),
-                                    PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
+                                        f(.default)
+                                    })),
+                                    .action(ContextMenuActionItem(text: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                        f(.default)
+                                        
                                         if let strongSelf = self {
                                             if isStarred {
                                                 let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -552,9 +503,10 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                                 let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                             }
                                         }
-                                        return true
-                                    }),
-                                    PeekControllerMenuItem(title: strongSelf.presentationData.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
+                                    })),
+                                    .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_ViewPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                        f(.default)
+                                        
                                         if let strongSelf = self {
                                             loop: for attribute in item.file.attributes {
                                                 switch attribute {
@@ -577,9 +529,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                                 }
                                             }
                                         }
-                                        return true
-                                    }),
-                                    PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
+                                    }))
                                 ]
                                 return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
                             } else {
@@ -599,16 +549,17 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 |> deliverOnMainQueue
                 |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                     if let strongSelf = self {
-                        var menuItems: [PeekControllerMenuItem] = []
+                        var menuItems: [ContextMenuItem] = []
                         menuItems = [
-                            PeekControllerMenuItem(title: strongSelf.presentationData.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
-                                if let strongSelf = self {
-                                    return strongSelf.sendSticker?(.standalone(media: item.file), node, rect) ?? false
-                                } else {
-                                    return false
+                            .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                if let strongSelf = self, let peekController = strongSelf.peekController, let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                    let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
                                 }
-                            }),
-                            PeekControllerMenuItem(title: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
+                                f(.default)
+                            })),
+                            .action(ContextMenuActionItem(text: isStarred ? strongSelf.presentationData.strings.Stickers_RemoveFromFavorites : strongSelf.presentationData.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                f(.default)
+                                
                                 if let strongSelf = self {
                                     if isStarred {
                                         let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -616,34 +567,33 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                         let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                     }
                                 }
-                                return true
-                            }),
-                            PeekControllerMenuItem(title: strongSelf.presentationData.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
+                            })),
+                            .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_ViewPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                                f(.default)
+                                
                                 if let strongSelf = self {
                                     loop: for attribute in item.file.attributes {
                                         switch attribute {
-                                            case let .Sticker(_, packReference, _):
-                                                if let packReference = packReference {
-                                                    let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { file, sourceNode, sourceRect in
-                                                        if let strongSelf = self {
-                                                            return strongSelf.sendSticker?(file, sourceNode, sourceRect) ?? false
-                                                        } else {
-                                                            return false
-                                                        }
-                                                    })
-                                          
-                                                    strongSelf.controller?.view.endEditing(true)
-                                                    strongSelf.controller?.present(controller, in: .window(.root))
-                                                }
-                                                break loop
-                                            default:
-                                                break
+                                        case let .Sticker(_, packReference, _):
+                                            if let packReference = packReference {
+                                                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controller?.navigationController as? NavigationController, sendSticker: { file, sourceNode, sourceRect in
+                                                    if let strongSelf = self {
+                                                        return strongSelf.sendSticker?(file, sourceNode, sourceRect) ?? false
+                                                    } else {
+                                                        return false
+                                                    }
+                                                })
+                                                
+                                                strongSelf.controller?.view.endEditing(true)
+                                                strongSelf.controller?.present(controller, in: .window(.root))
+                                            }
+                                            break loop
+                                        default:
+                                            break
                                         }
                                     }
                                 }
-                                return true
-                            }),
-                            PeekControllerMenuItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { _, _ in return true })
+                            }))
                         ]
                         return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                     } else {
@@ -654,21 +604,15 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             return nil
         }, present: { [weak self] content, sourceNode in
             if let strongSelf = self {
-                let controller = PeekController(theme: PeekControllerTheme(presentationTheme: strongSelf.presentationData.theme), content: content, sourceNode: {
+                let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
                     return sourceNode
                 })
+                strongSelf.peekController = controller
                 strongSelf.controller?.presentInGlobalOverlay(controller)
                 return controller
             }
             return nil
-        }, updateContent: { [weak self] content in
-            if let strongSelf = self {
-                var item: StickerPreviewPeekItem?
-                if let content = content as? StickerPreviewPeekContent {
-                    item = content.item
-                }
-                //strongSelf.updatePreviewingItem(item: item, animated: true)
-            }
+        }, updateContent: { _ in
         }))
     }
     
@@ -758,7 +702,15 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             self.enqueuedTransitions.remove(at: 0)
             
             let itemTransition: ContainedViewLayoutTransition = .immediate
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: transition.initial), completion: { _ in })
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: transition.initial), completion: { [weak self] _ in
+                if let strongSelf = self, transition.initial {
+                    strongSelf.gridNode.forEachItemNode({ itemNode in
+                        if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode, itemNode.item?.info.id == strongSelf.controller?.highlightedPackId {
+                            itemNode.highlight()
+                        }
+                    })
+                }
+            })
         }
     }
     
@@ -787,6 +739,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
 
 final class FeaturedStickersScreen: ViewController {
     private let context: AccountContext
+    fileprivate let highlightedPackId: ItemCollectionId?
     private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     
     private var controllerNode: FeaturedStickersScreenNode {
@@ -803,8 +756,9 @@ final class FeaturedStickersScreen: ViewController {
     
     fileprivate var searchNavigationNode: SearchNavigationContentNode?
     
-    public init(context: AccountContext, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) {
         self.context = context
+        self.highlightedPackId = highlightedPackId
         self.sendSticker = sendSticker
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -815,7 +769,7 @@ final class FeaturedStickersScreen: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        let searchNavigationNode = SearchNavigationContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, cancel: { [weak self] in
+        let searchNavigationNode = SearchNavigationContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, placeholder: { strings in return strings.Stickers_Search }, cancel: { [weak self] in
             self?.dismiss()
         })
         self.searchNavigationNode = searchNavigationNode
@@ -885,7 +839,7 @@ final class FeaturedStickersScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationHeight: self.navigationHeight, transition: transition)
+        self.controllerNode.containerLayoutUpdated(layout, navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
 
@@ -898,15 +852,17 @@ private final class SearchNavigationContentNode: NavigationBarContentNode {
     private let searchBar: SearchBarNode
     
     private var queryUpdated: ((String, String?) -> Void)?
+    private var placeholder: ((PresentationStrings) -> String)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, cancel: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, placeholder: ((PresentationStrings) -> String)? = nil, cancel: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
+        self.placeholder = placeholder
         
         self.cancel = cancel
         
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme), strings: strings, fieldStyle: .modern, cancelText: strings.Common_Done)
-        let placeholderText = strings.Common_Search
+        let placeholderText = placeholder?(strings) ?? strings.Common_Search
         let searchBarFont = Font.regular(17.0)
         
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
@@ -929,7 +885,7 @@ private final class SearchNavigationContentNode: NavigationBarContentNode {
         self.theme = theme
         self.strings = strings
         
-        self.searchBar.updateThemeAndStrings(theme:  SearchBarNodeTheme(theme: theme), strings: strings)
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: theme), strings: strings)
     }
     
     func setQueryUpdated(_ f: @escaping (String, String?) -> Void) {
@@ -1032,7 +988,7 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
                 interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
+            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: true, fillsRow: true, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info, topItems, !installed)
@@ -1163,87 +1119,10 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            let account = strongSelf.context.account
             if install {
-                let _ = addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: []).start()
-                /*var installSignal = loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                    switch result {
-                    case let .result(info, items, installed):
-                        if installed {
-                            return .complete()
-                        } else {
-                            return preloadedStickerPackThumbnail(account: account, info: info, items: items)
-                            |> filter { $0 }
-                            |> ignoreValues
-                            |> then(
-                                addStickerPackInteractively(postbox: strongSelf.context.account.postbox, info: info, items: items)
-                                |> ignoreValues
-                            )
-                            |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
-                                return .complete()
-                            }
-                            |> then(.single((info, items)))
-                        }
-                    case .fetching:
-                        break
-                    case .none:
-                        break
-                    }
-                    return .complete()
-                }
-                |> deliverOnMainQueue
-                
-                let context = strongSelf.context
-                var cancelImpl: (() -> Void)?
-                let progressSignal = Signal<Never, NoError> { subscriber in
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                        cancelImpl?()
-                    }))
-                    self?.controller?.present(controller, in: .window(.root))
-                    return ActionDisposable { [weak controller] in
-                        Queue.mainQueue().async() {
-                            controller?.dismiss()
-                        }
-                    }
-                }
-                |> runOn(Queue.mainQueue())
-                |> delay(0.12, queue: Queue.mainQueue())
-                let progressDisposable = progressSignal.start()
-                
-                installSignal = installSignal
-                |> afterDisposed {
-                    Queue.mainQueue().async {
-                        progressDisposable.dispose()
-                    }
-                }
-                cancelImpl = {
-                    self?.installDisposable.set(nil)
-                }
-                    
-                strongSelf.installDisposable.set(installSignal.start(next: { info, items in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    var animateInAsReplacement = false
-                    if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                        for controller in navigationController.overlayControllers {
-                            if let controller = controller as? UndoOverlayController {
-                                controller.dismissWithCommitActionAndReplacementAnimation()
-                                animateInAsReplacement = true
-                            }
-                        }
-                    }
-                    
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    /*strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).0, undo: false, info: info, topItem: items.first, account: strongSelf.context.account), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
-                        return true
-                    }))*/
-                }))*/
+                let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: []).start()
             } else {
-                let _ = (removeStickerPackInteractively(postbox: account.postbox, id: info.id, option: .delete)
+                let _ = (strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
                 |> deliverOnMainQueue).start(next: { _ in
                 })
             }
@@ -1268,22 +1147,22 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
     func updateText(_ text: String, languageCode: String?) {
         let signal: Signal<([(String?, FoundStickerItem)], FoundStickerSets, Bool, FoundStickerSets?)?, NoError>
         if !text.isEmpty {
-            let account = self.context.account
+            let context = self.context
             let stickers: Signal<[(String?, FoundStickerItem)], NoError> = Signal { subscriber in
                 var signals: Signal<[Signal<(String?, [FoundStickerItem]), NoError>], NoError> = .single([])
                 
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if query.isSingleEmoji {
-                    signals = .single([searchStickers(account: account, query: text.basicEmoji.0)
+                    signals = .single([context.engine.stickers.searchStickers(query: text.basicEmoji.0)
                     |> map { (nil, $0) }])
                 } else if query.count > 1, let languageCode = languageCode, !languageCode.isEmpty && languageCode != "emoji" {
-                    var signal = searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
+                    var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
                     if !languageCode.lowercased().hasPrefix("en") {
                         signal = signal
                         |> mapToSignal { keywords in
                             return .single(keywords)
                             |> then(
-                                searchEmojiKeywords(postbox: account.postbox, inputLanguageCode: "en-US", query: query.lowercased(), completeMatch: query.count < 3)
+                                context.engine.stickers.searchEmojiKeywords(inputLanguageCode: "en-US", query: query.lowercased(), completeMatch: query.count < 3)
                                 |> map { englishKeywords in
                                     return keywords + englishKeywords
                                 }
@@ -1296,7 +1175,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                         var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
                         let emoticons = keywords.flatMap { $0.emoticons }
                         for emoji in emoticons {
-                            signals.append(searchStickers(account: self.context.account, query: emoji.basicEmoji.0)
+                            signals.append(context.engine.stickers.searchStickers(query: emoji.basicEmoji.0)
                             |> take(1)
                             |> map { (emoji, $0) })
                         }
@@ -1320,8 +1199,8 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 })
             }
             
-            let local = searchStickerSets(postbox: context.account.postbox, query: text)
-            let remote = searchStickerSetsRemotely(network: context.account.network, query: text)
+            let local = context.engine.stickers.searchStickerSets(query: text)
+            let remote = context.engine.stickers.searchStickerSetsRemotely(query: text)
             |> delay(0.2, queue: Queue.mainQueue())
             let rawPacks = local
             |> mapToSignal { result -> Signal<(FoundStickerSets, Bool, FoundStickerSets?), NoError> in

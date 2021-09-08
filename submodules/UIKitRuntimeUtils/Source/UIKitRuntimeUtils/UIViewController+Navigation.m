@@ -302,42 +302,15 @@ static bool notyfyingShiftState = false;
 
 @end
 
-static NSString *TGEncodeText(NSString *string, int key)
-{
-    NSMutableString *result = [[NSMutableString alloc] init];
-    
-    for (int i = 0; i < (int)[string length]; i++)
-    {
-        unichar c = [string characterAtIndex:i];
-        c += key;
-        [result appendString:[NSString stringWithCharacters:&c length:1]];
+void applyKeyboardAutocorrection(UITextView * _Nonnull textView) {
+    NSRange rangeCopy = textView.selectedRange;
+    NSRange fakeRange = rangeCopy;
+    if (fakeRange.location != 0) {
+        fakeRange.location--;
     }
-    
-    return result;
-}
-
-void applyKeyboardAutocorrection() {
-    static Class keyboardClass = NULL;
-    static SEL currentInstanceSelector = NULL;
-    static SEL applyVariantSelector = NULL;
-    
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        keyboardClass = NSClassFromString(TGEncodeText(@"VJLfzcpbse", -1));
-        
-        currentInstanceSelector = NSSelectorFromString(TGEncodeText(@"bdujwfLfzcpbse", -1));
-        applyVariantSelector = NSSelectorFromString(TGEncodeText(@"bddfquBvupdpssfdujpo", -1));
-    });
-    
-    if ([keyboardClass respondsToSelector:currentInstanceSelector])
-    {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        id currentInstance = [keyboardClass performSelector:currentInstanceSelector];
-        if ([currentInstance respondsToSelector:applyVariantSelector])
-            [currentInstance performSelector:applyVariantSelector];
-#pragma clang diagnostic pop
-    }
+    [textView unmarkText];
+    [textView setSelectedRange:fakeRange];
+    [textView setSelectedRange:rangeCopy];
 }
 
 @interface AboveStatusBarWindowController : UIViewController

@@ -5,7 +5,6 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
-import SyncCore
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -74,14 +73,6 @@ private func gridNodeLayoutForContainerLayout(size: CGSize) -> GridNodeLayoutTyp
 
 private struct WebSearchRecentQueryStableId: Hashable {
     let query: String
-    
-    var hashValue: Int {
-        return query.hashValue
-    }
-    
-    static func ==(lhs: WebSearchRecentQueryStableId, rhs: WebSearchRecentQueryStableId) -> Bool {
-        return lhs.query == rhs.query
-    }
 }
 
 private struct WebSearchRecentQueryEntry: Comparable, Identifiable {
@@ -219,7 +210,7 @@ class WebSearchControllerNode: ASDisplayNode {
         self.recentQueriesNode = ListView()
         self.recentQueriesNode.backgroundColor = theme.list.plainBackgroundColor
         self.recentQueriesNode.accessibilityPageScrolledString = { row, count in
-            return presentationData.strings.VoiceOver_ScrollStatus(row, count).0
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
         super.init()
@@ -284,7 +275,7 @@ class WebSearchControllerNode: ASDisplayNode {
             }
         })
         
-        self.recentQueriesNode.beganInteractiveDragging = { [weak self] in
+        self.recentQueriesNode.beganInteractiveDragging = { [weak self] _ in
             self?.dismissInput?()
         }
         
@@ -350,10 +341,10 @@ class WebSearchControllerNode: ASDisplayNode {
         }
         
         if themeUpdated {
-            self.segmentedBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+            self.segmentedBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.opaqueBackgroundColor
             self.segmentedSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
             self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: self.theme))
-            self.toolbarBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
+            self.toolbarBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.opaqueBackgroundColor
             self.toolbarSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
         }
         
@@ -577,7 +568,7 @@ class WebSearchControllerNode: ASDisplayNode {
         let geoPoint = currentProcessedResults.geoPoint.flatMap { geoPoint -> (Double, Double) in
             return (geoPoint.latitude, geoPoint.longitude)
         }
-        self.loadMoreDisposable.set((requestChatContextResults(account: self.context.account, botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
+        self.loadMoreDisposable.set((self.context.engine.messages.requestChatContextResults(botId: currentProcessedResults.botId, peerId: currentProcessedResults.peerId, query: currentProcessedResults.query, location: .single(geoPoint), offset: nextOffset)
             |> deliverOnMainQueue).start(next: { [weak self] nextResults in
                 guard let strongSelf = self, let nextResults = nextResults else {
                     return

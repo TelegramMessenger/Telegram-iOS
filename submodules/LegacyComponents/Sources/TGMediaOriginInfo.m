@@ -114,8 +114,11 @@
             
         case TGMediaOriginTypeWebpage:
         {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             NSString *url = (__bridge_transfer NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(NULL, (CFStringRef)keyComponents[1], CFSTR(""), kCFStringEncodingUTF8);
             info->_webpageUrl = url;
+#pragma clang diagnostic pop
         }
             break;
         

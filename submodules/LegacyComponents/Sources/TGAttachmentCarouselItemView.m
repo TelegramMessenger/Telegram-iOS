@@ -107,6 +107,8 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     bool _saveEditedPhotos;
     
     TGMenuSheetPallete *_pallete;
+    
+    bool _savingStartImage;
 }
 @end
 
@@ -246,8 +248,9 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         }
         
         _collectionView = [[TGAttachmentCarouselCollectionView alloc] initWithFrame:CGRectMake(0, 0, self.bounds.size.width, TGAttachmentZoomedPhotoHeight + TGAttachmentEdgeInset * 2) collectionViewLayout:_smallLayout];
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             _collectionView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        }
         _collectionView.backgroundColor = [UIColor clearColor];
         _collectionView.dataSource = self;
         _collectionView.delegate = self;
@@ -270,7 +273,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             {
                 if (strongSelf->_selectionContext.allowGrouping)
                     [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
-                strongSelf.sendPressed(nil, false, false, 0);
+                strongSelf.sendPressed(nil, false, false, 0, false);
             }
         }];
         [_sendMediaItemView setHidden:true animated:false];
@@ -282,7 +285,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             {
                 __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
                 if (strongSelf != nil && strongSelf.sendPressed != nil)
-                    strongSelf.sendPressed(nil, true, false, 0);
+                    strongSelf.sendPressed(nil, true, false, 0, false);
             }];
             _sendFileItemView.requiresDivider = false;
             [_sendFileItemView setHidden:true animated:false];
@@ -344,6 +347,30 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     [_assetsDisposable dispose];
     [_selectionChangedDisposable dispose];
     [_itemsSizeChangedDisposable dispose];
+}
+
+- (void)saveStartImage {
+    _savingStartImage = true;
+    __weak TGAttachmentCameraView *weakCameraView = _cameraView;
+    [_cameraView saveStartImage:^{
+        __strong TGAttachmentCameraView *strongCameraView = weakCameraView;
+        [strongCameraView stopPreview];
+    }];
+}
+
+- (UIView *)getItemSnapshot:(NSString *)uniqueId {
+    for (UIView *cell in _collectionView.visibleCells) {
+        if ([cell isKindOfClass:[TGAttachmentAssetCell class]]) {
+            TGAttachmentAssetCell *assetCell = (TGAttachmentAssetCell *)cell;
+            if (assetCell.asset.identifier != nil && [assetCell.asset.identifier isEqualToString:uniqueId]) {
+                UIView *snapshotView = [assetCell snapshotViewAfterScreenUpdates:false];
+                snapshotView.frame = [assetCell convertRect:assetCell.bounds toView:nil];
+                assetCell.alpha = 0.01f;
+                return snapshotView;
+            }
+        }
+    }
+    return nil;
 }
 
 - (void)setPallete:(TGMenuSheetPallete *)pallete
@@ -792,7 +819,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         {
             if (strongSelf->_selectionContext.allowGrouping)
                 [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
-            strongSelf.sendPressed(item.asset, strongSelf.asFile, silentPosting, scheduleTime);
+            strongSelf.sendPressed(item.asset, strongSelf.asFile, silentPosting, scheduleTime, true);
         }
     };
     
@@ -1211,7 +1238,9 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 {
     [super menuView:menuView didDisappearAnimated:animated];
     menuView.tapDismissalAllowed = nil;
-    [_cameraView stopPreview];
+    if (!_savingStartImage) {
+        [_cameraView stopPreview];
+    }
 }
 
 #pragma mark -

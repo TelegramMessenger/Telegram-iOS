@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
@@ -165,7 +164,7 @@ final class CommandChatInputPanelItemNode: ListViewItemNode {
                     
                     strongSelf.arrowNode.setImage(iconImage, for: [])
                     
-                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.theme, peer: item.command.peer, emptyColor: item.theme.list.mediaPlaceholderColor)
+                    strongSelf.avatarNode.setPeer(context: item.context, theme: item.theme, peer: EnginePeer(item.command.peer), emptyColor: item.theme.list.mediaPlaceholderColor)
                     
                     let _ = textApply()
                     

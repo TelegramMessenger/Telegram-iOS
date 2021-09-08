@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -109,7 +108,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.titleNode = titleNode
         
         self.textNode = ASTextNode()
-        self.textNode.attributedText = NSAttributedString(string: strings.Checkout_PasswordEntry_Text(cardTitle).0, font: Font.regular(13.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: strings.Checkout_PasswordEntry_Text(cardTitle).string, font: Font.regular(13.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
         self.textNode.displaysAsynchronously = false
         self.textNode.isUserInteractionEnabled = false
         
@@ -285,7 +284,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         }
         
         self.isVerifying = true
-        self.disposable.set((requestTemporaryTwoStepPasswordToken(account: self.context.account, password: text, period: self.period, requiresBiometrics: self.requiresBiometrics) |> deliverOnMainQueue).start(next: { [weak self] token in
+        self.disposable.set((self.context.engine.auth.requestTemporaryTwoStepPasswordToken(password: text, period: self.period, requiresBiometrics: self.requiresBiometrics) |> deliverOnMainQueue).start(next: { [weak self] token in
             if let strongSelf = self {
                 strongSelf.completion(token)
             }

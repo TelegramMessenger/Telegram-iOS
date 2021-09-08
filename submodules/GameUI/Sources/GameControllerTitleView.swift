@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import TelegramPresentationData
 
@@ -40,7 +39,7 @@ final class GameControllerTitleView: UIView {
     }
     
     func set(title: String, subtitle: String) {
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
         self.infoNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
     }
     

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
-import SyncCore
 import SwiftSignalKit
 import Display
 import AVFoundation
@@ -13,6 +12,7 @@ import TelegramPresentationData
 import DeviceAccess
 import UniversalMediaPlayer
 import AccountContext
+import DeviceProximity
 
 final class PresentationCallToneRenderer {
     let queue: Queue
@@ -24,7 +24,7 @@ final class PresentationCallToneRenderer {
     private var toneRendererAudioSessionActivated = false
     private let audioLevelPipe = ValuePipe<Float>()
     
-    init(tone: PresentationCallTone) {
+    init(tone: PresentationCallTone, completed: (() -> Void)? = nil) {
         let queue = Queue.mainQueue()
         self.queue = queue
         
@@ -52,6 +52,7 @@ final class PresentationCallToneRenderer {
         let toneDataOffset = Atomic<Int>(value: 0)
         
         let toneData = Atomic<Data?>(value: nil)
+        let reportedCompletion = Atomic<Bool>(value: false)
         
         self.toneRenderer.beginRequestingFrames(queue: DispatchQueue.global(), takeFrame: {
             var data = toneData.with { $0 }
@@ -63,6 +64,9 @@ final class PresentationCallToneRenderer {
             }
             
             guard let toneData = data else {
+                if !reportedCompletion.swap(true) {
+                    completed?()
+                }
                 return .finished
             }
             
@@ -83,13 +87,21 @@ final class PresentationCallToneRenderer {
             
             if let takeOffset = takeOffset {
                 if let toneDataMaxOffset = toneDataMaxOffset, takeOffset >= toneDataMaxOffset {
+                    if !reportedCompletion.swap(true) {
+                        Queue.mainQueue().after(1.0, {
+                            completed?()
+                        })
+                    }
                     return .finished
                 }
                 
                 var blockBuffer: CMBlockBuffer?
                 
                 let bytes = malloc(frameSize)!
-                toneData.withUnsafeBytes { (dataBytes: UnsafePointer<UInt8>) -> Void in
+                toneData.withUnsafeBytes { dataBuffer -> Void in
+                    guard let dataBytes = dataBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                        return
+                    }
                     var takenCount = 0
                     while takenCount < frameSize {
                         let dataOffset = (takeOffset + takenCount) % toneData.count
@@ -117,6 +129,9 @@ final class PresentationCallToneRenderer {
                 
                 let status = CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: bytes, blockLength: frameSize, blockAllocator: nil, customBlockSource: nil, offsetToData: 0, dataLength: frameSize, flags: 0, blockBufferOut: &blockBuffer)
                 if status != noErr {
+                    if !reportedCompletion.swap(true) {
+                        completed?()
+                    }
                     return .finished
                 }
                 
@@ -127,15 +142,24 @@ final class PresentationCallToneRenderer {
                 var sampleBuffer: CMSampleBuffer?
                 var sampleSize = frameSize
                 guard CMSampleBufferCreate(allocator: nil, dataBuffer: blockBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: nil, sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleSizeEntryCount: 1, sampleSizeArray: &sampleSize, sampleBufferOut: &sampleBuffer) == noErr else {
+                    if !reportedCompletion.swap(true) {
+                        completed?()
+                    }
                     return .finished
                 }
                 
                 if let sampleBuffer = sampleBuffer {
                     return .frame(MediaTrackFrame(type: .audio, sampleBuffer: sampleBuffer, resetDecoder: false, decoded: true))
                 } else {
+                    if !reportedCompletion.swap(true) {
+                        completed?()
+                    }
                     return .finished
                 }
             } else {
+                if !reportedCompletion.swap(true) {
+                    completed?()
+                }
                 return .finished
             }
         })
@@ -165,7 +189,7 @@ final class PresentationCallToneRenderer {
 }
 
 public final class PresentationCallImpl: PresentationCall {
-    public let account: Account
+    public let context: AccountContext
     private let audioSession: ManagedAudioSession
     private let callSessionManager: CallSessionManager
     private let callKitIntegration: CallKitIntegration?
@@ -265,9 +289,19 @@ public final class PresentationCallImpl: PresentationCall {
     
     private var useFrontCamera: Bool = true
     private var videoCapturer: OngoingCallVideoCapturer?
+
+    private var screencastBufferServerContext: IpcGroupCallBufferAppContext?
+    private var screencastCapturer: OngoingCallVideoCapturer?
+    private var isScreencastActive: Bool = false
+    
+    private var proximityManagerIndex: Int?
+
+    private let screencastFramesDisposable = MetaDisposable()
+    private let screencastAudioDataDisposable = MetaDisposable()
+    private let screencastStateDisposable = MetaDisposable()
     
     init(
-        account: Account,
+        context: AccountContext,
         audioSession: ManagedAudioSession,
         callSessionManager: CallSessionManager,
         callKitIntegration: CallKitIntegration?,
@@ -290,7 +324,7 @@ public final class PresentationCallImpl: PresentationCall {
         enableTCP: Bool,
         preferredVideoCodec: String?
     ) {
-        self.account = account
+        self.context = context
         self.audioSession = audioSession
         self.callSessionManager = callSessionManager
         self.callKitIntegration = callKitIntegration
@@ -322,7 +356,7 @@ public final class PresentationCallImpl: PresentationCall {
         self.isVideo = startWithVideo
         if self.isVideo {
             self.videoCapturer = OngoingCallVideoCapturer()
-            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .active, remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal))
+            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .active(isScreencast: self.isScreencastActive), remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal))
         } else {
             self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: self.isVideoPossible ? .inactive : .notAvailable, remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal))
         }
@@ -360,7 +394,7 @@ public final class PresentationCallImpl: PresentationCall {
                     }
                 }
             }
-        }, deactivate: { [weak self] in
+        }, deactivate: { [weak self] _ in
             return Signal { subscriber in
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -434,6 +468,16 @@ public final class PresentationCallImpl: PresentationCall {
                 strongSelf.updateIsAudioSessionActive(value)
             }
         })
+
+        let screencastCapturer = OngoingCallVideoCapturer(isCustom: true)
+        self.screencastCapturer = screencastCapturer
+
+        self.resetScreencastContext()
+        
+        if callKitIntegration == nil {
+            self.proximityManagerIndex = DeviceProximityManager.shared().add { _ in
+            }
+        }
     }
     
     deinit {
@@ -445,12 +489,19 @@ public final class PresentationCallImpl: PresentationCall {
         self.audioLevelDisposable?.dispose()
         self.batteryLevelDisposable?.dispose()
         self.audioSessionDisposable?.dispose()
+        self.screencastFramesDisposable.dispose()
+        self.screencastAudioDataDisposable.dispose()
+        self.screencastStateDisposable.dispose()
         
         if let dropCallKitCallTimer = self.dropCallKitCallTimer {
             dropCallKitCallTimer.invalidate()
             if !self.droppedCall {
                 self.callKitIntegration?.dropCall(uuid: self.internalId)
             }
+        }
+        
+        if let proximityManagerIndex = self.proximityManagerIndex {
+            DeviceProximityManager.shared().remove(proximityManagerIndex)
         }
     }
     
@@ -498,11 +549,11 @@ public final class PresentationCallImpl: PresentationCall {
             case .notAvailable:
                 mappedVideoState = .notAvailable
             case .active:
-                mappedVideoState = .active
+                mappedVideoState = .active(isScreencast: self.isScreencastActive)
             case .inactive:
                 mappedVideoState = .inactive
             case .paused:
-                mappedVideoState = .paused
+                mappedVideoState = .paused(isScreencast: self.isScreencastActive)
             }
             switch callContextState.remoteVideoState {
             case .inactive:
@@ -533,7 +584,7 @@ public final class PresentationCallImpl: PresentationCall {
                 mappedVideoState = previousVideoState
             } else {
                 if self.isVideo {
-                    mappedVideoState = .active
+                    mappedVideoState = .active(isScreencast: self.isScreencastActive)
                 } else if self.isVideoPossible && sessionState.isVideoPossible {
                     mappedVideoState = .inactive
                 } else {
@@ -632,7 +683,7 @@ public final class PresentationCallImpl: PresentationCall {
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
                     let logName = "\(id.id)_\(id.accessHash)"
                     
-                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
+                    let ongoingContext = OngoingCallContext(account: self.context.account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
                     self.ongoingContext = ongoingContext
                     ongoingContext.setIsMuted(self.isMutedValue)
                     if let requestedVideoAspect = self.requestedVideoAspect {
@@ -895,6 +946,61 @@ public final class PresentationCallImpl: PresentationCall {
             self.ongoingContext?.disableVideo()
         }
     }
+
+    private func resetScreencastContext() {
+        let basePath = self.context.sharedContext.basePath + "/broadcast-coordination"
+        let screencastBufferServerContext = IpcGroupCallBufferAppContext(basePath: basePath)
+        self.screencastBufferServerContext = screencastBufferServerContext
+
+        self.screencastFramesDisposable.set((screencastBufferServerContext.frames
+        |> deliverOnMainQueue).start(next: { [weak screencastCapturer] screencastFrame in
+            guard let screencastCapturer = screencastCapturer else {
+                return
+            }
+            screencastCapturer.injectPixelBuffer(screencastFrame.0, rotation: screencastFrame.1)
+        }))
+        self.screencastAudioDataDisposable.set((screencastBufferServerContext.audioData
+        |> deliverOnMainQueue).start(next: { [weak self] data in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.ongoingContext?.addExternalAudioData(data: data)
+        }))
+        self.screencastStateDisposable.set((screencastBufferServerContext.isActive
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] isActive in
+            guard let strongSelf = self else {
+                return
+            }
+            if isActive {
+                strongSelf.requestScreencast()
+            } else {
+                strongSelf.disableScreencast(reset: false)
+            }
+        }))
+    }
+
+    private func requestScreencast() {
+        self.disableVideo()
+
+        if let screencastCapturer = self.screencastCapturer {
+            self.isScreencastActive = true
+            self.ongoingContext?.requestVideo(screencastCapturer)
+        }
+    }
+
+    func disableScreencast(reset: Bool = true) {
+        if self.isScreencastActive {
+            if let _ = self.videoCapturer {
+                self.videoCapturer = nil
+            }
+            self.isScreencastActive = false
+            self.ongoingContext?.disableVideo()
+            if reset {
+                self.resetScreencastContext()
+            }
+        }
+    }
     
     public func setOutgoingVideoIsPaused(_ isPaused: Bool) {
         self.videoCapturer?.setIsVideoEnabled(!isPaused)
@@ -927,6 +1033,7 @@ public final class PresentationCallImpl: PresentationCall {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
                 let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
+                let updateIsEnabled = view.updateIsEnabled
                 completion(PresentationCallVideoView(
                     holder: view,
                     view: view.view,
@@ -978,6 +1085,9 @@ public final class PresentationCallImpl: PresentationCall {
                         setOnIsMirroredUpdated { value in
                             f?(value)
                         }
+                    },
+                    updateIsEnabled: { value in
+                        updateIsEnabled(value)
                     }
                 ))
             } else {
@@ -992,11 +1102,12 @@ public final class PresentationCallImpl: PresentationCall {
             self.videoCapturer = videoCapturer
         }
         
-        self.videoCapturer?.makeOutgoingVideoView(completion: { view in
+        self.videoCapturer?.makeOutgoingVideoView(requestClone: false, completion: { view, _ in
             if let view = view {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
                 let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
+                let updateIsEnabled = view.updateIsEnabled
                 completion(PresentationCallVideoView(
                     holder: view,
                     view: view.view,
@@ -1048,6 +1159,9 @@ public final class PresentationCallImpl: PresentationCall {
                         setOnIsMirroredUpdated { value in
                             f?(value)
                         }
+                    },
+                    updateIsEnabled: { value in
+                        updateIsEnabled(value)
                     }
                 ))
             } else {

@@ -306,23 +306,29 @@ static HTMLEscapeMap gAsciiHTMLEscapeMap[] = {
 + (NSString *)stringByEscapingForURL:(NSString *)string
 {
     static NSString * const kAFLegalCharactersToBeEscaped = @"?!@#$^&%*+=,.:;'\"`<>()[]{}/\\|~ ";
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSString *unescapedString = [string stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
     if (unescapedString == nil)
         unescapedString = string;
     
     return (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (__bridge CFStringRef)unescapedString, NULL, (CFStringRef)kAFLegalCharactersToBeEscaped, CFStringConvertNSStringEncodingToEncoding(NSUTF8StringEncoding));
+#pragma clang diagnostic pop
 }
 
 + (NSString *)stringByEscapingForActorURL:(NSString *)string
 {
     static NSString * const kAFLegalCharactersToBeEscaped = @"?!@#$^&%*+=,:;'\"`<>()[]{}/\\|~ ";
-    
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSString *unescapedString = [string stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
     if (unescapedString == nil)
         unescapedString = string;
     
     return (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, (__bridge CFStringRef)unescapedString, NULL, (CFStringRef)kAFLegalCharactersToBeEscaped, CFStringConvertNSStringEncodingToEncoding(NSUTF8StringEncoding));
+#pragma clang diagnostic pop
 }
 
 + (NSString *)stringByEncodingInBase64:(NSData *)data
@@ -503,9 +509,11 @@ static HTMLEscapeMap gAsciiHTMLEscapeMap[] = {
     {
         NSRange equalsSignRange = [keyValuePair rangeOfString:@"="];
         if (equalsSignRange.location != NSNotFound) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             NSString *key = [keyValuePair substringToIndex:equalsSignRange.location];
             NSString *value = [[[keyValuePair substringFromIndex:equalsSignRange.location + equalsSignRange.length] stringByReplacingOccurrencesOfString:@"+" withString:@" "] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-
+#pragma clang diagnostic pop
             
             [queryStringDictionary setObject:value forKey:key];
         }
@@ -1389,7 +1397,7 @@ static unsigned char strToChar (char a, char b)
         buf[1] = [hex characterAtIndex:i+1];
         char *b2 = NULL;
         *bp++ = strtol(buf, &b2, 16);
-        NSAssert(b2 == buf + 2, @"String should be all hex digits: %@ (bad digit around %d)", hex, i);
+        NSAssert(b2 == buf + 2, @"String should be all hex digits: %@ (bad digit around %d)", hex, (int)i);
     }
     
     return [NSData dataWithBytesNoCopy:bytes length:[hex length]/2 freeWhenDone:YES];

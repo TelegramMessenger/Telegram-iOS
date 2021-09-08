@@ -5,7 +5,6 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
-import SyncCore
 import AccountContext
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -178,7 +177,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
            
             var subtitle = timeString
             if let distance = item.distance {
-                let distanceString = item.presentationData.strings.Map_DistanceAway(shortStringForDistance(strings: item.presentationData.strings, distance: Int32(distance))).0
+                let distanceString = item.presentationData.strings.Map_DistanceAway(shortStringForDistance(strings: item.presentationData.strings, distance: Int32(distance))).string
                 subtitle = "\(timeString) • \(distanceString)"
             }
             
@@ -229,7 +228,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                         let avatarSize: CGFloat = 40.0
                         
                         if let peer = item.message.author {
-                            strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: nil, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: false)
+                            strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(peer), overrideImage: nil, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: false)
                         }
                         
                         strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
