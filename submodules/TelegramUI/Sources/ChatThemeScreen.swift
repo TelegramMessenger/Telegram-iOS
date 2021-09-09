@@ -343,7 +343,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         if let snapshotView = self.view.snapshotView(afterScreenUpdates: false) {
             self.view.addSubview(snapshotView)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }
@@ -378,8 +378,7 @@ final class ChatThemeScreen: ViewController {
     private let context: AccountContext
     private let initiallySelectedEmoticon: String?
     private let dismissByTapOutside: Bool
-    private let previewTheme: (String?) -> Void
-    private let previewDarkTheme: (Bool) -> Void
+    private let previewTheme: (String?, Bool?) -> Void
     private let completion: (String?) -> Void
     
     private var presentationData: PresentationData
@@ -393,13 +392,12 @@ final class ChatThemeScreen: ViewController {
         }
     }
     
-    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), initiallySelectedEmoticon: String?, dismissByTapOutside: Bool = true, previewTheme: @escaping (String?) -> Void, previewDarkTheme: @escaping (Bool) -> Void, completion: @escaping (String?) -> Void) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), initiallySelectedEmoticon: String?, dismissByTapOutside: Bool = true, previewTheme: @escaping (String?, Bool?) -> Void, completion: @escaping (String?) -> Void) {
         self.context = context
         self.presentationData = updatedPresentationData.initial
         self.initiallySelectedEmoticon = initiallySelectedEmoticon
         self.dismissByTapOutside = dismissByTapOutside
         self.previewTheme = previewTheme
-        self.previewDarkTheme = previewDarkTheme
         self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
@@ -430,20 +428,14 @@ final class ChatThemeScreen: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = ChatThemeScreenNode(context: self.context, presentationData: self.presentationData, initiallySelectedEmoticon: self.initiallySelectedEmoticon, dismissByTapOutside: self.dismissByTapOutside)
         self.controllerNode.passthroughHitTestImpl = self.passthroughHitTestImpl
-        self.controllerNode.previewTheme = { [weak self] emoticon in
+        self.controllerNode.previewTheme = { [weak self] emoticon, dark in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.previewTheme(emoticon ?? "")
+            strongSelf.previewTheme((emoticon ?? ""), dark)
         }
         self.controllerNode.present = { [weak self] c in
             self?.present(c, in: .current)
-        }
-        self.controllerNode.previewDarkTheme = { [weak self] dark in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.previewDarkTheme(dark)
         }
         self.controllerNode.completion = { [weak self] emoticon in
             guard let strongSelf = self else {
@@ -463,7 +455,7 @@ final class ChatThemeScreen: ViewController {
                 return
             }
             strongSelf.dismiss()
-            strongSelf.previewTheme(nil)
+            strongSelf.previewTheme(nil, nil)
         }
     }
     
@@ -548,15 +540,20 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
     }
     private var selectedEmoticonPromise: ValuePromise<String?>
+
     private var isDarkAppearancePromise: ValuePromise<Bool>
+    private var isDarkAppearance: Bool = false {
+        didSet {
+            self.isDarkAppearancePromise.set(self.isDarkAppearance)
+        }
+    }
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     private let disposable = MetaDisposable()
     
     var present: ((ViewController) -> Void)?
-    var previewTheme: ((String?) -> Void)?
-    var previewDarkTheme: ((Bool) -> Void)?
+    var previewTheme: ((String?, Bool?) -> Void)?
     var completion: ((String?) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
@@ -587,6 +584,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.backgroundNode.clipsToBounds = true
         self.backgroundNode.cornerRadius = 16.0
         
+        self.isDarkAppearance = self.presentationData.theme.overallDarkAppearance
         self.isDarkAppearancePromise = ValuePromise(self.presentationData.theme.overallDarkAppearance)
         
         let backgroundColor = self.presentationData.theme.actionSheet.itemBackgroundColor
@@ -610,7 +608,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
         
         self.switchThemeButton = HighlightTrackingButtonNode()
-        self.animationNode = AnimationNode(animation: self.presentationData.theme.overallDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme), scale: 1.0)
+        self.animationNode = AnimationNode(animation: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme), scale: 1.0)
         self.animationNode.isUserInteractionEnabled = false
         
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
@@ -675,7 +673,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                     strongSelf.animateCrossfade(animateBackground: strongSelf.presentationData.theme.overallDarkAppearance, updateSunIcon: true)
                                         
                     strongSelf.selectedEmoticon = emoticon
-                    strongSelf.previewTheme?(emoticon)
+                    strongSelf.previewTheme?(emoticon, strongSelf.isDarkAppearance)
                     let _ = ensureThemeVisible(listNode: strongSelf.listNode, emoticon: emoticon, animated: true)
                     
                     strongSelf.doneButton.title = emoticon == nil ? strongSelf.presentationData.strings.Conversation_Theme_Reset : strongSelf.presentationData.strings.Conversation_Theme_Apply
@@ -773,9 +771,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
         let previousTheme = self.presentationData.theme
         self.presentationData = presentationData
-        
-        self.isDarkAppearancePromise.set(presentationData.theme.overallDarkAppearance)
-                
+                        
         if let effectView = self.effectNode.view as? UIVisualEffectView {
             effectView.effect = UIBlurEffect(style: presentationData.theme.actionSheet.backgroundType == .light ? .light : .dark)
         }
@@ -793,7 +789,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         if self.animationNode.isPlaying {
             
         } else {
-            self.animationNode.setAnimation(name: self.presentationData.theme.overallDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
+            self.animationNode.setAnimation(name: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
         }
     }
         
@@ -813,9 +809,12 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     
     @objc func switchThemePressed() {
         self.animateCrossfade(animateBackground: true)
-        self.animationNode.setAnimation(name: self.presentationData.theme.overallDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
+        self.animationNode.setAnimation(name: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
         self.animationNode.playOnce()
-        self.previewDarkTheme?(!self.presentationData.theme.overallDarkAppearance)
+        
+        let isDarkAppearance = !self.isDarkAppearance
+        self.previewTheme?(self.selectedEmoticon, isDarkAppearance)
+        self.isDarkAppearance = isDarkAppearance
         
         let _ = ApplicationSpecificNotice.incrementChatSpecificThemesDarkPreviewTip(accountManager: self.context.sharedContext.accountManager, count: 3).start()
     }
@@ -827,7 +826,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     }
     
     private func animateCrossfade(animateBackground: Bool = true, updateSunIcon: Bool = false) {
-        let delay: Double = animateBackground ? 0.0 : 0.2
+        let delay: Double = 0.2
         
         if let snapshotView = self.animationNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.animationNode.frame
