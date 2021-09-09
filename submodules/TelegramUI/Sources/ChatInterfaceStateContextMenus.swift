@@ -1188,7 +1188,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         subActions.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, textColor: .primary, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
                         }, action: { controller, _ in
-                            controller.setItems(contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: chatPresentationInterfaceState, context: context, messages: messages, controllerInteraction: controllerInteraction, selectAll: selectAll, interfaceInteraction: interfaceInteraction, readStats: stats), minHeight: nil)
+                            controller.setItems(contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: chatPresentationInterfaceState, context: context, messages: messages, controllerInteraction: controllerInteraction, selectAll: selectAll, interfaceInteraction: interfaceInteraction, readStats: stats), minHeight: nil, previousActionsTransition: .slide(forward: false))
                         })))
 
                         for peer in stats.peers {
@@ -1202,7 +1202,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         }
 
                         let minHeight = c.getActionsMinHeight()
-                        c.setItems(.single(subActions), minHeight: minHeight)
+                        c.setItems(.single(subActions), minHeight: minHeight, previousActionsTransition: .slide(forward: true))
                     } else {
                         f(.default)
                     }
@@ -1957,8 +1957,18 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         self.performAction()
     }
 
+    private var actionTemporarilyDisabled: Bool = false
+
     func performAction() {
-        guard let controller = self.getController(), let currentStats = self.currentStats  else {
+        if self.actionTemporarilyDisabled {
+            return
+        }
+        self.actionTemporarilyDisabled = true
+        Queue.mainQueue().async { [weak self] in
+            self?.actionTemporarilyDisabled = false
+        }
+
+        guard let controller = self.getController(), let currentStats = self.currentStats else {
             return
         }
         self.item.action(controller, { [weak self] result in
