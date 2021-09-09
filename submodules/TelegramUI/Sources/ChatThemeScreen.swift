@@ -239,6 +239,7 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
 
 private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     private let containerNode: ASDisplayNode
+    private let emojiContainerNode: ASDisplayNode
     private let imageNode: TransformImageNode
     private let overlayNode: ASImageNode
     private let textNode: TextNode
@@ -268,6 +269,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
 
     init() {
         self.containerNode = ASDisplayNode()
+        self.emojiContainerNode = ASDisplayNode()
 
         self.imageNode = TransformImageNode()
         self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 82.0, height: 108.0))
@@ -295,8 +297,11 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         self.containerNode.addSubnode(self.imageNode)
         self.containerNode.addSubnode(self.overlayNode)
         self.containerNode.addSubnode(self.textNode)
-        self.containerNode.addSubnode(self.emojiNode)
-        self.containerNode.addSubnode(self.placeholderNode)
+        
+        self.addSubnode(self.emojiContainerNode)
+        self.emojiContainerNode.addSubnode(self.emojiNode)
+        self.emojiContainerNode.addSubnode(self.emojiImageNode)
+        self.emojiContainerNode.addSubnode(self.placeholderNode)
         
         var firstTime = true
         self.emojiImageNode.imageUpdated = { [weak self] image in
@@ -341,11 +346,15 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         let currentItem = self.item
 
         return { [weak self] item, params in
+            var updatedEmoticon = false
             var updatedThemeReference = false
             var updatedTheme = false
             var updatedWallpaper = false
             var updatedSelected = false
             
+            if currentItem?.emoticon != item.emoticon {
+                updatedEmoticon = true
+            }
             if currentItem?.themeReference != item.themeReference {
                 updatedThemeReference = true
             }
@@ -396,6 +405,9 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                     strongSelf.containerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(x: 15.0, y: -15.0), size: CGSize(width: 90.0, height: 120.0))
                     
+                    strongSelf.emojiContainerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                    strongSelf.emojiContainerNode.frame = CGRect(origin: CGPoint(x: 15.0, y: -15.0), size: CGSize(width: 90.0, height: 120.0))
+                    
                     let _ = textApply()
                     let _ = emojiApply()
 
@@ -408,7 +420,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                     strongSelf.emojiNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 79.0), size: CGSize(width: 90.0, height: 30.0))
                     
                     let emojiFrame = CGRect(origin: CGPoint(x: 33.0, y: 79.0), size: CGSize(width: 24.0, height: 24.0))
-                    if let file = item.emojiFile {
+                    if let file = item.emojiFile, updatedEmoticon {
                         let imageApply = strongSelf.emojiImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: emojiFrame.size, boundingSize: emojiFrame.size, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
                         strongSelf.emojiImageNode.setSignal(chatMessageStickerPackThumbnail(postbox: item.context.account.postbox, resource: file.resource, animated: true, nilIfEmpty: true))
@@ -423,8 +435,9 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                                 self?.emojiImageNode.isHidden = true
                             }
                             strongSelf.animatedStickerNode = animatedStickerNode
-                            strongSelf.containerNode.insertSubnode(animatedStickerNode, belowSubnode: strongSelf.placeholderNode)
-                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 128, height: 128, mode: .cached)
+                            strongSelf.emojiContainerNode.insertSubnode(animatedStickerNode, belowSubnode: strongSelf.placeholderNode)
+                            let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 96, height: 96, mode: .direct(cachePathPrefix: pathPrefix))
                         }
                         animatedStickerNode.visibility = strongSelf.visibilityStatus
                         
@@ -445,8 +458,10 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
     
     func crossfade() {
-        if let snapshotView = self.view.snapshotView(afterScreenUpdates: false) {
-            self.view.addSubview(snapshotView)
+        if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
+            snapshotView.transform = self.containerNode.view.transform
+            snapshotView.frame = self.containerNode.view.frame
+            self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
             
             snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()

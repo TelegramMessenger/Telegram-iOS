@@ -78,6 +78,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         var displayUndo = true
         var undoText = presentationData.strings.Undo_Undo
         var undoTextColor = UIColor(rgb: 0x5ac8fa)
+        undoTextColor = presentationData.theme.list.itemAccentColor.withMultiplied(hue: 1.0, saturation: 0.64, brightness: 1.08)
         
         if presentationData.theme.overallDarkAppearance {
             self.animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
