@@ -785,8 +785,8 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 if let strongSelf = self, strongSelf.selectedEmoticon != emoticon {
                     strongSelf.animateCrossfade(animateBackground: strongSelf.presentationData.theme.overallDarkAppearance, updateSunIcon: true)
                                         
-                    strongSelf.selectedEmoticon = emoticon
                     strongSelf.previewTheme?(emoticon, strongSelf.isDarkAppearance)
+                    strongSelf.selectedEmoticon = emoticon
                     let _ = ensureThemeVisible(listNode: strongSelf.listNode, emoticon: emoticon, animated: true)
                     
                     strongSelf.doneButton.title = emoticon == nil ? strongSelf.presentationData.strings.Conversation_Theme_Reset : strongSelf.presentationData.strings.Conversation_Theme_Apply
