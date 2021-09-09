@@ -16,6 +16,7 @@ public protocol ContextControllerProtocol {
 
     func getActionsMinHeight() -> CGFloat?
     func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?)
+    func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition)
     func dismiss(completion: (() -> Void)?)
 }
 
@@ -450,7 +451,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.itemsDisposable.set((items
         |> deliverOnMainQueue).start(next: { [weak self] items in
-            self?.setItems(items: items, minHeight: nil)
+            self?.setItems(items: items, minHeight: nil, previousActionsTransition: .scale)
         }))
         
         switch source {
@@ -1178,18 +1179,18 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
-    func setItemsSignal(items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?) {
+    func setItemsSignal(items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
         self.items = items
         self.itemsDisposable.set((items
         |> deliverOnMainQueue).start(next: { [weak self] items in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.setItems(items: items, minHeight: minHeight)
+            strongSelf.setItems(items: items, minHeight: minHeight, previousActionsTransition: previousActionsTransition)
         }))
     }
     
-    private func setItems(items: [ContextMenuItem], minHeight: CGFloat?) {
+    private func setItems(items: [ContextMenuItem], minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
         if let _ = self.currentItems, !self.didCompleteAnimationIn && self.getController()?.immediateItemsTransitionAnimation == true {
             return
         }
@@ -1208,7 +1209,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.scrollNode.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
         
         if let layout = self.validLayout {
-            self.updateLayout(layout: layout, transition: .animated(duration: 0.3, curve: .spring), previousActionsContainerNode: previousActionsContainerNode)
+            self.updateLayout(layout: layout, transition: .animated(duration: 0.3, curve: .spring), previousActionsContainerNode: previousActionsContainerNode, previousActionsTransition: previousActionsTransition)
         } else {
             previousActionsContainerNode.removeFromSupernode()
         }
@@ -1231,7 +1232,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
-    func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition, previousActionsContainerNode: ContextActionsContainerNode?) {
+    func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition, previousActionsContainerNode: ContextActionsContainerNode?, previousActionsTransition: ContextController.PreviousActionsTransition = .scale) {
         if self.isAnimatingOut {
             return
         }
@@ -1649,13 +1650,44 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     })
                     self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 } else {
-                    transition.updateTransformScale(node: previousActionsContainerNode, scale: 0.1)
-                    previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
-                        previousActionsContainerNode?.removeFromSupernode()
-                    })
-                    
-                    transition.animateTransformScale(node: self.actionsContainerNode, from: 0.1)
-                    self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    switch previousActionsTransition {
+                    case .scale:
+                        transition.updateTransformScale(node: previousActionsContainerNode, scale: 0.1)
+                        previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
+                            previousActionsContainerNode?.removeFromSupernode()
+                        })
+
+                        transition.animateTransformScale(node: self.actionsContainerNode, from: 0.1)
+                        self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    case let .slide(forward):
+                        if case .compact = layout.metrics.widthClass {
+                            if forward {
+                                transition.updatePosition(node: previousActionsContainerNode, position: CGPoint(x: -previousActionsContainerNode.bounds.width / 2.0, y: previousActionsContainerNode.position.y), completion: { [weak previousActionsContainerNode] _ in
+                                    previousActionsContainerNode?.removeFromSupernode()
+                                })
+                                transition.animatePositionAdditive(node: self.actionsContainerNode, offset: CGPoint(x: layout.size.width + self.actionsContainerNode.bounds.width / 2.0 - self.actionsContainerNode.position.x, y: 0.0))
+                            } else {
+                                transition.updatePosition(node: previousActionsContainerNode, position: CGPoint(x: layout.size.width + previousActionsContainerNode.bounds.width / 2.0, y: previousActionsContainerNode.position.y), completion: { [weak previousActionsContainerNode] _ in
+                                    previousActionsContainerNode?.removeFromSupernode()
+                                })
+                                transition.animatePositionAdditive(node: self.actionsContainerNode, offset: CGPoint(x: -self.actionsContainerNode.bounds.width / 2.0 - self.actionsContainerNode.position.x, y: 0.0))
+                            }
+                        } else {
+                            let offset: CGFloat
+                            if forward {
+                                offset = previousActionsContainerNode.bounds.width
+                            } else {
+                                offset = -previousActionsContainerNode.bounds.width
+                            }
+                            transition.updatePosition(node: previousActionsContainerNode, position: previousActionsContainerNode.position.offsetBy(dx: -offset, dy: 0.0))
+                            previousActionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousActionsContainerNode] _ in
+                                previousActionsContainerNode?.removeFromSupernode()
+                            })
+
+                            transition.animatePositionAdditive(node: self.actionsContainerNode, offset: CGPoint(x: offset, y: 0.0))
+                            self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        }
+                    }
                 }
             } else {
                 previousActionsContainerNode.removeFromSupernode()
@@ -1831,6 +1863,11 @@ public enum ContextContentSource {
 }
 
 public final class ContextController: ViewController, StandalonePresentableController, ContextControllerProtocol {
+    public enum PreviousActionsTransition {
+        case scale
+        case slide(forward: Bool)
+    }
+
     private let account: Account
     private var presentationData: PresentationData
     private let source: ContextContentSource
@@ -1980,10 +2017,17 @@ public final class ContextController: ViewController, StandalonePresentableContr
         return nil
     }
     
-    public func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat? = nil) {
+    public func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?) {
         self.items = items
         if self.isNodeLoaded {
-            self.controllerNode.setItemsSignal(items: items, minHeight: minHeight)
+            self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: .scale)
+        }
+    }
+
+    public func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+        self.items = items
+        if self.isNodeLoaded {
+            self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: previousActionsTransition)
         }
     }
     
