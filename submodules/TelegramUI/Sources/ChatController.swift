@@ -13346,9 +13346,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return updated
         })
         
-        let _ = (self.cachedDataPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] cachedData in
+        let animatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
+        |> map { animatedEmoji -> [String: [StickerPackItem]] in
+            var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
+            switch animatedEmoji {
+                case let .result(_, items, _):
+                    for case let item as StickerPackItem in items {
+                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
+                            animatedEmojiStickers[emoji.basicEmoji.0] = [item]
+                            let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
+                            if animatedEmojiStickers[strippedEmoji] == nil {
+                                animatedEmojiStickers[strippedEmoji] = [item]
+                            }
+                        }
+                    }
+                default:
+                    break
+            }
+            return animatedEmojiStickers
+        }
+        
+        let _ = (combineLatest(queue: Queue.mainQueue(), self.cachedDataPromise.get(), animatedEmojiStickers)
+        |> take(1)).start(next: { [weak self] cachedData, animatedEmojiStickers in
             guard let strongSelf = self else {
                 return
             }
@@ -13364,7 +13383,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 selectedEmoticon = nil
             }
             
-            let controller = ChatThemeScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, initiallySelectedEmoticon: selectedEmoticon, previewTheme: { [weak self] emoticon, dark in
+            let controller = ChatThemeScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, animatedEmojiStickers: animatedEmojiStickers, initiallySelectedEmoticon: selectedEmoticon, previewTheme: { [weak self] emoticon, dark in
                 if let strongSelf = self {
                     strongSelf.presentCrossfadeSnapshot(delay: 0.2)
                     strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon, dark)))
