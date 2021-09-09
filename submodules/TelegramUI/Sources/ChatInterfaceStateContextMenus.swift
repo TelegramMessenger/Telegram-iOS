@@ -1886,7 +1886,18 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             } else if currentStats.peers.count == 1 {
                 self.textNode.attributedText = NSAttributedString(string: currentStats.peers[0].displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
             } else {
-                self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_ContextMenuSeen(Int32(currentStats.peers.count)), font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
+                var text = self.presentationData.strings.Conversation_ContextMenuSeen(Int32(currentStats.peers.count))
+                for media in self.item.message.media {
+                    if let file = media as? TelegramMediaFile {
+                        if file.isVoice {
+                            text = self.presentationData.strings.Conversation_ContextMenuListened(Int32(currentStats.peers.count))
+                        } else if file.isInstantVideo {
+                            text = self.presentationData.strings.Conversation_ContextMenuWatched(Int32(currentStats.peers.count))
+                        }
+                    }
+                }
+
+                self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
             }
         } else {
             self.textNode.attributedText = NSAttributedString(string: " ", font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
