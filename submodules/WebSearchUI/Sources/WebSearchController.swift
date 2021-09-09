@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import TelegramCore
 import LegacyComponents
 import TelegramUIPreferences
+import TelegramPresentationData
 import AccountContext
 
 public func requestContextResults(context: AccountContext, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, staleCachedResults: Bool = false, limit: Int = 60) -> Signal<RequestChatContextResultsResult?, NoError> {
@@ -155,14 +156,14 @@ public final class WebSearchController: ViewController {
         }
     }
     
-    public init(context: AccountContext, peer: Peer?, chatLocation: ChatLocation?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer?, chatLocation: ChatLocation?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode
         self.peer = peer
         self.chatLocation = chatLocation
         self.configuration = configuration
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.interfaceState = WebSearchInterfaceState(presentationData: presentationData)
         
         var searchQuery: String?
@@ -199,7 +200,7 @@ public final class WebSearchController: ViewController {
         }
         |> distinctUntilChanged
 
-        self.disposable = ((combineLatest(settings, context.sharedContext.presentationData, gifProvider))
+        self.disposable = ((combineLatest(settings, (updatedPresentationData?.signal ?? context.sharedContext.presentationData), gifProvider))
         |> deliverOnMainQueue).start(next: { [weak self] settings, presentationData, gifProvider in
             guard let strongSelf = self else {
                 return
