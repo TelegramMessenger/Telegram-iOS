@@ -6799,7 +6799,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
             }
         }
         
-        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
+        self.presentationDataDisposable = (presentationDataSignal
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
