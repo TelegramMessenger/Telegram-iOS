@@ -2,13 +2,18 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import TelegramCore
 import TelegramPresentationData
 import ContextUI
 
 final class ChatTextInputActionButtonsNode: ASDisplayNode {
+    private let presentationContext: ChatPresentationContext?
     private let strings: PresentationStrings
     
     let micButton: ChatTextInputMediaRecordingButton
+    let sendContainerNode: ASDisplayNode
+    let backdropNode: ChatMessageBubbleBackdrop
+    let backgroundNode: ASDisplayNode
     let sendButton: HighlightTrackingButtonNode
     var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
     var sendButtonHasApplyIcon = false
@@ -26,10 +31,21 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     
     var micButtonPointerInteraction: PointerInteraction?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
+    private var validLayout: CGSize?
+    
+    init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
+        self.presentationContext = presentationContext
+        let theme = presentationInterfaceState.theme
+        let strings = presentationInterfaceState.strings
         self.strings = strings
-        
+         
         self.micButton = ChatTextInputMediaRecordingButton(theme: theme, strings: strings, presentController: presentController)
+        
+        self.sendContainerNode = ASDisplayNode()
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
+        self.backgroundNode.clipsToBounds = true
+        self.backdropNode = ChatMessageBubbleBackdrop()
         self.sendButton = HighlightTrackingButtonNode(pointerStyle: .lift)
         
         self.expandMediaInputButton = HighlightableButtonNode(pointerStyle: .default)
@@ -43,24 +59,32 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
             if let strongSelf = self {
                 if strongSelf.sendButtonHasApplyIcon || !strongSelf.sendButtonLongPressEnabled {
                     if highlighted {
-                        strongSelf.layer.removeAnimation(forKey: "opacity")
-                        strongSelf.alpha = 0.4
+                        strongSelf.sendContainerNode.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.sendContainerNode.alpha = 0.4
                     } else {
-                        strongSelf.alpha = 1.0
-                        strongSelf.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                        strongSelf.sendContainerNode.alpha = 1.0
+                        strongSelf.sendContainerNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     }
                 } else {
                     if highlighted {
-                        strongSelf.sendButton.layer.animateScale(from: 1.0, to: 0.75, duration: 0.4, removeOnCompletion: false)
+                        strongSelf.sendContainerNode.layer.animateScale(from: 1.0, to: 0.75, duration: 0.4, removeOnCompletion: false)
                     } else if let presentationLayer = strongSelf.sendButton.layer.presentation() {
-                        strongSelf.sendButton.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
+                        strongSelf.sendContainerNode.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
                     }
                 }
             }
         }
         
         self.view.addSubview(self.micButton)
-        self.addSubnode(self.sendButton)
+            
+        self.addSubnode(self.sendContainerNode)
+        self.sendContainerNode.addSubnode(self.backgroundNode)
+        if let presentationContext = presentationContext {
+            let graphics = PresentationResourcesChat.principalGraphics(theme: theme, wallpaper: presentationInterfaceState.chatWallpaper, bubbleCorners: presentationInterfaceState.bubbleCorners)
+            self.backdropNode.setType(type: .outgoing(.None), theme: ChatPresentationThemeData(theme: theme, wallpaper: presentationInterfaceState.chatWallpaper), essentialGraphics: graphics, maskMode: true, backgroundNode: presentationContext.backgroundNode)
+            self.backgroundNode.addSubnode(self.backdropNode)
+        }
+        self.sendContainerNode.addSubnode(self.sendButton)
         self.addSubnode(self.expandMediaInputButton)
     }
     
@@ -75,23 +99,51 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
                 return
             }
             if !strongSelf.sendButtonHasApplyIcon {
-                strongSelf.sendButtonLongPressed?(strongSelf.sendButton, recognizer)
+                strongSelf.sendButtonLongPressed?(strongSelf.sendContainerNode, recognizer)
             }
         }
         
         self.micButtonPointerInteraction = PointerInteraction(view: self.micButton, style: .circle)
     }
     
-    func updateTheme(theme: PresentationTheme) {
+    func updateTheme(theme: PresentationTheme, wallpaper: TelegramWallpaper) {
         self.micButton.updateTheme(theme: theme)
         self.expandMediaInputButton.setImage(PresentationResourcesChat.chatInputPanelExpandButtonImage(theme), for: [])
+        
+        self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
+        
+        if [.day, .night].contains(theme.referenceTheme.baseTheme) && theme.chat.message.outgoing.bubble.withWallpaper.fill.count > 1 {
+            self.backdropNode.isHidden = false
+        } else {
+            self.backdropNode.isHidden = true
+        }
+        
+        let graphics = PresentationResourcesChat.principalGraphics(theme: theme, wallpaper: wallpaper, bubbleCorners: .init(mainRadius: 1, auxiliaryRadius: 1, mergeBubbleCorners: false))
+        self.backdropNode.setType(type: .outgoing(.None), theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), essentialGraphics: graphics, maskMode: false, backgroundNode: self.presentationContext?.backgroundNode)
+    }
+    
+    private var absoluteRect: (CGRect, CGSize)?
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
+        self.absoluteRect = (rect, containerSize)
+        self.backdropNode.update(rect: rect, within: containerSize, transition: transition)
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+        self.validLayout = size
         transition.updateFrame(layer: self.micButton.layer, frame: CGRect(origin: CGPoint(), size: size))
         self.micButton.layoutItems()
         
         transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.sendContainerNode, frame: CGRect(origin: CGPoint(), size: size))
+        
+        let backgroundSize = CGSize(width: 33.0, height: 33.0)
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - backgroundSize.width) / 2.0), y: floorToScreenPixels((size.height - backgroundSize.height) / 2.0)), size: backgroundSize))
+        self.backgroundNode.cornerRadius = backgroundSize.width / 2.0
+        
+        transition.updateFrame(node: self.backdropNode, frame: CGRect(origin: CGPoint(x: -2.0, y: -2.0), size: CGSize(width: size.width + 12.0, height: size.height + 2.0)))
+        if let (rect, containerSize) = self.absoluteRect {
+            self.backdropNode.update(rect: rect, within: containerSize)
+        }
         
         var isScheduledMessages = false
         if case .scheduledMessages = interfaceState.subject {
@@ -104,12 +156,12 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
                 sendButtonRadialStatusNode = current
             } else {
                 sendButtonRadialStatusNode = ChatSendButtonRadialStatusNode(color: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
-                sendButtonRadialStatusNode.alpha = self.sendButton.alpha
+                sendButtonRadialStatusNode.alpha = self.sendContainerNode.alpha
                 self.sendButtonRadialStatusNode = sendButtonRadialStatusNode
                 self.addSubnode(sendButtonRadialStatusNode)
             }
             
-            transition.updateSublayerTransformScale(layer: self.sendButton.layer, scale: CGPoint(x: 0.7575, y: 0.7575))
+            transition.updateSublayerTransformScale(layer: self.sendContainerNode.layer, scale: CGPoint(x: 0.7575, y: 0.7575))
             
             let defaultSendButtonSize: CGFloat = 25.0
             let defaultOriginX = floorToScreenPixels((self.sendButton.bounds.width - defaultSendButtonSize) / 2.0)
@@ -123,7 +175,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
                 self.sendButtonRadialStatusNode = nil
                 sendButtonRadialStatusNode.removeFromSupernode()
             }
-            transition.updateSublayerTransformScale(layer: self.sendButton.layer, scale: CGPoint(x: 1.0, y: 1.0))
+            transition.updateSublayerTransformScale(layer: self.sendContainerNode.layer, scale: CGPoint(x: 1.0, y: 1.0))
         }
         
         transition.updateFrame(node: self.expandMediaInputButton, frame: CGRect(origin: CGPoint(), size: size))

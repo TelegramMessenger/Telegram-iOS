@@ -21,6 +21,7 @@ import UndoUI
 import ShimmerEffect
 import AnimatedAvatarSetNode
 import AvatarNode
+import AdUI
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -139,7 +140,10 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
     return false
 }
 
-private func canViewReadStats(message: Message, appConfig: AppConfiguration) -> Bool {
+private func canViewReadStats(message: Message, isMessageRead: Bool, appConfig: AppConfiguration) -> Bool {
+    if !isMessageRead {
+        return false
+    }
     if message.flags.contains(.Incoming) {
         return false
     }
@@ -149,6 +153,21 @@ private func canViewReadStats(message: Message, appConfig: AppConfiguration) -> 
     for media in message.media {
         if let _ = media as? TelegramMediaAction {
             return false
+        } else if let file = media as? TelegramMediaFile {
+            if file.isVoice || file.isInstantVideo {
+                var hasRead = false
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ConsumableContentMessageAttribute {
+                        if attribute.consumed {
+                            hasRead = true
+                            break
+                        }
+                    }
+                }
+                if !hasRead {
+                    return false
+                }
+            }
         }
     }
 
@@ -345,18 +364,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         var actions: [ContextMenuItem] = []
         actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
-        }, iconSource: nil, action: { _, f in
-            f(.default)
-
-            controllerInteraction.presentController(textAlertController(context: context, title: nil, text: presentationData.strings.SponsoredMessageInfo_Text, actions: [
-                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                }),
-                TextAlertAction(type: .defaultAction, title: presentationData.strings.SponsoredMessageInfo_Action, action: {
-                    context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.SponsoredMessageInfo_ActionUrl, forceExternal: true, presentationData: presentationData, navigationController: controllerInteraction.navigationController(), dismissInput: {
-                        controllerInteraction.navigationController()?.view.endEditing(true)
-                    })
-                }),
-            ]), nil)
+        }, iconSource: nil, action: { c, _ in
+            c.dismiss(completion: {
+                controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
+            })
         })))
 
         actions.append(.separator)
@@ -518,30 +529,40 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     let cachedData = context.account.postbox.transaction { transaction -> CachedPeerData? in
         return transaction.getPeerCachedData(peerId: messages[0].id.peerId)
     }
+
+    let readState = context.account.postbox.transaction { transaction -> CombinedPeerReadState? in
+        return transaction.getCombinedPeerReadState(messages[0].id.peerId)
+    }
     
-    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration), NoError> = combineLatest(
+    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool), NoError> = combineLatest(
         loadLimits,
         loadStickerSaveStatusSignal,
         loadResourceStatusSignal,
         context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })),
         context.account.pendingUpdateMessageManager.updatingMessageMedia
         |> take(1),
-        cachedData
+        cachedData,
+        readState
     )
-    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration) in
+    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData, readState -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool) in
         let (limitsConfiguration, appConfig) = limitsAndAppConfig
         var canEdit = false
         if !isAction {
             let message = messages[0]
             canEdit = canEditMessage(context: context, limitsConfiguration: limitsConfiguration, message: message)
         }
+
+        var isMessageRead = false
+        if let readState = readState {
+            isMessageRead = readState.isOutgoingMessageIndexRead(message.index)
+        }
         
-        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig)
+        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig, isMessageRead)
     }
     
     return dataSignal
     |> deliverOnMainQueue
-    |> map { data, updatingMessageMedia, cachedData, appConfig -> [ContextMenuItem] in
+    |> map { data, updatingMessageMedia, cachedData, appConfig, isMessageRead -> [ContextMenuItem] in
         var actions: [ContextMenuItem] = []
         
         var isPinnedMessages = false
@@ -1103,8 +1124,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
 
         if !isPinnedMessages, !isReplyThreadHead, data.canSelect {
+            var didAddSeparator = false
             if !selectAll || messages.count == 1 {
-                if !actions.isEmpty {
+                if !actions.isEmpty && !didAddSeparator {
+                    didAddSeparator = true
                     actions.append(.separator)
                 }
 
@@ -1118,6 +1141,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
 
             if messages.count > 1 {
+                if !actions.isEmpty && !didAddSeparator {
+                    didAddSeparator = true
+                    actions.append(.separator)
+                }
+
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelectAll(Int32(messages.count)), icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SelectAll"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
@@ -1128,7 +1156,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
 
-        if let peer = message.peers[message.id.peerId], canViewReadStats(message: message, appConfig: appConfig) {
+        if let peer = message.peers[message.id.peerId], canViewReadStats(message: message, isMessageRead: isMessageRead, appConfig: appConfig) {
             var hasReadReports = false
             if let channel = peer as? TelegramChannel {
                 if case .group = channel.info {
@@ -1160,29 +1188,21 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         subActions.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, textColor: .primary, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
                         }, action: { controller, _ in
-                            controller.setItems(contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: chatPresentationInterfaceState, context: context, messages: messages, controllerInteraction: controllerInteraction, selectAll: selectAll, interfaceInteraction: interfaceInteraction, readStats: stats))
+                            controller.setItems(contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: chatPresentationInterfaceState, context: context, messages: messages, controllerInteraction: controllerInteraction, selectAll: selectAll, interfaceInteraction: interfaceInteraction, readStats: stats), minHeight: nil, previousActionsTransition: .slide(forward: false))
                         })))
 
-                        let debugRepeatCount: Int
-                        #if DEBUG
-                        debugRepeatCount = stats.peers.count == 1 ? 1 : 50
-                        #else
-                        debugRepeatCount = 1
-                        #endif
+                        for peer in stats.peers {
+                            let avatarSignal = peerAvatarCompleteImage(account: context.account, peer: peer._asPeer(), size: CGSize(width: 30.0, height: 30.0))
 
-                        for _ in 0 ..< debugRepeatCount {
-                            for peer in stats.peers {
-                                let avatarSignal = peerAvatarCompleteImage(account: context.account, peer: peer._asPeer(), size: CGSize(width: 30.0, height: 30.0))
-
-                                subActions.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 30.0, height: 30.0), signal: avatarSignal), action: { _, f in
-                                    c.dismiss(completion: {
-                                        controllerInteraction.openPeer(peer.id, .default, nil)
-                                    })
-                                })))
-                            }
+                            subActions.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 30.0, height: 30.0), signal: avatarSignal), action: { _, f in
+                                c.dismiss(completion: {
+                                    controllerInteraction.openPeer(peer.id, .default, nil)
+                                })
+                            })))
                         }
 
-                        c.setItems(.single(subActions))
+                        let minHeight = c.getActionsMinHeight()
+                        c.setItems(.single(subActions), minHeight: minHeight, previousActionsTransition: .slide(forward: true))
                     } else {
                         f(.default)
                     }
@@ -1845,18 +1865,39 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
         let rightTextInset: CGFloat = sideInset + 36.0
 
-        let calculatedWidth = min(constrainedWidth, 260.0)
+        let calculatedWidth = min(constrainedWidth, 250.0)
 
         let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize)
 
         if let currentStats = self.currentStats {
             if currentStats.peers.isEmpty {
-                //TODO:localize
-                self.textNode.attributedText = NSAttributedString(string: "No Views", font: textFont, textColor: self.presentationData.theme.contextMenu.secondaryColor)
+                var text = self.presentationData.strings.Conversation_ContextMenuNoViews
+                for media in self.item.message.media {
+                    if let file = media as? TelegramMediaFile {
+                        if file.isVoice {
+                            text = self.presentationData.strings.Conversation_ContextMenuNobodyListened
+                        } else if file.isInstantVideo {
+                            text = self.presentationData.strings.Conversation_ContextMenuNobodyWatched
+                        }
+                    }
+                }
+
+                self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.secondaryColor)
             } else if currentStats.peers.count == 1 {
                 self.textNode.attributedText = NSAttributedString(string: currentStats.peers[0].displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
             } else {
-                self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_ContextMenuSeen(Int32(currentStats.peers.count)), font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
+                var text = self.presentationData.strings.Conversation_ContextMenuSeen(Int32(currentStats.peers.count))
+                for media in self.item.message.media {
+                    if let file = media as? TelegramMediaFile {
+                        if file.isVoice {
+                            text = self.presentationData.strings.Conversation_ContextMenuListened(Int32(currentStats.peers.count))
+                        } else if file.isInstantVideo {
+                            text = self.presentationData.strings.Conversation_ContextMenuWatched(Int32(currentStats.peers.count))
+                        }
+                    }
+                }
+
+                self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
             }
         } else {
             self.textNode.attributedText = NSAttributedString(string: " ", font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
@@ -1927,8 +1968,18 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         self.performAction()
     }
 
+    private var actionTemporarilyDisabled: Bool = false
+
     func performAction() {
-        guard let controller = self.getController(), let currentStats = self.currentStats  else {
+        if self.actionTemporarilyDisabled {
+            return
+        }
+        self.actionTemporarilyDisabled = true
+        Queue.mainQueue().async { [weak self] in
+            self?.actionTemporarilyDisabled = false
+        }
+
+        guard let controller = self.getController(), let currentStats = self.currentStats else {
             return
         }
         self.item.action(controller, { [weak self] result in

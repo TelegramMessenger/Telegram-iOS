@@ -1122,12 +1122,16 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     }
                     
                     let merchantId: String
+                    var countryCode: String = "US"
                     if nativeProvider.name == "stripe" {
                         merchantId = "merchant.ph.telegra.Telegraph"
                     } else if let paramsId = nativeParams["apple_pay_merchant_id"] as? String {
                         merchantId = paramsId
                     } else {
                         return
+                    }
+                    if let paramsCountryCode = nativeParams["acquirer_bank_country"] as? String {
+                        countryCode = paramsCountryCode
                     }
                     
                     let botPeerId = self.messageId.peerId
@@ -1141,9 +1145,9 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                             request.merchantIdentifier = merchantId
                             request.supportedNetworks = [.visa, .amex, .masterCard]
                             request.merchantCapabilities = [.capability3DS]
-                            request.countryCode = "US"
+                            request.countryCode = countryCode
                             request.currencyCode = paymentForm.invoice.currency.uppercased()
-                            
+
                             var items: [PKPaymentSummaryItem] = []
                             
                             var totalAmount: Int64 = 0

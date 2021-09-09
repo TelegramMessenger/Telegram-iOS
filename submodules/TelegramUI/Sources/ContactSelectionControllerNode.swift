@@ -39,7 +39,12 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var requestMultipleAction: (() -> Void)?
     var dismiss: (() -> Void)?
     
-    var presentationData: PresentationData
+    var presentationData: PresentationData {
+        didSet {
+            self.presentationDataPromise.set(.single(self.presentationData))
+        }
+    }
+    private var presentationDataPromise = Promise<PresentationData>()
     
     private let countPanelNode: ContactSelectionCountPanelNode
     
@@ -51,7 +56,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.displayDeviceContacts = displayDeviceContacts
         self.displayCallIcons = displayCallIcons
         
-        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, multipleSelection: multipleSelection)
+        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, multipleSelection: multipleSelection)
         
         self.dimNode = ASDisplayNode()
         
@@ -151,7 +156,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         } else {
             categories.insert(.global)
         }
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: categories, addContact: nil, openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), onlyWriteable: false, categories: categories, addContact: nil, openPeer: { [weak self] peer in
             if let strongSelf = self {
                 var updated = false
                 strongSelf.contactListNode.updateSelectionState { state -> ContactListNodeGroupSelectionState? in

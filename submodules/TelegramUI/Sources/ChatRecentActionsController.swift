@@ -24,6 +24,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         return (self.presentationData, self.presentationDataPromise.get())
     }
     private var presentationDataDisposable: Disposable?
+    private var didSetPresentationData = false
     
     private var interaction: ChatRecentActionsInteraction!
     private var panelInteraction: ChatPanelInterfaceInteraction!
@@ -185,10 +186,12 @@ final class ChatRecentActionsController: TelegramBaseController {
                     }
                 }
                 
+                let isFirstTime = !strongSelf.didSetPresentationData
                 strongSelf.presentationData = presentationData
                 strongSelf.presentationDataPromise.set(.single(presentationData))
+                strongSelf.didSetPresentationData = true
                 
-                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                if isFirstTime || previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.updateThemeAndStrings()
                 }
             }

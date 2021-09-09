@@ -6766,11 +6766,16 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageChangedThemeRemove" = "%1$@ disabled chat theme";
 
 "SponsoredMessageMenu.Info" = "What are sponsored\nmessages?";
-"SponsoredMessageInfo.Text" = "Unlike other apps, Telegram never uses your private data to target ads. No user data is mined or analyzed to display ads, and every user viewing a channel on Telegram sees the same sponsored message. We believe that everyone has the right to privacy, and technological platforms should respect that.
+"SponsoredMessageInfoScreen.Title" = "What are sponsored messages?";
+"SponsoredMessageInfoScreen.Text" = "Unlike other apps, Telegram never uses your private data to target ads. You are seeing this message only because someone chose this public one-to many channel as a space to promote their messages. This means that no user data is mined or analyzed to display ads, and every user viewing a channel on Telegram sees the same sponsored message.
 
-More at: https://ads.telegram.org";
+Unline other apps, Telegram doesn't track whether you tapped on a sponsored message and doesn't profile you based on your activity. We also prevent external links in sponsored messages to ensure that third parties can't spy on our users. We believe that everyone has the right to privacy, and technological platforms should respect that.
+
+Telegram offers free and unlimited service to hundreds of millions of users, which involves significant server and traffic costs. In order to remain independent and stay true to its values, Telegram developed a paid tool to promote messages with user privacy in mind. We welcome responsible adverticers at:
+[url]
+Ads should no longer be synonymous with abuse of user privacy. Let us redefine how a tech compony should operate — together.";
 "SponsoredMessageInfo.Action" = "Learn More";
-"SponsoredMessageInfo.ActionUrl" = "https://telegram.org";
+"SponsoredMessageInfo.ActionUrl" = "https://telegram.org/ads";
 
 "Chat.NavigationNoChannels" = "You have no unread channels";
 
@@ -6798,3 +6803,14 @@ More at: https://ads.telegram.org";
 
 "Conversation.ContextMenuSeen_1" = "1 Seen";
 "Conversation.ContextMenuSeen_any" = "%@ Seen";
+"Conversation.ContextMenuListened_1" = "1 Listened";
+"Conversation.ContextMenuListened_any" = "%@ Listened";
+"Conversation.ContextMenuWatched_1" = "1 Watched";
+"Conversation.ContextMenuWatched_any" = "%@ Watched";
+
+"Conversation.ContextMenuNoViews" = "Nobody Viewed";
+"Conversation.ContextMenuNobodyListened" = "Nobody Listened";
+"Conversation.ContextMenuNobodyWatched" = "Nobody Watched";
+
+"VideoChat.RecordingSaved" = "Video chat recording saved to **Saved Messages**.";
+"LiveStream.RecordingSaved" = "Live stream recording saved to **Saved Messages**.";

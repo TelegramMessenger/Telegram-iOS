@@ -228,7 +228,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDel
         self.textPlaceholderNode.maximumNumberOfLines = 1
         self.textPlaceholderNode.isUserInteractionEnabled = false
         
-        self.actionButtons = ChatTextInputActionButtonsNode(theme: presentationInterfaceState.theme, strings: presentationInterfaceState.strings, presentController: presentController)
+        self.actionButtons = ChatTextInputActionButtonsNode(presentationInterfaceState: presentationInterfaceState, presentationContext: nil, presentController: presentController)
         self.counterTextNode = ImmediateTextNode()
         self.counterTextNode.textAlignment = .center
         
@@ -440,7 +440,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDel
                 
                 self.theme = interfaceState.theme
 
-                self.actionButtons.updateTheme(theme: interfaceState.theme)
+                self.actionButtons.updateTheme(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
                 
                 let textFieldMinHeight = calclulateTextFieldMinHeight(interfaceState, metrics: metrics)
                 let minimalInputHeight: CGFloat = 2.0 + textFieldMinHeight

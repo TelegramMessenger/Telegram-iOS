@@ -189,7 +189,21 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
                     }
                 }
             }
-            transaction.resetIncomingReadStates([peerId: [Namespaces.Message.Cloud: readState]])
+            var updatedReadState = readState
+            if case let .idBased(updatedMaxIncomingReadId, updatedMaxOutgoingReadId, updatedMaxKnownId, updatedCount, updatedMarkedUnread) = readState, let readStates = transaction.getPeerReadStates(peerId) {
+                for (namespace, state) in readStates {
+                    if namespace == Namespaces.Message.Cloud {
+                        switch state {
+                        case let .idBased(_, maxOutgoingReadId, _, _, _):
+                            updatedReadState = .idBased(maxIncomingReadId: updatedMaxIncomingReadId, maxOutgoingReadId: max(updatedMaxOutgoingReadId, maxOutgoingReadId), maxKnownId: updatedMaxKnownId, count: updatedCount, markedUnread: updatedMarkedUnread)
+                        case .indexBased:
+                            break
+                        }
+                        break
+                    }
+                }
+            }
+            transaction.resetIncomingReadStates([peerId: [Namespaces.Message.Cloud: updatedReadState]])
             return nil
         }
         |> mapToSignalPromotingError { error -> Signal<Never, PeerReadStateValidationError> in

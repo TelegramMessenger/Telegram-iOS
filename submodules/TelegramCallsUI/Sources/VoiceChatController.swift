@@ -2473,7 +2473,7 @@ public final class VoiceChatController: ViewController {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                c.setItems(strongSelf.contextMenuDisplayAsItems())
+                                c.setItems(strongSelf.contextMenuDisplayAsItems(), minHeight: nil)
                             })))
                             items.append(.separator)
                             break
@@ -2506,7 +2506,7 @@ public final class VoiceChatController: ViewController {
                         guard let strongSelf = self else {
                             return
                         }
-                        c.setItems(strongSelf.contextMenuAudioItems())
+                        c.setItems(strongSelf.contextMenuAudioItems(), minHeight: nil)
                     })))
                 }
 
@@ -2543,7 +2543,7 @@ public final class VoiceChatController: ViewController {
                             guard let strongSelf = self else {
                                 return
                             }
-                            c.setItems(strongSelf.contextMenuPermissionItems())
+                            c.setItems(strongSelf.contextMenuPermissionItems(), minHeight: nil)
                         })))
                     }
                 }
@@ -2613,7 +2613,15 @@ public final class VoiceChatController: ViewController {
                                 if let strongSelf = self {
                                     strongSelf.call.setShouldBeRecording(false, title: nil, videoOrientation: nil)
 
-                                    strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: strongSelf.presentationData.strings.VoiceChat_RecordingSaved), action: { [weak self] value in
+                                    
+                                    let text: String
+                                    if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
+                                        text = strongSelf.presentationData.strings.LiveStream_RecordingSaved
+                                    } else {
+                                        text = strongSelf.presentationData.strings.VideoChat_RecordingSaved
+                                    }
+                                    
+                                    strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: text), action: { [weak self] value in
                                         if case .info = value, let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                                             let context = strongSelf.context
                                             strongSelf.controller?.dismiss(completion: {
@@ -2795,7 +2803,7 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                c.setItems(strongSelf.contextMenuMainItems())
+                c.setItems(strongSelf.contextMenuMainItems(), minHeight: nil)
             })))
             return .single(items)
         }
@@ -2890,7 +2898,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    c.setItems(strongSelf.contextMenuMainItems())
+                    c.setItems(strongSelf.contextMenuMainItems(), minHeight: nil)
                 })))
                 return items
             }
@@ -2936,7 +2944,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    c.setItems(strongSelf.contextMenuMainItems())
+                    c.setItems(strongSelf.contextMenuMainItems(), minHeight: nil)
                 })))
             }
             return .single(items)

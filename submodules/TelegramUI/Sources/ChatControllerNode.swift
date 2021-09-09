@@ -492,7 +492,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
-        self.textInputPanelNode = ChatTextInputPanelNode(presentationInterfaceState: chatPresentationInterfaceState, presentController: { [weak self] controller in
+        self.textInputPanelNode = ChatTextInputPanelNode(presentationInterfaceState: chatPresentationInterfaceState, presentationContext: ChatPresentationContext(backgroundNode: backgroundNode), presentController: { [weak self] controller in
             self?.interfaceInteraction?.presentController(controller, nil)
         })
         self.textInputPanelNode?.storedInputLanguage = chatPresentationInterfaceState.interfaceState.inputLanguage
@@ -1446,9 +1446,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             if inputPanelNodeHandlesTransition {
+                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: .immediate)
                 inputPanelNode.frame = apparentInputPanelFrame
                 inputPanelNode.alpha = 1.0
             } else {
+                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: transition)
                 transition.updateFrame(node: inputPanelNode, frame: apparentInputPanelFrame)
                 transition.updateAlpha(node: inputPanelNode, alpha: 1.0)
             }
@@ -2611,6 +2613,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState
         let titleAccessoryPanelSnapshot: UIView?
         let navigationBarHeight: CGFloat
+        let inputPanelNodeSnapshot: UIView?
+        let inputPanelOverscrollNodeSnapshot: UIView?
 
         fileprivate init(
             historySnapshotState: ChatHistoryListNode.SnapshotState,
@@ -2618,7 +2622,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?,
             navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState,
             titleAccessoryPanelSnapshot: UIView?,
-            navigationBarHeight: CGFloat
+            navigationBarHeight: CGFloat,
+            inputPanelNodeSnapshot: UIView?,
+            inputPanelOverscrollNodeSnapshot: UIView?
         ) {
             self.historySnapshotState = historySnapshotState
             self.titleViewSnapshotState = titleViewSnapshotState
@@ -2626,6 +2632,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.navigationButtonsSnapshotState = navigationButtonsSnapshotState
             self.titleAccessoryPanelSnapshot = titleAccessoryPanelSnapshot
             self.navigationBarHeight = navigationBarHeight
+            self.inputPanelNodeSnapshot = inputPanelNodeSnapshot
+            self.inputPanelOverscrollNodeSnapshot = inputPanelOverscrollNodeSnapshot
         }
     }
 
@@ -2638,13 +2646,25 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             snapshot.frame = titleAccessoryPanelNode.frame
             titleAccessoryPanelSnapshot = snapshot
         }
+        var inputPanelNodeSnapshot: UIView?
+        if let inputPanelNode = self.inputPanelNode, let snapshot = inputPanelNode.view.snapshotView(afterScreenUpdates: false) {
+            snapshot.frame = inputPanelNode.frame
+            inputPanelNodeSnapshot = snapshot
+        }
+        var inputPanelOverscrollNodeSnapshot: UIView?
+        if let inputPanelOverscrollNode = self.inputPanelOverscrollNode, let snapshot = inputPanelOverscrollNode.view.snapshotView(afterScreenUpdates: false) {
+            snapshot.frame = inputPanelOverscrollNode.frame
+            inputPanelOverscrollNodeSnapshot = snapshot
+        }
         return SnapshotState(
             historySnapshotState: self.historyNode.prepareSnapshotState(),
             titleViewSnapshotState: titleViewSnapshotState,
             avatarSnapshotState: avatarSnapshotState,
             navigationButtonsSnapshotState: self.navigateButtons.prepareSnapshotState(),
             titleAccessoryPanelSnapshot: titleAccessoryPanelSnapshot,
-            navigationBarHeight: self.navigationBar?.backgroundNode.bounds.height ?? 0.0
+            navigationBarHeight: self.navigationBar?.backgroundNode.bounds.height ?? 0.0,
+            inputPanelNodeSnapshot: inputPanelNodeSnapshot,
+            inputPanelOverscrollNodeSnapshot: inputPanelOverscrollNodeSnapshot
         )
     }
 
@@ -2683,6 +2703,27 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 navigationBar.backgroundNode.update(size: previousFrame.size, transition: .immediate)
                 navigationBar.backgroundNode.update(size: currentFrame.size, transition: .animated(duration: 0.5, curve: .spring))
             }
+        }
+
+        if let inputPanelNode = self.inputPanelNode, let inputPanelNodeSnapshot = snapshotState.inputPanelNodeSnapshot {
+            inputPanelNode.view.superview?.insertSubview(inputPanelNodeSnapshot, belowSubview: inputPanelNode.view)
+
+            inputPanelNodeSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputPanelNodeSnapshot] _ in
+                inputPanelNodeSnapshot?.removeFromSuperview()
+            })
+            inputPanelNodeSnapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -5.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+
+            if let inputPanelOverscrollNodeSnapshot = snapshotState.inputPanelOverscrollNodeSnapshot {
+                inputPanelNode.view.superview?.insertSubview(inputPanelOverscrollNodeSnapshot, belowSubview: inputPanelNode.view)
+
+                inputPanelOverscrollNodeSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputPanelOverscrollNodeSnapshot] _ in
+                    inputPanelOverscrollNodeSnapshot?.removeFromSuperview()
+                })
+                inputPanelOverscrollNodeSnapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -5.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            }
+
+            inputPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            inputPanelNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 5.0), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         }
     }
 

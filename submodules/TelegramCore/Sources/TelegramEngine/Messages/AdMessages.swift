@@ -260,7 +260,7 @@ private class AdMessagesHistoryContextImpl {
 
         self.state.set(CachedState.getCached(postbox: account.postbox, peerId: peerId)
         |> mapToSignal { cachedState -> Signal<State, NoError> in
-            if let cachedState = cachedState, cachedState.timestamp >= Int32(Date().timeIntervalSince1970) - 5 * 60 {
+            if false, let cachedState = cachedState, cachedState.timestamp >= Int32(Date().timeIntervalSince1970) - 5 * 60 {
                 return account.postbox.transaction { transaction -> State in
                     return State(messages: cachedState.messages.map { message in
                         return message.toMessage(peerId: peerId, transaction: transaction)

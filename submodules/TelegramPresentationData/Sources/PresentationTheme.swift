@@ -1274,6 +1274,11 @@ public final class PresentationTheme: Equatable {
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
     public init(name: PresentationThemeName, index: Int64, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, chart: PresentationThemeChart, preview: Bool = false) {
+        var overallDarkAppearance = overallDarkAppearance
+        if [.night, .tinted].contains(referenceTheme.baseTheme) {
+            overallDarkAppearance = true
+        }
+        
         self.name = name
         self.index = index
         self.referenceTheme = referenceTheme

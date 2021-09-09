@@ -1308,8 +1308,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             self?.additionalAnimationNodes.removeAll(where: { $0 === additionalAnimationNode })
             additionalAnimationNode?.removeFromSupernode()
         }
-        additionalAnimationNode.frame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
+        var animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
             .offsetBy(dx: incoming ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
+        animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
+        additionalAnimationNode.frame = animationFrame
         if incoming {
             additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
         }
@@ -1434,7 +1436,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                             return .optionalAction({
                                 if firstScalar.value == heart {
-                                    self.playAdditionalAnimation("TestHearts")
+                                    if self.additionalAnimationNodes.count % 2 == 0 {
+                                        self.playAdditionalAnimation("TestHearts")
+                                    } else {
+                                        self.playAdditionalAnimation("TestHearts2")
+                                    }
                                 } else if firstScalar.value == fireworks {
                                     self.playAdditionalAnimation("TestFireworks")
                                 }

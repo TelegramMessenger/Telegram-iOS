@@ -33,9 +33,15 @@ extension PeekControllerTheme {
 public final class PeekController: ViewController, ContextControllerProtocol {
     public var useComplexItemsTransitionAnimation: Bool = false
     public var immediateItemsTransitionAnimation = false
+
+    public func getActionsMinHeight() -> CGFloat? {
+        return nil
+    }
     
-    public func setItems(_ items: Signal<[ContextMenuItem], NoError>) {
-        
+    public func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?) {
+    }
+
+    public func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
     }
     
     private var controllerNode: PeekControllerNode {
