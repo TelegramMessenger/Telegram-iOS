@@ -3907,6 +3907,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let accountManager = context.sharedContext.accountManager
+        let currentThemeEmoticon = Atomic<(String?, Bool)?>(value: nil)
         self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, themeSettings, context.engine.themes.getChatThemes(accountManager: accountManager, onlyCached: false), themeEmoticon, self.themeEmoticonAndDarkAppearancePreviewPromise.get()).start(next: { [weak self] presentationData, themeSettings, chatThemes, themeEmoticon, themeEmoticonAndDarkAppearance in
             if let strongSelf = self {
                 let (themeEmoticonPreview, darkAppearancePreview) = themeEmoticonAndDarkAppearance
@@ -3925,17 +3926,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                                 
                 var presentationData = presentationData
+                var useDarkAppearance = presentationData.theme.overallDarkAppearance
+                
                 if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoji == themeEmoticon }) {
-                    var useDarkAppearance = presentationData.theme.overallDarkAppearance
                     if let darkAppearancePreview = darkAppearancePreview {
                         useDarkAppearance = darkAppearancePreview
                     }
                     let customTheme = useDarkAppearance ? theme.darkTheme : theme.theme
                     if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings) {
-                        presentationData = presentationData.withUpdated(theme: theme)
-                        presentationData = presentationData.withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
+                        presentationData = presentationData.withUpdated(theme: theme).withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
                     }
                 } else if let darkAppearancePreview = darkAppearancePreview {
+                    useDarkAppearance = darkAppearancePreview
                     let lightTheme: PresentationTheme
                     let lightWallpaper: TelegramWallpaper
                     
@@ -3990,24 +3992,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if darkAppearancePreview {
-                        presentationData = presentationData.withUpdated(theme: darkTheme)
-                        presentationData = presentationData.withUpdated(chatWallpaper: darkWallpaper)
+                        presentationData = presentationData.withUpdated(theme: darkTheme).withUpdated(chatWallpaper: darkWallpaper)
                     } else {
-                        presentationData = presentationData.withUpdated(theme: lightTheme)
-                        presentationData = presentationData.withUpdated(chatWallpaper: lightWallpaper)
+                        presentationData = presentationData.withUpdated(theme: lightTheme).withUpdated(chatWallpaper: lightWallpaper)
                     }
                 }
                 let isFirstTime = !strongSelf.didSetPresentationData
                 strongSelf.presentationData = presentationData
                 strongSelf.didSetPresentationData = true
                 
-                if isFirstTime || previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || presentationData.chatWallpaper != previousChatWallpaper {
+                let previousThemeEmoticon = currentThemeEmoticon.swap((themeEmoticon, useDarkAppearance))
+                
+                if isFirstTime || previousTheme != presentationData.theme || previousStrings !== presentationData.strings || presentationData.chatWallpaper != previousChatWallpaper {
                     strongSelf.themeAndStringsUpdated()
                     
                     controllerInteraction.updatedPresentationData = strongSelf.updatedPresentationData
                     strongSelf.presentationDataPromise.set(.single(strongSelf.presentationData))
                     
-                    if !isFirstTime && previousTheme !== presentationData.theme {
+                    if !isFirstTime && (previousThemeEmoticon?.0 != themeEmoticon || previousThemeEmoticon?.1 != useDarkAppearance) {
                         strongSelf.presentCrossfadeSnapshot(delay: 0.2)
                     }
                 }
@@ -13389,8 +13391,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon, dark)))
                 }
             }, completion: { [weak self] emoticon in
-                strongSelf.presentCrossfadeSnapshot(delay: 0.2)
-                strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon, nil)))
+                strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon ?? "", nil)))
                 let _ = context.engine.themes.setChatTheme(peerId: peerId, emoticon: emoticon).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((nil, nil)))
