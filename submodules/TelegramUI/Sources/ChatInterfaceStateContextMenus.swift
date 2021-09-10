@@ -141,15 +141,32 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
 }
 
 private func canViewReadStats(message: Message, isMessageRead: Bool, appConfig: AppConfiguration) -> Bool {
-    if !isMessageRead {
-        return false
-    }
-    if message.flags.contains(.Incoming) {
-        return false
-    }
     guard let peer = message.peers[message.id.peerId] else {
         return false
     }
+
+    if message.flags.contains(.Incoming) {
+        switch peer {
+        case let channel as TelegramChannel:
+            if channel.adminRights == nil {
+                return false
+            }
+        case let group as TelegramGroup:
+            switch group.role {
+            case .creator, .admin:
+                break
+            case .member:
+                return false
+            }
+        default:
+            return false
+        }
+    } else {
+        if !isMessageRead {
+            return false
+        }
+    }
+
     for media in message.media {
         if let _ = media as? TelegramMediaAction {
             return false

@@ -78,7 +78,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
             activatedActionImpl?()
         }, feedbackTap: {
             feedbackTapImpl?()
-        }, displayTextSelectionTip: false, blurBackground: true)
+        }, tip: nil, blurBackground: true)
         self.actionsContainerNode.alpha = 0.0
 
         super.init()
@@ -334,7 +334,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
             self?.requestDismiss()
         }, feedbackTap: { [weak self] in
             self?.hapticFeedback.tap()
-        }, displayTextSelectionTip: false, blurBackground: true)
+        }, tip: nil, blurBackground: true)
         self.actionsContainerNode.alpha = 0.0
         self.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
         previousActionsContainerNode.removeFromSupernode()
