@@ -6718,6 +6718,7 @@ Sorry for the inconvenience.";
 "Conversation.Theme.Apply" = "Apply Theme";
 "Conversation.Theme.NoTheme" = "No\nTheme";
 "Conversation.Theme.Reset" = "Reset Theme for This Chat";
+"Conversation.Theme.DontSetTheme" = "Do Not Set Theme";
 "Conversation.Theme.SwitchToDark" = "Switch to dark appearance";
 "Conversation.Theme.SwitchToLight" = "Switch to light appearance";
 

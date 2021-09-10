@@ -2863,6 +2863,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return false
             }
             return strongSelf.chatDisplayNode.messageTransitionNode.isAnimatingMessage(stableId: stableId)
+        }, getMessageTransitionNode: { [weak self] in
+            guard let strongSelf = self else {
+                return nil
+            }
+            return strongSelf.chatDisplayNode.messageTransitionNode
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -7353,11 +7358,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let postbox = self.context.account.postbox
                 let previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
-                var activityCategory: PeerActivitySpace.Category = .global
-                if case let .replyThread(replyThreadMessage) = self.chatLocation {
-                    activityCategory = .thread(makeMessageThreadId(replyThreadMessage.messageId))
+
+                let activitySpace: PeerActivitySpace
+                switch self.chatLocation {
+                case let .peer(peerId):
+                    activitySpace = PeerActivitySpace(peerId: peerId, category: .global)
+                case let .replyThread(replyThreadMessage):
+                    activitySpace = PeerActivitySpace(peerId: replyThreadMessage.messageId.peerId, category: .thread(makeMessageThreadId(replyThreadMessage.messageId)))
                 }
-                self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: PeerActivitySpace(peerId: peerId, category: activityCategory))
+                
+                self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: activitySpace)
                 |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
                     var foundAllPeers = true
                     var cachedResult: [(Peer, PeerInputActivity)] = []
@@ -7390,7 +7400,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] activities in
                     if let strongSelf = self {
-                        strongSelf.chatTitleView?.inputActivities = (peerId, activities)
+                        let displayActivities = activities.filter({
+                            switch $0.1 {
+                                case .speakingInGroupCall, .interactingWithEmoji:
+                                    return false
+                                default:
+                                    return true
+                            }
+                        })
+                        strongSelf.chatTitleView?.inputActivities = (peerId, displayActivities)
+                        
+                        for activity in activities {
+                            if case let .interactingWithEmoji(emoticon, maybeInteraction) = activity.1, let interaction = maybeInteraction {
+                                var found = false
+                                strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode({ itemNode in
+                                    if !found, let itemNode = itemNode as? ChatMessageAnimatedStickerItemNode, let item = itemNode.item {
+                                        if item.message.text.strippedEmoji == emoticon {
+                                            itemNode.playAdditionalAnimation(index: interaction.animation, incoming: true)
+                                            found = true
+                                        }
+                                    }
+                                })
+                                
+                                if found {
+                                    let _ = strongSelf.context.account.updateLocalInputActivity(peerId: activitySpace, activity: .seeingEmojiInteraction(emoticon: emoticon), isPresent: true)
+                                }
+                            }
+                        }
                     }
                 })
             }

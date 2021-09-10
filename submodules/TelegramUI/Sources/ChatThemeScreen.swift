@@ -338,6 +338,27 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + emojiFrame.minX, y: rect.minY + emojiFrame.minY), size: emojiFrame.size), within: containerSize)
     }
     
+    override func selected() {
+        super.selected()
+        
+        if let animatedStickerNode = self.animatedStickerNode {
+            Queue.mainQueue().after(0.1) {        
+                let started = animatedStickerNode.playIfNeeded()
+                if started {
+                    let scale: CGFloat = 2.6
+                    animatedStickerNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
+                    animatedStickerNode.layer.animateSpring(from: 1.0 as NSNumber, to: scale as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                    
+                    animatedStickerNode.completed = { [weak animatedStickerNode] _ in
+                        animatedStickerNode?.transform = CATransform3DIdentity
+                        animatedStickerNode?.layer.animateSpring(from: scale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                    }
+                }
+            }
+        }
+        
+    }
+    
     func asyncLayout() -> (ThemeSettingsThemeIconItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let makeEmojiLayout = TextNode.asyncLayout(self.emojiNode)
@@ -437,8 +458,11 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                             strongSelf.animatedStickerNode = animatedStickerNode
                             strongSelf.emojiContainerNode.insertSubnode(animatedStickerNode, belowSubnode: strongSelf.placeholderNode)
                             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
-                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 96, height: 96, mode: .direct(cachePathPrefix: pathPrefix))
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 128, height: 128, playbackMode: .still(.start), mode: .direct(cachePathPrefix: pathPrefix))
+                            
+                            animatedStickerNode.anchorPoint = CGPoint(x: 0.5, y: 1.0)
                         }
+                        animatedStickerNode.autoplay = true
                         animatedStickerNode.visibility = strongSelf.visibilityStatus
                         
                         strongSelf.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
@@ -734,7 +758,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.animationNode.isUserInteractionEnabled = false
         
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
-        self.doneButton.title = self.presentationData.strings.Conversation_Theme_Apply
+        self.doneButton.title = initiallySelectedEmoticon == nil ? self.presentationData.strings.Conversation_Theme_DontSetTheme : self.presentationData.strings.Conversation_Theme_Apply
         
         self.listNode = ListView()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
@@ -783,9 +807,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             let presentationData = strongSelf.presentationData
                 
             var entries: [ThemeSettingsThemeEntry] = []
-            if strongSelf.initiallySelectedEmoticon != nil {
-                entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: nil, emojiFile: nil, themeReference: nil, selected: selectedEmoticon == nil, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
-            }
+            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: nil, emojiFile: nil, themeReference: nil, selected: selectedEmoticon == nil, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             for theme in themes {
                 var emoticon = theme.emoji
                 if emoticon == "🦁" {
@@ -804,7 +826,13 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                     strongSelf.selectedEmoticon = emoticon
                     let _ = ensureThemeVisible(listNode: strongSelf.listNode, emoticon: emoticon, animated: true)
                     
-                    strongSelf.doneButton.title = emoticon == nil ? strongSelf.presentationData.strings.Conversation_Theme_Reset : strongSelf.presentationData.strings.Conversation_Theme_Apply
+                    let doneButtonTitle: String
+                    if emoticon == nil {
+                        doneButtonTitle = strongSelf.initiallySelectedEmoticon == nil ? strongSelf.presentationData.strings.Conversation_Theme_DontSetTheme : strongSelf.presentationData.strings.Conversation_Theme_Reset
+                    } else {
+                        doneButtonTitle = strongSelf.presentationData.strings.Conversation_Theme_Apply
+                    }
+                    strongSelf.doneButton.title = doneButtonTitle
                 }
             }
             let previousEntries = strongSelf.entries ?? []

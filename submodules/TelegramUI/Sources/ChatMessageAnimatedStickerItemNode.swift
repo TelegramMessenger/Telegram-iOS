@@ -1290,36 +1290,76 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    private func playAdditionalAnimation(_ name: String) {
-        let source = AnimatedStickerNodeLocalFileSource(name: name)
-        guard let item = self.item, let path = source.path, let animationSize = self.animationSize, let animationNode = self.animationNode, self.additionalAnimationNodes.count < 4 else {
+    func playAdditionalAnimation(index: Int, incoming: Bool) {
+        guard let item = self.item else {
             return
         }
-        let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+        
+        let textEmoji = item.message.text.strippedEmoji
+        let animationName: String?
+        switch textEmoji {
+            case "❤":
+                if index == 2 {
+                    animationName = "TestHearts2"
+                } else {
+                    animationName = "TestHearts"
+                }
+            case "🎆":
+                animationName = "TestFireworks"
+            default:
+                animationName = nil
+        }
+        
+        guard let animationName = animationName else {
+            return
+        }
+        
+        let source = AnimatedStickerNodeLocalFileSource(name: animationName)
+        guard let path = source.path, let animationSize = self.animationSize, let animationNode = self.animationNode, self.additionalAnimationNodes.count < 4 else {
+            return
+        }
+        
+        if let animationNode = animationNode as? AnimatedStickerNode {
+            let _ = animationNode.playIfNeeded()
+        }
+        
+        let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
         
         self.supernode?.view.bringSubviewToFront(self.view)
-        
-        let resource = BundleResource(name: name, path: path)
+                
+        let resource = BundleResource(name: animationName, path: path)
         let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
         
         let additionalAnimationNode = AnimatedStickerNode()
-        additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 3.0), height: Int(animationSize.height * 3.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+        additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2.0), height: Int(animationSize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+        var animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
+            .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
+        animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
+        additionalAnimationNode.frame = animationFrame
+        if incomingMessage {
+            additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+        }
+        var decorationNode: ChatMessageTransitionNode.DecorationItemNode?
+        if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
+            decorationNode = transitionNode.add(decorationNode: additionalAnimationNode, itemNode: self)
+        } else {
+            self.addSubnode(additionalAnimationNode)
+        }
         additionalAnimationNode.completed = { [weak self, weak additionalAnimationNode] _ in
             self?.additionalAnimationNodes.removeAll(where: { $0 === additionalAnimationNode })
             additionalAnimationNode?.removeFromSupernode()
+            if let decorationNode = decorationNode, let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
+                transitionNode.remove(decorationNode: decorationNode)
+            }
         }
-        var animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
-            .offsetBy(dx: incoming ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
-        animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
-        additionalAnimationNode.frame = animationFrame
-        if incoming {
-            additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-        }
-        self.addSubnode(additionalAnimationNode)
         
         self.additionalAnimationNodes.append(additionalAnimationNode)
         
         additionalAnimationNode.play()
+        
+        if !incoming {
+            item.context.account.updateLocalInputActivity(peerId: PeerActivitySpace(peerId: item.message.id.peerId, category: .global), activity: .interactingWithEmoji(emoticon: textEmoji, interaction: EmojiInteraction(animation: index)), isPresent: true)
+        }
     }
     
     private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {
@@ -1437,12 +1477,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             return .optionalAction({
                                 if firstScalar.value == heart {
                                     if self.additionalAnimationNodes.count % 2 == 0 {
-                                        self.playAdditionalAnimation("TestHearts")
+                                        self.playAdditionalAnimation(index: 1, incoming: false)
                                     } else {
-                                        self.playAdditionalAnimation("TestHearts2")
+                                        self.playAdditionalAnimation(index: 2, incoming: false)
                                     }
                                 } else if firstScalar.value == fireworks {
-                                    self.playAdditionalAnimation("TestFireworks")
+                                    self.playAdditionalAnimation(index: 1, incoming: false)
                                 }
                                 
                                 if shouldPlay {

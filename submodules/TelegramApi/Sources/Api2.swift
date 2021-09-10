@@ -4278,6 +4278,8 @@ public extension Api {
         case speakingInGroupCallAction
         case sendMessageHistoryImportAction(progress: Int32)
         case sendMessageChooseStickerAction
+        case sendMessageEmojiInteraction(emoticon: String, interaction: Api.DataJSON)
+        case sendMessageEmojiInteractionSeen(emoticon: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4377,6 +4379,19 @@ public extension Api {
                     }
                     
                     break
+                case .sendMessageEmojiInteraction(let emoticon, let interaction):
+                    if boxed {
+                        buffer.appendInt32(1781674934)
+                    }
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    interaction.serialize(buffer, true)
+                    break
+                case .sendMessageEmojiInteractionSeen(let emoticon):
+                    if boxed {
+                        buffer.appendInt32(-1234857938)
+                    }
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -4414,6 +4429,10 @@ public extension Api {
                 return ("sendMessageHistoryImportAction", [("progress", progress)])
                 case .sendMessageChooseStickerAction:
                 return ("sendMessageChooseStickerAction", [])
+                case .sendMessageEmojiInteraction(let emoticon, let interaction):
+                return ("sendMessageEmojiInteraction", [("emoticon", emoticon), ("interaction", interaction)])
+                case .sendMessageEmojiInteractionSeen(let emoticon):
+                return ("sendMessageEmojiInteractionSeen", [("emoticon", emoticon)])
     }
     }
     
@@ -4512,6 +4531,33 @@ public extension Api {
         }
         public static func parse_sendMessageChooseStickerAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageChooseStickerAction
+        }
+        public static func parse_sendMessageEmojiInteraction(_ reader: BufferReader) -> SendMessageAction? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Api.DataJSON?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.DataJSON
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.SendMessageAction.sendMessageEmojiInteraction(emoticon: _1!, interaction: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_sendMessageEmojiInteractionSeen(_ reader: BufferReader) -> SendMessageAction? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.SendMessageAction.sendMessageEmojiInteractionSeen(emoticon: _1!)
+            }
+            else {
+                return nil
+            }
         }
     
     }

@@ -1,6 +1,42 @@
 import Foundation
 import TelegramApi
 
+public struct EmojiInteraction: Equatable {
+    public let animation: Int
+    
+    public init(animation: Int) {
+        self.animation = animation
+    }
+    
+    public init?(apiDataJson: Api.DataJSON) {
+        if case let .dataJSON(string) = apiDataJson, let data = string.data(using: .utf8) {
+            do {
+                let decodedData = try JSONSerialization.jsonObject(with: data, options: [])
+                guard let item = decodedData as? [String: Any] else {
+                    return nil
+                }
+                guard let animation = item["animation"] as? Int else {
+                    return nil
+                }
+                self.animation = animation
+            } catch {
+                return nil
+            }
+        } else {
+            return nil
+        }
+    }
+    
+    public var apiDataJson: Api.DataJSON {
+        let dict = ["animation": animation]
+        if let data = try? JSONSerialization.data(withJSONObject: dict, options: []), let dataString = String(data: data, encoding: .utf8) {
+            return .dataJSON(data: dataString)
+        } else {
+            return .dataJSON(data: "")
+        }
+    }
+}
+
 public enum PeerInputActivity: Comparable {
     case typingText
     case uploadingFile(progress: Int32)
@@ -12,6 +48,8 @@ public enum PeerInputActivity: Comparable {
     case uploadingInstantVideo(progress: Int32)
     case speakingInGroupCall(timestamp: Int32)
     case choosingSticker
+    case interactingWithEmoji(emoticon: String, interaction: EmojiInteraction?)
+    case seeingEmojiInteraction(emoticon: String)
     
     public var key: Int32 {
         switch self {
@@ -35,6 +73,10 @@ public enum PeerInputActivity: Comparable {
                 return 8
             case .choosingSticker:
                 return 9
+            case .interactingWithEmoji:
+                return 10
+            case .seeingEmojiInteraction:
+                return 11
         }
     }
     
@@ -70,6 +112,10 @@ extension PeerInputActivity {
                 self = .choosingSticker
             case .sendMessageHistoryImportAction:
                 return nil
+            case let .sendMessageEmojiInteraction(emoticon, interaction):
+                self = .interactingWithEmoji(emoticon: emoticon, interaction: EmojiInteraction(apiDataJson: interaction))
+            case let .sendMessageEmojiInteractionSeen(emoticon):
+                self = .seeingEmojiInteraction(emoticon: emoticon)
         }
     }
 }
