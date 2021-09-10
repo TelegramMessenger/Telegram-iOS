@@ -288,8 +288,11 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                     let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: iconSize, height: iconSize), boundingSize: CGSize(width: iconSize, height: iconSize), intrinsicInsets: UIEdgeInsets()))
                     iconApply()
                     
+                    let placeholderBackgroundColor: UIColor
+                    
                     switch item.style {
                         case .plain:
+                            placeholderBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
                             if strongSelf.backgroundNode.supernode != nil {
                                 strongSelf.backgroundNode.removeFromSupernode()
                             }
@@ -297,7 +300,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.topStripeNode.removeFromSupernode()
                             }
                             if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
+                                strongSelf.addSubnode(strongSelf.bottomStripeNode)
                             }
                             if strongSelf.maskNode.supernode != nil {
                                 strongSelf.maskNode.removeFromSupernode()
@@ -312,6 +315,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: stripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - stripeInset, height: separatorHeight))
                             strongSelf.bottomStripeNode.isHidden = last
                         case .blocks:
+                            placeholderBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                             if strongSelf.backgroundNode.supernode == nil {
                                 strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
                             }
@@ -395,8 +399,8 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                         
                         let subtitleFrame = strongSelf.addressNode.frame
                         shapes.append(.roundedRectLine(startPoint: CGPoint(x: subtitleFrame.minX, y: subtitleFrame.minY + floor((subtitleFrame.height - lineDiameter) / 2.0)), width: subtitleLineWidth, diameter: lineDiameter))
-                        
-                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: layout.contentSize)
+                                                
+                        shimmerNode.update(backgroundColor: placeholderBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: layout.contentSize)
                     } else if let shimmerNode = strongSelf.placeholderNode {
                         strongSelf.placeholderNode = nil
                         shimmerNode.removeFromSupernode()

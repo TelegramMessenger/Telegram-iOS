@@ -3489,20 +3489,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 
                 let filteredButtons = allHeaderButtons.subtracting(headerButtons)
                 
-                var canChangeColors = true
-//                if let peer = peer as? TelegramUser, self.data?.encryptionKeyFingerprint == nil {
-//                    canChangeColors = true
-//                }
-                if let peer = peer as? TelegramChannel {
-                    if case .broadcast = peer.info {
-                        canChangeColors = false
-                    } else {
-                        canChangeColors = peer.hasPermission(.changeInfo)
-                    }
-                } else if let peer = peer as? TelegramGroup, case .member = peer.role {
-                    canChangeColors = !peer.hasBannedPermission(.banChangeInfo)
-                } else if self.data?.encryptionKeyFingerprint != nil {
-                    canChangeColors = false
+                var canChangeColors = false
+                if peer is TelegramUser, self.data?.encryptionKeyFingerprint == nil {
+                    canChangeColors = true
                 }
                 
                 if canChangeColors {
@@ -6799,7 +6788,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
             }
         }
         
-        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
+        self.presentationDataDisposable = (presentationDataSignal
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
