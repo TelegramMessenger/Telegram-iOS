@@ -14,8 +14,12 @@ import PresentationDataUtils
 import AnimationUI
 import MergeLists
 import MediaResources
+import StickerResources
 import WallpaperResources
 import TooltipUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import ShimmerEffect
 
 private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -41,6 +45,7 @@ private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
 private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     let index: Int
     let emoticon: String?
+    let emojiFile: TelegramMediaFile?
     let themeReference: PresentationThemeReference?
     var selected: Bool
     let theme: PresentationTheme
@@ -58,6 +63,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
         if lhs.emoticon != rhs.emoticon {
             return false
         }
+        
         if lhs.themeReference?.index != rhs.themeReference?.index {
             return false
         }
@@ -81,7 +87,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, action: @escaping (String?) -> Void) -> ListViewItem {
-        return ThemeSettingsThemeIconItem(context: context, emoticon: self.emoticon, themeReference: self.themeReference, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, action: action)
+        return ThemeSettingsThemeIconItem(context: context, emoticon: self.emoticon, emojiFile: self.emojiFile, themeReference: self.themeReference, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, action: action)
     }
 }
 
@@ -89,6 +95,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
 private class ThemeSettingsThemeIconItem: ListViewItem {
     let context: AccountContext
     let emoticon: String?
+    let emojiFile: TelegramMediaFile?
     let themeReference: PresentationThemeReference?
     let selected: Bool
     let theme: PresentationTheme
@@ -96,9 +103,10 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
     let wallpaper: TelegramWallpaper?
     let action: (String?) -> Void
     
-    public init(context: AccountContext, emoticon: String?, themeReference: PresentationThemeReference?, selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, action: @escaping (String?) -> Void) {
+    public init(context: AccountContext, emoticon: String?, emojiFile: TelegramMediaFile?, themeReference: PresentationThemeReference?, selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, action: @escaping (String?) -> Void) {
         self.context = context
         self.emoticon = emoticon
+        self.emojiFile = emojiFile
         self.themeReference = themeReference
         self.selected = selected
         self.theme = theme
@@ -232,16 +240,37 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
 
 private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     private let containerNode: ASDisplayNode
+    private let emojiContainerNode: ASDisplayNode
     private let imageNode: TransformImageNode
     private let overlayNode: ASImageNode
     private let textNode: TextNode
     private let emojiNode: TextNode
+    private let emojiImageNode: TransformImageNode
+    private var animatedStickerNode: AnimatedStickerNode?
+    private var placeholderNode: StickerShimmerEffectNode
     var snapshotView: UIView?
     
     var item: ThemeSettingsThemeIconItem?
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            self.visibilityStatus = self.visibility != .none
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                self.animatedStickerNode?.visibility = self.visibilityStatus
+            }
+        }
+    }
+    
+    private let stickerFetchedDisposable = MetaDisposable()
 
     init() {
         self.containerNode = ASDisplayNode()
+        self.emojiContainerNode = ASDisplayNode()
 
         self.imageNode = TransformImageNode()
         self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 82.0, height: 108.0))
@@ -258,6 +287,10 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         
         self.emojiNode = TextNode()
         self.emojiNode.isUserInteractionEnabled = false
+        
+        self.emojiImageNode = TransformImageNode()
+        
+        self.placeholderNode = StickerShimmerEffectNode()
 
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
@@ -265,9 +298,47 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         self.containerNode.addSubnode(self.imageNode)
         self.containerNode.addSubnode(self.overlayNode)
         self.containerNode.addSubnode(self.textNode)
-        self.containerNode.addSubnode(self.emojiNode)
+        
+        self.addSubnode(self.emojiContainerNode)
+        self.emojiContainerNode.addSubnode(self.emojiNode)
+        self.emojiContainerNode.addSubnode(self.emojiImageNode)
+        self.emojiContainerNode.addSubnode(self.placeholderNode)
+        
+        var firstTime = true
+        self.emojiImageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+                if firstTime {
+                    strongSelf.emojiImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+            firstTime = false
+        }
     }
 
+    deinit {
+        self.stickerFetchedDisposable.dispose()
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        if !animated {
+            self.placeholderNode.removeFromSupernode()
+        } else {
+            self.placeholderNode.alpha = 0.0
+            self.placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                self?.placeholderNode.removeFromSupernode()
+            })
+        }
+    }
+    
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        let emojiFrame = CGRect(origin: CGPoint(x: 33.0, y: 79.0), size: CGSize(width: 24.0, height: 24.0))
+        self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + emojiFrame.minX, y: rect.minY + emojiFrame.minY), size: emojiFrame.size), within: containerSize)
+    }
+    
     func asyncLayout() -> (ThemeSettingsThemeIconItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let makeEmojiLayout = TextNode.asyncLayout(self.emojiNode)
@@ -276,11 +347,15 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
         let currentItem = self.item
 
         return { [weak self] item, params in
+            var updatedEmoticon = false
             var updatedThemeReference = false
             var updatedTheme = false
             var updatedWallpaper = false
             var updatedSelected = false
             
+            if currentItem?.emoticon != item.emoticon {
+                updatedEmoticon = true
+            }
             if currentItem?.themeReference != item.themeReference {
                 updatedThemeReference = true
             }
@@ -297,7 +372,13 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             let text = NSAttributedString(string: item.strings.Conversation_Theme_NoTheme, font: Font.semibold(15.0), textColor: item.theme.actionSheet.controlAccentColor)
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: text, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let title = NSAttributedString(string: item.emoticon ?? "❌", font: Font.regular(22.0), textColor: .black)
+            var emoticon = item.emoticon
+            if emoticon == "🦁" {
+                emoticon = "🌳"
+            } else if emoticon == "🔮" {
+                emoticon = "🎆"
+            }
+            let title = NSAttributedString(string: emoticon != nil ? "" : "❌", font: Font.regular(22.0), textColor: .black)
             let (_, emojiApply) = makeEmojiLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 120.0, height: 90.0), insets: UIEdgeInsets())
@@ -325,6 +406,9 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                     strongSelf.containerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(x: 15.0, y: -15.0), size: CGSize(width: 90.0, height: 120.0))
                     
+                    strongSelf.emojiContainerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                    strongSelf.emojiContainerNode.frame = CGRect(origin: CGPoint(x: 15.0, y: -15.0), size: CGSize(width: 90.0, height: 120.0))
+                    
                     let _ = textApply()
                     let _ = emojiApply()
 
@@ -335,14 +419,50 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                     
                     strongSelf.overlayNode.frame = strongSelf.imageNode.frame.insetBy(dx: -1.0, dy: -1.0)
                     strongSelf.emojiNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 79.0), size: CGSize(width: 90.0, height: 30.0))
+                    
+                    let emojiFrame = CGRect(origin: CGPoint(x: 33.0, y: 79.0), size: CGSize(width: 24.0, height: 24.0))
+                    if let file = item.emojiFile, updatedEmoticon {
+                        let imageApply = strongSelf.emojiImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: emojiFrame.size, boundingSize: emojiFrame.size, intrinsicInsets: UIEdgeInsets()))
+                        imageApply()
+                        strongSelf.emojiImageNode.setSignal(chatMessageStickerPackThumbnail(postbox: item.context.account.postbox, resource: file.resource, animated: true, nilIfEmpty: true))
+                        strongSelf.emojiImageNode.frame = emojiFrame
+                        
+                        let animatedStickerNode: AnimatedStickerNode
+                        if let current = strongSelf.animatedStickerNode {
+                            animatedStickerNode = current
+                        } else {
+                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode.started = { [weak self] in
+                                self?.emojiImageNode.isHidden = true
+                            }
+                            strongSelf.animatedStickerNode = animatedStickerNode
+                            strongSelf.emojiContainerNode.insertSubnode(animatedStickerNode, belowSubnode: strongSelf.placeholderNode)
+                            let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 96, height: 96, mode: .direct(cachePathPrefix: pathPrefix))
+                        }
+                        animatedStickerNode.visibility = strongSelf.visibilityStatus
+                        
+                        strongSelf.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
+                        
+                        let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
+                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, imageSize: thumbnailDimensions.cgSize)
+                        strongSelf.placeholderNode.frame = emojiFrame
+                    }
+                    
+                    if let animatedStickerNode = strongSelf.animatedStickerNode {
+                        animatedStickerNode.frame = emojiFrame
+                        animatedStickerNode.updateLayout(size: emojiFrame.size)
+                    }
                 }
             })
         }
     }
     
     func crossfade() {
-        if let snapshotView = self.view.snapshotView(afterScreenUpdates: false) {
-            self.view.addSubview(snapshotView)
+        if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
+            snapshotView.transform = self.containerNode.view.transform
+            snapshotView.frame = self.containerNode.view.frame
+            self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
             
             snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
@@ -377,6 +497,7 @@ final class ChatThemeScreen: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
+    private let animatedEmojiStickers: [String: [StickerPackItem]]
     private let initiallySelectedEmoticon: String?
     private let dismissByTapOutside: Bool
     private let previewTheme: (String?, Bool?) -> Void
@@ -393,9 +514,10 @@ final class ChatThemeScreen: ViewController {
         }
     }
     
-    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), initiallySelectedEmoticon: String?, dismissByTapOutside: Bool = true, previewTheme: @escaping (String?, Bool?) -> Void, completion: @escaping (String?) -> Void) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), animatedEmojiStickers: [String: [StickerPackItem]], initiallySelectedEmoticon: String?, dismissByTapOutside: Bool = true, previewTheme: @escaping (String?, Bool?) -> Void, completion: @escaping (String?) -> Void) {
         self.context = context
         self.presentationData = updatedPresentationData.initial
+        self.animatedEmojiStickers = animatedEmojiStickers
         self.initiallySelectedEmoticon = initiallySelectedEmoticon
         self.dismissByTapOutside = dismissByTapOutside
         self.previewTheme = previewTheme
@@ -427,7 +549,7 @@ final class ChatThemeScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatThemeScreenNode(context: self.context, presentationData: self.presentationData, initiallySelectedEmoticon: self.initiallySelectedEmoticon, dismissByTapOutside: self.dismissByTapOutside)
+        self.displayNode = ChatThemeScreenNode(context: self.context, presentationData: self.presentationData, animatedEmojiStickers: self.animatedEmojiStickers, initiallySelectedEmoticon: self.initiallySelectedEmoticon, dismissByTapOutside: self.dismissByTapOutside)
         self.controllerNode.passthroughHitTestImpl = self.passthroughHitTestImpl
         self.controllerNode.previewTheme = { [weak self] emoticon, dark in
             guard let strongSelf = self else {
@@ -559,7 +681,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, initiallySelectedEmoticon: String?, dismissByTapOutside: Bool) {
+    init(context: AccountContext, presentationData: PresentationData, animatedEmojiStickers: [String: [StickerPackItem]], initiallySelectedEmoticon: String?, dismissByTapOutside: Bool) {
         self.context = context
         self.initiallySelectedEmoticon = initiallySelectedEmoticon
         self.selectedEmoticon = initiallySelectedEmoticon
@@ -663,18 +785,24 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 
             var entries: [ThemeSettingsThemeEntry] = []
             if strongSelf.initiallySelectedEmoticon != nil {
-                entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: nil, themeReference: nil, selected: selectedEmoticon == nil, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+                entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: nil, emojiFile: nil, themeReference: nil, selected: selectedEmoticon == nil, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             for theme in themes {
-                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: theme.emoji, themeReference: .cloud(PresentationCloudTheme(theme: isDarkAppearance ? theme.darkTheme : theme.theme, resolvedWallpaper: nil, creatorAccountId: nil)), selected: selectedEmoticon == theme.emoji, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+                var emoticon = theme.emoji
+                if emoticon == "🦁" {
+                    emoticon = "🌳"
+                } else if emoticon == "🔮" {
+                    emoticon = "🎆"
+                }
+                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: theme.emoji, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: isDarkAppearance ? theme.darkTheme : theme.theme, resolvedWallpaper: nil, creatorAccountId: nil)), selected: selectedEmoticon == theme.emoji, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             
             let action: (String?) -> Void = { [weak self] emoticon in
                 if let strongSelf = self, strongSelf.selectedEmoticon != emoticon {
                     strongSelf.animateCrossfade(animateBackground: strongSelf.presentationData.theme.overallDarkAppearance, updateSunIcon: true)
                                         
-                    strongSelf.selectedEmoticon = emoticon
                     strongSelf.previewTheme?(emoticon, strongSelf.isDarkAppearance)
+                    strongSelf.selectedEmoticon = emoticon
                     let _ = ensureThemeVisible(listNode: strongSelf.listNode, emoticon: emoticon, animated: true)
                     
                     strongSelf.doneButton.title = emoticon == nil ? strongSelf.presentationData.strings.Conversation_Theme_Reset : strongSelf.presentationData.strings.Conversation_Theme_Apply

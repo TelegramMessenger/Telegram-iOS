@@ -25,9 +25,9 @@ final class ChatSearchResultsController: ViewController {
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, location: SearchMessagesLocation, searchQuery: String, searchResult: SearchMessagesResult, searchState: SearchMessagesState, navigateToMessageIndex: @escaping (Int) -> Void, resultsUpdated: @escaping (SearchMessagesResult, SearchMessagesState) -> Void) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, location: SearchMessagesLocation, searchQuery: String, searchResult: SearchMessagesResult, searchState: SearchMessagesState, navigateToMessageIndex: @escaping (Int) -> Void, resultsUpdated: @escaping (SearchMessagesResult, SearchMessagesState) -> Void) {
         self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.location = location
         self.searchQuery = searchQuery
         self.navigateToMessageIndex = navigateToMessageIndex
@@ -39,7 +39,7 @@ final class ChatSearchResultsController: ViewController {
         
         self.navigationPresentation = .modal
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
