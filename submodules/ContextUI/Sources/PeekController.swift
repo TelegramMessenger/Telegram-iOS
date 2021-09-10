@@ -38,10 +38,10 @@ public final class PeekController: ViewController, ContextControllerProtocol {
         return nil
     }
     
-    public func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?) {
+    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?) {
     }
 
-    public func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
     }
     
     private var controllerNode: PeekControllerNode {

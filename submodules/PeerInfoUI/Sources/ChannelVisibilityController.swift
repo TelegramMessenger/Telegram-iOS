@@ -1050,7 +1050,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             })
         })))
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, manageInviteLinks: {
         let controller = inviteLinkListController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, admin: nil)

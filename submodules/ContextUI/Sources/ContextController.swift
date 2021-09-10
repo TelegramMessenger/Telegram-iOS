@@ -15,8 +15,8 @@ public protocol ContextControllerProtocol {
     var immediateItemsTransitionAnimation: Bool { get set }
 
     func getActionsMinHeight() -> CGFloat?
-    func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?)
-    func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition)
+    func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?)
+    func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition)
     func dismiss(completion: (() -> Void)?)
 }
 
@@ -117,7 +117,7 @@ private func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIV
 private final class ContextControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private var presentationData: PresentationData
     private let source: ContextContentSource
-    private var items: Signal<[ContextMenuItem], NoError>
+    private var items: Signal<ContextController.Items, NoError>
     private let beginDismiss: (ContextMenuActionResult) -> Void
     private let reactionSelected: (ReactionContextItem.Reaction) -> Void
     private let beganAnimatingOut: () -> Void
@@ -125,13 +125,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     fileprivate var dismissedForCancel: (() -> Void)?
     private let getController: () -> ContextControllerProtocol?
     private weak var gesture: ContextGesture?
-    private var tip: ContextController.Tip?
     
     private var didSetItemsReady = false
     let itemsReady = Promise<Bool>()
     let contentReady = Promise<Bool>()
     
-    private var currentItems: [ContextMenuItem]?
+    private var currentItems: ContextController.Items?
     private var currentActionsMinHeight: CGFloat?
     
     private var validLayout: ContainerViewLayout?
@@ -169,7 +168,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let blurBackground: Bool
     
-    init(account: Account, controller: ContextController, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (ReactionContextItem.Reaction) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void, tip: ContextController.Tip?) {
+    init(account: Account, controller: ContextController, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (ReactionContextItem.Reaction) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void) {
         self.presentationData = presentationData
         self.source = source
         self.items = items
@@ -178,7 +177,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.beganAnimatingOut = beganAnimatingOut
         self.attemptTransitionControllerIntoNavigation = attemptTransitionControllerIntoNavigation
         self.gesture = gesture
-        self.tip = tip
         
         self.getController = { [weak controller] in
             return controller
@@ -231,13 +229,13 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         self.blurBackground = blurBackground
             
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: [], getController: { [weak controller] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(items: []), getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             beginDismiss(result)
         }, feedbackTap: {
             feedbackTap?()
-        }, tip: self.tip, blurBackground: blurBackground)
+        }, blurBackground: blurBackground)
         
         if !reactionItems.isEmpty {
             let reactionContextNode = ReactionContextNode(account: account, theme: presentationData.theme, items: reactionItems)
@@ -1179,7 +1177,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
-    func setItemsSignal(items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+    func setItemsSignal(items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
         self.items = items
         self.itemsDisposable.set((items
         |> deliverOnMainQueue).start(next: { [weak self] items in
@@ -1190,7 +1188,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }))
     }
     
-    private func setItems(items: [ContextMenuItem], minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+    private func setItems(items: ContextController.Items, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
         if let _ = self.currentItems, !self.didCompleteAnimationIn && self.getController()?.immediateItemsTransitionAnimation == true {
             return
         }
@@ -1206,7 +1204,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self?.beginDismiss(result)
         }, feedbackTap: { [weak self] in
             self?.hapticFeedback.tap()
-        }, tip: self.tip, blurBackground: self.blurBackground)
+        }, blurBackground: self.blurBackground)
         self.scrollNode.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
         
         if let layout = self.validLayout {
@@ -1217,7 +1215,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if !self.didSetItemsReady {
             self.didSetItemsReady = true
-            self.tip = nil
             self.itemsReady.set(.single(true))
         }
     }
@@ -1867,6 +1864,21 @@ public enum ContextContentSource {
 }
 
 public final class ContextController: ViewController, StandalonePresentableController, ContextControllerProtocol {
+    public struct Items {
+        public var items: [ContextMenuItem]
+        public var tip: Tip?
+
+        public init(items: [ContextMenuItem], tip: Tip? = nil) {
+            self.items = items
+            self.tip = tip
+        }
+
+        public init() {
+            self.items = []
+            self.tip = nil
+        }
+    }
+
     public enum PreviousActionsTransition {
         case scale
         case slide(forward: Bool)
@@ -1880,7 +1892,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     private let account: Account
     private var presentationData: PresentationData
     private let source: ContextContentSource
-    private var items: Signal<[ContextMenuItem], NoError>
+    private var items: Signal<ContextController.Items, NoError>
     private var reactionItems: [ReactionContextItem]
     
     private let _ready = Promise<Bool>()
@@ -1890,7 +1902,6 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     private weak var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
     private weak var gesture: ContextGesture?
-    private let tip: Tip?
     
     private var animatedDidAppear = false
     private var wasDismissed = false
@@ -1912,7 +1923,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     private var shouldBeDismissedDisposable: Disposable?
     
-    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, tip: Tip? = nil) {
+    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
         self.account = account
         self.presentationData = presentationData
         self.source = source
@@ -1920,7 +1931,6 @@ public final class ContextController: ViewController, StandalonePresentableContr
         self.reactionItems = reactionItems
         self.recognizer = recognizer
         self.gesture = gesture
-        self.tip = tip
         
         super.init(navigationBarPresentationData: nil)
               
@@ -1991,7 +2001,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             default:
                 break
             }
-        }, tip: self.tip)
+        })
         self.controllerNode.dismissedForCancel = self.dismissedForCancel
         self.displayNodeDidLoad()
         
@@ -2026,14 +2036,14 @@ public final class ContextController: ViewController, StandalonePresentableContr
         return nil
     }
     
-    public func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?) {
+    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?) {
         self.items = items
         if self.isNodeLoaded {
             self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: .scale)
         }
     }
 
-    public func setItems(_ items: Signal<[ContextMenuItem], NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
         self.items = items
         if self.isNodeLoaded {
             self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: previousActionsTransition)
