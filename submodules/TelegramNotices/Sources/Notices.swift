@@ -169,6 +169,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case dismissedTrendingStickerPacks = 22
     case chatSpecificThemesDarkPreviewTip = 23
     case chatForwardOptionsTip = 24
+    case messageViewsPrivacyTips = 25
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -291,6 +292,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func chatTextSelectionTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatTextSelectionTip.key)
+    }
+
+    static func messageViewsPrivacyTips() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.messageViewsPrivacyTips.key)
     }
     
     static func themeChangeTip() -> NoticeEntryKey {
@@ -743,6 +748,28 @@ public struct ApplicationSpecificNotice {
             currentValue += count
             
             transaction.setNotice(ApplicationSpecificNoticeKeys.chatTextSelectionTip(), ApplicationSpecificCounterNotice(value: currentValue))
+        }
+    }
+
+    public static func getMessageViewsPrivacyTips(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.messageViewsPrivacyTips()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+
+    public static func incrementMessageViewsPrivacyTips(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.messageViewsPrivacyTips()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            currentValue += count
+
+            transaction.setNotice(ApplicationSpecificNoticeKeys.messageViewsPrivacyTips(), ApplicationSpecificCounterNotice(value: currentValue))
         }
     }
     

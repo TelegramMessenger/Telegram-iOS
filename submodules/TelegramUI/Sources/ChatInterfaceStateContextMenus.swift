@@ -22,6 +22,7 @@ import ShimmerEffect
 import AnimatedAvatarSetNode
 import AvatarNode
 import AdUI
+import TelegramNotices
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -141,15 +142,32 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
 }
 
 private func canViewReadStats(message: Message, isMessageRead: Bool, appConfig: AppConfiguration) -> Bool {
-    if !isMessageRead {
-        return false
-    }
-    if message.flags.contains(.Incoming) {
-        return false
-    }
     guard let peer = message.peers[message.id.peerId] else {
         return false
     }
+
+    if message.flags.contains(.Incoming) {
+        switch peer {
+        case let channel as TelegramChannel:
+            if channel.adminRights == nil {
+                return false
+            }
+        case let group as TelegramGroup:
+            switch group.role {
+            case .creator, .admin:
+                break
+            case .member:
+                return false
+            }
+        default:
+            return false
+        }
+    } else {
+        if !isMessageRead {
+            return false
+        }
+    }
+
     for media in message.media {
         if let _ = media as? TelegramMediaAction {
             return false
@@ -351,9 +369,9 @@ func updatedChatEditInterfaceMessageState(state: ChatPresentationInterfaceState,
     return updated
 }
 
-func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?, readStats: MessageReadStats? = nil) -> Signal<[ContextMenuItem], NoError> {
+func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?, readStats: MessageReadStats? = nil) -> Signal<ContextController.Items, NoError> {
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
-        return .single([])
+        return .single(ContextController.Items(items: []))
     }
 
     if messages.count == 1, let _ = messages[0].adAttribute {
@@ -420,7 +438,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             })))
         }
 
-        return .single(actions)
+        return .single(ContextController.Items(items: actions))
     }
     
     var loadStickerSaveStatus: MediaId?
@@ -534,7 +552,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         return transaction.getCombinedPeerReadState(messages[0].id.peerId)
     }
     
-    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool), NoError> = combineLatest(
+    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32), NoError> = combineLatest(
         loadLimits,
         loadStickerSaveStatusSignal,
         loadResourceStatusSignal,
@@ -542,9 +560,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         context.account.pendingUpdateMessageManager.updatingMessageMedia
         |> take(1),
         cachedData,
-        readState
+        readState,
+        ApplicationSpecificNotice.getMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager)
     )
-    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData, readState -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool) in
+    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData, readState, messageViewsPrivacyTips -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32) in
         let (limitsConfiguration, appConfig) = limitsAndAppConfig
         var canEdit = false
         if !isAction {
@@ -557,12 +576,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             isMessageRead = readState.isOutgoingMessageIndexRead(message.index)
         }
         
-        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig, isMessageRead)
+        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips)
     }
     
     return dataSignal
     |> deliverOnMainQueue
-    |> map { data, updatingMessageMedia, cachedData, appConfig, isMessageRead -> [ContextMenuItem] in
+    |> map { data, updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips -> ContextController.Items in
         var actions: [ContextMenuItem] = []
         
         var isPinnedMessages = false
@@ -1191,6 +1210,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             controller.setItems(contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: chatPresentationInterfaceState, context: context, messages: messages, controllerInteraction: controllerInteraction, selectAll: selectAll, interfaceInteraction: interfaceInteraction, readStats: stats), minHeight: nil, previousActionsTransition: .slide(forward: false))
                         })))
 
+                        subActions.append(.separator)
+
                         for peer in stats.peers {
                             let avatarSignal = peerAvatarCompleteImage(account: context.account, peer: peer._asPeer(), size: CGSize(width: 30.0, height: 30.0))
 
@@ -1201,8 +1222,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             })))
                         }
 
+                        var tip: ContextController.Tip?
+                        if messageViewsPrivacyTips < 3 {
+                            tip = .messageViewsPrivacy
+                            let _ = ApplicationSpecificNotice.incrementMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager).start()
+                        }
+
                         let minHeight = c.getActionsMinHeight()
-                        c.setItems(.single(subActions), minHeight: minHeight, previousActionsTransition: .slide(forward: true))
+                        c.setItems(.single(ContextController.Items(items: subActions, tip: tip)), minHeight: minHeight, previousActionsTransition: .slide(forward: true))
                     } else {
                         f(.default)
                     }
@@ -1210,7 +1237,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        return actions
+        return ContextController.Items(items: actions, tip: nil)
     }
 }
 

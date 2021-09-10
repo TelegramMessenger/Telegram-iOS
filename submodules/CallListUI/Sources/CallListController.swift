@@ -358,7 +358,7 @@ public final class CallListController: TelegramBaseController {
             }
         }
     
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: self, sourceNode: buttonNode.contentNode, keepInPlace: false, blurBackground: false)), items: .single(items), reactionItems: [], gesture: nil)
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: self, sourceNode: buttonNode.contentNode, keepInPlace: false, blurBackground: false)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: nil)
         self.presentInGlobalOverlay(contextController)
     }
     

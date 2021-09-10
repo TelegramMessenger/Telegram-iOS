@@ -6778,7 +6778,7 @@ Telegram offers free and unlimited service to hundreds of millions of users, whi
 [url]
 Ads should no longer be synonymous with abuse of user privacy. Let us redefine how a tech compony should operate — together.";
 "SponsoredMessageInfo.Action" = "Learn More";
-"SponsoredMessageInfo.ActionUrl" = "https://telegram.org/ads";
+"SponsoredMessageInfo.Url" = "https://telegram.org/ads";
 
 "Chat.NavigationNoChannels" = "You have no unread channels";
 
@@ -6817,3 +6817,5 @@ Ads should no longer be synonymous with abuse of user privacy. Let us redefine h
 
 "VideoChat.RecordingSaved" = "Video chat recording saved to **Saved Messages**.";
 "LiveStream.RecordingSaved" = "Live stream recording saved to **Saved Messages**.";
+
+"ChatContextMenu.MessageViewsPrivacyTip" = "To protect privacy, views are only stored for 7 days.";

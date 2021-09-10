@@ -88,11 +88,15 @@ public final class Transaction {
         return self.postbox!.messageHistoryThreadHoleIndexTable.closest(peerId: peerId, threadId: threadId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1))
     }
 
-    public func getThreadMessageCount(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, fromId: Int32?, toIndex: MessageIndex) -> Int? {
+    public func getThreadMessageCount(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, fromIdExclusive: Int32?, toIndex: MessageIndex) -> Int? {
         assert(!self.disposed)
         let fromIndex: MessageIndex?
-        if let fromId = fromId {
-            fromIndex = self.postbox!.messageHistoryIndexTable.closestIndex(id: MessageId(peerId: peerId, namespace: namespace, id: fromId))
+        if let fromIdExclusive = fromIdExclusive {
+            if let message = self.postbox?.getMessage(MessageId(peerId: peerId, namespace: namespace, id: fromIdExclusive)) {
+                fromIndex = message.index.peerLocalSuccessor()
+            } else {
+                fromIndex = self.postbox!.messageHistoryIndexTable.closestIndex(id: MessageId(peerId: peerId, namespace: namespace, id: fromIdExclusive))?.peerLocalSuccessor()
+            }
         } else {
             fromIndex = nil
         }

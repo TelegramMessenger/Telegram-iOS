@@ -494,7 +494,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         chatController.canReadHistory.set(false)
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: peerNearbyContextMenuItems(context: context, peerId: peer.id, present: { c in
             presentControllerImpl?(c, nil)
-        }), reactionItems: [], gesture: gesture)
+        }) |> map { ContextController.Items(items: $0) }, reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, expandUsers: {
         expandedPromise.set(true)

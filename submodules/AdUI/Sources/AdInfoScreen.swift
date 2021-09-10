@@ -106,14 +106,14 @@ public final class AdInfoScreen: ViewController {
 
                 if !didAddUrl {
                     didAddUrl = true
-                    items.append(.link(LinkNode(text: self.presentationData.strings.SponsoredMessageInfo_ActionUrl, color: self.presentationData.theme.list.itemAccentColor, action: {
+                    items.append(.link(LinkNode(text: self.presentationData.strings.SponsoredMessageInfo_Url, color: self.presentationData.theme.list.itemAccentColor, action: {
                         openUrl?()
                     })))
                 }
             }
             if !didAddUrl {
                 didAddUrl = true
-                items.append(.link(LinkNode(text: self.presentationData.strings.SponsoredMessageInfo_ActionUrl, color: self.presentationData.theme.list.itemAccentColor, action: {
+                items.append(.link(LinkNode(text: self.presentationData.strings.SponsoredMessageInfo_Url, color: self.presentationData.theme.list.itemAccentColor, action: {
                     openUrl?()
                 })))
             }
@@ -138,7 +138,7 @@ public final class AdInfoScreen: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.context.sharedContext.applicationBindings.openUrl(strongSelf.presentationData.strings.SponsoredMessageInfo_ActionUrl)
+                strongSelf.context.sharedContext.applicationBindings.openUrl(strongSelf.presentationData.strings.SponsoredMessageInfo_Url)
             }
         }
 
