@@ -123,6 +123,7 @@ public final class ChatControllerInteraction {
     let copyText: (String) -> Void
     let displayUndo: (UndoOverlayContent) -> Void
     let isAnimatingMessage: (UInt32) -> Bool
+    var getMessageTransitionNode: () -> ChatMessageTransitionNode?
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -217,6 +218,7 @@ public final class ChatControllerInteraction {
         copyText: @escaping (String) -> Void,
         displayUndo: @escaping (UndoOverlayContent) -> Void,
         isAnimatingMessage: @escaping (UInt32) -> Bool,
+        getMessageTransitionNode: @escaping () -> ChatMessageTransitionNode?,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -297,6 +299,7 @@ public final class ChatControllerInteraction {
         self.copyText = copyText
         self.displayUndo = displayUndo
         self.isAnimatingMessage = isAnimatingMessage
+        self.getMessageTransitionNode = getMessageTransitionNode
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         
@@ -353,6 +356,8 @@ public final class ChatControllerInteraction {
         }, displayUndo: { _ in
         }, isAnimatingMessage: { _ in
             return false
+        }, getMessageTransitionNode: {
+            return nil
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

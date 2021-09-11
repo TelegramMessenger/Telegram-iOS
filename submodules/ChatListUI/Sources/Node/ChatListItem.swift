@@ -1724,6 +1724,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.textNode.frame = textNodeFrame
                     
                     var animateInputActivitiesFrame = false
+                    let inputActivities = inputActivities?.filter({
+                        switch $0.1 {
+                            case .speakingInGroupCall, .interactingWithEmoji, .seeingEmojiInteraction:
+                                return false
+                            default:
+                                return true
+                        }
+                    })
+                    
                     if let inputActivities = inputActivities, !inputActivities.isEmpty {
                         if strongSelf.inputActivitiesNode.supernode == nil {
                             strongSelf.contextContainer.addSubnode(strongSelf.inputActivitiesNode)
