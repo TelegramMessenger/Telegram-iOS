@@ -830,6 +830,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
         }
     }
     
+    public var isPlayingChanged: (Bool) -> Void = { _ in }
+    
     override public init() {
         self.queue = sharedQueue
         self.eventsNode = AnimatedStickerNodeDisplayEvents()
@@ -959,6 +961,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
             } else{
                 self.pause()
             }
+            
+            self.isPlayingChanged(isPlaying)
         }
         let canDisplayFirstFrame = self.automaticallyLoadFirstFrame && self.isDisplaying
         if self.canDisplayFirstFrame != canDisplayFirstFrame {

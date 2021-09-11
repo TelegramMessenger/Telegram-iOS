@@ -182,6 +182,8 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         private let containerNode: ASDisplayNode
         private let clippingNode: ASDisplayNode
         
+        fileprivate weak var overlayController: OverlayTransitionContainerController?
+        
         init(itemNode: ChatMessageItemView, contentNode: ASDisplayNode, getContentAreaInScreenSpace: @escaping () -> CGRect) {
             self.itemNode = itemNode
             self.contentNode = contentNode
@@ -639,14 +641,20 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         let decorationItemNode = DecorationItemNode(itemNode: itemNode, contentNode: decorationNode, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
         decorationItemNode.updateLayout(size: self.bounds.size)
         self.decorationItemNodes.append(decorationItemNode)
-        self.addSubnode(decorationItemNode)
         
+        let overlayController = OverlayTransitionContainerController()
+        overlayController.displayNode.isUserInteractionEnabled = false
+        overlayController.displayNode.addSubnode(decorationItemNode)
+        decorationItemNode.overlayController = overlayController
+        itemNode.item?.context.sharedContext.mainWindow?.presentInGlobalOverlay(overlayController)
+                
         return decorationItemNode
     }
     
     func remove(decorationNode: DecorationItemNode) {
         self.decorationItemNodes.removeAll(where: { $0 === decorationNode })
         decorationNode.removeFromSupernode()
+        decorationNode.overlayController?.dismiss()
     }
 
     private func beginAnimation(itemNode: ChatMessageItemView, source: Source) {

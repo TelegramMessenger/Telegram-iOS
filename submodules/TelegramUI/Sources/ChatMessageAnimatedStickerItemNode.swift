@@ -168,7 +168,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private(set) var placeholderNode: StickerShimmerEffectNode
     private(set) var animationNode: GenericAnimatedStickerNode?
     private var animationSize: CGSize?
-    private var additionalAnimationNodes: [AnimatedStickerNode] = []
+    private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
     private var didSetUpAnimationNode = false
     private var isPlaying = false
   
@@ -396,6 +396,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if self.visibilityStatus != oldValue {
                 self.updateVisibility()
                 self.haptic?.enabled = self.visibilityStatus
+                
+                
             }
         }
     }
@@ -524,6 +526,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let animationNode = self.animationNode as? AnimatedStickerNode {
             let isPlaying = self.visibilityStatus && !self.forceStopAnimations
+            
+            if !isPlaying {
+                for decorationNode in self.additionalAnimationNodes {
+                    if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
+                        decorationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak decorationNode] _ in
+                            if let decorationNode = decorationNode {
+                                transitionNode.remove(decorationNode: decorationNode)
+                            }
+                        })
+                    }
+                }
+                self.additionalAnimationNodes.removeAll()
+            }
+            
             if self.isPlaying != isPlaying {
                 self.isPlaying = isPlaying
                 
@@ -1339,21 +1355,29 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         if incomingMessage {
             additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
         }
-        var decorationNode: ChatMessageTransitionNode.DecorationItemNode?
-        if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
-            decorationNode = transitionNode.add(decorationNode: additionalAnimationNode, itemNode: self)
-        } else {
-            self.addSubnode(additionalAnimationNode)
+
+        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() else {
+            return
         }
-        additionalAnimationNode.completed = { [weak self, weak additionalAnimationNode] _ in
-            self?.additionalAnimationNodes.removeAll(where: { $0 === additionalAnimationNode })
-            additionalAnimationNode?.removeFromSupernode()
-            if let decorationNode = decorationNode, let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
-                transitionNode.remove(decorationNode: decorationNode)
+        let decorationNode = transitionNode.add(decorationNode: additionalAnimationNode, itemNode: self)
+        additionalAnimationNode.completed = { [weak self, weak decorationNode, weak transitionNode] _ in
+            guard let decorationNode = decorationNode else {
+                return
+            }
+            self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
+            transitionNode?.remove(decorationNode: decorationNode)
+        }
+        additionalAnimationNode.isPlayingChanged = { [weak self, weak decorationNode, weak transitionNode] isPlaying in
+            if !isPlaying {
+                guard let decorationNode = decorationNode else {
+                    return
+                }
+                self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
+                transitionNode?.remove(decorationNode: decorationNode)
             }
         }
         
-        self.additionalAnimationNodes.append(additionalAnimationNode)
+        self.additionalAnimationNodes.append(decorationNode)
         
         additionalAnimationNode.play()
         

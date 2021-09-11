@@ -168,7 +168,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                 outgoingInactiveControlColor = outgoingAccent
                 outgoingFileTitleColor = outgoingAccent
                 outgoingPollsProgressColor = outgoingControlColor
-                outgoingSelectionColor = outgoingAccent.withMultiplied(hue: 1.0, saturation: 1.292, brightness: 0.871)
+                outgoingSelectionColor = outgoingAccent.withAlphaComponent(0.2)
                 outgoingSelectionBaseColor = outgoingControlColor
                 outgoingCheckColor = outgoingAccent
             } else {
