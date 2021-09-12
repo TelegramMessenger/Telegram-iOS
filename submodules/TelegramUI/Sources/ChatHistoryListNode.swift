@@ -555,6 +555,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     var nextChannelToReadDisplayName: Bool = false
     private var currentOverscrollExpandProgress: CGFloat = 0.0
     private var freezeOverscrollControl: Bool = false
+    private var freezeOverscrollControlProgress: Bool = false
     private var feedback: HapticFeedback?
     var openNextChannelToRead: ((EnginePeer, TelegramEngine.NextUnreadChannelLocation) -> Void)?
     private var contentInsetAnimator: DisplayLinkAnimator?
@@ -1273,8 +1274,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf.freezeOverscrollControl = true
                     strongSelf.openNextChannelToRead?(nextChannelToRead.peer, nextChannelToRead.location)
                 } else {
+                    strongSelf.freezeOverscrollControlProgress = true
                     strongSelf.scroller.contentInset = UIEdgeInsets(top: 94.0 + 12.0, left: 0.0, bottom: 0.0, right: 0.0)
-                    Queue.mainQueue().after(0.5, {
+                    Queue.mainQueue().after(0.3, {
                         let animator = DisplayLinkAnimator(duration: 0.2, from: 1.0, to: 0.0, update: { rawT in
                             guard let strongSelf = self else {
                                 return
@@ -1288,6 +1290,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                             strongSelf.contentInsetAnimator = nil
                             strongSelf.scroller.contentInset = UIEdgeInsets()
+                            strongSelf.freezeOverscrollControlProgress = false
                         })
                         strongSelf.contentInsetAnimator = animator
                     })
@@ -1391,7 +1394,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: nil)
             }
 
-            let overscrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.insets.top), size: CGSize(width: self.bounds.width, height: 94.0))
+            var overscrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.insets.top), size: CGSize(width: self.bounds.width, height: 94.0))
+            if self.freezeOverscrollControlProgress {
+                overscrollFrame.origin.y -= max(0.0, 94.0 - expandDistance)
+            }
+
+            overscrollView.frame = self.view.convert(overscrollFrame, to: self.view.superview!)
 
             let _ = overscrollView.update(
                 transition: .immediate,
@@ -1402,7 +1410,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     unreadCount: self.nextChannelToRead?.unreadCount ?? 0,
                     location: self.nextChannelToRead?.location ?? .same,
                     context: self.context,
-                    expandDistance: expandDistance,
+                    expandDistance: self.freezeOverscrollControl ? 94.0 : expandDistance,
+                    freezeProgress: false,
                     absoluteRect: CGRect(origin: CGPoint(x: overscrollFrame.minX, y: self.bounds.height - overscrollFrame.minY), size: overscrollFrame.size),
                     absoluteSize: self.bounds.size,
                     wallpaperNode: chatControllerNode.backgroundNode
@@ -1410,7 +1419,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 environment: {},
                 containerSize: CGSize(width: self.bounds.width, height: 200.0)
             )
-            overscrollView.frame = self.view.convert(overscrollFrame, to: self.view.superview!)
         } else if let overscrollView = self.overscrollView {
             self.overscrollView = nil
             overscrollView.removeFromSuperview()
