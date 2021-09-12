@@ -13460,6 +13460,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return nil
                 }
             }
+            controller.dismissed = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.chatDisplayNode.historyNode.tapped = nil
+                }
+            }
+            strongSelf.chatDisplayNode.historyNode.tapped = { [weak controller] in
+                controller?.dimTapped()
+            }
             strongSelf.present(controller, in: .window(.root))
             strongSelf.themeSceen = controller
         })
