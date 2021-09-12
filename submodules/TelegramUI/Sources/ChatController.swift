@@ -3924,7 +3924,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let accountManager = context.sharedContext.accountManager
         let currentThemeEmoticon = Atomic<(String?, Bool)?>(value: nil)
-        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, themeSettings, context.engine.themes.getChatThemes(accountManager: accountManager, onlyCached: false), themeEmoticon, self.themeEmoticonAndDarkAppearancePreviewPromise.get()).start(next: { [weak self] presentationData, themeSettings, chatThemes, themeEmoticon, themeEmoticonAndDarkAppearance in
+        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, themeSettings, context.engine.themes.getChatThemes(accountManager: accountManager, onlyCached: true), themeEmoticon, self.themeEmoticonAndDarkAppearancePreviewPromise.get()).start(next: { [weak self] presentationData, themeSettings, chatThemes, themeEmoticon, themeEmoticonAndDarkAppearance in
             if let strongSelf = self {
                 let (themeEmoticonPreview, darkAppearancePreview) = themeEmoticonAndDarkAppearance
                 
@@ -13459,6 +13459,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else {
                     return nil
                 }
+            }
+            controller.dismissed = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.chatDisplayNode.historyNode.tapped = nil
+                }
+            }
+            strongSelf.chatDisplayNode.historyNode.tapped = { [weak controller] in
+                controller?.dimTapped()
             }
             strongSelf.present(controller, in: .window(.root))
             strongSelf.themeSceen = controller

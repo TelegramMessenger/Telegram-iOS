@@ -6721,6 +6721,8 @@ Sorry for the inconvenience.";
 "Conversation.Theme.DontSetTheme" = "Do Not Set Theme";
 "Conversation.Theme.SwitchToDark" = "Switch to dark appearance";
 "Conversation.Theme.SwitchToLight" = "Switch to light appearance";
+"Conversation.Theme.DismissAlert" = "Do you want to apply the selected theme to the chat?";
+"Conversation.Theme.DismissAlertApply" = "Apply";
 
 "Notification.ChangedTheme" = "%1$@ changed chat theme to %2$@";
 "Notification.DisabledTheme" = "%@ disabled chat theme";

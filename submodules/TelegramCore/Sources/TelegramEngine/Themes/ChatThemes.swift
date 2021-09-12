@@ -101,7 +101,7 @@ func _internal_getChatThemes(accountManager: AccountManager<TelegramAccountManag
             }
         }
         |> mapToSignal { current, hash -> Signal<[ChatTheme], NoError> in
-            if onlyCached {
+            if onlyCached && !current.isEmpty {
                 return .single(current)
             } else {
                 return .single(current)
@@ -150,4 +150,12 @@ extension ChatTheme {
                 self.init(emoji: emoticon, theme: TelegramTheme(apiTheme: theme), darkTheme: TelegramTheme(apiTheme: darkTheme))
         }
     }
+}
+
+func managedChatThemesUpdates(accountManager: AccountManager<TelegramAccountManagerTypes>, network: Network) -> Signal<Void, NoError> {
+    let poll = _internal_getChatThemes(accountManager: accountManager, network: network)
+    |> mapToSignal { _ -> Signal<Void, NoError> in
+        return .complete()
+    }
+    return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
