@@ -14,9 +14,9 @@ public protocol ContextControllerProtocol {
     var useComplexItemsTransitionAnimation: Bool { get set }
     var immediateItemsTransitionAnimation: Bool { get set }
 
-    func getActionsMinHeight() -> CGFloat?
-    func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?)
-    func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition)
+    func getActionsMinHeight() -> ContextController.ActionsHeight?
+    func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?)
+    func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition)
     func dismiss(completion: (() -> Void)?)
 }
 
@@ -131,7 +131,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     let contentReady = Promise<Bool>()
     
     private var currentItems: ContextController.Items?
-    private var currentActionsMinHeight: CGFloat?
+    private var currentActionsMinHeight: ContextController.ActionsHeight?
     
     private var validLayout: ContainerViewLayout?
     
@@ -1169,15 +1169,15 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         })
     }
 
-    func getActionsMinHeight() -> CGFloat? {
+    func getActionsMinHeight() -> ContextController.ActionsHeight? {
         if !self.actionsContainerNode.bounds.height.isZero {
-            return self.actionsContainerNode.bounds.height
+            return ContextController.ActionsHeight(minY: self.actionsContainerNode.frame.minY)
         } else {
             return nil
         }
     }
     
-    func setItemsSignal(items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+    func setItemsSignal(items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition) {
         self.items = items
         self.itemsDisposable.set((items
         |> deliverOnMainQueue).start(next: { [weak self] items in
@@ -1188,7 +1188,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }))
     }
     
-    private func setItems(items: ContextController.Items, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+    private func setItems(items: ContextController.Items, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition) {
         if let _ = self.currentItems, !self.didCompleteAnimationIn && self.getController()?.immediateItemsTransitionAnimation == true {
             return
         }
@@ -1293,7 +1293,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
                     let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: actionsContainerTransition)
-                    let adjustedActionsSize = CGSize(width: realActionsSize.width, height: max(realActionsSize.height, self.currentActionsMinHeight ?? 0.0))
+                    let adjustedActionsSize = realActionsSize
 
                     self.actionsContainerNode.updateSize(containerSize: realActionsSize, contentSize: realActionsSize)
                     let contentSize = originalProjectedContentViewFrame.1.size
@@ -1373,7 +1373,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
                     let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: actionsContainerTransition)
-                    let adjustedActionsSize = CGSize(width: realActionsSize.width, height: max(realActionsSize.height, self.currentActionsMinHeight ?? 0.0))
+                    let adjustedActionsSize = realActionsSize
 
                     self.actionsContainerNode.updateSize(containerSize: realActionsSize, contentSize: realActionsSize)
                     let contentSize = originalProjectedContentViewFrame.1.size
@@ -1381,7 +1381,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     
                     let maximumActionsFrameOrigin = max(60.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - adjustedActionsSize.height)
                     let preferredActionsX: CGFloat
-                    let originalActionsY: CGFloat
+                    var originalActionsY: CGFloat
                     if centerVertically {
                         originalActionsY = min(originalProjectedContentViewFrame.1.maxY + contentActionsSpacing, maximumActionsFrameOrigin)
                         preferredActionsX = originalProjectedContentViewFrame.1.maxX - adjustedActionsSize.width
@@ -1391,6 +1391,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     } else {
                         originalActionsY = min(originalProjectedContentViewFrame.1.maxY + contentActionsSpacing, maximumActionsFrameOrigin)
                         preferredActionsX = originalProjectedContentViewFrame.1.minX
+                    }
+
+                    if let currentActionsMinHeight = self.currentActionsMinHeight {
+                        originalActionsY = currentActionsMinHeight.minY
                     }
 
                     var originalActionsFrame = CGRect(origin: CGPoint(x: max(actionsSideInset, min(layout.size.width - adjustedActionsSize.width - actionsSideInset, preferredActionsX)), y: originalActionsY), size: realActionsSize)
@@ -1415,7 +1419,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     if keepInPlace {
                         contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset) - originalActionsFrame.minY + contentTopInset)
                     } else {
-                        contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset) - originalContentFrame.minY + contentTopInset)
+                        contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset + layout.intrinsicInsets.bottom)/* - originalContentFrame.minY + contentTopInset*/)
                     }
                     
                     var overflowOffset: CGFloat
@@ -1473,14 +1477,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     actionsContainerTransition.updateFrame(node: self.actionsContainerNode, frame: originalActionsFrame.offsetBy(dx: 0.0, dy: -overflowOffset))
                     
                     if isInitialLayout {
-                        let previousContentOffset = self.scrollNode.view.contentOffset.y
+                        //let previousContentOffset = self.scrollNode.view.contentOffset.y
                         if !keepInPlace {
                             self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: -overflowOffset)
                         }
                         let currentContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                         var offset: CGFloat = 0.0
-                        offset -= previousContentOffset - self.scrollNode.view.contentOffset.y
-                        //offset += previousContainerFrame.minY - currentContainerFrame.minY
+                        //offset -= previousContentOffset - self.scrollNode.view.contentOffset.y
+                        offset += previousContainerFrame.minY - currentContainerFrame.minY
                         transition.animatePositionAdditive(node: self.contentContainerNode, offset: CGPoint(x: 0.0, y: offset))
                         if overflowOffset < 0.0 {
                             let _ = currentContainerFrame
@@ -1889,6 +1893,14 @@ public final class ContextController: ViewController, StandalonePresentableContr
         case messageViewsPrivacy
     }
 
+    public final class ActionsHeight {
+        fileprivate let minY: CGFloat
+
+        fileprivate init(minY: CGFloat) {
+            self.minY = minY
+        }
+    }
+
     private let account: Account
     private var presentationData: PresentationData
     private let source: ContextContentSource
@@ -2029,21 +2041,21 @@ public final class ContextController: ViewController, StandalonePresentableContr
         }
     }
 
-    public func getActionsMinHeight() -> CGFloat? {
+    public func getActionsMinHeight() -> ContextController.ActionsHeight? {
         if self.isNodeLoaded {
             return self.controllerNode.getActionsMinHeight()
         }
         return nil
     }
     
-    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?) {
+    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?) {
         self.items = items
         if self.isNodeLoaded {
             self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: .scale)
         }
     }
 
-    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition) {
         self.items = items
         if self.isNodeLoaded {
             self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: previousActionsTransition)

@@ -34,14 +34,14 @@ public final class PeekController: ViewController, ContextControllerProtocol {
     public var useComplexItemsTransitionAnimation: Bool = false
     public var immediateItemsTransitionAnimation = false
 
-    public func getActionsMinHeight() -> CGFloat? {
+    public func getActionsMinHeight() -> ContextController.ActionsHeight? {
         return nil
     }
     
-    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?) {
+    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?) {
     }
 
-    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: CGFloat?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition) {
     }
     
     private var controllerNode: PeekControllerNode {
