@@ -1738,6 +1738,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
+    private let placeholderCalculationTextNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let shimmerNode: ShimmerEffectNode
     private let iconNode: ASImageNode
@@ -1772,11 +1773,15 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         self.highlightedBackgroundNode.alpha = 0.0
 
+        self.placeholderCalculationTextNode = ImmediateTextNode()
+        self.placeholderCalculationTextNode.attributedText = NSAttributedString(string: presentationData.strings.Conversation_ContextMenuSeen(11), font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
+        self.placeholderCalculationTextNode.maximumNumberOfLines = 1
+
         self.textNode = ImmediateTextNode()
         self.textNode.isAccessibilityElement = false
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
-        self.textNode.attributedText = NSAttributedString(string: " ", font: textFont, textColor: presentationData.theme.contextMenu.destructiveColor)
+        self.textNode.attributedText = NSAttributedString(string: " ", font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
         self.textNode.maximumNumberOfLines = 1
         self.textNode.alpha = 0.0
 
@@ -1918,6 +1923,8 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
         let textSize = self.textNode.updateLayout(CGSize(width: calculatedWidth - sideInset - rightTextInset - iconSize.width - 4.0, height: .greatestFiniteMagnitude))
 
+        let placeholderTextSize = self.placeholderCalculationTextNode.updateLayout(CGSize(width: calculatedWidth - sideInset - rightTextInset - iconSize.width - 4.0, height: .greatestFiniteMagnitude))
+
         let combinedTextHeight = textSize.height
         return (CGSize(width: calculatedWidth, height: verticalInset * 2.0 + combinedTextHeight), { size, transition in
             self.validLayout = (calculatedWidth: calculatedWidth, size: size)
@@ -1928,7 +1935,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
             let shimmerHeight: CGFloat = 8.0
 
-            self.shimmerNode.frame = CGRect(origin: CGPoint(x: textFrame.minX, y: floor((size.height - shimmerHeight) / 2.0)), size: CGSize(width: min(100.0, size.width - 40.0), height: shimmerHeight))
+            self.shimmerNode.frame = CGRect(origin: CGPoint(x: textFrame.minX, y: floor((size.height - shimmerHeight) / 2.0)), size: CGSize(width: placeholderTextSize.width, height: shimmerHeight))
             self.shimmerNode.cornerRadius = shimmerHeight / 2.0
             let shimmeringForegroundColor = self.presentationData.theme.contextMenu.itemSeparatorColor.blitOver(self.presentationData.theme.list.plainBackgroundColor, alpha: 0.9)
             let shimmeringColor = self.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.2)
