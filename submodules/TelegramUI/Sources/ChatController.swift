@@ -7435,15 +7435,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode({ itemNode in
                                     if !found, let itemNode = itemNode as? ChatMessageAnimatedStickerItemNode, let item = itemNode.item {
                                         if item.message.id == messageId {
-                                            for animation in interaction.animations {
-                                                if animation.timeOffset > 0.0 {
-                                                    Queue.mainQueue().after(Double(animation.timeOffset)) {
-                                                        itemNode.playAdditionalAnimation(index: animation.index)
-                                                    }
-                                                } else {
-                                                    itemNode.playAdditionalAnimation(index: animation.index)
-                                                }
-                                            }
+                                            itemNode.playEmojiInteraction(interaction)
                                             found = true
                                         }
                                     }

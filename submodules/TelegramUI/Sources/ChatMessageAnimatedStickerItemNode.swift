@@ -204,6 +204,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     private var forceStopAnimations = false
     
+    private var hapticFeedback: HapticFeedback?
     private var haptic: EmojiHaptic?
     private var mediaPlayer: MediaPlayer?
     private let mediaStatusDisposable = MetaDisposable()
@@ -1350,6 +1351,38 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         item.context.account.updateLocalInputActivity(peerId: PeerActivitySpace(peerId: item.message.id.peerId, category: .global), activity: .interactingWithEmoji(emoticon: textEmoji, messageId: item.message.id, interaction: EmojiInteraction(animations: animations)), isPresent: true)
+    }
+    
+    func playEmojiInteraction(_ interaction: EmojiInteraction) {
+        var hapticFeedback: HapticFeedback
+        if let current = self.hapticFeedback {
+            hapticFeedback = current
+        } else {
+            hapticFeedback = HapticFeedback()
+            self.hapticFeedback = hapticFeedback
+        }
+        
+        var playHaptic = true
+        if let existingHaptic = self.haptic, existingHaptic.active {
+            playHaptic = false
+        }
+        hapticFeedback.prepareTap()
+        
+        for animation in interaction.animations {
+            if animation.timeOffset > 0.0 {
+                Queue.mainQueue().after(Double(animation.timeOffset)) {
+                    self.playAdditionalAnimation(index: animation.index)
+                    if playHaptic {
+                        hapticFeedback.tap()
+                    }
+                }
+            } else {
+                self.playAdditionalAnimation(index: animation.index)
+                if playHaptic {
+                    hapticFeedback.tap()
+                }
+            }
+        }
     }
     
     func playAdditionalAnimation(index: Int) {
