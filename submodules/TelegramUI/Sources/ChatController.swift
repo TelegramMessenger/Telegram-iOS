@@ -7430,11 +7430,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.chatTitleView?.inputActivities = (peerId, displayActivities)
                         
                         for activity in activities {
-                            if case let .interactingWithEmoji(emoticon, maybeInteraction) = activity.1, let interaction = maybeInteraction {
+                            if case let .interactingWithEmoji(emoticon, messageId, maybeInteraction) = activity.1, let interaction = maybeInteraction {
                                 var found = false
                                 strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode({ itemNode in
                                     if !found, let itemNode = itemNode as? ChatMessageAnimatedStickerItemNode, let item = itemNode.item {
-                                        if item.message.text.strippedEmoji == emoticon {
+                                        if item.message.id == messageId {
                                             for animation in interaction.animations {
                                                 if animation.timeOffset > 0.0 {
                                                     Queue.mainQueue().after(Double(animation.timeOffset)) {
