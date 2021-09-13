@@ -1349,7 +1349,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             animations.append(EmojiInteraction.Animation(index: index, timeOffset: Float(max(0.0, timestamp - startTimestamp))))
         }
         
-        item.context.account.updateLocalInputActivity(peerId: PeerActivitySpace(peerId: item.message.id.peerId, category: .global), activity: .interactingWithEmoji(emoticon: textEmoji, interaction: EmojiInteraction(animations: animations)), isPresent: true)
+        item.context.account.updateLocalInputActivity(peerId: PeerActivitySpace(peerId: item.message.id.peerId, category: .global), activity: .interactingWithEmoji(emoticon: textEmoji, messageId: item.message.id, interaction: EmojiInteraction(animations: animations)), isPresent: true)
     }
     
     func playAdditionalAnimation(index: Int) {
@@ -1524,7 +1524,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                             return .optionalAction({
                                 if let animationItems = item.associatedData.additionalAnimatedEmojiStickers[originalTextEmoji] {
-                                    self.startAdditionalAnimationsCommitTimer()
+                                    let syncAnimations = item.message.id.peerId.namespace == Namespaces.Peer.CloudUser
+                                    
+                                    if syncAnimations {
+                                        self.startAdditionalAnimationsCommitTimer()
+                                    }
                                     
                                     let timestamp = CACurrentMediaTime()
                                     let previousAnimation = self.enqueuedAdditionalAnimations.last
@@ -1540,15 +1544,19 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                     if let index = availableAnimations.randomElement()?.0 {
                                         if delay > 0.0 {
                                             Queue.mainQueue().after(delay) {
-                                                self.enqueuedAdditionalAnimations.append((index, timestamp + delay))
+                                                if syncAnimations {
+                                                    self.enqueuedAdditionalAnimations.append((index, timestamp + delay))
+                                                }
                                                 self.playAdditionalAnimation(index: index)
                                                 
-                                                if self.additionalAnimationsCommitTimer == nil {
+                                                if syncAnimations, self.additionalAnimationsCommitTimer == nil {
                                                     self.startAdditionalAnimationsCommitTimer()
                                                 }
                                             }
                                         } else {
-                                            self.enqueuedAdditionalAnimations.append((index, timestamp))
+                                            if syncAnimations {
+                                                self.enqueuedAdditionalAnimations.append((index, timestamp))
+                                            }
                                             self.playAdditionalAnimation(index: index)
                                         }
                                     }

@@ -1254,7 +1254,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.readSecretOutbox(peerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(chatId))), timestamp: maxDate, actionTimestamp: date)
             case let .updateUserTyping(userId, type):
                 if let date = updatesDate, date + 60 > serverTime {
-                    let activity = PeerInputActivity(apiType: type, timestamp: date)
+                    let activity = PeerInputActivity(apiType: type, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), timestamp: date)
                     var category: PeerActivitySpace.Category = .global
                     if case .speakingInGroupCall = activity {
                         category = .voiceChat
@@ -1264,7 +1264,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 }
             case let .updateChatUserTyping(chatId, userId, type):
                 if let date = updatesDate, date + 60 > serverTime {
-                    let activity = PeerInputActivity(apiType: type, timestamp: date)
+                    let activity = PeerInputActivity(apiType: type, peerId: nil, timestamp: date)
                     var category: PeerActivitySpace.Category = .global
                     if case .speakingInGroupCall = activity {
                         category = .voiceChat
@@ -1277,7 +1277,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     let channelPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
                     let threadId = topMsgId.flatMap { makeMessageThreadId(MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: $0)) }
                     
-                    let activity = PeerInputActivity(apiType: type, timestamp: date)
+                    let activity = PeerInputActivity(apiType: type, peerId: nil, timestamp: date)
                     var category: PeerActivitySpace.Category = .global
                     if case .speakingInGroupCall = activity {
                         category = .voiceChat

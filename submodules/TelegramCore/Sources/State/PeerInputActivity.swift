@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 import TelegramApi
 
 public struct EmojiInteraction: Equatable {
@@ -31,8 +32,8 @@ public struct EmojiInteraction: Equatable {
                 var animations: [EmojiInteraction.Animation] = []
                 for animationDict in animationsArray {
                     if let animationDict = animationDict as? [String: Any] {
-                        if let index = animationDict["i"] as? Int, let timeOffset = animationDict["t"] as? Float {
-                            animations.append(EmojiInteraction.Animation(index: index, timeOffset: timeOffset))
+                        if let index = animationDict["i"] as? Int, let timeOffset = animationDict["t"] as? Double {
+                            animations.append(EmojiInteraction.Animation(index: index, timeOffset: Float(timeOffset)))
                         }
                     }
                 }
@@ -45,8 +46,10 @@ public struct EmojiInteraction: Equatable {
         }
     }
     
+    fileprivate let roundingBehavior = NSDecimalNumberHandler(roundingMode: .plain, scale: 2, raiseOnExactness: false, raiseOnOverflow: false, raiseOnUnderflow: false, raiseOnDivideByZero: true)
+
     public var apiDataJson: Api.DataJSON {
-        let dict = ["v": 1, "a": self.animations.map({ ["i": $0.index, "t": $0.timeOffset] })] as [String : Any]
+        let dict = ["v": 1, "a": self.animations.map({ ["i": $0.index, "t": NSDecimalNumber(value: $0.timeOffset).rounding(accordingToBehavior: roundingBehavior)] })] as [String : Any]
         if let data = try? JSONSerialization.data(withJSONObject: dict, options: []), let dataString = String(data: data, encoding: .utf8) {
             return .dataJSON(data: dataString)
         } else {
@@ -66,7 +69,7 @@ public enum PeerInputActivity: Comparable {
     case uploadingInstantVideo(progress: Int32)
     case speakingInGroupCall(timestamp: Int32)
     case choosingSticker
-    case interactingWithEmoji(emoticon: String, interaction: EmojiInteraction?)
+    case interactingWithEmoji(emoticon: String, messageId: MessageId, interaction: EmojiInteraction?)
     case seeingEmojiInteraction(emoticon: String)
     
     public var key: Int32 {
@@ -104,7 +107,7 @@ public enum PeerInputActivity: Comparable {
 }
 
 extension PeerInputActivity {
-    init?(apiType: Api.SendMessageAction, timestamp: Int32) {
+    init?(apiType: Api.SendMessageAction, peerId: PeerId?, timestamp: Int32) {
         switch apiType {
             case .sendMessageCancelAction, .sendMessageChooseContactAction, .sendMessageGeoLocationAction, .sendMessageRecordVideoAction:
                 return nil
@@ -130,8 +133,12 @@ extension PeerInputActivity {
                 self = .choosingSticker
             case .sendMessageHistoryImportAction:
                 return nil
-            case let .sendMessageEmojiInteraction(emoticon, interaction):
-                self = .interactingWithEmoji(emoticon: emoticon, interaction: EmojiInteraction(apiDataJson: interaction))
+            case let .sendMessageEmojiInteraction(emoticon, messageId, interaction):
+                if let peerId = peerId {
+                    self = .interactingWithEmoji(emoticon: emoticon, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageId), interaction: EmojiInteraction(apiDataJson: interaction))
+                } else {
+                    return nil
+                }
             case let .sendMessageEmojiInteractionSeen(emoticon):
                 self = .seeingEmojiInteraction(emoticon: emoticon)
         }

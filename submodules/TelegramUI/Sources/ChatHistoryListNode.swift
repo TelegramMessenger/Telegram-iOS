@@ -796,8 +796,21 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 case let .result(_, items, _):
                     for case let item as StickerPackItem in items {
                         let indexKeys = item.getStringRepresentationsOfIndexKeys()
-                        if indexKeys.count > 1, let emoji = indexKeys.first, let indexEmoji = indexKeys.last?.first {
-                            if let strIndex = sequence.firstIndex(of: indexEmoji) {
+                        if indexKeys.count > 1, let first = indexKeys.first, let last = indexKeys.last {
+                            let emoji: String?
+                            let indexEmoji: String?
+                            if sequence.contains(first) {
+                                emoji = last
+                                indexEmoji = first
+                            } else if sequence.contains(last) {
+                                emoji = first
+                                indexEmoji = last
+                            } else {
+                                emoji = nil
+                                indexEmoji = nil
+                            }
+                            
+                            if let emoji = emoji, let indexEmoji = indexEmoji?.first,  let strIndex = sequence.firstIndex(of: indexEmoji) {
                                 let emoji = emoji.strippedEmoji
                                 let index = sequence.distance(from: sequence.startIndex, to: strIndex)
                                 if animatedEmojiStickers[emoji] != nil {
