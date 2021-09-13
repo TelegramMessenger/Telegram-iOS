@@ -1130,6 +1130,7 @@ public class Account {
         
         if !self.supplementary {
             self.managedOperationsDisposable.add(managedAnimatedEmojiUpdates(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedAnimatedEmojiAnimationsUpdates(postbox: self.postbox, network: self.network).start())
         }
         self.managedOperationsDisposable.add(managedGreetingStickers(postbox: self.postbox, network: self.network).start())
 

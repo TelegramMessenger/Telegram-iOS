@@ -16939,6 +16939,7 @@ public extension Api {
         case inputStickerSetShortName(shortName: String)
         case inputStickerSetAnimatedEmoji
         case inputStickerSetDice(emoticon: String)
+        case inputStickerSetAnimatedEmojiAnimations
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -16973,6 +16974,12 @@ public extension Api {
                     }
                     serializeString(emoticon, buffer: buffer, boxed: false)
                     break
+                case .inputStickerSetAnimatedEmojiAnimations:
+                    if boxed {
+                        buffer.appendInt32(215889721)
+                    }
+                    
+                    break
     }
     }
     
@@ -16988,6 +16995,8 @@ public extension Api {
                 return ("inputStickerSetAnimatedEmoji", [])
                 case .inputStickerSetDice(let emoticon):
                 return ("inputStickerSetDice", [("emoticon", emoticon)])
+                case .inputStickerSetAnimatedEmojiAnimations:
+                return ("inputStickerSetAnimatedEmojiAnimations", [])
     }
     }
     
@@ -17032,6 +17041,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_inputStickerSetAnimatedEmojiAnimations(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetAnimatedEmojiAnimations
         }
     
     }

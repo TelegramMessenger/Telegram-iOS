@@ -392,12 +392,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             let text = NSAttributedString(string: item.strings.Conversation_Theme_NoTheme, font: Font.semibold(15.0), textColor: item.theme.actionSheet.controlAccentColor)
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: text, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            var emoticon = item.emoticon
-            if emoticon == "🦁" {
-                emoticon = "🌳"
-            } else if emoticon == "🔮" {
-                emoticon = "🎆"
-            }
+            let emoticon = item.emoticon
             let title = NSAttributedString(string: emoticon != nil ? "" : "❌", font: Font.regular(22.0), textColor: .black)
             let (_, emojiApply) = makeEmojiLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
@@ -823,12 +818,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             var entries: [ThemeSettingsThemeEntry] = []
             entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: nil, emojiFile: nil, themeReference: nil, selected: selectedEmoticon == nil, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             for theme in themes {
-                var emoticon = theme.emoji
-                if emoticon == "🦁" {
-                    emoticon = "🌳"
-                } else if emoticon == "🔮" {
-                    emoticon = "🎆"
-                }
+                let emoticon = theme.emoji
                 entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: theme.emoji, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: isDarkAppearance ? theme.darkTheme : theme.theme, resolvedWallpaper: nil, creatorAccountId: nil)), selected: selectedEmoticon == theme.emoji, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             

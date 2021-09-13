@@ -2,10 +2,20 @@ import Foundation
 import TelegramApi
 
 public struct EmojiInteraction: Equatable {
-    public let animation: Int
+    public struct Animation: Equatable {
+        public let index: Int
+        public let timeOffset: Float
+        
+        public init(index: Int, timeOffset: Float) {
+            self.index = index
+            self.timeOffset = timeOffset
+        }
+    }
     
-    public init(animation: Int) {
-        self.animation = animation
+    public let animations: [Animation]
+    
+    public init(animations: [Animation]) {
+        self.animations = animations
     }
     
     public init?(apiDataJson: Api.DataJSON) {
@@ -15,10 +25,18 @@ public struct EmojiInteraction: Equatable {
                 guard let item = decodedData as? [String: Any] else {
                     return nil
                 }
-                guard let animation = item["animation"] as? Int else {
+                guard let animationsArray = item["a"] as? [Any] else {
                     return nil
                 }
-                self.animation = animation
+                var animations: [EmojiInteraction.Animation] = []
+                for animationDict in animationsArray {
+                    if let animationDict = animationDict as? [String: Any] {
+                        if let index = animationDict["i"] as? Int, let timeOffset = animationDict["t"] as? Float {
+                            animations.append(EmojiInteraction.Animation(index: index, timeOffset: timeOffset))
+                        }
+                    }
+                }
+                self.animations = animations
             } catch {
                 return nil
             }
@@ -28,7 +46,7 @@ public struct EmojiInteraction: Equatable {
     }
     
     public var apiDataJson: Api.DataJSON {
-        let dict = ["animation": animation]
+        let dict = ["v": 1, "a": self.animations.map({ ["i": $0.index, "t": $0.timeOffset] })] as [String : Any]
         if let data = try? JSONSerialization.data(withJSONObject: dict, options: []), let dataString = String(data: data, encoding: .utf8) {
             return .dataJSON(data: dataString)
         } else {

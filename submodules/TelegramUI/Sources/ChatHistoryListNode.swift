@@ -311,7 +311,7 @@ private final class ChatHistoryTransactionOpaqueState {
     }
 }
 
-private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?) -> ChatMessageItemAssociatedData {
+private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?) -> ChatMessageItemAssociatedData {
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
     var channelDiscussionGroup: ChatMessageItemAssociatedData.ChannelDiscussionGroupStatus = .unknown
@@ -360,7 +360,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
         }
     }
     
-    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId)
+    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId)
 }
 
 private extension ChatHistoryLocationInput {
@@ -786,6 +786,32 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             return animatedEmojiStickers
         }
         
+        let additionalAnimatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmojiAnimations, forceActualized: false)
+        |> map { animatedEmoji -> [String: [Int: StickerPackItem]] in
+            let sequence = "0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣"
+            var animatedEmojiStickers: [String: [Int: StickerPackItem]] = [:]
+            switch animatedEmoji {
+                case let .result(_, items, _):
+                    for case let item as StickerPackItem in items {
+                        let indexKeys = item.getStringRepresentationsOfIndexKeys()
+                        if indexKeys.count > 1, let emoji = indexKeys.first, let indexEmoji = indexKeys.last?.first {
+                            if let strIndex = sequence.firstIndex(of: indexEmoji) {
+                                let emoji = emoji.strippedEmoji
+                                let index = sequence.distance(from: sequence.startIndex, to: strIndex)
+                                if animatedEmojiStickers[emoji] != nil {
+                                    animatedEmojiStickers[emoji]![index] = item
+                                } else {
+                                    animatedEmojiStickers[emoji] = [index: item]
+                                }
+                            }
+                        }
+                    }
+                default:
+                    break
+            }
+            return animatedEmojiStickers
+        }
+        
         let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)
                 
         let updatingMedia = context.account.pendingUpdateMessageManager.updatingMessageMedia
@@ -869,11 +895,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self.pendingUnpinnedAllMessagesPromise.get(),
             self.pendingRemovedMessagesPromise.get(),
             animatedEmojiStickers,
+            additionalAnimatedEmojiStickers,
             customChannelDiscussionReadState,
             customThreadOutgoingReadState,
             self.currentlyPlayingMessageIdPromise.get(),
             adMessages
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, currentlyPlayingMessageId, adMessages in
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, currentlyPlayingMessageId, adMessages in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -956,7 +983,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     reverse = reverseValue
                 }
                 
-                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId)
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId)
                 
                 let filteredEntries = chatHistoryEntriesForView(
                     location: chatLocation,
