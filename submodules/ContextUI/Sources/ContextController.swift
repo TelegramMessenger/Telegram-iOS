@@ -1171,7 +1171,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
 
     func getActionsMinHeight() -> ContextController.ActionsHeight? {
         if !self.actionsContainerNode.bounds.height.isZero {
-            return ContextController.ActionsHeight(minY: self.actionsContainerNode.frame.minY)
+            return ContextController.ActionsHeight(
+                minY: self.actionsContainerNode.frame.minY,
+                contentOffset: self.scrollNode.view.contentOffset.y
+            )
         } else {
             return nil
         }
@@ -1419,7 +1422,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     if keepInPlace {
                         contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset) - originalActionsFrame.minY + contentTopInset)
                     } else {
-                        contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset + layout.intrinsicInsets.bottom)/* - originalContentFrame.minY + contentTopInset*/)
+                        if self.currentActionsMinHeight != nil {
+                            contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset + layout.intrinsicInsets.bottom))
+                        } else {
+                            contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset + layout.intrinsicInsets.bottom) - originalContentFrame.minY + contentTopInset)
+                        }
                     }
                     
                     var overflowOffset: CGFloat
@@ -1479,7 +1486,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     if isInitialLayout {
                         //let previousContentOffset = self.scrollNode.view.contentOffset.y
                         if !keepInPlace {
-                            self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: -overflowOffset)
+                            if let currentActionsMinHeight = self.currentActionsMinHeight {
+                                self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: currentActionsMinHeight.contentOffset)
+                            } else {
+                                self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: -overflowOffset)
+                            }
                         }
                         let currentContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                         var offset: CGFloat = 0.0
@@ -1895,9 +1906,11 @@ public final class ContextController: ViewController, StandalonePresentableContr
 
     public final class ActionsHeight {
         fileprivate let minY: CGFloat
+        fileprivate let contentOffset: CGFloat
 
-        fileprivate init(minY: CGFloat) {
+        fileprivate init(minY: CGFloat, contentOffset: CGFloat) {
             self.minY = minY
+            self.contentOffset = contentOffset
         }
     }
 
