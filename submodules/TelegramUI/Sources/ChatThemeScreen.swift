@@ -339,17 +339,23 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
     
     override func selected() {
+        let wasSelected = self.item?.selected ?? false
         super.selected()
         
         if let animatedStickerNode = self.animatedStickerNode {
-            Queue.mainQueue().after(0.1) {        
-                let started = animatedStickerNode.playIfNeeded()
-                if started {
+            Queue.mainQueue().after(0.1) {
+                if !wasSelected {
+                    animatedStickerNode.seekTo(.frameIndex(0))
+                    animatedStickerNode.play()
+                    
                     let scale: CGFloat = 2.6
                     animatedStickerNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
                     animatedStickerNode.layer.animateSpring(from: 1.0 as NSNumber, to: scale as NSNumber, keyPath: "transform.scale", duration: 0.45)
                     
-                    animatedStickerNode.completed = { [weak animatedStickerNode] _ in
+                    animatedStickerNode.completed = { [weak animatedStickerNode, weak self] _ in
+                        guard let item = self?.item, item.selected else {
+                            return
+                        }
                         animatedStickerNode?.transform = CATransform3DIdentity
                         animatedStickerNode?.layer.animateSpring(from: scale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
                     }
@@ -400,7 +406,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             return (itemLayout, { animated in
                 if let strongSelf = self {
                     strongSelf.item = item
-                    
+                        
                     if updatedThemeReference || updatedWallpaper {
                         if let themeReference = item.themeReference {
                             strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, emoticon: true))
@@ -413,6 +419,13 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                     
                     if updatedTheme || updatedSelected {
                         strongSelf.overlayNode.image = generateBorderImage(theme: item.theme, bordered: false, selected: item.selected)
+                    }
+                    
+                    if !item.selected && currentItem?.selected == true, let animatedStickerNode = strongSelf.animatedStickerNode {
+                        animatedStickerNode.transform = CATransform3DIdentity
+                        
+                        let initialScale: CGFloat = CGFloat((animatedStickerNode.value(forKeyPath: "layer.presentationLayer.transform.scale.x") as? NSNumber)?.floatValue ?? 1.0)
+                        animatedStickerNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
                     }
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((90.0 - textLayout.size.width) / 2.0), y: 24.0), size: textLayout.size)
