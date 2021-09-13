@@ -63,11 +63,11 @@ final class PeerNotificationSettingsTable: Table {
     private var cachedSettings: [PeerId: PeerNotificationSettingsTableEntry] = [:]
     private var updatedInitialSettings: [PeerId: PeerNotificationSettingsTableEntry] = [:]
     
-    init(valueBox: ValueBox, table: ValueBoxTable, pendingIndexTable: PendingPeerNotificationSettingsIndexTable, behaviorTable: PeerNotificationSettingsBehaviorTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, pendingIndexTable: PendingPeerNotificationSettingsIndexTable, behaviorTable: PeerNotificationSettingsBehaviorTable) {
         self.pendingIndexTable = pendingIndexTable
         self.behaviorTable = behaviorTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ id: PeerId) -> ValueBoxKey {
@@ -301,6 +301,10 @@ final class PeerNotificationSettingsTable: Table {
             }
             
             self.updatedInitialSettings.removeAll()
+
+            if !self.useCaches {
+                self.cachedSettings.removeAll()
+            }
         }
     }
 }

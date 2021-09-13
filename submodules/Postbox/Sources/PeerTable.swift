@@ -13,10 +13,10 @@ final class PeerTable: Table {
     private var cachedPeers: [PeerId: Peer] = [:]
     private var updatedInitialPeers: [PeerId: Peer?] = [:]
     
-    init(valueBox: ValueBox, table: ValueBoxTable, reverseAssociatedTable: ReverseAssociatedPeerTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, reverseAssociatedTable: ReverseAssociatedPeerTable) {
         self.reverseAssociatedTable = reverseAssociatedTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ id: PeerId) -> ValueBoxKey {
@@ -87,6 +87,9 @@ final class PeerTable: Table {
             }
             
             self.updatedInitialPeers.removeAll()
+            if !self.useCaches {
+                self.cachedPeers.removeAll()
+            }
         }
     }
 }

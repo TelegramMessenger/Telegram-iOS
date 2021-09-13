@@ -19,10 +19,10 @@ final class OrderedItemListTable: Table {
     
     private let indexTable: OrderedItemListIndexTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, indexTable: OrderedItemListIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, indexTable: OrderedItemListIndexTable) {
         self.indexTable = indexTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func keyIndexToId(collectionId: Int32, itemIndex: UInt32) -> ValueBoxKey {

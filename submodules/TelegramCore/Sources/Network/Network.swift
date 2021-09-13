@@ -423,16 +423,6 @@ public struct NetworkInitializationArguments {
 private let cloudDataContext = Atomic<CloudDataContext?>(value: nil)
 #endif
 
-private final class SharedContextStore {
-    struct Key: Hashable {
-        var accountId: AccountRecordId
-    }
-    
-    var contexts: [Key: MTContext] = [:]
-}
-
-private let sharedContexts = Atomic<SharedContextStore>(value: SharedContextStore())
-
 func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         let queue = Queue()
@@ -475,19 +465,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             
             let useTempAuthKeys: Bool = true
             
-            var contextValue: MTContext?
-            sharedContexts.with { store in
-                let key = SharedContextStore.Key(accountId: accountId)
-                
-                let context: MTContext
-
-                context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
-                store.contexts[key] = context
-
-                contextValue = context
-            }
-            
-            let context = contextValue!
+            let context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
             
             let seedAddressList: [Int: [String]]
             
@@ -538,10 +516,6 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             }
             #endif
             context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber))
-            
-            #if DEBUG
-            //let _ = MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber).start(next: nil)
-            #endif
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil), requiredAuthToken: nil, authTokenMasterDatacenterId: 0)!
             mtProto.useTempAuthKeys = context.useTempAuthKeys

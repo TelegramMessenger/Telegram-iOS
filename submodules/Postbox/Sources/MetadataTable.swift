@@ -19,8 +19,8 @@ final class MetadataTable: Table {
     
     private let sharedBuffer = WriteBuffer()
     
-    override init(valueBox: ValueBox, table: ValueBoxTable) {
-        super.init(valueBox: valueBox, table: table)
+    override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ key: MetadataKey) -> ValueBoxKey {

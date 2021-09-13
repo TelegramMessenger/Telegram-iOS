@@ -33,6 +33,13 @@ final public class AdaptedPostboxDecoder {
     }
 
     func decode<T>(_ type: T.Type, from data: Data, contentType: ContentType) throws -> T where T : Decodable {
+        if type == AdaptedPostboxDecoder.RawObjectData.self {
+            if case .object = contentType {
+                return AdaptedPostboxDecoder.RawObjectData(data: data, typeHash: 0) as! T
+            } else {
+                preconditionFailure()
+            }
+        }
         let decoder = _AdaptedPostboxDecoder(data: data, contentType: contentType)
         return try T(from: decoder)
     }

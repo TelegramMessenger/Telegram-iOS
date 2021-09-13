@@ -52,15 +52,15 @@ public enum DeletedMessageId: Hashable {
 
 public final class AccountStateManager {
     private let queue = Queue()
-    private let accountPeerId: PeerId
+    public let accountPeerId: PeerId
     private let accountManager: AccountManager<TelegramAccountManagerTypes>
-    private let postbox: Postbox
-    private let network: Network
-    private let callSessionManager: CallSessionManager
+    public let postbox: Postbox
+    public let network: Network
+    private let callSessionManager: CallSessionManager?
     private let addIsContactUpdates: ([(PeerId, Bool)]) -> Void
     private let shouldKeepOnlinePresence: Signal<Bool, NoError>
     
-    private let peerInputActivityManager: PeerInputActivityManager
+    private let peerInputActivityManager: PeerInputActivityManager?
     let auxiliaryMethods: AccountAuxiliaryMethods
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
     
@@ -166,7 +166,7 @@ public final class AccountStateManager {
     private let appliedQtsPromise = Promise<Int32?>(nil)
     private let appliedQtsDisposable = MetaDisposable()
     
-    init(accountPeerId: PeerId, accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network, callSessionManager: CallSessionManager, addIsContactUpdates: @escaping ([(PeerId, Bool)]) -> Void, shouldKeepOnlinePresence: Signal<Bool, NoError>, peerInputActivityManager: PeerInputActivityManager, auxiliaryMethods: AccountAuxiliaryMethods) {
+    init(accountPeerId: PeerId, accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network, callSessionManager: CallSessionManager?, addIsContactUpdates: @escaping ([(PeerId, Bool)]) -> Void, shouldKeepOnlinePresence: Signal<Bool, NoError>, peerInputActivityManager: PeerInputActivityManager?, auxiliaryMethods: AccountAuxiliaryMethods) {
         self.accountPeerId = accountPeerId
         self.accountManager = accountManager
         self.postbox = postbox
@@ -183,9 +183,14 @@ public final class AccountStateManager {
         self.operationDisposable.dispose()
         self.appliedMaxMessageIdDisposable.dispose()
         self.appliedQtsDisposable.dispose()
+
+        var postbox: Postbox? = self.postbox
+        postbox?.queue.async {
+            postbox = nil
+        }
     }
     
-    func reset() {
+    public func reset() {
         self.queue.async {
             if self.updateService == nil {
                 self.updateService = UpdateMessageService(peerId: self.accountPeerId)
@@ -641,7 +646,7 @@ public final class AccountStateManager {
                         let topOperation = strongSelf.operations.removeFirst()
                         if case .processEvents(operationId, _) = topOperation.content {
                             if !events.updatedTypingActivities.isEmpty {
-                                strongSelf.peerInputActivityManager.transaction { manager in
+                                strongSelf.peerInputActivityManager?.transaction { manager in
                                     for (chatPeerId, peerActivities) in events.updatedTypingActivities {
                                         for (peerId, activity) in peerActivities {
                                             if let activity = activity {
@@ -661,12 +666,12 @@ public final class AccountStateManager {
                             }
                             if !events.updatedCalls.isEmpty {
                                 for call in events.updatedCalls {
-                                    strongSelf.callSessionManager.updateSession(call, completion: { _ in })
+                                    strongSelf.callSessionManager?.updateSession(call, completion: { _ in })
                                 }
                             }
                             if !events.addedCallSignalingData.isEmpty {
                                 for (id, data) in events.addedCallSignalingData {
-                                    strongSelf.callSessionManager.addCallSignalingData(id: id, data: data)
+                                    strongSelf.callSessionManager?.addCallSignalingData(id: id, data: data)
                                 }
                             }
                             if !events.updatedGroupCallParticipants.isEmpty {
@@ -1046,9 +1051,13 @@ public final class AccountStateManager {
                 for update in updates {
                     switch update {
                     case let .updatePhoneCall(phoneCall):
-                        self.callSessionManager.updateSession(phoneCall, completion: { result in
-                            completion(result)
-                        })
+                        if let callSessionManager = self.callSessionManager {
+                            callSessionManager.updateSession(phoneCall, completion: { result in
+                                completion(result)
+                            })
+                        } else {
+                            completion(nil)
+                        }
                         return
                     default:
                         break

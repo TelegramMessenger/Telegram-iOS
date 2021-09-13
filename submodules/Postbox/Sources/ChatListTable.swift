@@ -133,12 +133,12 @@ final class ChatListTable: Table {
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
-    init(valueBox: ValueBox, table: ValueBoxTable, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.indexTable = indexTable
         self.metadataTable = metadataTable
         self.seedConfiguration = seedConfiguration
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(groupId: PeerGroupId, index: ChatListIndex, type: ChatListEntryType) -> ValueBoxKey {

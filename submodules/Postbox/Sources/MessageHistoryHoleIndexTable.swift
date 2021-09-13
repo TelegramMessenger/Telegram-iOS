@@ -49,11 +49,11 @@ final class MessageHistoryHoleIndexTable: Table {
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
-    init(valueBox: ValueBox, table: ValueBoxTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.seedConfiguration = seedConfiguration
         self.metadataTable = metadataTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(id: MessageId, space: MessageHistoryHoleSpace) -> ValueBoxKey {

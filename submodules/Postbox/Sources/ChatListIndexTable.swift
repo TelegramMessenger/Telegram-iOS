@@ -52,13 +52,13 @@ final class ChatListIndexTable: Table {
     
     private var updatedPreviousPeerCachedIndices: [PeerId: ChatListPeerInclusionIndex] = [:]
     
-    init(valueBox: ValueBox, table: ValueBoxTable, peerNameIndexTable: PeerNameIndexTable, metadataTable: MessageHistoryMetadataTable, readStateTable: MessageHistoryReadStateTable, notificationSettingsTable: PeerNotificationSettingsTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, peerNameIndexTable: PeerNameIndexTable, metadataTable: MessageHistoryMetadataTable, readStateTable: MessageHistoryReadStateTable, notificationSettingsTable: PeerNotificationSettingsTable) {
         self.peerNameIndexTable = peerNameIndexTable
         self.metadataTable = metadataTable
         self.readStateTable = readStateTable
         self.notificationSettingsTable = notificationSettingsTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ peerId: PeerId) -> ValueBoxKey {
@@ -554,6 +554,10 @@ final class ChatListIndexTable: Table {
     
     override func beforeCommit() {
         assert(self.updatedPreviousPeerCachedIndices.isEmpty)
+
+        if !self.useCaches {
+            self.cachedPeerIndices.removeAll()
+        }
     }
     
     func debugReindexUnreadCounts(postbox: Postbox, currentTransaction: Transaction) -> ([PeerGroupId: ChatListTotalUnreadState], [PeerGroupId: PeerGroupUnreadCountersCombinedSummary]) {

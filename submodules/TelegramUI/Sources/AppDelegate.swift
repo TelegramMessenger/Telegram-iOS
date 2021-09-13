@@ -677,7 +677,7 @@ final class SharedApplicationContext {
         })
         
         let accountManagerSignal = Signal<AccountManager<TelegramAccountManagerTypes>, NoError> { subscriber in
-            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false)
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true)
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
@@ -1489,6 +1489,10 @@ final class SharedApplicationContext {
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
+        if "".isEmpty {
+            return;
+        }
+
         if #available(iOS 9.0, *) {
             /*guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
                 return

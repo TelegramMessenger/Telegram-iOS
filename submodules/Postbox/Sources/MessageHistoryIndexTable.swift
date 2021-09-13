@@ -47,13 +47,13 @@ final class MessageHistoryIndexTable: Table {
     
     private var cachedExistingNamespaces: [PeerId: Set<MessageId.Namespace>] = [:]
     
-    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, globalMessageIdsTable: GlobalMessageIdsTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, globalMessageIdsTable: GlobalMessageIdsTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.messageHistoryHoleIndexTable = messageHistoryHoleIndexTable
         self.globalMessageIdsTable = globalMessageIdsTable
         self.seedConfiguration = seedConfiguration
         self.metadataTable = metadataTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ id: MessageId) -> ValueBoxKey {

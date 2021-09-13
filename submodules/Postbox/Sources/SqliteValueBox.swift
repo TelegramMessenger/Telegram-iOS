@@ -163,6 +163,7 @@ public final class SqliteValueBox: ValueBox {
     fileprivate let basePath: String
     private let isTemporary: Bool
     private let isReadOnly: Bool
+    private let useCaches: Bool
     private let inMemory: Bool
     private let encryptionParameters: ValueBoxEncryptionParameters?
     private let databasePath: String
@@ -201,10 +202,11 @@ public final class SqliteValueBox: ValueBox {
     
     private let queue: Queue
     
-    public init?(basePath: String, queue: Queue, isTemporary: Bool, isReadOnly: Bool, encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void, inMemory: Bool = false) {
+    public init?(basePath: String, queue: Queue, isTemporary: Bool, isReadOnly: Bool, useCaches: Bool, encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void, inMemory: Bool = false) {
         self.basePath = basePath
         self.isTemporary = isTemporary
         self.isReadOnly = isReadOnly
+        self.useCaches = useCaches
         self.inMemory = inMemory
         self.encryptionParameters = encryptionParameters
         self.databasePath = basePath + "/db_sqlite"
@@ -420,8 +422,11 @@ public final class SqliteValueBox: ValueBox {
         }
 
         postboxLog("Did set up encryption")
-        
-        //database.execute("PRAGMA cache_size=-2097152")
+
+        if !self.useCaches {
+            resultCode = database.execute("PRAGMA cache_size=32")
+            assert(resultCode)
+        }
         resultCode = database.execute("PRAGMA mmap_size=0")
         assert(resultCode)
         resultCode = database.execute("PRAGMA synchronous=NORMAL")

@@ -21,30 +21,30 @@ private func makeExclusiveKeychain(id: AccountRecordId, postbox: Postbox) -> Key
         }
         return dict
     }
-    return Keychain(get: { key in
+    return Keychain(get: { [weak postbox] key in
         let enabled = accountRecordToActiveKeychainId.with { dict -> Bool in
             return dict[id] == keychainId
         }
-        if enabled {
+        if enabled, let postbox = postbox {
             return postbox.keychainEntryForKey(key)
         } else {
             Logger.shared.log("Keychain", "couldn't get \(key) — not current")
             return nil
         }
-    }, set: { (key, data) in
+    }, set: { [weak postbox] key, data in
         let enabled = accountRecordToActiveKeychainId.with { dict -> Bool in
             return dict[id] == keychainId
         }
-        if enabled {
+        if enabled, let postbox = postbox {
             postbox.setKeychainEntryForKey(key, value: data)
         } else {
             Logger.shared.log("Keychain", "couldn't set \(key) — not current")
         }
-    }, remove: { key in
+    }, remove: { [weak postbox] key in
         let enabled = accountRecordToActiveKeychainId.with { dict -> Bool in
             return dict[id] == keychainId
         }
-        if enabled {
+        if enabled, let postbox = postbox {
             postbox.removeKeychainEntryForKey(key)
         } else {
             Logger.shared.log("Keychain", "couldn't remove \(key) — not current")
@@ -162,85 +162,19 @@ public enum AccountResult {
     case authorized(Account)
 }
 
-public enum AccountPreferenceEntriesResult {
-    case progress(Float)
-    case result(String, [ValueBoxKey: PreferencesEntry])
-}
-
-public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys: Set<ValueBoxKey>, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountPreferenceEntriesResult, NoError> {
-    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true, isReadOnly: true, useCopy: false)
-    return postbox
-    |> mapToSignal { value -> Signal<AccountPreferenceEntriesResult, NoError> in
-        switch value {
-            case let .upgrading(progress):
-                return .single(.progress(progress))
-            case let .postbox(postbox):
-                return postbox.transaction { transaction -> AccountPreferenceEntriesResult in
-                    var result: [ValueBoxKey: PreferencesEntry] = [:]
-                    for key in keys {
-                        if let value = transaction.getPreferencesEntry(key: key) {
-                            result[key] = value
-                        }
-                    }
-                    return .result(path, result)
-                }
-            case .error:
-                return .single(.progress(0.0))
-        }
-    }
-}
-
-public enum AccountNoticeEntriesResult {
-    case progress(Float)
-    case result(String, [ValueBoxKey: NoticeEntry])
-}
-
-public func accountNoticeEntries(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountNoticeEntriesResult, NoError> {
-    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true, isReadOnly: true, useCopy: false)
-    return postbox
-    |> mapToSignal { value -> Signal<AccountNoticeEntriesResult, NoError> in
-        switch value {
-            case let .upgrading(progress):
-                return .single(.progress(progress))
-            case let .postbox(postbox):
-                return postbox.transaction { transaction -> AccountNoticeEntriesResult in
-                    return .result(path, transaction.getAllNoticeEntries())
-                }
-            case .error:
-                return .single(.progress(0.0))
-        }
-    }
-}
-
-public enum LegacyAccessChallengeDataResult {
-    case progress(Float)
-    case result(PostboxAccessChallengeData)
-}
-
-public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<LegacyAccessChallengeDataResult, NoError> {
-    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true, isReadOnly: true, useCopy: false)
-    return postbox
-    |> mapToSignal { value -> Signal<LegacyAccessChallengeDataResult, NoError> in
-        switch value {
-            case let .upgrading(progress):
-                return .single(.progress(progress))
-            case let .postbox(postbox):
-                return postbox.transaction { transaction -> LegacyAccessChallengeDataResult in
-                    return .result(transaction.legacyGetAccessChallengeData())
-                }
-            case .error:
-                return .single(.progress(0.0))
-        }
-    }
-}
-
 public func accountWithId(accountManager: AccountManager<TelegramAccountManagerTypes>, networkArguments: NetworkInitializationArguments, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, backupData: AccountBackupData?, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: false, isReadOnly: false, useCopy: false)
+    let postbox = openPostbox(
+        basePath: path + "/postbox",
+        seedConfiguration: telegramPostboxSeedConfiguration,
+        encryptionParameters: encryptionParameters,
+        timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970),
+        isTemporary: false,
+        isReadOnly: false,
+        useCopy: false,
+        useCaches: !supplementary
+    )
     
     return postbox
     |> mapToSignal { result -> Signal<AccountResult, NoError> in
@@ -251,7 +185,11 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                 return .single(.upgrading(0.0))
             case let .postbox(postbox):
                 return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
-                    return (transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self), transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self))
+                    var localizationSettings: LocalizationSettings?
+                    if !supplementary {
+                        localizationSettings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self)
+                    }
+                    return (localizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self))
                 }
                 |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountResult, NoError> in
                     return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
@@ -740,22 +678,30 @@ public struct MasterNotificationKey: Codable {
 }
 
 public func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
-    return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: ignoreDisabled)
+    return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: ignoreDisabled, createIfNotExists: true)
+    |> map { value -> MasterNotificationKey in
+        return value!
+    }
 }
 
-private func masterNotificationsKey(masterNotificationKeyValue: Atomic<MasterNotificationKey?>, postbox: Postbox, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
+public func existingMasterNotificationsKey(postbox: Postbox) -> Signal<MasterNotificationKey?, NoError> {
+    let value = Atomic<MasterNotificationKey?>(value: nil)
+    return masterNotificationsKey(masterNotificationKeyValue: value, postbox: postbox, ignoreDisabled: true, createIfNotExists: false)
+}
+
+private func masterNotificationsKey(masterNotificationKeyValue: Atomic<MasterNotificationKey?>, postbox: Postbox, ignoreDisabled: Bool, createIfNotExists: Bool) -> Signal<MasterNotificationKey?, NoError> {
     if let key = masterNotificationKeyValue.with({ $0 }) {
         return .single(key)
     }
     
-    return postbox.transaction(ignoreDisabled: ignoreDisabled, { transaction -> MasterNotificationKey in
+    return postbox.transaction(ignoreDisabled: ignoreDisabled, { transaction -> MasterNotificationKey? in
         if let value = transaction.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
             let authKeyHash = sha1Digest(value)
             let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
             let keyData = MasterNotificationKey(id: authKeyId, data: value)
             let _ = masterNotificationKeyValue.swap(keyData)
             return keyData
-        } else {
+        } else if createIfNotExists {
             var secretData = Data(count: 256)
             let secretDataCount = secretData.count
             if !secretData.withUnsafeMutableBytes({ rawBytes -> Bool in
@@ -772,6 +718,8 @@ private func masterNotificationsKey(masterNotificationKeyValue: Atomic<MasterNot
             let keyData = MasterNotificationKey(id: authKeyId, data: secretData)
             let _ = masterNotificationKeyValue.swap(keyData)
             return keyData
+        } else {
+            return nil
         }
     })
 }
@@ -818,8 +766,11 @@ public func decryptedNotificationPayload(key: MasterNotificationKey, data: Data)
 }
 
 public func decryptedNotificationPayload(account: Account, data: Data) -> Signal<Data?, NoError> {
-    return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: true)
+    return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: true, createIfNotExists: false)
     |> map { secret -> Data? in
+        guard let secret = secret else {
+            return nil
+        }
         return decryptedNotificationPayload(key: secret, data: data)
     }
 }
@@ -969,12 +920,8 @@ public class Account {
         
         let networkStateQueue = Queue()
         
-        let networkStateSignal = combineLatest(queue: networkStateQueue, self.stateManager.isUpdating, network.connectionStatus/*, delayNetworkStatus*/)
-        |> map { isUpdating, connectionStatus/*, delayNetworkStatus*/ -> AccountNetworkState in
-            /*if delayNetworkStatus {
-                return .online(proxy: nil)
-            }*/
-            
+        let networkStateSignal = combineLatest(queue: networkStateQueue, self.stateManager.isUpdating, network.connectionStatus)
+        |> map { isUpdating, connectionStatus -> AccountNetworkState in
             switch connectionStatus {
                 case .waitingForNetwork:
                     return .waitingForNetwork
@@ -1076,7 +1023,10 @@ public class Account {
         self.managedOperationsDisposable.add(managedApplyPendingMessageReactionsActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedSynchronizeEmojiKeywordsOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedApplyPendingScheduledMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedChatListFilters(postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
+
+        if !supplementary {
+            self.managedOperationsDisposable.add(managedChatListFilters(postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
+        }
         
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
@@ -1140,7 +1090,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeAppLogEventsOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedNotificationSettingsBehaviors(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedThemesUpdates(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
-        if !self.testingEnvironment {
+        if !self.testingEnvironment && !supplementary {
             self.managedOperationsDisposable.add(managedChatThemesUpdates(accountManager: accountManager, network: self.network).start())
         }
         
@@ -1161,7 +1111,7 @@ public class Account {
             })
         }
         
-        let _ = masterNotificationsKey(masterNotificationKeyValue: self.masterNotificationKey, postbox: self.postbox, ignoreDisabled: false).start(next: { key in
+        let _ = masterNotificationsKey(masterNotificationKeyValue: self.masterNotificationKey, postbox: self.postbox, ignoreDisabled: false, createIfNotExists: true).start(next: { key in
             let encoder = JSONEncoder()
             if let data = try? encoder.encode(key) {
                 let _ = try? data.write(to: URL(fileURLWithPath: "\(basePath)/notificationsKey"))
@@ -1300,4 +1250,96 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     account.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     account.pendingMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     account.pendingUpdateMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
+}
+
+public func standaloneStateManager(
+    accountManager: AccountManager<TelegramAccountManagerTypes>,
+    networkArguments: NetworkInitializationArguments,
+    id: AccountRecordId,
+    encryptionParameters: ValueBoxEncryptionParameters,
+    rootPath: String,
+    auxiliaryMethods: AccountAuxiliaryMethods
+) -> Signal<AccountStateManager?, NoError> {
+    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
+
+    let postbox = openPostbox(
+        basePath: path + "/postbox",
+        seedConfiguration: telegramPostboxSeedConfiguration,
+        encryptionParameters: encryptionParameters,
+        timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970),
+        isTemporary: false,
+        isReadOnly: false,
+        useCopy: false,
+        useCaches: false
+    )
+
+    return postbox
+    |> take(1)
+    |> mapToSignal { result -> Signal<AccountStateManager?, NoError> in
+        switch result {
+        case .upgrading:
+            return .single(nil)
+        case .error:
+            return .single(nil)
+        case let .postbox(postbox):
+            return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
+                return (nil, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self))
+            }
+            |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountStateManager?, NoError> in
+                return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                    let state = transaction.getState()
+
+                    return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self))
+                }
+                |> mapToSignal { accountState, localizationSettings, proxySettings, networkSettings -> Signal<AccountStateManager?, NoError> in
+                    let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
+
+                    if let accountState = accountState {
+                        switch accountState {
+                        case _ as UnauthorizedAccountState:
+                            return .single(nil)
+                        case let authorizedState as AuthorizedAccountState:
+                            return postbox.transaction { transaction -> String? in
+                                return (transaction.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
+                            }
+                            |> mapToSignal { phoneNumber in
+                                return initializedNetwork(
+                                    accountId: id,
+                                    arguments: networkArguments,
+                                    supplementary: true,
+                                    datacenterId: Int(authorizedState.masterDatacenterId),
+                                    keychain: keychain,
+                                    basePath: path,
+                                    testingEnvironment: authorizedState.isTestingEnvironment,
+                                    languageCode: localizationSettings?.primaryComponent.languageCode,
+                                    proxySettings: proxySettings,
+                                    networkSettings: networkSettings,
+                                    phoneNumber: phoneNumber
+                                )
+                                |> map { network -> AccountStateManager? in
+                                    return AccountStateManager(
+                                        accountPeerId: authorizedState.peerId,
+                                        accountManager: accountManager,
+                                        postbox: postbox,
+                                        network: network,
+                                        callSessionManager: nil,
+                                        addIsContactUpdates: { _ in
+                                        },
+                                        shouldKeepOnlinePresence: .single(false),
+                                        peerInputActivityManager: nil,
+                                        auxiliaryMethods: auxiliaryMethods
+                                    )
+                                }
+                            }
+                        default:
+                            assertionFailure("Unexpected accountState \(accountState)")
+                            return .single(nil)
+                        }
+                    } else {
+                        return .single(nil)
+                    }
+                }
+            }
+        }
+    }
 }

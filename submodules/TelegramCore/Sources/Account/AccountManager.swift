@@ -282,36 +282,6 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
     }
 }
 
-public final class TemporaryAccount {
-    public let id: AccountRecordId
-    public let basePath: String
-    public let postbox: Postbox
-    
-    init(id: AccountRecordId, basePath: String, postbox: Postbox) {
-        self.id = id
-        self.basePath = basePath
-        self.postbox = postbox
-    }
-}
-
-public func temporaryAccount(manager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<TemporaryAccount, NoError> {
-    return manager.allocatedTemporaryAccountId()
-    |> mapToSignal { id -> Signal<TemporaryAccount, NoError> in
-        let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-        return openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: false, isReadOnly: false, useCopy: false)
-        |> mapToSignal { result -> Signal<TemporaryAccount, NoError> in
-            switch result {
-                case .upgrading:
-                    return .complete()
-                case .error:
-                    return .complete()
-                case let .postbox(postbox):
-                    return .single(TemporaryAccount(id: id, basePath: path, postbox: postbox))
-            }
-        }
-    }
-}
-
 public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountResult?, NoError> {
     return manager.currentAccountRecord(allocateIfNotExists: allocateIfNotExists)
     |> distinctUntilChanged(isEqual: { lhs, rhs in
