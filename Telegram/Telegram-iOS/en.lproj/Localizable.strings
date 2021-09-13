@@ -6718,8 +6718,11 @@ Sorry for the inconvenience.";
 "Conversation.Theme.Apply" = "Apply Theme";
 "Conversation.Theme.NoTheme" = "No\nTheme";
 "Conversation.Theme.Reset" = "Reset Theme for This Chat";
+"Conversation.Theme.DontSetTheme" = "Do Not Set Theme";
 "Conversation.Theme.SwitchToDark" = "Switch to dark appearance";
 "Conversation.Theme.SwitchToLight" = "Switch to light appearance";
+"Conversation.Theme.DismissAlert" = "Do you want to apply the selected theme to the chat?";
+"Conversation.Theme.DismissAlertApply" = "Apply";
 
 "Notification.ChangedTheme" = "%1$@ changed chat theme to %2$@";
 "Notification.DisabledTheme" = "%@ disabled chat theme";
@@ -6777,7 +6780,7 @@ Telegram offers free and unlimited service to hundreds of millions of users, whi
 [url]
 Ads should no longer be synonymous with abuse of user privacy. Let us redefine how a tech compony should operate — together.";
 "SponsoredMessageInfo.Action" = "Learn More";
-"SponsoredMessageInfo.ActionUrl" = "https://telegram.org/ads";
+"SponsoredMessageInfo.Url" = "https://telegram.org/ads";
 
 "Chat.NavigationNoChannels" = "You have no unread channels";
 
@@ -6816,3 +6819,10 @@ Ads should no longer be synonymous with abuse of user privacy. Let us redefine h
 
 "VideoChat.RecordingSaved" = "Video chat recording saved to **Saved Messages**.";
 "LiveStream.RecordingSaved" = "Live stream recording saved to **Saved Messages**.";
+
+"ChatContextMenu.MessageViewsPrivacyTip" = "To protect privacy, views are only stored for 7 days.";
+
+"MESSAGE_NOTHEME" = "%1$@ changed theme to default one";
+"CHAT_MESSAGE_NOTHEME" = "%1$@ set theme to default one in the group %2$@";
+
+"Activity.EnjoyingAnimations" = "enjoying %@ animations";

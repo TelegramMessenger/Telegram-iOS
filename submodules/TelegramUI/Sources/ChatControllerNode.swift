@@ -2578,6 +2578,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return false
         }
 
+        var hasAd = false
+        self.historyNode.forEachVisibleItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                if let _ = itemNode.item?.message.adAttribute {
+                    hasAd = true
+                }
+            }
+        }
+
+        if hasAd {
+            return false
+        }
+
         switch self.historyNode.visibleContentOffset() {
         case let .known(value) where value < 20.0:
             return true
@@ -2586,6 +2599,23 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         default:
             return false
         }
+    }
+
+    var shouldUseFastMessageSendAnimation: Bool {
+        var hasAd = false
+        self.historyNode.forEachVisibleItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                if let _ = itemNode.item?.message.adAttribute {
+                    hasAd = true
+                }
+            }
+        }
+
+        if hasAd {
+            return false
+        }
+
+        return true
     }
 
     var shouldAllowOverscrollActions: Bool {

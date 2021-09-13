@@ -1458,7 +1458,7 @@ final class ChatMediaInputNode: ChatInputNode {
             
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: sourceNode, sourceRect: sourceRect)), items: .single(items), reactionItems: [], gesture: gesture)
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: sourceNode, sourceRect: sourceRect)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: gesture)
             strongSelf.controllerInteraction.presentGlobalOverlayController(contextController, nil)
         })
     }

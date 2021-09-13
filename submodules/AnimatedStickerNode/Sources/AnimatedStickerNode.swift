@@ -830,6 +830,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
         }
     }
     
+    public var isPlayingChanged: (Bool) -> Void = { _ in }
+    
     override public init() {
         self.queue = sharedQueue
         self.eventsNode = AnimatedStickerNodeDisplayEvents()
@@ -959,6 +961,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
             } else{
                 self.pause()
             }
+            
+            self.isPlayingChanged(isPlaying)
         }
         let canDisplayFirstFrame = self.automaticallyLoadFirstFrame && self.isDisplaying
         if self.canDisplayFirstFrame != canDisplayFirstFrame {
@@ -1046,7 +1050,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             if frame.isLastFrame {
                                 var stopped = false
                                 var stopNow = false
-                                if case .once = strongSelf.playbackMode {
+                                if case .still = strongSelf.playbackMode {
+                                    stopNow = true
+                                } else if case .once = strongSelf.playbackMode {
                                     stopNow = true
                                 } else if case let .count(count) = strongSelf.playbackMode {
                                     strongSelf.currentLoopCount += 1
@@ -1143,7 +1149,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             if frame.isLastFrame {
                                 var stopped = false
                                 var stopNow = false
-                                if case .once = strongSelf.playbackMode {
+                                if case .still = strongSelf.playbackMode {
+                                    stopNow = true
+                                } else if case .once = strongSelf.playbackMode {
                                     stopNow = true
                                 } else if case let .count(count) = strongSelf.playbackMode {
                                     strongSelf.currentLoopCount += 1

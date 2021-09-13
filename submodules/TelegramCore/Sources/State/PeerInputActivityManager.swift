@@ -328,7 +328,9 @@ final class PeerInputActivityManager {
             
             let timeout: Double
             switch activity {
-            case .speakingInGroupCall:
+            case .interactingWithEmoji:
+                timeout = 2.0
+            case .speakingInGroupCall, .seeingEmojiInteraction:
                 timeout = 3.0
             default:
                 timeout = 8.0

@@ -168,9 +168,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private(set) var placeholderNode: StickerShimmerEffectNode
     private(set) var animationNode: GenericAnimatedStickerNode?
     private var animationSize: CGSize?
-    private var additionalAnimationNodes: [AnimatedStickerNode] = []
     private var didSetUpAnimationNode = false
     private var isPlaying = false
+    
+    private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
+    private var enqueuedAdditionalAnimations: [(Int, Double)] = []
+    private var additionalAnimationsCommitTimer: SwiftSignalKit.Timer?
   
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
@@ -183,6 +186,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     var emojiFile: TelegramMediaFile?
     var telegramDice: TelegramMediaDice?
     private let disposable = MetaDisposable()
+    private let disposables = DisposableSet()
     
     private var forwardInfoNode: ChatMessageForwardInfoNode?
     private var forwardBackgroundNode: NavigationBackgroundNode?
@@ -305,7 +309,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     deinit {
         self.disposable.dispose()
+        self.disposables.dispose()
         self.mediaStatusDisposable.set(nil)
+        self.additionalAnimationsCommitTimer?.invalidate()
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -396,6 +402,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if self.visibilityStatus != oldValue {
                 self.updateVisibility()
                 self.haptic?.enabled = self.visibilityStatus
+                
+                
             }
         }
     }
@@ -513,6 +521,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
                 }
                 self.updateVisibility()
+                
+                if let animationItems = item.associatedData.additionalAnimatedEmojiStickers[item.message.text.strippedEmoji] {
+                    for (_, animationItem) in animationItems {
+                        self.disposables.add(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: animationItem.file)).start())
+                    }
+                }
             }
         }
     }
@@ -524,6 +538,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let animationNode = self.animationNode as? AnimatedStickerNode {
             let isPlaying = self.visibilityStatus && !self.forceStopAnimations
+            
+            if !isPlaying {
+                for decorationNode in self.additionalAnimationNodes {
+                    if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
+                        decorationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak decorationNode] _ in
+                            if let decorationNode = decorationNode {
+                                transitionNode.remove(decorationNode: decorationNode)
+                            }
+                        })
+                    }
+                }
+                self.additionalAnimationNodes.removeAll()
+            }
+            
             if self.isPlaying != isPlaying {
                 self.isPlaying = isPlaying
                 
@@ -1290,34 +1318,93 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    private func playAdditionalAnimation(_ name: String) {
-        let source = AnimatedStickerNodeLocalFileSource(name: name)
-        guard let item = self.item, let path = source.path, let animationSize = self.animationSize, let animationNode = self.animationNode, self.additionalAnimationNodes.count < 4 else {
+    private func startAdditionalAnimationsCommitTimer() {
+        guard self.additionalAnimationsCommitTimer == nil else {
             return
         }
-        let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-        
-        self.supernode?.view.bringSubviewToFront(self.view)
-        
-        let resource = BundleResource(name: name, path: path)
-        let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
-        
-        let additionalAnimationNode = AnimatedStickerNode()
-        additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 3.0), height: Int(animationSize.height * 3.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
-        additionalAnimationNode.completed = { [weak self, weak additionalAnimationNode] _ in
-            self?.additionalAnimationNodes.removeAll(where: { $0 === additionalAnimationNode })
-            additionalAnimationNode?.removeFromSupernode()
+        let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+            self?.commitEnqueuedAnimations()
+            self?.additionalAnimationsCommitTimer?.invalidate()
+            self?.additionalAnimationsCommitTimer = nil
+        }, queue: Queue.mainQueue())
+        self.additionalAnimationsCommitTimer = timer
+        timer.start()
+    }
+    
+    private func commitEnqueuedAnimations() {
+        guard let item = self.item, !self.enqueuedAdditionalAnimations.isEmpty else {
+            return
         }
+        let textEmoji = item.message.text.strippedEmoji
+        
+        let enqueuedAnimations = self.enqueuedAdditionalAnimations
+        self.enqueuedAdditionalAnimations.removeAll()
+        
+        guard let startTimestamp = enqueuedAnimations.first?.1 else {
+            return
+        }
+        
+        var animations: [EmojiInteraction.Animation] = []
+        for (index, timestamp) in enqueuedAnimations {
+            animations.append(EmojiInteraction.Animation(index: index, timeOffset: Float(max(0.0, timestamp - startTimestamp))))
+        }
+        
+        item.context.account.updateLocalInputActivity(peerId: PeerActivitySpace(peerId: item.message.id.peerId, category: .global), activity: .interactingWithEmoji(emoticon: textEmoji, interaction: EmojiInteraction(animations: animations)), isPresent: true)
+    }
+    
+    func playAdditionalAnimation(index: Int) {
+        guard let item = self.item else {
+            return
+        }
+        
+        let textEmoji = item.message.text.strippedEmoji
+        guard let animationItems = item.associatedData.additionalAnimatedEmojiStickers[textEmoji], index < 10, let file = animationItems[index]?.file else {
+            return
+        }
+        let source = AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: nil)
+        guard let animationSize = self.animationSize, let animationNode = self.animationNode, self.additionalAnimationNodes.count < 4 else {
+            return
+        }
+        
+        if let animationNode = animationNode as? AnimatedStickerNode {
+            let _ = animationNode.playIfNeeded()
+        }
+        
+        let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
+                    
+        let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+        let additionalAnimationNode = AnimatedStickerNode()
+        additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2.0), height: Int(animationSize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
         var animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
-            .offsetBy(dx: incoming ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
+            .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
         animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
         additionalAnimationNode.frame = animationFrame
-        if incoming {
+        if incomingMessage {
             additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
         }
-        self.addSubnode(additionalAnimationNode)
+
+        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() else {
+            return
+        }
+        let decorationNode = transitionNode.add(decorationNode: additionalAnimationNode, itemNode: self)
+        additionalAnimationNode.completed = { [weak self, weak decorationNode, weak transitionNode] _ in
+            guard let decorationNode = decorationNode else {
+                return
+            }
+            self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
+            transitionNode?.remove(decorationNode: decorationNode)
+        }
+        additionalAnimationNode.isPlayingChanged = { [weak self, weak decorationNode, weak transitionNode] isPlaying in
+            if !isPlaying {
+                guard let decorationNode = decorationNode else {
+                    return
+                }
+                self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
+                transitionNode?.remove(decorationNode: decorationNode)
+            }
+        }
         
-        self.additionalAnimationNodes.append(additionalAnimationNode)
+        self.additionalAnimationNodes.append(decorationNode)
         
         additionalAnimationNode.play()
     }
@@ -1420,29 +1507,51 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let heart = 0x2764
                         let peach = 0x1F351
                         let coffin = 0x26B0
-                        let fireworks = 0x1F386
                         
                         let appConfiguration = item.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
                         |> take(1)
                         |> map { view in
                             return view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
                         }
-                                                
-                        if let text = self.item?.message.text, var firstScalar = text.unicodeScalars.first {
+                                          
+                        let text = item.message.text
+                        if var firstScalar = text.unicodeScalars.first {
                             var textEmoji = text.strippedEmoji
+                            let originalTextEmoji = textEmoji
                             if beatingHearts.contains(firstScalar.value) {
                                 textEmoji = "❤️"
                                 firstScalar = UnicodeScalar(heart)!
                             }
                             return .optionalAction({
-                                if firstScalar.value == heart {
-                                    if self.additionalAnimationNodes.count % 2 == 0 {
-                                        self.playAdditionalAnimation("TestHearts")
-                                    } else {
-                                        self.playAdditionalAnimation("TestHearts2")
+                                if let animationItems = item.associatedData.additionalAnimatedEmojiStickers[originalTextEmoji] {
+                                    self.startAdditionalAnimationsCommitTimer()
+                                    
+                                    let timestamp = CACurrentMediaTime()
+                                    let previousAnimation = self.enqueuedAdditionalAnimations.last
+                                    
+                                    var availableAnimations = animationItems
+                                    var delay: Double = 0.0
+                                    if availableAnimations.count > 1, let (previousIndex, _) = previousAnimation {
+                                        availableAnimations.removeValue(forKey: previousIndex)
                                     }
-                                } else if firstScalar.value == fireworks {
-                                    self.playAdditionalAnimation("TestFireworks")
+                                    if let (_, previousTimestamp) = previousAnimation {
+                                        delay = min(0.2, max(0.0, previousTimestamp + 0.2 - timestamp))
+                                    }
+                                    if let index = availableAnimations.randomElement()?.0 {
+                                        if delay > 0.0 {
+                                            Queue.mainQueue().after(delay) {
+                                                self.enqueuedAdditionalAnimations.append((index, timestamp + delay))
+                                                self.playAdditionalAnimation(index: index)
+                                                
+                                                if self.additionalAnimationsCommitTimer == nil {
+                                                    self.startAdditionalAnimationsCommitTimer()
+                                                }
+                                            }
+                                        } else {
+                                            self.enqueuedAdditionalAnimations.append((index, timestamp))
+                                            self.playAdditionalAnimation(index: index)
+                                        }
+                                    }
                                 }
                                 
                                 if shouldPlay {

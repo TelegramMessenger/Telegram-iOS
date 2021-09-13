@@ -1,6 +1,60 @@
 import Foundation
 import TelegramApi
 
+public struct EmojiInteraction: Equatable {
+    public struct Animation: Equatable {
+        public let index: Int
+        public let timeOffset: Float
+        
+        public init(index: Int, timeOffset: Float) {
+            self.index = index
+            self.timeOffset = timeOffset
+        }
+    }
+    
+    public let animations: [Animation]
+    
+    public init(animations: [Animation]) {
+        self.animations = animations
+    }
+    
+    public init?(apiDataJson: Api.DataJSON) {
+        if case let .dataJSON(string) = apiDataJson, let data = string.data(using: .utf8) {
+            do {
+                let decodedData = try JSONSerialization.jsonObject(with: data, options: [])
+                guard let item = decodedData as? [String: Any] else {
+                    return nil
+                }
+                guard let animationsArray = item["a"] as? [Any] else {
+                    return nil
+                }
+                var animations: [EmojiInteraction.Animation] = []
+                for animationDict in animationsArray {
+                    if let animationDict = animationDict as? [String: Any] {
+                        if let index = animationDict["i"] as? Int, let timeOffset = animationDict["t"] as? Float {
+                            animations.append(EmojiInteraction.Animation(index: index, timeOffset: timeOffset))
+                        }
+                    }
+                }
+                self.animations = animations
+            } catch {
+                return nil
+            }
+        } else {
+            return nil
+        }
+    }
+    
+    public var apiDataJson: Api.DataJSON {
+        let dict = ["v": 1, "a": self.animations.map({ ["i": $0.index, "t": $0.timeOffset] })] as [String : Any]
+        if let data = try? JSONSerialization.data(withJSONObject: dict, options: []), let dataString = String(data: data, encoding: .utf8) {
+            return .dataJSON(data: dataString)
+        } else {
+            return .dataJSON(data: "")
+        }
+    }
+}
+
 public enum PeerInputActivity: Comparable {
     case typingText
     case uploadingFile(progress: Int32)
@@ -12,6 +66,8 @@ public enum PeerInputActivity: Comparable {
     case uploadingInstantVideo(progress: Int32)
     case speakingInGroupCall(timestamp: Int32)
     case choosingSticker
+    case interactingWithEmoji(emoticon: String, interaction: EmojiInteraction?)
+    case seeingEmojiInteraction(emoticon: String)
     
     public var key: Int32 {
         switch self {
@@ -35,6 +91,10 @@ public enum PeerInputActivity: Comparable {
                 return 8
             case .choosingSticker:
                 return 9
+            case .interactingWithEmoji:
+                return 10
+            case .seeingEmojiInteraction:
+                return 11
         }
     }
     
@@ -70,6 +130,10 @@ extension PeerInputActivity {
                 self = .choosingSticker
             case .sendMessageHistoryImportAction:
                 return nil
+            case let .sendMessageEmojiInteraction(emoticon, interaction):
+                self = .interactingWithEmoji(emoticon: emoticon, interaction: EmojiInteraction(apiDataJson: interaction))
+            case let .sendMessageEmojiInteractionSeen(emoticon):
+                self = .seeingEmojiInteraction(emoticon: emoticon)
         }
     }
 }

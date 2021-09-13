@@ -35,9 +35,14 @@ func _internal_messageReadStats(account: Account, id: MessageId) -> Signal<Messa
                 var peerIds: [PeerId] = []
                 var missingPeerIds: [PeerId] = []
 
+                let authorId = transaction.getMessage(id)?.author?.id
+
                 for id in result {
                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))
                     if peerId == account.peerId {
+                        continue
+                    }
+                    if peerId == authorId {
                         continue
                     }
                     peerIds.append(peerId)

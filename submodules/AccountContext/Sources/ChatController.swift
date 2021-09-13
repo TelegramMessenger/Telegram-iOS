@@ -22,10 +22,11 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let contactsPeerIds: Set<EnginePeer.Id>
     public let channelDiscussionGroup: ChannelDiscussionGroupStatus
     public let animatedEmojiStickers: [String: [StickerPackItem]]
+    public let additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]]
     public let forcedResourceStatus: FileMediaResourceStatus?
     public let currentlyPlayingMessageId: EngineMessage.Index?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
@@ -33,6 +34,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.contactsPeerIds = contactsPeerIds
         self.channelDiscussionGroup = channelDiscussionGroup
         self.animatedEmojiStickers = animatedEmojiStickers
+        self.additionalAnimatedEmojiStickers = additionalAnimatedEmojiStickers
         self.forcedResourceStatus = forcedResourceStatus
         self.currentlyPlayingMessageId = currentlyPlayingMessageId
     }
@@ -57,6 +59,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.animatedEmojiStickers != rhs.animatedEmojiStickers {
+            return false
+        }
+        if lhs.additionalAnimatedEmojiStickers != rhs.additionalAnimatedEmojiStickers {
             return false
         }
         if lhs.forcedResourceStatus != rhs.forcedResourceStatus {
