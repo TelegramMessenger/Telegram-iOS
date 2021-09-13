@@ -1017,7 +1017,11 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.previewTheme?(self.selectedEmoticon, isDarkAppearance)
         self.isDarkAppearance = isDarkAppearance
         
-        let _ = ApplicationSpecificNotice.incrementChatSpecificThemeDarkPreviewTip(accountManager: self.context.sharedContext.accountManager, count: 3, timestamp: Int32(Date().timeIntervalSince1970)).start()
+        if isDarkAppearance {
+            let _ = ApplicationSpecificNotice.incrementChatSpecificThemeDarkPreviewTip(accountManager: self.context.sharedContext.accountManager, count: 3, timestamp: Int32(Date().timeIntervalSince1970)).start()
+        } else {
+            let _ = ApplicationSpecificNotice.incrementChatSpecificThemeLightPreviewTip(accountManager: self.context.sharedContext.accountManager, count: 3, timestamp: Int32(Date().timeIntervalSince1970)).start()
+        }
     }
     
     private func animateCrossfade(animateIcon: Bool = true) {
