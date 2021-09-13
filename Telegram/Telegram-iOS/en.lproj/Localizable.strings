@@ -6715,12 +6715,15 @@ Sorry for the inconvenience.";
 "UserInfo.ChangeColors" = "Change Colors";
 
 "Conversation.Theme.Title" = "Select Theme";
+"Conversation.Theme.Subtitle" = "Theme will be also applied for %@";
 "Conversation.Theme.Apply" = "Apply Theme";
 "Conversation.Theme.NoTheme" = "No\nTheme";
 "Conversation.Theme.Reset" = "Reset Theme for This Chat";
 "Conversation.Theme.DontSetTheme" = "Do Not Set Theme";
 "Conversation.Theme.SwitchToDark" = "Switch to dark appearance";
 "Conversation.Theme.SwitchToLight" = "Switch to light appearance";
+"Conversation.Theme.PreviewDark" = "Tap to see how chat will appear to\n%@ when using night mode.";
+"Conversation.Theme.PreviewLight" = "Tap to see how chat will appear to\n%@ when using day mode.";
 "Conversation.Theme.DismissAlert" = "Do you want to apply the selected theme to the chat?";
 "Conversation.Theme.DismissAlertApply" = "Apply";
 

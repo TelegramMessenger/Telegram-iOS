@@ -13436,7 +13436,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            
+                
             let selectedEmoticon: String?
             if let cachedData = cachedData as? CachedUserData {
                 selectedEmoticon = cachedData.themeEmoticon
@@ -13448,7 +13448,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 selectedEmoticon = nil
             }
             
-            let controller = ChatThemeScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, animatedEmojiStickers: animatedEmojiStickers, initiallySelectedEmoticon: selectedEmoticon, previewTheme: { [weak self] emoticon, dark in
+            let controller = ChatThemeScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, animatedEmojiStickers: animatedEmojiStickers, initiallySelectedEmoticon: selectedEmoticon, peerName: strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer?.compactDisplayTitle ?? "", previewTheme: { [weak self] emoticon, dark in
                 if let strongSelf = self {
                     strongSelf.presentCrossfadeSnapshot(delay: 0.2)
                     strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon, dark)))

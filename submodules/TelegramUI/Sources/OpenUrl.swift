@@ -624,10 +624,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         game = value
                                     } else if queryItem.name == "post" {
                                         post = value
-                                    } else if queryItem.name == "voicechat" {
+                                    } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                         voiceChat = value
                                     }
-                                } else if queryItem.name == "voicechat" {
+                                } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
                                 }
                             }
