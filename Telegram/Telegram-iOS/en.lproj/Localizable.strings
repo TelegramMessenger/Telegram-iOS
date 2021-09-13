@@ -5837,8 +5837,11 @@ Sorry for the inconvenience.";
 "VoiceChat.StartRecordingText" = "Do you want to start recording this chat and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "LiveStream.StartRecordingText" = "Do you want to start recording this live stream and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "VoiceChat.StartRecordingStart" = "Start";
+"VoiceChat.StartRecordingTextVideo" = "Do you want to start recording this chat and save the result into a video file?\n\nOther members will see that the chat is being recorded.";
+"LiveStream.StartRecordingTextVideo" = "Do you want to start recording this live stream and save the result into a video file?\n\nOther members will see that the chat is being recorded.";
 
 "VoiceChat.RecordingTitlePlaceholder" = "Audio Title (Optional)";
+"VoiceChat.RecordingTitlePlaceholderVideo" = "Video Title (Optional)";
 "VoiceChat.RecordingStarted" = "Voice chat recording started";
 "LiveStream.RecordingStarted" = "Live stream recording started";
 "VoiceChat.RecordingInProgress" = "Voice chat is being recorded";
