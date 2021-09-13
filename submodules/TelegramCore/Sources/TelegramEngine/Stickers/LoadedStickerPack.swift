@@ -19,6 +19,8 @@ extension StickerPackReference {
                 return .inputStickerSetAnimatedEmoji
             case let .dice(emoji):
                 return .inputStickerSetDice(emoticon: emoji)
+            case .animatedEmojiAnimations:
+                return .inputStickerSetAnimatedEmojiAnimations
         }
     }
 }

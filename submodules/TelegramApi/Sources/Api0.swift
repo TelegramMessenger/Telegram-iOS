@@ -669,6 +669,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2044933984] = { return Api.InputStickerSet.parse_inputStickerSetShortName($0) }
     dict[42402760] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmoji($0) }
     dict[-427863538] = { return Api.InputStickerSet.parse_inputStickerSetDice($0) }
+    dict[215889721] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmojiAnimations($0) }
     dict[-1231326505] = { return Api.messages.ChatAdminsWithInvites.parse_chatAdminsWithInvites($0) }
     dict[460632885] = { return Api.BotInfo.parse_botInfo($0) }
     dict[-2046910401] = { return Api.stickers.SuggestedShortName.parse_suggestedShortName($0) }

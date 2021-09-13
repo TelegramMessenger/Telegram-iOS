@@ -6824,3 +6824,5 @@ Ads should no longer be synonymous with abuse of user privacy. Let us redefine h
 
 "MESSAGE_NOTHEME" = "%1$@ changed theme to default one";
 "CHAT_MESSAGE_NOTHEME" = "%1$@ set theme to default one in the group %2$@";
+
+"Activity.EnjoyingAnimations" = "enjoying %@ animations";

@@ -339,17 +339,23 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
     
     override func selected() {
+        let wasSelected = self.item?.selected ?? false
         super.selected()
         
         if let animatedStickerNode = self.animatedStickerNode {
-            Queue.mainQueue().after(0.1) {        
-                let started = animatedStickerNode.playIfNeeded()
-                if started {
+            Queue.mainQueue().after(0.1) {
+                if !wasSelected {
+                    animatedStickerNode.seekTo(.frameIndex(0))
+                    animatedStickerNode.play()
+                    
                     let scale: CGFloat = 2.6
                     animatedStickerNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
                     animatedStickerNode.layer.animateSpring(from: 1.0 as NSNumber, to: scale as NSNumber, keyPath: "transform.scale", duration: 0.45)
                     
-                    animatedStickerNode.completed = { [weak animatedStickerNode] _ in
+                    animatedStickerNode.completed = { [weak animatedStickerNode, weak self] _ in
+                        guard let item = self?.item, item.selected else {
+                            return
+                        }
                         animatedStickerNode?.transform = CATransform3DIdentity
                         animatedStickerNode?.layer.animateSpring(from: scale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
                     }
@@ -392,12 +398,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             let text = NSAttributedString(string: item.strings.Conversation_Theme_NoTheme, font: Font.semibold(15.0), textColor: item.theme.actionSheet.controlAccentColor)
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: text, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            var emoticon = item.emoticon
-            if emoticon == "🦁" {
-                emoticon = "🌳"
-            } else if emoticon == "🔮" {
-                emoticon = "🎆"
-            }
+            let emoticon = item.emoticon
             let title = NSAttributedString(string: emoticon != nil ? "" : "❌", font: Font.regular(22.0), textColor: .black)
             let (_, emojiApply) = makeEmojiLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
@@ -405,7 +406,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             return (itemLayout, { animated in
                 if let strongSelf = self {
                     strongSelf.item = item
-                    
+                        
                     if updatedThemeReference || updatedWallpaper {
                         if let themeReference = item.themeReference {
                             strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, emoticon: true))
@@ -418,6 +419,13 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                     
                     if updatedTheme || updatedSelected {
                         strongSelf.overlayNode.image = generateBorderImage(theme: item.theme, bordered: false, selected: item.selected)
+                    }
+                    
+                    if !item.selected && currentItem?.selected == true, let animatedStickerNode = strongSelf.animatedStickerNode {
+                        animatedStickerNode.transform = CATransform3DIdentity
+                        
+                        let initialScale: CGFloat = CGFloat((animatedStickerNode.value(forKeyPath: "layer.presentationLayer.transform.scale.x") as? NSNumber)?.floatValue ?? 1.0)
+                        animatedStickerNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
                     }
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((90.0 - textLayout.size.width) / 2.0), y: 24.0), size: textLayout.size)
@@ -823,12 +831,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             var entries: [ThemeSettingsThemeEntry] = []
             entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: nil, emojiFile: nil, themeReference: nil, selected: selectedEmoticon == nil, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             for theme in themes {
-                var emoticon = theme.emoji
-                if emoticon == "🦁" {
-                    emoticon = "🌳"
-                } else if emoticon == "🔮" {
-                    emoticon = "🎆"
-                }
+                let emoticon = theme.emoji
                 entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: theme.emoji, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: isDarkAppearance ? theme.darkTheme : theme.theme, resolvedWallpaper: nil, creatorAccountId: nil)), selected: selectedEmoticon == theme.emoji, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             

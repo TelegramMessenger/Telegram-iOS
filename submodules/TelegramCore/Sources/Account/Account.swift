@@ -1126,10 +1126,13 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeAppLogEventsOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedNotificationSettingsBehaviors(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedThemesUpdates(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedChatThemesUpdates(accountManager: accountManager, network: self.network).start())
+        if !self.testingEnvironment {
+            self.managedOperationsDisposable.add(managedChatThemesUpdates(accountManager: accountManager, network: self.network).start())
+        }
         
         if !self.supplementary {
             self.managedOperationsDisposable.add(managedAnimatedEmojiUpdates(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedAnimatedEmojiAnimationsUpdates(postbox: self.postbox, network: self.network).start())
         }
         self.managedOperationsDisposable.add(managedGreetingStickers(postbox: self.postbox, network: self.network).start())
 

@@ -344,7 +344,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         case .choosingSticker:
                             stringValue = strings.Activity_ChoosingSticker
                         case let .seeingEmojiInteraction(emoticon):
-                            stringValue = "enjoying \(emoticon) animations"
+                            stringValue = strings.Activity_EnjoyingAnimations(emoticon).string
                         case .speakingInGroupCall, .interactingWithEmoji:
                             stringValue = ""
                     }
