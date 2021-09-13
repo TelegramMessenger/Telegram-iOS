@@ -32,7 +32,7 @@ public struct EmojiInteraction: Equatable {
                 var animations: [EmojiInteraction.Animation] = []
                 for animationDict in animationsArray {
                     if let animationDict = animationDict as? [String: Any] {
-                        if let index = animationDict["i"] as? Int, let timeOffset = animationDict["t"] as? Float {
+                        if let index = animationDict["i"] as? Int, let timeOffset = animationDict["t"] as? Double {
                             animations.append(EmojiInteraction.Animation(index: index, timeOffset: timeOffset))
                         }
                     }
