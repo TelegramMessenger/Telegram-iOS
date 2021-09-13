@@ -243,7 +243,7 @@ def generate(header_path: str, implementation_path: str, data_path: str, entries
                 formatted_accessors += '''
 static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStrings * _Nonnull strings,
     uint32_t keyId{arguments_string}) {{
-    NSString *formatString = getSingle(strings, strings->_idToKey[@(keyId)]);
+    NSString *formatString = getSingle(strings, strings->_idToKey[@(keyId)], nil);
     NSArray<_FormattedStringRange *> *argumentRanges = extractArgumentRanges(formatString);
     return formatWithArgumentRanges(formatString, argumentRanges, @[{arguments_array}]);
 }}
@@ -421,8 +421,8 @@ static _FormattedString * _Nonnull formatWithArgumentRanges(
     return [[_FormattedString alloc] initWithString:result ranges:resultingRanges];
 }
 
-static NSString * _Nonnull getPluralizationSuffix(_PresentationStrings * _Nonnull strings, int32_t value) {
-    NumberPluralizationForm pluralizationForm = numberPluralizationForm(strings.lc, value);
+static NSString * _Nonnull getPluralizationSuffix(uint32_t lc, int32_t value) {
+    NumberPluralizationForm pluralizationForm = numberPluralizationForm(lc, value);
     switch (pluralizationForm) {
         case NumberPluralizationFormZero: {
             return @"_0";
@@ -445,10 +445,14 @@ static NSString * _Nonnull getPluralizationSuffix(_PresentationStrings * _Nonnul
     }
 }
 
-static NSString * _Nonnull getSingle(_PresentationStrings * _Nonnull strings, NSString * _Nonnull key) {
-    NSString *result = strings.primaryComponent.dict[key];
-    if (!result) {
-        result = strings.secondaryComponent.dict[key];
+static NSString * _Nonnull getSingle(_PresentationStrings * _Nullable strings, NSString * _Nonnull key,
+    bool * _Nullable isFound) {
+    NSString *result = nil;
+    if (strings) {
+        result = strings.primaryComponent.dict[key];
+        if (!result) {
+            result = strings.secondaryComponent.dict[key];
+        }
     }
     if (!result) {
         static NSDictionary<NSString *, NSString *> *fallbackDict = nil;
@@ -472,18 +476,31 @@ static NSString * _Nonnull getSingle(_PresentationStrings * _Nonnull strings, NS
     }
     if (!result) {
         result = key;
+        if (isFound) {
+            *isFound = false;
+        }
+    } else {
+        if (isFound) {
+            *isFound = true;
+        }
     }
     return result;
 }
 
 static NSString * _Nonnull getSingleIndirect(_PresentationStrings * _Nonnull strings, uint32_t keyId) {
-    return getSingle(strings, strings->_idToKey[@(keyId)]);
+    return getSingle(strings, strings->_idToKey[@(keyId)], nil);
 }
 
 static NSString * _Nonnull getPluralized(_PresentationStrings * _Nonnull strings, NSString * _Nonnull key,
     int32_t value) {
-    NSString *parsedKey = [[NSString alloc] initWithFormat:@"%@%@", key, getPluralizationSuffix(strings, value)];
-    NSString *formatString = getSingle(strings, parsedKey);
+    NSString *parsedKey = [[NSString alloc] initWithFormat:@"%@%@", key, getPluralizationSuffix(strings.lc, value)];
+    bool isFound = false;
+    NSString *formatString = getSingle(strings, parsedKey, &isFound);
+    if (!isFound) {
+        // fall back to English
+        parsedKey = [[NSString alloc] initWithFormat:@"%@%@", key, getPluralizationSuffix(0x656e, value)];
+        formatString = getSingle(nil, parsedKey, nil);
+    }
     NSString *stringValue = formatNumberWithGroupingSeparator(strings.groupingSeparator, value);
     NSArray<_FormattedStringRange *> *argumentRanges = extractArgumentRanges(formatString);
     return formatWithArgumentRanges(formatString, argumentRanges, @[stringValue]).string;
