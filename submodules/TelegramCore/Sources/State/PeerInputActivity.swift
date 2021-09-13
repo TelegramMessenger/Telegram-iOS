@@ -26,6 +26,9 @@ public struct EmojiInteraction: Equatable {
                 guard let item = decodedData as? [String: Any] else {
                     return nil
                 }
+                guard let version = item["v"] as? Int, version == 1 else {
+                    return nil
+                }
                 guard let animationsArray = item["a"] as? [Any] else {
                     return nil
                 }
