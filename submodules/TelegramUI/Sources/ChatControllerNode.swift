@@ -122,11 +122,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private(set) var textInputPanelNode: ChatTextInputPanelNode?
     private var inputMediaNode: ChatMediaInputNode?
     
-    private let choosingStickerPromise = Promise<Bool>(false)
-    var choosingSticker: Signal<Bool, NoError> {
-        return self.choosingStickerPromise.get()
-    }
-    
     let navigateButtons: ChatHistoryNavigationButtons
     
     private var ignoreUpdateHeight = false
@@ -865,7 +860,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             if let inputMediaNode = inputNode as? ChatMediaInputNode, self.inputMediaNode == nil {
                 self.inputMediaNode = inputMediaNode
-                self.choosingStickerPromise.set(inputMediaNode.choosingSticker)
                 inputMediaNode.requestDisableStickerAnimations = { [weak self] disabled in
                     self?.controller?.disableStickerAnimations = disabled
                 }
@@ -1961,7 +1955,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self?.controller?.disableStickerAnimations = disabled
             }
             self.inputMediaNode = inputNode
-            self.choosingStickerPromise.set(inputNode.choosingSticker)
             if let (validLayout, _) = self.validLayout {
                 let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, standardInputHeight: validLayout.standardInputHeight, inputHeight: validLayout.inputHeight ?? 0.0, maximumHeight: validLayout.standardInputHeight, inputPanelHeight: 44.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: validLayout.deviceMetrics, isVisible: false)
             }
