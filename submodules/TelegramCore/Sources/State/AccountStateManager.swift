@@ -838,6 +838,50 @@ public final class AccountStateManager {
         }
     }
 
+    func standaloneReplayAsynchronouslyBuiltFinalState(finalState: AccountFinalState) {
+        if !finalState.state.preCachedResources.isEmpty {
+            for (resource, data) in finalState.state.preCachedResources {
+                self.postbox.mediaBox.storeResourceData(resource.id, data: data)
+            }
+        }
+
+        let accountPeerId = self.accountPeerId
+        let accountManager = self.accountManager
+        let postbox = self.postbox
+        let mediaBox = self.postbox.mediaBox
+        let network = self.network
+        let auxiliaryMethods = self.auxiliaryMethods
+        let removePossiblyDeliveredMessagesUniqueIds = self.removePossiblyDeliveredMessagesUniqueIds
+        let signal = self.postbox.transaction { transaction -> AccountReplayedFinalState? in
+            let startTime = CFAbsoluteTimeGetCurrent()
+            let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false)
+            let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
+            if deltaTime > 1.0 {
+                Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
+            }
+            return result
+        }
+        |> map({ ($0, finalState) })
+        |> deliverOn(self.queue)
+
+        let _ = signal.start(next: { [weak self] replayedState, finalState in
+            if let strongSelf = self {
+                if case .replayAsynchronouslyBuiltFinalState = strongSelf.operations.removeFirst().content {
+                    if let replayedState = replayedState {
+                        let events = AccountFinalStateEvents(state: replayedState)
+                        if !events.isEmpty {
+                            strongSelf.insertProcessEvents(events)
+                        }
+                    }
+                    strongSelf.startFirstOperation()
+                } else {
+                    assertionFailure()
+                }
+                completion()
+            }
+        })
+    }
+
     public func standalonePollDifference() -> Signal<Bool, NoError> {
         let queue = self.queue
         let accountManager = self.accountManager
