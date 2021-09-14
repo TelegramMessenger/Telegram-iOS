@@ -1937,8 +1937,19 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
             self.shimmerNode.frame = CGRect(origin: CGPoint(x: textFrame.minX, y: floor((size.height - shimmerHeight) / 2.0)), size: CGSize(width: placeholderTextSize.width, height: shimmerHeight))
             self.shimmerNode.cornerRadius = shimmerHeight / 2.0
-            let shimmeringForegroundColor = self.presentationData.theme.contextMenu.itemSeparatorColor.blitOver(self.presentationData.theme.list.plainBackgroundColor, alpha: 0.9)
-            let shimmeringColor = self.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.2)
+            let shimmeringForegroundColor: UIColor
+            let shimmeringColor: UIColor
+            if self.presentationData.theme.overallDarkAppearance {
+                let backgroundColor = self.presentationData.theme.contextMenu.backgroundColor.blitOver(self.presentationData.theme.list.plainBackgroundColor, alpha: 1.0)
+
+                shimmeringForegroundColor = self.presentationData.theme.contextMenu.primaryColor.blitOver(backgroundColor, alpha: 0.1)
+                shimmeringColor = self.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3)
+            } else {
+                let backgroundColor = self.presentationData.theme.contextMenu.backgroundColor.blitOver(self.presentationData.theme.list.plainBackgroundColor, alpha: 1.0)
+
+                shimmeringForegroundColor = self.presentationData.theme.contextMenu.primaryColor.blitOver(backgroundColor, alpha: 0.15)
+                shimmeringColor = self.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3)
+            }
             self.shimmerNode.update(backgroundColor: self.presentationData.theme.list.plainBackgroundColor, foregroundColor: shimmeringForegroundColor, shimmeringColor: shimmeringColor, shapes: [.rect(rect: self.shimmerNode.bounds)], horizontal: true, size: self.shimmerNode.bounds.size)
             self.shimmerNode.updateAbsoluteRect(self.shimmerNode.frame, within: size)
             transition.updateAlpha(node: self.shimmerNode, alpha: self.currentStats == nil ? 1.0 : 0.0)
