@@ -206,7 +206,7 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         func updateLayout(size: CGSize) {
             self.clippingNode.frame = CGRect(origin: CGPoint(), size: size)
             
-            let absoluteRect = self.itemNode.view.convert(self.itemNode.view.bounds, to: self.view)
+            let absoluteRect = self.itemNode.view.convert(self.itemNode.view.bounds, to: self.itemNode.supernode?.supernode?.view)
             self.containerNode.frame = absoluteRect
         }
         

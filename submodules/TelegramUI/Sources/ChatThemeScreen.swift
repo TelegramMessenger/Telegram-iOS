@@ -165,7 +165,7 @@ private struct ThemeSettingsThemeItemNodeTransition {
 
 private func ensureThemeVisible(listNode: ListView, emoticon: String?, animated: Bool) -> Bool {
     var resultNode: ThemeSettingsThemeItemIconNode?
-    var previousNode: ThemeSettingsThemeItemIconNode?
+//    var previousNode: ThemeSettingsThemeItemIconNode?
     var nextNode: ThemeSettingsThemeItemIconNode?
     listNode.forEachItemNode { node in
         guard let node = node as? ThemeSettingsThemeItemIconNode else {
@@ -175,7 +175,7 @@ private func ensureThemeVisible(listNode: ListView, emoticon: String?, animated:
             if node.item?.emoticon == emoticon {
                 resultNode = node
             } else {
-                previousNode = node
+//                previousNode = node
             }
         } else if nextNode == nil {
             nextNode = node
@@ -968,7 +968,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.doneButton.updateTheme(SolidRoundedButtonTheme(theme: self.presentationData.theme))
         
         if self.animationNode.isPlaying {
-            if let animationNode = self.animationNode.makeCopy(colors: iconColors(theme: self.presentationData.theme), progress: 0.25) {
+            if let animationNode = self.animationNode.makeCopy(colors: iconColors(theme: self.presentationData.theme), progress: 0.2) {
                 let previousAnimationNode = self.animationNode
                 self.animationNode = animationNode
                 
@@ -1075,8 +1075,6 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     
     private var animatedOut = false
     func animateIn() {
-        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-        
         let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
         let dimPosition = self.dimNode.layer.position
         
