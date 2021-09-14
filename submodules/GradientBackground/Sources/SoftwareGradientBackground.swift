@@ -191,6 +191,8 @@ public final class GradientBackgroundNode: ASDisplayNode {
             self.parentNode = parentNode
 
             super.init()
+            
+            self.displaysAsynchronously = false
 
             self.index = parentNode.cloneNodes.add(Weak<CloneNode>(self))
             self.image = parentNode.dimmedImage

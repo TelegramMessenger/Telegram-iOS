@@ -1270,6 +1270,7 @@ public final class PresentationTheme: Equatable {
     public let inAppNotification: PresentationThemeInAppNotification
     public let chart: PresentationThemeChart
     public let preview: Bool
+    public var forceSync: Bool = false
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     

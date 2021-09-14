@@ -3484,16 +3484,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             var mainItemsImpl: (() -> Signal<[ContextMenuItem], NoError>)?
-            mainItemsImpl = {
+            mainItemsImpl = { [weak self] in
                 var items: [ContextMenuItem] = []
+                guard let strongSelf = self else {
+                    return .single(items)
+                }
                 
-                let allHeaderButtons = Set(peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat, isExpanded: false, videoCallsEnabled: self.videoCallsEnabled, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false))
-                let headerButtons = Set(peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: self.isOpenedFromChat, isExpanded: self.headerNode.isAvatarExpanded, videoCallsEnabled: self.videoCallsEnabled, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false))
+                let allHeaderButtons = Set(peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: strongSelf.isOpenedFromChat, isExpanded: false, videoCallsEnabled: strongSelf.videoCallsEnabled, isSecretChat: strongSelf.peerId.namespace == Namespaces.Peer.SecretChat, isContact: strongSelf.data?.isContact ?? false))
+                let headerButtons = Set(peerInfoHeaderButtons(peer: peer, cachedData: data.cachedData, isOpenedFromChat: strongSelf.isOpenedFromChat, isExpanded: strongSelf.headerNode.isAvatarExpanded, videoCallsEnabled: strongSelf.videoCallsEnabled, isSecretChat: strongSelf.peerId.namespace == Namespaces.Peer.SecretChat, isContact: strongSelf.data?.isContact ?? false))
                 
                 let filteredButtons = allHeaderButtons.subtracting(headerButtons)
                 
                 var canChangeColors = false
-                if peer is TelegramUser, self.data?.encryptionKeyFingerprint == nil {
+                if peer is TelegramUser, strongSelf.data?.encryptionKeyFingerprint == nil {
                     canChangeColors = true
                 }
                 
@@ -3633,7 +3636,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         })))
                     }
                                        
-                    if self.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport) {
+                    if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport) {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_StartSecretChat, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
@@ -3653,7 +3656,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 })))
                             }
                         }
-                    } else if self.peerId.namespace == Namespaces.Peer.SecretChat && data.isContact {
+                    } else if strongSelf.peerId.namespace == Namespaces.Peer.SecretChat && data.isContact {
                         if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
                         } else {
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_BlockUser, icon: { theme in
@@ -3666,7 +3669,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                     }
                 } else if let channel = peer as? TelegramChannel {
-                    if let cachedData = self.data?.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
+                    if let cachedData = strongSelf.data?.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_Stats, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in

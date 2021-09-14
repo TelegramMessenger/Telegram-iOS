@@ -283,9 +283,11 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
 
         self.textNode = TextNode()
         self.textNode.isUserInteractionEnabled = false
+        self.textNode.displaysAsynchronously = false
         
         self.emojiNode = TextNode()
         self.emojiNode.isUserInteractionEnabled = false
+        self.emojiNode.displaysAsynchronously = false
         
         self.emojiImageNode = TransformImageNode()
         
@@ -495,7 +497,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             snapshotView.frame = self.containerNode.view.frame
             self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatThemeScreen.themeCrossfadeDuration, delay: ChatThemeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }
@@ -521,6 +523,9 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
 }
 
 final class ChatThemeScreen: ViewController {
+    static let themeCrossfadeDuration: Double = 0.3
+    static let themeCrossfadeDelay: Double = 0.25
+    
     private var controllerNode: ChatThemeScreenNode {
         return self.displayNode as! ChatThemeScreenNode
     }
@@ -839,7 +844,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             
             let action: (String?) -> Void = { [weak self] emoticon in
                 if let strongSelf = self, strongSelf.selectedEmoticon != emoticon {
-                    strongSelf.animateCrossfade(animateIcon: false)
+                    strongSelf.animateCrossfade(animateIcon: true)
                                         
                     strongSelf.previewTheme?(emoticon, strongSelf.isDarkAppearance)
                     strongSelf.selectedEmoticon = emoticon
@@ -973,7 +978,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 animationNode.isUserInteractionEnabled = false
                 animationNode.frame = previousAnimationNode.frame
                 previousAnimationNode.supernode?.insertSubnode(animationNode, belowSubnode: previousAnimationNode)
-                previousAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                previousAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatThemeScreen.themeCrossfadeDuration, removeOnCompletion: false)
                 animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
         } else {
@@ -1009,6 +1014,11 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     }
     
     @objc func switchThemePressed() {
+        self.switchThemeButton.isUserInteractionEnabled = false
+        Queue.mainQueue().after(0.5) {
+            self.switchThemeButton.isUserInteractionEnabled = true
+        }
+        
         self.animateCrossfade(animateIcon: false)
         self.animationNode.setAnimation(name: self.isDarkAppearance ? "anim_sun_reverse" : "anim_sun", colors: iconColors(theme: self.presentationData.theme))
         self.animationNode.playOnce()
@@ -1024,21 +1034,19 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
     }
     
-    private func animateCrossfade(animateIcon: Bool = true) {
-        let delay: Double = 0.2
-        
+    private func animateCrossfade(animateIcon: Bool) {
         if animateIcon, let snapshotView = self.animationNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.animationNode.frame
             self.animationNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.animationNode.view)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatThemeScreen.themeCrossfadeDuration, delay: ChatThemeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }
         
-        Queue.mainQueue().after(delay) {
+        Queue.mainQueue().after(ChatThemeScreen.themeCrossfadeDelay) {
             if let effectView = self.effectNode.view as? UIVisualEffectView {
-                UIView.animate(withDuration: 0.3, delay: 0.0, options: .curveEaseInOut) {
+                UIView.animate(withDuration: ChatThemeScreen.themeCrossfadeDuration, delay: 0.0, options: .curveLinear) {
                     effectView.effect = UIBlurEffect(style: self.presentationData.theme.actionSheet.backgroundType == .light ? .light : .dark)
                 } completion: { _ in
                 }
@@ -1046,14 +1054,14 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
 
             let previousColor = self.contentBackgroundNode.backgroundColor ?? .clear
             self.contentBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.itemBackgroundColor
-            self.contentBackgroundNode.layer.animate(from: previousColor.cgColor, to: (self.contentBackgroundNode.backgroundColor ?? .clear).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.3)
+            self.contentBackgroundNode.layer.animate(from: previousColor.cgColor, to: (self.contentBackgroundNode.backgroundColor ?? .clear).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: ChatThemeScreen.themeCrossfadeDuration)
         }
                 
         if let snapshotView = self.contentContainerNode.view.snapshotView(afterScreenUpdates: false) {
             snapshotView.frame = self.contentContainerNode.frame
             self.contentContainerNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.contentContainerNode.view)
             
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatThemeScreen.themeCrossfadeDuration, delay: ChatThemeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
             })
         }

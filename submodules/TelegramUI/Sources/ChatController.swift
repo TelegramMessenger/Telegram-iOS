@@ -3964,7 +3964,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     let customTheme = useDarkAppearance ? theme.darkTheme : theme.theme
                     if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings) {
+                        theme.forceSync = true
                         presentationData = presentationData.withUpdated(theme: theme).withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
+                        
+                        Queue.mainQueue().after(1.0, {
+                            theme.forceSync = false
+                        })
                     }
                 } else if let darkAppearancePreview = darkAppearancePreview {
                     useDarkAppearance = darkAppearancePreview
@@ -3988,7 +3993,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let themeSpecificWallpaper = themeSpecificWallpaper {
                             lightWallpaper = themeSpecificWallpaper
                         } else {
-                            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor) ?? defaultPresentationTheme
+                            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: themeSettings.theme, accentColor: currentColors?.color, bubbleColors: currentColors?.customBubbleColors ?? [], wallpaper: currentColors?.wallpaper, baseColor: currentColors?.baseColor, preview: true) ?? defaultPresentationTheme
                             lightWallpaper = theme.chat.defaultWallpaper
                         }
                         
@@ -4022,8 +4027,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if darkAppearancePreview {
+                        darkTheme.forceSync = true
+                        Queue.mainQueue().after(1.0, {
+                            darkTheme.forceSync = false
+                        })
                         presentationData = presentationData.withUpdated(theme: darkTheme).withUpdated(chatWallpaper: darkWallpaper)
                     } else {
+                        lightTheme.forceSync = true
+                        Queue.mainQueue().after(1.0, {
+                            lightTheme.forceSync = false
+                        })
                         presentationData = presentationData.withUpdated(theme: lightTheme).withUpdated(chatWallpaper: lightWallpaper)
                     }
                 }
@@ -4040,7 +4053,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.presentationDataPromise.set(.single(strongSelf.presentationData))
                     
                     if !isFirstTime && (previousThemeEmoticon?.0 != themeEmoticon || previousThemeEmoticon?.1 != useDarkAppearance) {
-                        strongSelf.presentCrossfadeSnapshot(delay: 0.2)
+                        strongSelf.presentCrossfadeSnapshot()
                     }
                 }
                 strongSelf.presentationReady.set(.single(true))
@@ -13389,14 +13402,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private var crossfading = false
-    private func presentCrossfadeSnapshot(delay: Double) {
+    private func presentCrossfadeSnapshot() {
         guard !self.crossfading, let snapshotView = self.view.snapshotView(afterScreenUpdates: false) else {
             return
         }
         self.crossfading = true
         self.view.addSubview(snapshotView)
 
-        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: delay, removeOnCompletion: false, completion: { [weak self, weak snapshotView] _ in
+        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatThemeScreen.themeCrossfadeDuration, delay: ChatThemeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak self, weak snapshotView] _ in
             self?.crossfading = false
             snapshotView?.removeFromSuperview()
         })
@@ -13454,7 +13467,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let controller = ChatThemeScreen(context: context, updatedPresentationData: strongSelf.updatedPresentationData, animatedEmojiStickers: animatedEmojiStickers, initiallySelectedEmoticon: selectedEmoticon, peerName: strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer?.compactDisplayTitle ?? "", previewTheme: { [weak self] emoticon, dark in
                 if let strongSelf = self {
-                    strongSelf.presentCrossfadeSnapshot(delay: 0.2)
+                    strongSelf.presentCrossfadeSnapshot()
                     strongSelf.themeEmoticonAndDarkAppearancePreviewPromise.set(.single((emoticon, dark)))
                 }
             }, completion: { [weak self] emoticon in
