@@ -287,12 +287,11 @@ private final class NotificationServiceHandler {
 
                         stateManager.network.shouldKeepConnection.set(.single(true))
                         if peerId.namespace == Namespaces.Peer.CloudChannel {
-                            strongSelf.pollDisposable.set(pollChannelOnce(
+                            strongSelf.pollDisposable.set(standalonePollChannelOnce(
                                 postbox: stateManager.postbox,
                                 network: stateManager.network,
                                 peerId: peerId,
-                                stateManager: stateManager,
-                                delayCompletion: false
+                                stateManager: stateManager
                             ).start(completed: {
                                 pollCompletion()
                             }))

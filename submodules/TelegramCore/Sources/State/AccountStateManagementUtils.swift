@@ -1706,11 +1706,15 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
     }
 }
 
-public func pollChannelOnce(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager, delayCompletion: Bool) -> Signal<Int32, NoError> {
+func pollChannelOnce(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager, delayCompletion: Bool) -> Signal<Int32, NoError> {
     return postbox.transaction { transaction -> Signal<Int32, NoError> in
         guard let accountState = (transaction.getState() as? AuthorizedAccountState)?.state, let peer = transaction.getPeer(peerId) else {
-            return .complete()
-            |> delay(30.0, queue: Queue.concurrentDefaultQueue())
+            if delayCompletion {
+                return .complete()
+                |> delay(30.0, queue: Queue.concurrentDefaultQueue())
+            } else {
+                return .complete()
+            }
         }
 
         var channelStates: [PeerId: AccountStateChannelState] = [:]
@@ -1755,6 +1759,49 @@ public func pollChannelOnce(postbox: Postbox, network: Network, peerId: PeerId, 
                         return .single(timeout ?? 30)
                     }
                 }
+            }
+        }
+    }
+    |> switchToLatest
+}
+
+public func standalonePollChannelOnce(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Signal<Never, NoError> in
+        guard let accountState = (transaction.getState() as? AuthorizedAccountState)?.state, let peer = transaction.getPeer(peerId) else {
+            return .complete()
+        }
+
+        var channelStates: [PeerId: AccountStateChannelState] = [:]
+        if let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
+            channelStates[peerId] = AccountStateChannelState(pts: channelState.pts)
+        }
+        let initialPeers: [PeerId: Peer] = [peerId: peer]
+        var peerChatInfos: [PeerId: PeerChatInfo] = [:]
+        let inclusion = transaction.getPeerChatListInclusion(peerId)
+        var hasValidInclusion = false
+        switch inclusion {
+        case .ifHasMessagesOrOneOf:
+            hasValidInclusion = true
+        case .notIncluded:
+            hasValidInclusion = false
+        }
+        if hasValidInclusion {
+            if let notificationSettings = transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings {
+                peerChatInfos[peerId] = PeerChatInfo(notificationSettings: notificationSettings)
+            }
+        }
+        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
+        return pollChannel(network: network, peer: peer, state: initialState)
+        |> mapToSignal { (finalState, _, timeout) -> Signal<Never, NoError> in
+            return resolveAssociatedMessages(network: network, state: finalState)
+            |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
+                return resolveMissingPeerChatInfos(network: network, state: resultingState)
+                |> map { resultingState, _ -> AccountFinalState in
+                    return AccountFinalState(state: resultingState, shouldPoll: false, incomplete: false, missingUpdatesFromChannels: Set(), discard: false)
+                }
+            }
+            |> mapToSignal { finalState -> Signal<Never, NoError> in
+                return stateManager.standaloneReplayAsynchronouslyBuiltFinalState(finalState: finalState)
             }
         }
     }

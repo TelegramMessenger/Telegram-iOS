@@ -838,7 +838,7 @@ public final class AccountStateManager {
         }
     }
 
-    func standaloneReplayAsynchronouslyBuiltFinalState(finalState: AccountFinalState) {
+    func standaloneReplayAsynchronouslyBuiltFinalState(finalState: AccountFinalState) -> Signal<Never, NoError> {
         if !finalState.state.preCachedResources.isEmpty {
             for (resource, data) in finalState.state.preCachedResources {
                 self.postbox.mediaBox.storeResourceData(resource.id, data: data)
@@ -864,22 +864,8 @@ public final class AccountStateManager {
         |> map({ ($0, finalState) })
         |> deliverOn(self.queue)
 
-        let _ = signal.start(next: { [weak self] replayedState, finalState in
-            if let strongSelf = self {
-                if case .replayAsynchronouslyBuiltFinalState = strongSelf.operations.removeFirst().content {
-                    if let replayedState = replayedState {
-                        let events = AccountFinalStateEvents(state: replayedState)
-                        if !events.isEmpty {
-                            strongSelf.insertProcessEvents(events)
-                        }
-                    }
-                    strongSelf.startFirstOperation()
-                } else {
-                    assertionFailure()
-                }
-                completion()
-            }
-        })
+        return signal
+        |> ignoreValues
     }
 
     public func standalonePollDifference() -> Signal<Bool, NoError> {
