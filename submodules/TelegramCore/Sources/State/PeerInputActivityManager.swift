@@ -336,6 +336,10 @@ final class PeerInputActivityManager {
                 timeout = 8.0
             }
             
+            if activity == .choosingSticker {
+                context.removeActivity(peerId: peerId, activity: .typingText, episodeId: nil)
+            }
+            
             context.addActivity(peerId: peerId, activity: activity, timeout: timeout, episodeId: episodeId, nextUpdateId: &self.nextUpdateId)
             
             if let globalContext = self.globalContext {
