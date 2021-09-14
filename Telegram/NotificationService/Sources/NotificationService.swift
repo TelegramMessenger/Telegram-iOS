@@ -35,7 +35,11 @@ private struct NotificationContent {
     var title: String?
     var subtitle: String?
     var body: String?
+    var threadId: String?
+    var sound: String?
     var badge: Int?
+    var category: String?
+    var userInfo: [AnyHashable: Any] = [:]
 
     func asNotificationContent() -> UNNotificationContent {
         let content = UNMutableNotificationContent()
@@ -44,9 +48,23 @@ private struct NotificationContent {
         content.subtitle = self.subtitle ?? ""
         content.body = self.body ?? ""
 
+        if let threadId = self.threadId {
+            content.threadIdentifier = threadId
+        }
+
+        if let sound = self.sound {
+            content.sound = UNNotificationSound(named: UNNotificationSoundName(rawValue: sound))
+        }
+
         if let badge = self.badge {
             content.badge = badge as NSNumber
         }
+
+        if let category = self.category {
+            content.categoryIdentifier = category
+        }
+
+        content.userInfo = self.userInfo
 
         return content
     }
@@ -174,11 +192,79 @@ private final class NotificationServiceHandler {
                         return
                     }
 
+                    var peerId: PeerId?
+                    var messageId: MessageId.Id?
+
+                    if let messageIdString = payloadJson["msg_id"] as? String {
+                        content.userInfo["msg_id"] = messageIdString
+                        messageId = Int32(messageIdString)
+                    }
+
+                    if let fromIdString = payloadJson["from_id"] as? String {
+                        content.userInfo["from_id"] = fromIdString
+                        if let userIdValue = Int64(fromIdString) {
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userIdValue))
+                        }
+                    } else if let chatIdString = payloadJson["chat_id"] as? String {
+                        content.userInfo["chat_id"] = chatIdString
+                        if let chatIdValue = Int64(chatIdString) {
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatIdValue))
+                        }
+                    } else if let channelIdString = payloadJson["channel_id"] as? String {
+                        content.userInfo["channel_id"] = channelIdString
+                        if let channelIdValue = Int64(channelIdString) {
+                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelIdValue))
+                        }
+                    }
+
+                    if let silentString = payloadJson["silent"] as? String {
+                        if let silentValue = Int(silentString), silentValue != 0 {
+                            if let title = content.title {
+                                content.title = "\(title) 🔕"
+                            }
+                        }
+                    }
+
+                    if let threadId = aps["thread-id"] as? String {
+                        content.threadId = threadId
+                    }
+
+                    if let sound = aps["sound"] as? String {
+                        content.sound = sound
+                    }
+
+                    if let category = aps["category"] as? String {
+                        content.category = category
+
+                        let _ = messageId
+
+                        /*if (peerId != 0 && messageId != 0 && parsedAttachment != nil && attachmentData != nil) {
+                            userInfo[@"peerId"] = @(peerId);
+                            userInfo[@"messageId.namespace"] = @(0);
+                            userInfo[@"messageId.id"] = @(messageId);
+
+                            userInfo[@"media"] = [attachmentData base64EncodedStringWithOptions:0];
+
+                            if (isExpandableMedia) {
+                                if ([categoryString isEqualToString:@"r"]) {
+                                    _bestAttemptContent.categoryIdentifier = @"withReplyMedia";
+                                } else if ([categoryString isEqualToString:@"m"]) {
+                                    _bestAttemptContent.categoryIdentifier = @"withMuteMedia";
+                                }
+                            }
+                        }*/
+                    }
+
+                    /*if (accountInfos.accounts.count > 1) {
+                        if (_bestAttemptContent.title.length != 0 && account.peerName.length != 0) {
+                            _bestAttemptContent.title = [NSString stringWithFormat:@"%@ → %@", _bestAttemptContent.title, account.peerName];
+                        }
+                    }*/
+
                     updateCurrentContent(content.asNotificationContent())
 
-                    if let stateManager = strongSelf.stateManager {
-                        stateManager.network.shouldKeepConnection.set(.single(true))
-                        strongSelf.pollDisposable.set(stateManager.pollStateUpdateCompletion().start(completed: {
+                    if let stateManager = strongSelf.stateManager, let peerId = peerId {
+                        let pollCompletion: () -> Void = {
                             queue.async {
                                 guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
                                     completed()
@@ -197,8 +283,38 @@ private final class NotificationServiceHandler {
                                     completed()
                                 })
                             }
-                        }))
-                        stateManager.reset()
+                        }
+
+                        stateManager.network.shouldKeepConnection.set(.single(true))
+                        if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            strongSelf.pollDisposable.set(pollChannelOnce(
+                                postbox: stateManager.postbox,
+                                network: stateManager.network,
+                                peerId: peerId,
+                                stateManager: stateManager,
+                                delayCompletion: false
+                            ).start(completed: {
+                                pollCompletion()
+                            }))
+                        } else {
+                            enum ControlError {
+                                case restart
+                            }
+                            let signal = stateManager.standalonePollDifference()
+                            |> castError(ControlError.self)
+                            |> mapToSignal { result -> Signal<Never, ControlError> in
+                                if result {
+                                    return .complete()
+                                } else {
+                                    return .fail(.restart)
+                                }
+                            }
+                            |> restartIfError
+                            
+                            strongSelf.pollDisposable.set(signal.start(completed: {
+                                pollCompletion()
+                            }))
+                        }
                     } else {
                         completed()
                     }

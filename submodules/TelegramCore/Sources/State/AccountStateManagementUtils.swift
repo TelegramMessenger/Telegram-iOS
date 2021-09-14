@@ -1706,8 +1706,8 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
     }
 }
 
-func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Int32, NoError> {
-    let signal: Signal<Int32, NoError> = postbox.transaction { transaction -> Signal<Int32, NoError> in
+public func pollChannelOnce(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager, delayCompletion: Bool) -> Signal<Int32, NoError> {
+    return postbox.transaction { transaction -> Signal<Int32, NoError> in
         guard let accountState = (transaction.getState() as? AuthorizedAccountState)?.state, let peer = transaction.getPeer(peerId) else {
             return .complete()
             |> delay(30.0, queue: Queue.concurrentDefaultQueue())
@@ -1745,15 +1745,25 @@ func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stat
             |> mapToSignal { finalState -> Signal<Int32, NoError> in
                 return stateManager.addReplayAsynchronouslyBuiltFinalState(finalState)
                 |> mapToSignal { _ -> Signal<Int32, NoError> in
-                    return .single(timeout ?? 30) |> then(.complete() |> delay(Double(timeout ?? 30), queue: Queue.concurrentDefaultQueue()))
+                    if delayCompletion {
+                        return .single(timeout ?? 30)
+                        |> then(
+                            .complete()
+                            |> delay(Double(timeout ?? 30), queue: Queue.concurrentDefaultQueue())
+                        )
+                    } else {
+                        return .single(timeout ?? 30)
+                    }
                 }
             }
         }
     }
     |> switchToLatest
+}
+
+func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Int32, NoError> {
+    return pollChannelOnce(postbox: postbox, network: network, peerId: peerId, stateManager: stateManager, delayCompletion: true)
     |> restart
-    
-    return signal
     |> delay(1.0, queue: .concurrentDefaultQueue())
 }
 
@@ -2254,7 +2264,18 @@ private func recordPeerActivityTimestamp(peerId: PeerId, timestamp: Int32, into 
     }
 }
 
-func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, accountPeerId: PeerId, mediaBox: MediaBox, encryptionProvider: EncryptionProvider, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState, removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId]) -> AccountReplayedFinalState? {
+func replayFinalState(
+    accountManager: AccountManager<TelegramAccountManagerTypes>,
+    postbox: Postbox,
+    accountPeerId: PeerId,
+    mediaBox: MediaBox,
+    encryptionProvider: EncryptionProvider,
+    transaction: Transaction,
+    auxiliaryMethods: AccountAuxiliaryMethods,
+    finalState: AccountFinalState,
+    removePossiblyDeliveredMessagesUniqueIds: [Int64: PeerId],
+    ignoreDate: Bool
+) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(transaction, finalState: finalState.state)
     if !verified {
         Logger.shared.log("State", "failed to verify final state")
@@ -2780,10 +2801,14 @@ func replayFinalState(accountManager: AccountManager<TelegramAccountManagerTypes
                         markUnseenPersonalMessage(transaction: transaction, id: id, addSynchronizeAction: false)
                     }
                 }
-            case let .UpdateState(state):
+            case let .UpdateState(innerState):
                 let currentState = transaction.getState() as! AuthorizedAccountState
-                transaction.setState(currentState.changedState(state))
-                Logger.shared.log("State", "apply state \(state)")
+                var updatedInnerState = innerState
+                if ignoreDate, let previousInnerState = currentState.state {
+                    updatedInnerState = AuthorizedAccountState.State(pts: updatedInnerState.pts, qts: updatedInnerState.qts, date: previousInnerState.date, seq: updatedInnerState.seq)
+                }
+                transaction.setState(currentState.changedState(updatedInnerState))
+                Logger.shared.log("State", "apply state \(updatedInnerState)")
             case let .UpdateChannelState(peerId, pts):
                 var state = (transaction.getPeerChatState(peerId) as? ChannelState) ?? ChannelState(pts: pts, invalidatedPts: nil, synchronizedUntilMessageId: nil)
                 state = state.withUpdatedPts(pts)

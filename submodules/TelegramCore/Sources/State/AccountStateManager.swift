@@ -166,7 +166,17 @@ public final class AccountStateManager {
     private let appliedQtsPromise = Promise<Int32?>(nil)
     private let appliedQtsDisposable = MetaDisposable()
     
-    init(accountPeerId: PeerId, accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network, callSessionManager: CallSessionManager?, addIsContactUpdates: @escaping ([(PeerId, Bool)]) -> Void, shouldKeepOnlinePresence: Signal<Bool, NoError>, peerInputActivityManager: PeerInputActivityManager?, auxiliaryMethods: AccountAuxiliaryMethods) {
+    init(
+        accountPeerId: PeerId,
+        accountManager: AccountManager<TelegramAccountManagerTypes>,
+        postbox: Postbox,
+        network: Network,
+        callSessionManager: CallSessionManager?,
+        addIsContactUpdates: @escaping ([(PeerId, Bool)]) -> Void,
+        shouldKeepOnlinePresence: Signal<Bool, NoError>,
+        peerInputActivityManager: PeerInputActivityManager?,
+        auxiliaryMethods: AccountAuxiliaryMethods
+    ) {
         self.accountPeerId = accountPeerId
         self.accountManager = accountManager
         self.postbox = postbox
@@ -423,10 +433,7 @@ public final class AccountStateManager {
                     if let authorizedState = state.state {
                         let flags: Int32 = 0
                         let ptsTotalLimit: Int32? = nil
-                        #if DEBUG
-                        //flags = 1 << 0
-                        //ptsTotalLimit = 1000
-                        #endif
+                        
                         let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsTotalLimit: ptsTotalLimit, date: authorizedState.date, qts: authorizedState.qts))
                         |> map(Optional.init)
                         |> `catch` { error -> Signal<Api.updates.Difference?, MTRpcError> in
@@ -446,10 +453,6 @@ public final class AccountStateManager {
                             switch difference {
                                 case .differenceTooLong:
                                     preconditionFailure()
-                                    /*return accountStateReset(postbox: postbox, network: network, accountPeerId: accountPeerId) |> mapToSignal { _ -> Signal<(Api.updates.Difference?, AccountReplayedFinalState?), NoError> in
-                                        return .complete()
-                                    }
-                                    |> then(.single((nil, nil)))*/
                                 default:
                                     return initialStateWithDifference(postbox: postbox, difference: difference)
                                     |> mapToSignal { state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
@@ -468,7 +471,7 @@ public final class AccountStateManager {
                                                     let removePossiblyDeliveredMessagesUniqueIds = self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
                                                     return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool) in
                                                         let startTime = CFAbsoluteTimeGetCurrent()
-                                                        let replayedState = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds)
+                                                        let replayedState = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false)
                                                         let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
                                                         if deltaTime > 1.0 {
                                                             Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
@@ -515,7 +518,7 @@ public final class AccountStateManager {
                             if let difference = difference {
                                 switch difference {
                                     case .differenceSlice:
-                                    strongSelf.addOperation(.pollDifference(events), position: .first)
+                                        strongSelf.addOperation(.pollDifference(events), position: .first)
                                     default:
                                         if !events.isEmpty {
                                             strongSelf.insertProcessEvents(events)
@@ -586,7 +589,7 @@ public final class AccountStateManager {
                                 return nil
                             } else {
                                 let startTime = CFAbsoluteTimeGetCurrent()
-                                let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds)
+                                let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false)
                                 let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
                                 if deltaTime > 1.0 {
                                     Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
@@ -806,7 +809,7 @@ public final class AccountStateManager {
                 let removePossiblyDeliveredMessagesUniqueIds = self.removePossiblyDeliveredMessagesUniqueIds
                 let signal = self.postbox.transaction { transaction -> AccountReplayedFinalState? in
                     let startTime = CFAbsoluteTimeGetCurrent()
-                    let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds)
+                    let result = replayFinalState(accountManager: accountManager, postbox: postbox, accountPeerId: accountPeerId, mediaBox: mediaBox, encryptionProvider: network.encryptionProvider, transaction: transaction, auxiliaryMethods: auxiliaryMethods, finalState: finalState, removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds, ignoreDate: false)
                     let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
                     if deltaTime > 1.0 {
                         Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
@@ -832,6 +835,115 @@ public final class AccountStateManager {
                         completion()
                     }
                 })
+        }
+    }
+
+    public func standalonePollDifference() -> Signal<Bool, NoError> {
+        let queue = self.queue
+        let accountManager = self.accountManager
+        let postbox = self.postbox
+        let network = self.network
+        let mediaBox = postbox.mediaBox
+        let accountPeerId = self.accountPeerId
+        let auxiliaryMethods = self.auxiliaryMethods
+
+        let signal = postbox.stateView()
+        |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
+            if let state = view.state as? AuthorizedAccountState {
+                return .single(state)
+            } else {
+                return .complete()
+            }
+        }
+        |> take(1)
+        |> mapToSignal { [weak self] state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+            if let authorizedState = state.state {
+                let flags: Int32 = 0
+                let ptsTotalLimit: Int32? = nil
+
+                let request = network.request(Api.functions.updates.getDifference(flags: flags, pts: authorizedState.pts, ptsTotalLimit: ptsTotalLimit, date: Int32.max, qts: authorizedState.qts))
+                |> map(Optional.init)
+                |> `catch` { error -> Signal<Api.updates.Difference?, MTRpcError> in
+                    if error.errorCode == 406 && error.errorDescription == "AUTH_KEY_DUPLICATED" {
+                        return .single(nil)
+                    } else {
+                        return .fail(error)
+                    }
+                }
+                |> retryRequest
+
+                return request
+                |> mapToSignal { difference -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+                    guard let difference = difference else {
+                        return .single((nil, nil, true))
+                    }
+                    switch difference {
+                    case .differenceTooLong:
+                        preconditionFailure()
+                    default:
+                        return initialStateWithDifference(postbox: postbox, difference: difference)
+                        |> mapToSignal { state -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+                            if state.initialState.state != authorizedState {
+                                Logger.shared.log("State", "pollDifference initial state \(authorizedState) != current state \(state.initialState.state)")
+                                return .single((nil, nil, false))
+                            } else {
+                                return finalStateWithDifference(postbox: postbox, network: network, state: state, difference: difference)
+                                |> deliverOn(queue)
+                                |> mapToSignal { finalState -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool), NoError> in
+                                    if !finalState.state.preCachedResources.isEmpty {
+                                        for (resource, data) in finalState.state.preCachedResources {
+                                            mediaBox.storeResourceData(resource.id, data: data)
+                                        }
+                                    }
+                                    let removePossiblyDeliveredMessagesUniqueIds = self?.removePossiblyDeliveredMessagesUniqueIds ?? Dictionary()
+                                    return postbox.transaction { transaction -> (difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool) in
+                                        let startTime = CFAbsoluteTimeGetCurrent()
+                                        let replayedState = replayFinalState(
+                                            accountManager: accountManager,
+                                            postbox: postbox,
+                                            accountPeerId: accountPeerId,
+                                            mediaBox: mediaBox,
+                                            encryptionProvider: network.encryptionProvider,
+                                            transaction: transaction,
+                                            auxiliaryMethods: auxiliaryMethods,
+                                            finalState: finalState,
+                                            removePossiblyDeliveredMessagesUniqueIds: removePossiblyDeliveredMessagesUniqueIds,
+                                            ignoreDate: true
+                                        )
+                                        let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
+                                        if deltaTime > 1.0 {
+                                            Logger.shared.log("State", "replayFinalState took \(deltaTime)s")
+                                        }
+
+                                        if let replayedState = replayedState {
+                                            return (difference, replayedState, false)
+                                        } else {
+                                            return (nil, nil, false)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                return .single((nil, nil, false))
+            }
+        }
+        |> deliverOn(self.queue)
+
+        return signal
+        |> mapToSignal { difference, _, _ -> Signal<Bool, NoError> in
+            if let difference = difference {
+                switch difference {
+                case .differenceSlice:
+                    return .single(false)
+                default:
+                    return .single(true)
+                }
+            } else {
+                return .single(true)
+            }
         }
     }
     
