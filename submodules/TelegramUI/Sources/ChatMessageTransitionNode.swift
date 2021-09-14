@@ -172,7 +172,7 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         case videoMessage(VideoMessage)
         case mediaInput(MediaInput)
     }
-    
+            
     final class DecorationItemNode: ASDisplayNode {
         let itemNode: ChatMessageItemView
         private let contentNode: ASDisplayNode
@@ -640,13 +640,15 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
     func add(decorationNode: ASDisplayNode, itemNode: ChatMessageItemView) -> DecorationItemNode {
         let decorationItemNode = DecorationItemNode(itemNode: itemNode, contentNode: decorationNode, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
         decorationItemNode.updateLayout(size: self.bounds.size)
+       
         self.decorationItemNodes.append(decorationItemNode)
+        self.addSubnode(decorationItemNode)
         
-        let overlayController = OverlayTransitionContainerController()
-        overlayController.displayNode.isUserInteractionEnabled = false
-        overlayController.displayNode.addSubnode(decorationItemNode)
-        decorationItemNode.overlayController = overlayController
-        itemNode.item?.context.sharedContext.mainWindow?.presentInGlobalOverlay(overlayController)
+//        let overlayController = OverlayTransitionContainerController()
+//        overlayController.displayNode.isUserInteractionEnabled = false
+//        overlayController.displayNode.addSubnode(decorationItemNode)
+//        decorationItemNode.overlayController = overlayController
+//        itemNode.item?.context.sharedContext.mainWindow?.presentInGlobalOverlay(overlayController)
                 
         return decorationItemNode
     }
