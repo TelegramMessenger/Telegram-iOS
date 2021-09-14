@@ -289,8 +289,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             actionTitle = item.presentationData.strings.Conversation_ViewGroup
                         case "telegram_message":
                             actionTitle = item.presentationData.strings.Conversation_ViewMessage
-                        case "telegram_voicechat", "telegram_livestream", "telegram_videochat":
-                            if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                        case "telegram_voicechat", "telegram_videochat", "telegram_livestream":
+                            if type == "telegram_livestream" {
                                 title = item.presentationData.strings.Conversation_LiveStream
                             } else {
                                 title = item.presentationData.strings.Conversation_VoiceChat

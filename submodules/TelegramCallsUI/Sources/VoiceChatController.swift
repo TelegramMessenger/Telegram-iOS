@@ -2657,38 +2657,48 @@ public final class VoiceChatController: ViewController {
 
                                 let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
                                     if let strongSelf = self {
-                                        strongSelf.call.setShouldBeRecording(true, title: "", videoOrientation: videoOrientation)
+                                        let title: String
+                                        let text: String
+                                        let placeholder: String
+                                        if let _ = videoOrientation {
+                                            placeholder = strongSelf.presentationData.strings.VoiceChat_RecordingTitlePlaceholderVideo
+                                        } else {
+                                            placeholder = strongSelf.presentationData.strings.VoiceChat_RecordingTitlePlaceholder
+                                        }
+                                        if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
+                                            title = strongSelf.presentationData.strings.LiveStream_StartRecordingTitle
+                                            if let _ = videoOrientation {
+                                                text = strongSelf.presentationData.strings.LiveStream_StartRecordingTextVideo
+                                            } else {
+                                                text = strongSelf.presentationData.strings.LiveStream_StartRecordingText
+                                            }
+                                        } else {
+                                            title = strongSelf.presentationData.strings.VoiceChat_StartRecordingTitle
+                                            if let _ = videoOrientation {
+                                                text = strongSelf.presentationData.strings.VoiceChat_StartRecordingTextVideo
+                                            } else {
+                                                text = strongSelf.presentationData.strings.VoiceChat_StartRecordingText
+                                            }
+                                        }
 
-                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: text), action: { _ in return false })
-                                        strongSelf.call.playTone(.recordingStarted)
+                                        let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: title, text: text, placeholder: placeholder, value: nil, maxLength: 40, apply: { title in
+                                            if let strongSelf = self, let title = title {
+                                                strongSelf.call.setShouldBeRecording(true, title: title, videoOrientation: videoOrientation)
+
+                                                let text: String
+                                                if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
+                                                    text = strongSelf.presentationData.strings.LiveStream_RecordingStarted
+                                                } else {
+                                                    text = strongSelf.presentationData.strings.VoiceChat_RecordingStarted
+                                                }
+
+                                                strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: text), action: { _ in return false })
+                                                strongSelf.call.playTone(.recordingStarted)
+                                            }
+                                        })
+                                        strongSelf.controller?.present(controller, in: .window(.root))
                                     }
                                 })
-
-//                                let title: String
-//                                let text: String
-//                                if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-//                                    title = strongSelf.presentationData.strings.LiveStream_StartRecordingTitle
-//                                    text = strongSelf.presentationData.strings.LiveStream_StartRecordingText
-//                                } else {
-//                                    title = strongSelf.presentationData.strings.VoiceChat_StartRecordingTitle
-//                                    text = strongSelf.presentationData.strings.VoiceChat_StartRecordingText
-//                                }
-//
-//                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: title, text: text, placeholder: strongSelf.presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
-//                                    if let strongSelf = self, let title = title {
-//                                        strongSelf.call.setShouldBeRecording(true, title: title, videoOrientation: nil)
-//
-//                                        let text: String
-//                                        if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-//                                            text = strongSelf.presentationData.strings.LiveStream_RecordingStarted
-//                                        } else {
-//                                            text = strongSelf.presentationData.strings.VoiceChat_RecordingStarted
-//                                        }
-//
-//                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: text), action: { _ in return false })
-//                                        strongSelf.call.playTone(.recordingStarted)
-//                                    }
-//                                })
                                 self?.controller?.present(controller, in: .window(.root))
                             })))
                         }

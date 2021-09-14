@@ -49,7 +49,7 @@ private let validUrlSet: CharacterSet = {
     var set = CharacterSet(charactersIn: "a".unicodeScalars.first! ... "z".unicodeScalars.first!)
     set.insert(charactersIn: "A".unicodeScalars.first! ... "Z".unicodeScalars.first!)
     set.insert(charactersIn: "0".unicodeScalars.first! ... "9".unicodeScalars.first!)
-    set.insert(charactersIn: ".?!@#$^&%*+=,:;'\"`<>()[]{}/\\|~ ")
+    set.insert(charactersIn: ".?!@#$^&%*-+=,:;'\"`<>()[]{}/\\|~ ")
     return set
 }()
 

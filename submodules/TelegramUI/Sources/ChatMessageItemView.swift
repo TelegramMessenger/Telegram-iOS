@@ -893,8 +893,4 @@ public class ChatMessageItemView: ListViewItemNode {
             }
         }
     }
-    
-    override public var preferredAnimationCurve: (CGFloat) -> CGFloat {
-        return listViewAnimationCurveSystem
-    }
 }

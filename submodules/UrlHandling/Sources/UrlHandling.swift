@@ -136,10 +136,10 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     return .peerName(peerName, .groupBotStart(value))
                                 } else if queryItem.name == "game" {
                                     return nil
-                                } else if queryItem.name == "voicechat" || queryItem.name == "videochat" || queryItem.name == "livestream" {
+                                } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     return .peerName(peerName, .voiceChat(value))
                                 }
-                            } else if queryItem.name == "voicechat" || queryItem.name == "videochat" || queryItem.name == "livestream" {
+                            } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name)  {
                                 return .peerName(peerName, .voiceChat(nil))
                             }
                         }

@@ -5837,8 +5837,11 @@ Sorry for the inconvenience.";
 "VoiceChat.StartRecordingText" = "Do you want to start recording this chat and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "LiveStream.StartRecordingText" = "Do you want to start recording this live stream and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "VoiceChat.StartRecordingStart" = "Start";
+"VoiceChat.StartRecordingTextVideo" = "Do you want to start recording this chat and save the result into a video file?\n\nOther members will see that the chat is being recorded.";
+"LiveStream.StartRecordingTextVideo" = "Do you want to start recording this live stream and save the result into a video file?\n\nOther members will see that the chat is being recorded.";
 
 "VoiceChat.RecordingTitlePlaceholder" = "Audio Title (Optional)";
+"VoiceChat.RecordingTitlePlaceholderVideo" = "Video Title (Optional)";
 "VoiceChat.RecordingStarted" = "Voice chat recording started";
 "LiveStream.RecordingStarted" = "Live stream recording started";
 "VoiceChat.RecordingInProgress" = "Voice chat is being recorded";
@@ -6715,12 +6718,15 @@ Sorry for the inconvenience.";
 "UserInfo.ChangeColors" = "Change Colors";
 
 "Conversation.Theme.Title" = "Select Theme";
+"Conversation.Theme.Subtitle" = "Theme will be also applied for %@";
 "Conversation.Theme.Apply" = "Apply Theme";
 "Conversation.Theme.NoTheme" = "No\nTheme";
 "Conversation.Theme.Reset" = "Reset Theme for This Chat";
 "Conversation.Theme.DontSetTheme" = "Do Not Set Theme";
 "Conversation.Theme.SwitchToDark" = "Switch to dark appearance";
 "Conversation.Theme.SwitchToLight" = "Switch to light appearance";
+"Conversation.Theme.PreviewDark" = "Tap to see how chat will appear to\n%@ when using night mode.";
+"Conversation.Theme.PreviewLight" = "Tap to see how chat will appear to\n%@ when using day mode.";
 "Conversation.Theme.DismissAlert" = "Do you want to apply the selected theme to the chat?";
 "Conversation.Theme.DismissAlertApply" = "Apply";
 
