@@ -1600,6 +1600,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             } else if fitz != nil {
                                 additionalTextEmoji = basicEmoji
                             }
+                            
+                            let syncAnimations = item.message.id.peerId.namespace == Namespaces.Peer.CloudUser
                         
                             return .optionalAction({
                                 var haptic: EmojiHaptic?
@@ -1617,8 +1619,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                     self.haptic = haptic
                                 }
                                 
-                                if let animationItems = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji] {
-                                    let syncAnimations = item.message.id.peerId.namespace == Namespaces.Peer.CloudUser
+                                if syncAnimations, let animationItems = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji] {
                                     let playHaptic = haptic == nil
                                     
                                     var hapticFeedback: HapticFeedback
