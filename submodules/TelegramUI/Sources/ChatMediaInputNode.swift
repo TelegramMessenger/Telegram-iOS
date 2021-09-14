@@ -496,17 +496,14 @@ final class ChatMediaInputNode: ChatInputNode {
     private var scrollingStickerPacksListPromise = ValuePromise<Bool>(false)
     private var scrollingStickersGridPromise = ValuePromise<Bool>(false)
     private var previewingStickersPromise = ValuePromise<Bool>(false)
-    var choosingSticker: Signal<Bool, NoError> {
+    private var choosingSticker: Signal<Bool, NoError> {
         return combineLatest(self.scrollingStickerPacksListPromise.get(), self.scrollingStickersGridPromise.get(), self.previewingStickersPromise.get())
-        |> mapToSignal { scrollingStickerPacksList, scrollingStickersGrid, previewingStickers -> Signal<Bool, NoError> in
-            if scrollingStickerPacksList || scrollingStickersGrid || previewingStickers {
-                return .single(true)
-            } else {
-                return .single(false) |> delay(2.0, queue: Queue.mainQueue())
-            }
+        |> map { scrollingStickerPacksList, scrollingStickersGrid, previewingStickers -> Bool in
+            return scrollingStickerPacksList || scrollingStickersGrid || previewingStickers
         }
         |> distinctUntilChanged
     }
+    private var choosingStickerDisposable: Disposable?
     
     private var panelFocusScrollToIndex: Int?
     private var panelFocusInitialPosition: CGPoint?
@@ -1324,10 +1321,18 @@ final class ChatMediaInputNode: ChatInputNode {
                 strongSelf.startCollapseTimer(timeout: decelerated ? 0.5 : 2.5)
             }
         }
+        
+        self.choosingStickerDisposable = (self.choosingSticker
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction.updateChoosingSticker(value)
+            }
+        })
     }
     
     deinit {
         self.disposable.dispose()
+        self.choosingStickerDisposable?.dispose()
         self.searchContainerNodeLoadedDisposable.dispose()
         self.panelFocusTimer?.invalidate()
     }

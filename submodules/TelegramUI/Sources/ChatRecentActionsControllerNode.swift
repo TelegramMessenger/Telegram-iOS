@@ -529,6 +529,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return false
         }, getMessageTransitionNode: {
             return nil
+        }, updateChoosingSticker: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

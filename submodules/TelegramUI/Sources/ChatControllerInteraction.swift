@@ -123,7 +123,8 @@ public final class ChatControllerInteraction {
     let copyText: (String) -> Void
     let displayUndo: (UndoOverlayContent) -> Void
     let isAnimatingMessage: (UInt32) -> Bool
-    var getMessageTransitionNode: () -> ChatMessageTransitionNode?
+    let getMessageTransitionNode: () -> ChatMessageTransitionNode?
+    let updateChoosingSticker: (Bool) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -219,6 +220,7 @@ public final class ChatControllerInteraction {
         displayUndo: @escaping (UndoOverlayContent) -> Void,
         isAnimatingMessage: @escaping (UInt32) -> Bool,
         getMessageTransitionNode: @escaping () -> ChatMessageTransitionNode?,
+        updateChoosingSticker: @escaping (Bool) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -300,6 +302,7 @@ public final class ChatControllerInteraction {
         self.displayUndo = displayUndo
         self.isAnimatingMessage = isAnimatingMessage
         self.getMessageTransitionNode = getMessageTransitionNode
+        self.updateChoosingSticker = updateChoosingSticker
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         
@@ -358,6 +361,7 @@ public final class ChatControllerInteraction {
             return false
         }, getMessageTransitionNode: {
             return nil
+        }, updateChoosingSticker: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

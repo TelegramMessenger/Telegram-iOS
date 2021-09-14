@@ -43,6 +43,16 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     
     var getControllerInteraction: (() -> ChatControllerInteraction?)?
     
+    private var scrollingStickersGridPromise = ValuePromise<Bool>(false)
+    private var previewingStickersPromise = ValuePromise<Bool>(false)
+    var choosingSticker: Signal<Bool, NoError> {
+        return combineLatest(self.scrollingStickersGridPromise.get(), self.previewingStickersPromise.get())
+        |> map { scrollingStickersGrid, previewingStickers -> Bool in
+            return scrollingStickersGrid || previewingStickers
+        }
+        |> distinctUntilChanged
+    }
+    
     init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.context = context
         self.theme = theme
@@ -146,6 +156,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                     let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
                         return sourceNode
                     })
+                    controller.visibilityUpdated = { [weak self] visible in
+                        self?.previewingStickersPromise.set(visible)
+                    }
                     strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(controller, nil)
                     return controller
                 }
@@ -169,6 +182,20 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                 itemNode.updatePreviewing(animated: animated)
             }
         }
+    }
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.scrollingStickersGridPromise.set(true)
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            self.scrollingStickersGridPromise.set(false)
+        }
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        self.scrollingStickersGridPromise.set(false)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -402,6 +429,8 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
     private var validLayout: (CGSize, CGFloat)?
     private var query: String?
     
+    private var choosingStickerDisposable: Disposable?
+    
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         self.containerNode = ASDisplayNode()
         
@@ -491,11 +520,17 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true
         self.view.disablesInteractiveKeyboardGestureRecognizer = true
+        
+        self.choosingStickerDisposable = (self.stickersNode.choosingSticker
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction?.updateChoosingSticker(value)
+            }
+        })
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
+    deinit {
+        self.choosingStickerDisposable?.dispose()
     }
     
     func updateResults(results: [TelegramMediaFile], query: String?) {
