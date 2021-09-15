@@ -146,7 +146,7 @@ public func resetPasswordController(context: AccountContext, emailPattern: Strin
                     completion(false)
                 case .declined:
                     break
-                case let .error(reason):
+                case .error:
                     break
                 }
             })

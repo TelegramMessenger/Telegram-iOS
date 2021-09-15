@@ -98,7 +98,10 @@ final class PresentationCallToneRenderer {
                 var blockBuffer: CMBlockBuffer?
                 
                 let bytes = malloc(frameSize)!
-                toneData.withUnsafeBytes { (dataBytes: UnsafePointer<UInt8>) -> Void in
+                toneData.withUnsafeBytes { dataBuffer -> Void in
+                    guard let dataBytes = dataBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                        return
+                    }
                     var takenCount = 0
                     while takenCount < frameSize {
                         let dataOffset = (takeOffset + takenCount) % toneData.count

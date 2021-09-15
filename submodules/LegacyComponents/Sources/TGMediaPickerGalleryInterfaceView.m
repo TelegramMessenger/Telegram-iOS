@@ -1701,7 +1701,7 @@
 }
 
 - (CGRect)doneButtonFrame {
-    if (UIDeviceOrientationIsPortrait([self interfaceOrientation])) {
+    if (UIDeviceOrientationIsPortrait((UIDeviceOrientation)[self interfaceOrientation])) {
         return [_portraitToolbarView.doneButton convertRect:_portraitToolbarView.doneButton.bounds toView:nil];
     } else {
         return [_landscapeToolbarView.doneButton convertRect:_landscapeToolbarView.doneButton.bounds toView:nil];

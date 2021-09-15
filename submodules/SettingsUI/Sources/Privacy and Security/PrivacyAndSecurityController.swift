@@ -295,51 +295,51 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! PrivacyAndSecurityControllerArguments
         switch self {
-            case let .privacyHeader(theme, text):
+            case let .privacyHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .blockedPeers(theme, text, value):
+            case let .blockedPeers(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Blocked")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openBlockedUsers()
                 })
-            case let .phoneNumberPrivacy(theme, text, value):
+            case let .phoneNumberPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openPhoneNumberPrivacy()
                 })
-            case let .lastSeenPrivacy(theme, text, value):
+            case let .lastSeenPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openLastSeenPrivacy()
                 })
-            case let .profilePhotoPrivacy(theme, text, value):
+            case let .profilePhotoPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openProfilePhotoPrivacy()
                 })
-            case let .forwardPrivacy(theme, text, value):
+            case let .forwardPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openForwardPrivacy()
                 })
-            case let .groupPrivacy(theme, text, value):
+            case let .groupPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openGroupsPrivacy()
                 })
-            case let .selectivePrivacyInfo(theme, text):
+            case let .selectivePrivacyInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .voiceCallPrivacy(theme, text, value):
+            case let .voiceCallPrivacy(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openVoiceCallPrivacy()
                 })
-            case let .passcode(theme, text, hasFaceId, value):
+            case let .passcode(_, text, hasFaceId, value):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: hasFaceId ? "Settings/MenuIcons/FaceId" : "Settings/MenuIcons/TouchId")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openPasscode()
                 })
-            case let .twoStepVerification(theme, text, value, data):
+            case let .twoStepVerification(_, text, value, data):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/TwoStepAuth")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openTwoStepVerification(data)
                 })
-            case let .doubleBottom(theme, text, value):
+            case let .doubleBottom(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/DoubleBottom")?.precomposed(), longTapIcon: UIImage(bundleImageName: "Settings/MenuIcons/DoubleBottomEaster")?.precomposed(), backgroundIcon: UIImage(bundleImageName: "Settings/MenuIcons/DoubleBottomBackground")?.precomposed(), title: text, label: value, labelStyle: .monospaceText, sectionId: self.section, style: .blocks, action: {
                     arguments.openDoubleBottomFlow()
                 })
-            case let .activeSessions(theme, text, value):
+            case let .activeSessions(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Websites")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openActiveSessions()
                 })
@@ -351,19 +351,19 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 }, tag: PrivacyAndSecurityEntryTag.autoArchive)
             case let .autoArchiveInfo(text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .accountHeader(theme, text):
+            case let .accountHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .accountTimeout(theme, text, value):
+            case let .accountTimeout(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.setupAccountAutoremove()
                 }, tag: PrivacyAndSecurityEntryTag.accountTimeout)
-            case let .accountInfo(theme, text):
+            case let .accountInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .dataSettings(theme, text):
+            case let .dataSettings(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openDataSettings()
                 })
-            case let .dataSettingsInfo(theme, text):
+            case let .dataSettingsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -745,7 +745,6 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             }
         })
     }, openTwoStepVerification: { data in
-        let intro = false
         if let data = data {
             switch data {
             case .set:
@@ -756,28 +755,12 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
 
                     pushControllerImpl?(controller, true)
                     return
-                } else {
-                    
                 }
             }
         }
-        if intro {
-            var nextImpl: (() -> Void)?
-            let introController = PrivacyIntroController(context: context, mode: .twoStepVerification, proceedAction: {
-                nextImpl?()
-            })
-            nextImpl = { [weak introController] in
-                guard let introController = introController, let navigationController = introController.navigationController as? NavigationController else {
-                    return
-                }
-                let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: intro, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
-                navigationController.replaceController(introController, with: controller, animated: true)
-            }
-            pushControllerImpl?(introController, true)
-        } else {
-            let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: intro, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
-            pushControllerImpl?(controller, true)
-        }
+
+        let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: false, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
+        pushControllerImpl?(controller, true)
     }, openActiveSessions: {
         pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: true), true)
     }, toggleArchiveAndMuteNonContacts: { archiveValue in
@@ -887,7 +870,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     
     let accountIsHiddenSignal = context.sharedContext.accountManager.accountRecords()
     |> map { view -> Bool in
-            view.currentRecord?.attributes.contains(where: { $0 is HiddenAccountAttribute }) ?? false
+        view.currentRecord?.attributes.contains(where: { $0.isHiddenAccountAttribute }) ?? false
     }
     |> distinctUntilChanged(isEqual: ==)
     
@@ -900,7 +883,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         return value.timestamp
     })
     
-    let doubleBottomDisplayTimeSignal = combineLatest(accountIsHiddenSignal, doubleBottomTimestampSignal) |> mapToSignal { [weak context] accountIsHidden, timestamp -> Signal<Int64?,NoError> in
+    let doubleBottomDisplayTimeSignal = combineLatest(accountIsHiddenSignal, doubleBottomTimestampSignal) |> mapToSignal { accountIsHidden, timestamp -> Signal<Int64?,NoError> in
         let currentTimestamp = Int64(Date().timeIntervalSince1970)
         let timeLeft = timestamp - currentTimestamp
         if timeLeft <= 0 || accountIsHidden {

@@ -19,34 +19,34 @@
 
 @optional
 
-- (void)contextDatacenterAddressSetUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet *)addressSet;
-- (void)contextDatacenterAuthInfoUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo *)authInfo selector:(MTDatacenterAuthInfoSelector)selector;
-- (void)contextDatacenterAuthTokenUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId authToken:(id)authToken;
-- (void)contextDatacenterTransportSchemesUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId shouldReset:(bool)shouldReset;
-- (void)contextIsPasswordRequiredUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId;
-- (void)contextDatacenterPublicKeysUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys;
-- (MTSignal *)fetchContextDatacenterPublicKeys:(MTContext *)context datacenterId:(NSInteger)datacenterId;
-- (void)contextApiEnvironmentUpdated:(MTContext *)context apiEnvironment:(MTApiEnvironment *)apiEnvironment;
-- (MTSignal *)isContextNetworkAccessAllowed:(MTContext *)context;
-- (void)contextLoggedOut:(MTContext *)context;
+- (void)contextDatacenterAddressSetUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet * _Nonnull)addressSet;
+- (void)contextDatacenterAuthInfoUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo * _Nonnull)authInfo selector:(MTDatacenterAuthInfoSelector)selector;
+- (void)contextDatacenterAuthTokenUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId authToken:(id _Nullable)authToken;
+- (void)contextDatacenterTransportSchemesUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId shouldReset:(bool)shouldReset;
+- (void)contextIsPasswordRequiredUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId;
+- (void)contextDatacenterPublicKeysUpdated:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> * _Nonnull)publicKeys;
+- (MTSignal * _Nonnull)fetchContextDatacenterPublicKeys:(MTContext * _Nonnull)context datacenterId:(NSInteger)datacenterId;
+- (void)contextApiEnvironmentUpdated:(MTContext * _Nonnull)context apiEnvironment:(MTApiEnvironment * _Nonnull)apiEnvironment;
+- (MTSignal * _Nonnull)isContextNetworkAccessAllowed:(MTContext * _Nonnull)context;
+- (void)contextLoggedOut:(MTContext * _Nonnull)context;
 
 @end
 
 @interface MTContextBlockChangeListener : NSObject <MTContextChangeListener>
 
-@property (nonatomic, copy) void (^contextIsPasswordRequiredUpdated)(MTContext *, NSInteger);
-@property (nonatomic, copy) MTSignal *(^fetchContextDatacenterPublicKeys)(MTContext *, NSInteger);
-@property (nonatomic, copy) MTSignal *(^isContextNetworkAccessAllowed)(MTContext *);
+@property (nonatomic, copy) void (^ _Nullable contextIsPasswordRequiredUpdated)(MTContext * _Nonnull, NSInteger);
+@property (nonatomic, copy) MTSignal * _Nonnull (^ _Nullable fetchContextDatacenterPublicKeys)(MTContext * _Nonnull, NSInteger);
+@property (nonatomic, copy) MTSignal * _Nonnull(^ _Nullable isContextNetworkAccessAllowed)(MTContext * _Nonnull);
 
 @end
 
 @interface MTContext : NSObject
 
-@property (nonatomic, strong) id<MTKeychain> keychain;
+@property (nonatomic, strong) id<MTKeychain> _Nonnull keychain;
 
-@property (nonatomic, strong, readonly) id<MTSerialization> serialization;
-@property (nonatomic, strong) id<EncryptionProvider> encryptionProvider;
-@property (nonatomic, strong, readonly) MTApiEnvironment *apiEnvironment;
+@property (nonatomic, strong, readonly) id<MTSerialization> _Nonnull serialization;
+@property (nonatomic, strong) id<EncryptionProvider> _Nonnull encryptionProvider;
+@property (nonatomic, strong, readonly) MTApiEnvironment * _Nonnull apiEnvironment;
 @property (nonatomic, readonly) bool isTestingEnvironment;
 @property (nonatomic, readonly) bool useTempAuthKeys;
 @property (nonatomic) int32_t tempKeyExpiration;
@@ -54,66 +54,68 @@
 + (int32_t)fixedTimeDifference;
 + (void)setFixedTimeDifference:(int32_t)fixedTimeDifference;
 
-+ (MTQueue *)contextQueue;
++ (MTQueue * _Nonnull)contextQueue;
 
-- (instancetype)initWithSerialization:(id<MTSerialization>)serialization encryptionProvider:(id<EncryptionProvider>)encryptionProvider apiEnvironment:(MTApiEnvironment *)apiEnvironment isTestingEnvironment:(bool)isTestingEnvironment useTempAuthKeys:(bool)useTempAuthKeys;
++ (void)performWithObjCTry:(dispatch_block_t _Nonnull)block;
 
-- (void)performBatchUpdates:(void (^)())block;
+- (instancetype _Nonnull)initWithSerialization:(id<MTSerialization> _Nonnull)serialization encryptionProvider:(id<EncryptionProvider> _Nonnull)encryptionProvider apiEnvironment:(MTApiEnvironment * _Nonnull)apiEnvironment isTestingEnvironment:(bool)isTestingEnvironment useTempAuthKeys:(bool)useTempAuthKeys;
 
-- (void)addChangeListener:(id<MTContextChangeListener>)changeListener;
-- (void)removeChangeListener:(id<MTContextChangeListener>)changeListener;
+- (void)performBatchUpdates:(void (^ _Nonnull)())block;
 
-- (void)setDiscoverBackupAddressListSignal:(MTSignal *)signal;
+- (void)addChangeListener:(id<MTContextChangeListener> _Nonnull)changeListener;
+- (void)removeChangeListener:(id<MTContextChangeListener> _Nonnull)changeListener;
+
+- (void)setDiscoverBackupAddressListSignal:(MTSignal * _Nonnull)signal;
 
 - (NSTimeInterval)globalTime;
 - (NSTimeInterval)globalTimeDifference;
 - (NSTimeInterval)globalTimeOffsetFromUTC;
 - (void)setGlobalTimeDifference:(NSTimeInterval)globalTimeDifference;
 
-- (void)setSeedAddressSetForDatacenterWithId:(NSInteger)datacenterId seedAddressSet:(MTDatacenterAddressSet *)seedAddressSet;
-- (void)updateAddressSetForDatacenterWithId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet *)addressSet forceUpdateSchemes:(bool)forceUpdateSchemes;
-- (void)addAddressForDatacenterWithId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address;
-- (void)updateTransportSchemeForDatacenterWithId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme media:(bool)media isProxy:(bool)isProxy;
-- (void)updateAuthInfoForDatacenterWithId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo *)authInfo selector:(MTDatacenterAuthInfoSelector)selector;
+- (void)setSeedAddressSetForDatacenterWithId:(NSInteger)datacenterId seedAddressSet:(MTDatacenterAddressSet * _Nonnull)seedAddressSet;
+- (void)updateAddressSetForDatacenterWithId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet * _Nonnull)addressSet forceUpdateSchemes:(bool)forceUpdateSchemes;
+- (void)addAddressForDatacenterWithId:(NSInteger)datacenterId address:(MTDatacenterAddress * _Nonnull)address;
+- (void)updateTransportSchemeForDatacenterWithId:(NSInteger)datacenterId transportScheme:(MTTransportScheme * _Nonnull)transportScheme media:(bool)media isProxy:(bool)isProxy;
+- (void)updateAuthInfoForDatacenterWithId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo * _Nullable)authInfo selector:(MTDatacenterAuthInfoSelector)selector;
 
 - (bool)isPasswordInputRequiredForDatacenterWithId:(NSInteger)datacenterId;
 - (bool)updatePasswordInputRequiredForDatacenterWithId:(NSInteger)datacenterId required:(bool)required;
 
-- (void)scheduleSessionCleanupForAuthKeyId:(int64_t)authKeyId sessionInfo:(MTSessionInfo *)sessionInfo;
-- (void)collectSessionIdsForCleanupWithAuthKeyId:(int64_t)authKeyId completion:(void (^)(NSArray *sessionIds))completion;
-- (void)sessionIdsDeletedForAuthKeyId:(int64_t)authKeyId sessionIds:(NSArray *)sessionIds;
+- (void)scheduleSessionCleanupForAuthKeyId:(int64_t)authKeyId sessionInfo:(MTSessionInfo * _Nonnull)sessionInfo;
+- (void)collectSessionIdsForCleanupWithAuthKeyId:(int64_t)authKeyId completion:(void (^ _Nonnull)(NSArray * _Nonnull sessionIds))completion;
+- (void)sessionIdsDeletedForAuthKeyId:(int64_t)authKeyId sessionIds:(NSArray * _Nonnull)sessionIds;
 
-- (NSArray *)knownDatacenterIds;
-- (void)enumerateAddressSetsForDatacenters:(void (^)(NSInteger datacenterId, MTDatacenterAddressSet *addressSet, BOOL *stop))block;
+- (NSArray * _Nonnull)knownDatacenterIds;
+- (void)enumerateAddressSetsForDatacenters:(void (^ _Nonnull)(NSInteger datacenterId, MTDatacenterAddressSet * _Nonnull addressSet, BOOL * _Nullable stop))block;
 
-- (MTDatacenterAddressSet *)addressSetForDatacenterWithId:(NSInteger)datacenterId;
-- (void)reportTransportSchemeFailureForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme;
-- (void)reportTransportSchemeSuccessForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme;
+- (MTDatacenterAddressSet * _Nonnull)addressSetForDatacenterWithId:(NSInteger)datacenterId;
+- (void)reportTransportSchemeFailureForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme * _Nonnull)transportScheme;
+- (void)reportTransportSchemeSuccessForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme * _Nonnull)transportScheme;
 - (void)invalidateTransportSchemesForDatacenterIds:(NSArray<NSNumber *> * _Nonnull)datacenterIds;
 - (void)invalidateTransportSchemesForKnownDatacenterIds;
 - (MTTransportScheme * _Nullable)chooseTransportSchemeForConnectionToDatacenterId:(NSInteger)datacenterId schemes:(NSArray<MTTransportScheme *> * _Nonnull)schemes;
 - (NSArray<MTTransportScheme *> * _Nonnull)transportSchemesForDatacenterWithId:(NSInteger)datacenterId media:(bool)media enforceMedia:(bool)enforceMedia isProxy:(bool)isProxy;
 - (void)transportSchemeForDatacenterWithIdRequired:(NSInteger)datacenterId media:(bool)media;
-- (void)invalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme isProbablyHttp:(bool)isProbablyHttp media:(bool)media;
-- (void)revalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme media:(bool)media;
-- (MTDatacenterAuthInfo *)authInfoForDatacenterWithId:(NSInteger)datacenterId selector:(MTDatacenterAuthInfoSelector)selector;
+- (void)invalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme * _Nonnull)transportScheme isProbablyHttp:(bool)isProbablyHttp media:(bool)media;
+- (void)revalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme * _Nonnull)transportScheme media:(bool)media;
+- (MTDatacenterAuthInfo * _Nullable)authInfoForDatacenterWithId:(NSInteger)datacenterId selector:(MTDatacenterAuthInfoSelector)selector;
     
-- (NSArray<NSDictionary *> *)publicKeysForDatacenterWithId:(NSInteger)datacenterId;
-- (void)updatePublicKeysForDatacenterWithId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys;
+- (NSArray<NSDictionary *> * _Nonnull)publicKeysForDatacenterWithId:(NSInteger)datacenterId;
+- (void)updatePublicKeysForDatacenterWithId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> * _Nonnull)publicKeys;
 - (void)publicKeysForDatacenterWithIdRequired:(NSInteger)datacenterId;
 
 - (void)removeAllAuthTokens;
 - (void)removeTokenForDatacenterWithId:(NSInteger)datacenterId;
-- (id)authTokenForDatacenterWithId:(NSInteger)datacenterId;
-- (void)updateAuthTokenForDatacenterWithId:(NSInteger)datacenterId authToken:(id)authToken;
+- (id _Nullable)authTokenForDatacenterWithId:(NSInteger)datacenterId;
+- (void)updateAuthTokenForDatacenterWithId:(NSInteger)datacenterId authToken:(id _Nullable)authToken;
 
 - (void)addressSetForDatacenterWithIdRequired:(NSInteger)datacenterId;
 - (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId isCdn:(bool)isCdn selector:(MTDatacenterAuthInfoSelector)selector;
-- (void)authTokenForDatacenterWithIdRequired:(NSInteger)datacenterId authToken:(id)authToken masterDatacenterId:(NSInteger)masterDatacenterId;
+- (void)authTokenForDatacenterWithIdRequired:(NSInteger)datacenterId authToken:(id _Nullable)authToken masterDatacenterId:(NSInteger)masterDatacenterId;
 
-- (void)reportProblemsWithDatacenterAddressForId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address;
+- (void)reportProblemsWithDatacenterAddressForId:(NSInteger)datacenterId address:(MTDatacenterAddress * _Nonnull)address;
     
-- (void)updateApiEnvironment:(MTApiEnvironment *(^)(MTApiEnvironment *))f;
+- (void)updateApiEnvironment:(MTApiEnvironment * _Nullable (^ _Nonnull)(MTApiEnvironment * _Nullable))f;
 
 - (void)beginExplicitBackupAddressDiscovery;
 

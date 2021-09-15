@@ -14,23 +14,29 @@ public enum AuthorizationCodeRequestError {
     case timeout
 }
 
-func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: UnauthorizedAccount) {
+func switchToAuthorizedAccount(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, account: UnauthorizedAccount) {
     let nextSortOrder = (transaction.getRecords().map({ record -> Int32 in
         for attribute in record.attributes {
-            if let attribute = attribute as? AccountSortOrderAttribute {
-                return attribute.order
+            if case let .sortOrder(sortOrder) = attribute {
+                return sortOrder.order
             }
         }
         return 0
     }).max() ?? 0) + 1
-    var attributes: [AccountRecordAttribute] = [AccountEnvironmentAttribute(environment: account.testingEnvironment ? .test : .production), AccountSortOrderAttribute(order: nextSortOrder)]
+    var attributes: [TelegramAccountRecordAttribute] = [
+        .environment(AccountEnvironmentAttribute(environment: account.testingEnvironment ? .test : .production)),
+        .sortOrder(AccountSortOrderAttribute(order: nextSortOrder))
+    ]
     var shouldSwitchToAccount = true
     if let currentAuthAttribues = transaction.getCurrentAuth()?.attributes {
         for attribute in currentAuthAttribues {
-            if let attribute = attribute as? ContinueDoubleBottomFlowAttribute {
+            switch attribute {
+            case .continueDoubleBottom:
                 shouldSwitchToAccount = false
-            } else if attribute is HiddenAccountAttribute {
+            case .hiddenDoubleBottom:
                 attributes.append(attribute)
+            default:
+                continue
             }
         }
     }
@@ -81,7 +87,7 @@ private func ~=<T: RegularExpressionMatchable>(pattern: Regex, matchable: T) -> 
     return matchable.match(pattern)
 }
 
-public func sendAuthorizationCode(accountManager: AccountManager, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, syncContacts: Bool) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {
+public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, syncContacts: Bool) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {
     let sendCode = Api.functions.auth.sendCode(phoneNumber: phoneNumber, apiId: apiId, apiHash: apiHash, settings: .codeSettings(flags: 0))
     
     let codeAndAccount = account.network.request(sendCode, automaticFloodWait: false)
@@ -215,7 +221,7 @@ public enum AuthorizeWithCodeResult {
     case loggedIn
 }
 
-public func authorizeWithCode(accountManager: AccountManager, account: UnauthorizedAccount, code: String, termsOfService: UnauthorizedAccountTermsOfService?) -> Signal<AuthorizeWithCodeResult, AuthorizationCodeVerificationError> {
+public func authorizeWithCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, code: String, termsOfService: UnauthorizedAccountTermsOfService?) -> Signal<AuthorizeWithCodeResult, AuthorizationCodeVerificationError> {
     return account.postbox.transaction { transaction -> Signal<AuthorizeWithCodeResult, AuthorizationCodeVerificationError> in
         if let state = transaction.getState() as? UnauthorizedAccountState {
             switch state.contents {
@@ -308,7 +314,7 @@ public enum AuthorizationPasswordVerificationError {
     case generic
 }
 
-public func authorizeWithPassword(accountManager: AccountManager, account: UnauthorizedAccount, password: String, syncContacts: Bool) -> Signal<Void, AuthorizationPasswordVerificationError> {
+public func authorizeWithPassword(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, password: String, syncContacts: Bool) -> Signal<Void, AuthorizationPasswordVerificationError> {
     return verifyPassword(account, password: password)
     |> `catch` { error -> Signal<Api.auth.Authorization, AuthorizationPasswordVerificationError> in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -385,7 +391,7 @@ public final class RecoveredAccountData {
     }
 }
 
-public func loginWithRecoveredAccountData(accountManager: AccountManager, account: UnauthorizedAccount, recoveredAccountData: RecoveredAccountData, syncContacts: Bool) -> Signal<Never, NoError> {
+public func loginWithRecoveredAccountData(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, recoveredAccountData: RecoveredAccountData, syncContacts: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         switch recoveredAccountData.authorization {
         case let .authorization(_, _, user):
@@ -505,7 +511,7 @@ public enum SignUpError {
     case invalidLastName
 }
 
-public func signUpWithName(accountManager: AccountManager, account: UnauthorizedAccount, firstName: String, lastName: String, avatarData: Data?, avatarVideo: Signal<UploadedPeerPhotoData?, NoError>?, videoStartTimestamp: Double?) -> Signal<Void, SignUpError> {
+public func signUpWithName(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, firstName: String, lastName: String, avatarData: Data?, avatarVideo: Signal<UploadedPeerPhotoData?, NoError>?, videoStartTimestamp: Double?) -> Signal<Void, SignUpError> {
     return account.postbox.transaction { transaction -> Signal<Void, SignUpError> in
         if let state = transaction.getState() as? UnauthorizedAccountState, case let .signUp(number, codeHash, _, _, _, syncContacts) = state.contents {
             return account.network.request(Api.functions.auth.signUp(phoneNumber: number, phoneCodeHash: codeHash, firstName: firstName, lastName: lastName))
@@ -538,8 +544,8 @@ public func signUpWithName(accountManager: AccountManager, account: Unauthorized
                     
                     let switchedAccounts = accountManager.transaction { transaction -> Void in
                         switchToAuthorizedAccount(transaction: transaction, account: account)
-                        }
-                        |> castError(SignUpError.self)
+                    }
+                    |> castError(SignUpError.self)
                     
                     if let avatarData = avatarData {
                         let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))

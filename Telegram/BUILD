@@ -6,6 +6,8 @@ load("@build_bazel_rules_apple//apple:ios.bzl",
     "ios_application",
     "ios_extension",
     "ios_framework",
+    "ios_unit_test",
+    "ios_ui_test",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -1464,7 +1466,7 @@ ios_extension(
 plist_fragment(
     name = "BroadcastUploadInfoPlist",
     extension = "plist",
-    template =
+    template = 
     """
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
@@ -1851,6 +1853,23 @@ ios_application(
         ":Main",
         ":Lib",
     ],
+)
+
+swift_library(
+    name = "UITestsLib",
+    module_name = "UITestsLib",
+    srcs = glob(["UITests/**/*.swift"]),
+    deps = [
+        "//submodules/TelegramUI:TelegramUI",
+    ],
+)
+
+ios_ui_test(
+    name = "UITests",
+    minimum_os_version = "9.0",
+    deps = [":UITestsLib"],
+    infoplists = [":UITestsLib/Info.plist"],
+    test_host = ":Telegram",
 )
 
 # Temporary targets used to simplify webrtc build tests

@@ -1,7 +1,8 @@
 import Foundation
 import Display
-import Postbox
 import SwiftSignalKit
+import Postbox
+import TelegramCore
 
 public struct ChatListNodePeersFilter: OptionSet {
     public var rawValue: Int32
@@ -40,8 +41,9 @@ public final class PeerSelectionControllerParams {
     public let createNewGroup: (() -> Void)?
     public let pretendPresentedInModal: Bool
     public let multipleSelection: Bool
+    public let forwardedMessageIds: [EngineMessage.Id]
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessageIds: [EngineMessage.Id] = []) {
         self.context = context
         self.filter = filter
         self.hasChatListSelector = hasChatListSelector
@@ -52,6 +54,7 @@ public final class PeerSelectionControllerParams {
         self.createNewGroup = createNewGroup
         self.pretendPresentedInModal = pretendPresentedInModal
         self.multipleSelection = multipleSelection
+        self.forwardedMessageIds = forwardedMessageIds
     }
 }
 
@@ -63,7 +66,7 @@ public enum PeerSelectionControllerSendMode {
 
 public protocol PeerSelectionController: ViewController {
     var peerSelected: ((Peer) -> Void)? { get set }
-    var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode) -> Void)? { get set }
+    var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode, ChatInterfaceForwardOptionsState?) -> Void)? { get set }
     var inProgress: Bool { get set }
     var customDismiss: (() -> Void)? { get set }
 }

@@ -641,7 +641,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
+    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         let displaySize = CGSize(width: 184.0, height: 184.0)
         let telegramFile = self.telegramFile
         let emojiFile = self.emojiFile
@@ -661,7 +661,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
-            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
             var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
             var isEmoji = false
             if let _ = telegramDice {
@@ -853,10 +853,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var needsReplyBackground = false
             var replyMarkup: ReplyMarkupMessageAttribute?
             
-            var ignoreForward = self.telegramDice == nil
-            
             let availableContentWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
             
+            var ignoreForward = false
             if let forwardInfo = item.message.forwardInfo {
                 if item.message.id.peerId != item.context.account.peerId {
                     for attribute in item.message.attributes {
@@ -980,7 +979,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 layoutSize.height += actionButtonsSizeAndApply.0.height
             }
             
-            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
+            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, _ in
                 if let strongSelf = self {
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     strongSelf.updateAccessibilityData(accessibilityData)
@@ -992,7 +991,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration) = animation {
-                        transition = .animated(duration: duration, curve: .spring)
+                        if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                            transition = .animated(duration: duration, curve: .linear)
+                        } else {
+                            transition = .animated(duration: duration, curve: .spring)
+                        }
                     }
                     
                     let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
@@ -1080,7 +1083,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let viaBotNode = viaBotApply()
                         if strongSelf.viaBotNode == nil {
                             strongSelf.viaBotNode = viaBotNode
-                            strongSelf.addSubnode(viaBotNode)
+                            strongSelf.contextSourceNode.contentNode.addSubnode(viaBotNode)
                         }
                         let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 15.0) : (params.width - params.rightInset - viaBotLayout.size.width - layoutConstants.bubble.edgeInset - 14.0)), y: 8.0), size: viaBotLayout.size)
                         viaBotNode.frame = viaBotFrame
@@ -1161,7 +1164,21 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         } else {
                             let forwardBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
                             strongSelf.forwardBackgroundNode = forwardBackgroundNode
-                            strongSelf.addSubnode(forwardBackgroundNode)
+                            strongSelf.contextSourceNode.contentNode.addSubnode(forwardBackgroundNode)
+                            
+                            if animation.isAnimated {
+                                forwardBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
+                        }
+                    } else if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
+                        if animation.isAnimated {
+                            strongSelf.forwardBackgroundNode = nil
+                            forwardBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak forwardBackgroundNode] _ in
+                                forwardBackgroundNode?.removeFromSupernode()
+                            })
+                        } else {
+                            forwardBackgroundNode.removeFromSupernode()
+                            strongSelf.forwardBackgroundNode = nil
                         }
                     }
                     
@@ -1169,7 +1186,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let forwardInfoNode = forwardInfoApply(forwardInfoSize.width)
                         if strongSelf.forwardInfoNode == nil {
                             strongSelf.forwardInfoNode = forwardInfoNode
-                            strongSelf.addSubnode(forwardInfoNode)
+                            strongSelf.contextSourceNode.contentNode.addSubnode(forwardInfoNode)
+                            
+                            if animation.isAnimated {
+                                forwardInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
                         }
                         let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 12.0) : (params.width - params.rightInset - forwardInfoSize.width - layoutConstants.bubble.edgeInset - 12.0)), y: 8.0), size: forwardInfoSize)
                         forwardInfoNode.frame = forwardInfoFrame
@@ -1178,8 +1199,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             forwardBackgroundNode.update(size: forwardBackgroundNode.bounds.size, cornerRadius: 8.0, transition: .immediate)
                         }
                     } else if let forwardInfoNode = strongSelf.forwardInfoNode {
-                        forwardInfoNode.removeFromSupernode()
-                        strongSelf.forwardInfoNode = nil
+                        if animation.isAnimated {
+                            if let forwardInfoNode = strongSelf.forwardInfoNode {
+                                strongSelf.forwardInfoNode = nil
+                                forwardInfoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak forwardInfoNode] _ in
+                                    forwardInfoNode?.removeFromSupernode()
+                                })
+                            }
+                        } else {
+                            forwardInfoNode.removeFromSupernode()
+                            strongSelf.forwardInfoNode = nil
+                        }
                     }
                     
                     if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {

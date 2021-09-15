@@ -57,8 +57,9 @@
     _subtitleLabel.backgroundColor = [UIColor clearColor];
     _subtitleLabel.textColor = UIColorRGB(0x777777);
     
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         self.accessibilityIgnoresInvertColors = true;
+    }
 }
 
 - (void)setPallete:(TGMenuSheetPallete *)pallete

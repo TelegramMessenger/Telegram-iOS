@@ -366,7 +366,10 @@ private extension DoubleBottomFlow {
 
 fileprivate extension AccountRecord {
     var isPublic: Bool {
-        !attributes.contains(where: { $0 is HiddenAccountAttribute }) && !attributes.contains(where: { $0 is LoggedOutAccountAttribute })
+        !attributes.contains(where: {
+            guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+            return attribute.isHiddenAccountAttribute || attribute.isLoggedOutAccountAttribute
+        })
     }
 }
 

@@ -65,32 +65,6 @@ public enum InstalledStickerPacksEntryTag: ItemListItemTag {
 private enum InstalledStickerPacksEntryId: Hashable {
     case index(Int32)
     case pack(ItemCollectionId)
-    
-    var hashValue: Int {
-        switch self {
-            case let .index(index):
-                return index.hashValue
-            case let .pack(id):
-                return id.hashValue
-        }
-    }
-    
-    static func ==(lhs: InstalledStickerPacksEntryId, rhs: InstalledStickerPacksEntryId) -> Bool {
-        switch lhs {
-            case let .index(index):
-                if case .index(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .pack(id):
-                if case .pack(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
@@ -848,8 +822,8 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         var currentIds: [ItemCollectionId] = []
         for entry in entries {
             switch entry {
-            case let .pack(pack):
-                currentIds.append(pack.3.id)
+            case let .pack(_, _, _, info, _, _, _, _, _, _):
+                currentIds.append(info.id)
             default:
                 break
             }
@@ -902,14 +876,14 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         var currentIds: [ItemCollectionId] = []
         for entry in entries {
             switch entry {
-            case let .pack(pack):
-                currentIds.append(pack.3.id)
+            case let .pack(_, _, _, info, _, _, _, _, _, _):
+                currentIds.append(info.id)
             default:
                 break
             }
         }
         let _ = (context.account.postbox.transaction { transaction -> Void in
-            var infos = transaction.getItemCollectionsInfos(namespace: namespaceForMode(mode))
+            let infos = transaction.getItemCollectionsInfos(namespace: namespaceForMode(mode))
             
             var packDict: [ItemCollectionId: Int] = [:]
             for i in 0 ..< infos.count {

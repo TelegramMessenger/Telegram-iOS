@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -174,7 +173,7 @@ enum BotReceiptEntry: ItemListNodeEntry {
     }
 }
 
-private func botReceiptControllerEntries(presentationData: PresentationData, invoice: TelegramMediaInvoice?, formInvoice: BotPaymentInvoice?, formInfo: BotPaymentRequestedInfo?, shippingOption: BotPaymentShippingOption?, paymentMethodTitle: String?, botPeer: Peer?, tipAmount: Int64?) -> [BotReceiptEntry] {
+private func botReceiptControllerEntries(presentationData: PresentationData, invoice: TelegramMediaInvoice?, formInvoice: BotPaymentInvoice?, formInfo: BotPaymentRequestedInfo?, shippingOption: BotPaymentShippingOption?, paymentMethodTitle: String?, botPeer: EnginePeer?, tipAmount: Int64?) -> [BotReceiptEntry] {
     var entries: [BotReceiptEntry] = []
     
     var botName = ""
@@ -279,7 +278,7 @@ final class BotReceiptControllerNode: ItemListControllerNode {
     private let actionButtonPanelSeparator: ASDisplayNode
     private let actionButton: BotCheckoutActionButton
     
-    init(controller: ItemListController?, navigationBar: NavigationBar, context: AccountContext, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
+    init(controller: ItemListController?, navigationBar: NavigationBar, context: AccountContext, messageId: EngineMessage.Id, dismissAnimated: @escaping () -> Void) {
         self.context = context
         self.dismissAnimated = dismissAnimated
         
@@ -287,7 +286,13 @@ final class BotReceiptControllerNode: ItemListControllerNode {
         
         let arguments = BotReceiptControllerArguments(account: context.account)
         
-        let signal: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError> = combineLatest(context.sharedContext.presentationData, receiptData.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
+        let signal: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError> = combineLatest(
+            context.sharedContext.presentationData,
+            receiptData.get(),
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId)
+            )
+        )
         |> map { presentationData, receiptData, botPeer -> (ItemListPresentationData, (ItemListNodeState, Any)) in
             let nodeState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: botReceiptControllerEntries(presentationData: presentationData, invoice: receiptData?.4, formInvoice: receiptData?.0, formInfo: receiptData?.1, shippingOption: receiptData?.2, paymentMethodTitle: receiptData?.3, botPeer: botPeer, tipAmount: receiptData?.5), style: .blocks, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
             

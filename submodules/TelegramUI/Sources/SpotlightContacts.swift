@@ -90,7 +90,7 @@ private final class SpotlightIndexStorage {
     func update(items: [PeerId: SpotlightIndexStorageItem]) {
         let validPeerIds = Set(items.keys)
         var removePeerIds: [PeerId] = []
-        for (peerId, item) in self.items {
+        for (peerId, _) in self.items {
             if !validPeerIds.contains(peerId) {
                 removePeerIds.append(peerId)
             }
@@ -224,12 +224,12 @@ private func manageableSpotlightContacts(appBasePath: String, accounts: Signal<[
 private final class SpotlightDataContextImpl {
     private let queue: Queue
     private let appBasePath: String
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let indexStorage: SpotlightIndexStorage
     
     private var listDisposable: Disposable?
     
-    init(queue: Queue, appBasePath: String, accountManager: AccountManager, accounts: Signal<[Account], NoError>) {
+    init(queue: Queue, appBasePath: String, accountManager: AccountManager<TelegramAccountManagerTypes>, accounts: Signal<[Account], NoError>) {
         self.queue = queue
         self.appBasePath = appBasePath
         self.accountManager = accountManager
@@ -266,7 +266,7 @@ private final class SpotlightDataContextImpl {
 public final class SpotlightDataContext {
     private let impl: QueueLocalObject<SpotlightDataContextImpl>
     
-    public init(appBasePath: String, accountManager: AccountManager, accounts: Signal<[Account], NoError>) {
+    public init(appBasePath: String, accountManager: AccountManager<TelegramAccountManagerTypes>, accounts: Signal<[Account], NoError>) {
         let queue = Queue()
         self.impl = QueueLocalObject(queue: queue, generate: {
             return SpotlightDataContextImpl(queue: queue, appBasePath: appBasePath, accountManager: accountManager, accounts: accounts)

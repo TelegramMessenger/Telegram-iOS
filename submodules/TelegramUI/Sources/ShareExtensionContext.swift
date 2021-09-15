@@ -208,7 +208,7 @@ public class ShareRootControllerImpl {
             initializeAccountManagement()
             
             let hiddenAccountManager = HiddenAccountManagerImpl()
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager, isTemporary: true, isReadOnly: false)
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, hiddenAccountManager: hiddenAccountManager)
             
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
@@ -960,7 +960,7 @@ public class ShareRootControllerImpl {
                                                                 strongSelf.mainWindow?.present(controller, on: .root)
                                                             } else {
                                                                 let presentationData = internalContext.sharedContext.currentPresentationData.with { $0 }
-                                                                if let user = peer as? TelegramUser {
+                                                                if let _ = peer as? TelegramUser {
                                                                     let text: String
                                                                     switch result {
                                                                     case .allowed:

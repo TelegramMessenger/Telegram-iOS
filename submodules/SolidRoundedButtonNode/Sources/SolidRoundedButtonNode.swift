@@ -5,10 +5,12 @@ import Display
 
 public final class SolidRoundedButtonTheme {
     public let backgroundColor: UIColor
+    public let gradientBackgroundColor: UIColor?
     public let foregroundColor: UIColor
     
-    public init(backgroundColor: UIColor, foregroundColor: UIColor) {
+    public init(backgroundColor: UIColor, gradientBackgroundColor: UIColor? = nil, foregroundColor: UIColor) {
         self.backgroundColor = backgroundColor
+        self.gradientBackgroundColor = gradientBackgroundColor
         self.foregroundColor = foregroundColor
     }
 }
@@ -59,6 +61,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.title = title
         
         self.buttonBackgroundNode = ASDisplayNode()
+        self.buttonBackgroundNode.clipsToBounds = true
         self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         self.buttonBackgroundNode.cornerRadius = cornerRadius
         if #available(iOS 13.0, *) {
@@ -71,6 +74,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.displaysAsynchronously = false
         
         self.subtitleNode = ImmediateTextNode()
         self.subtitleNode.isUserInteractionEnabled = false
@@ -126,6 +130,10 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.buttonGlossNode.color = theme.foregroundColor
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(17.0) : Font.regular(17.0), textColor: theme.foregroundColor)
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
+        
+        if let width = self.validLayout {
+            _ = self.updateLayout(width: width, transition: .immediate)
+        }
     }
     
     public func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {

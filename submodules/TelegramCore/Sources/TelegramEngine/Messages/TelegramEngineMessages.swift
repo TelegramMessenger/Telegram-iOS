@@ -170,5 +170,38 @@ public extension TelegramEngine {
         public func topPeerActiveLiveLocationMessages(peerId: PeerId) -> Signal<(Peer?, [Message]), NoError> {
             return _internal_topPeerActiveLiveLocationMessages(viewTracker: self.account.viewTracker, accountPeerId: self.account.peerId, peerId: peerId)
         }
+
+        public func chatList(group: EngineChatList.Group, count: Int) -> Signal<EngineChatList, NoError> {
+            return self.account.postbox.tailChatListView(groupId: group._asGroup(), count: count, summaryComponents: ChatListEntrySummaryComponents())
+            |> map { view -> EngineChatList in
+                return EngineChatList(view.0)
+            }
+        }
+
+        public func callList(scope: EngineCallList.Scope, index: EngineMessage.Index, itemCount: Int) -> Signal<EngineCallList, NoError> {
+            return self.account.viewTracker.callListView(
+                type: scope == .all ? .all : .missed,
+                index: index,
+                count: itemCount
+            )
+            |> map { view -> EngineCallList in
+                return EngineCallList(
+                    items: view.entries.map { entry -> EngineCallList.Item in
+                        switch entry {
+                        case let .message(message, group):
+                            return .message(message: EngineMessage(message), group: group.map(EngineMessage.init))
+                        case let .hole(index):
+                            return .hole(index)
+                        }
+                    },
+                    hasEarlier: view.earlier != nil,
+                    hasLater: view.later != nil
+                )
+            }
+        }
+
+        public func adMessages(peerId: PeerId) -> AdMessagesHistoryContext {
+            return AdMessagesHistoryContext(account: self.account, peerId: peerId)
+        }
     }
 }

@@ -215,7 +215,6 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         if drawTail {
             let outlineBottomEllipse = bottomEllipse.insetBy(dx: -borderOffset, dy: -borderOffset)
             let outlineInnerTopEllipse = topEllipse.insetBy(dx: borderOffset, dy: borderOffset)
-            let outlineTopEllipse = topEllipse.insetBy(dx: -borderOffset, dy: -borderOffset)
             
             context.setBlendMode(.copy)
             context.setFillColor(UIColor.clear.cgColor)

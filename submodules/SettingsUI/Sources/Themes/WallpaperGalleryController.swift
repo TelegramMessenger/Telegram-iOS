@@ -153,7 +153,7 @@ private func updatedFileWallpaper(id: Int64? = nil, accessHash: Int64? = nil, sl
         intensityValue = 50
     }
     
-    return .file(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, isDark: false, slug: slug, file: file, settings: WallpaperSettings(colors: colorValues, intensity: intensityValue, rotation: rotation))
+    return .file(TelegramWallpaper.File(id: id ?? 0, accessHash: accessHash ?? 0, isCreator: false, isDefault: false, isPattern: isPattern, isDark: false, slug: slug, file: file, settings: WallpaperSettings(colors: colorValues, intensity: intensityValue, rotation: rotation)))
 }
 
 public class WallpaperGalleryController: ViewController {
@@ -400,8 +400,8 @@ public class WallpaperGalleryController: ViewController {
         
         var doneButtonType: WallpaperGalleryToolbarDoneButtonType = .set
         switch self.source {
-        case let .wallpaper(wallpaper):
-            switch wallpaper.0 {
+        case let .wallpaper(wallpaper, _, _, _, _, _):
+            switch wallpaper {
             case let .file(file):
                 if file.id == 0 {
                     doneButtonType = .none
@@ -426,7 +426,6 @@ public class WallpaperGalleryController: ViewController {
                 dismissed = true
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode() as? WallpaperGalleryItemNode {
                     let options = centralItemNode.options
-                    let gradientColors = centralItemNode.colors
                     if !strongSelf.entries.isEmpty {
                         let entry = strongSelf.entries[centralItemNode.index]
                         switch entry {
@@ -514,7 +513,7 @@ public class WallpaperGalleryController: ViewController {
                                             }
                                         }
                                     } else if case let .file(file) = wallpaper, let resource = resource {
-                                        if wallpaper.isPattern, !file.settings.colors.isEmpty, let intensity = file.settings.intensity {
+                                        if wallpaper.isPattern, !file.settings.colors.isEmpty, let _ = file.settings.intensity {
                                             var data: Data?
                                             var thumbnailData: Data?
                                             if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(resource), let maybeData = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead) {
@@ -632,11 +631,11 @@ public class WallpaperGalleryController: ViewController {
                     strongSelf.patternInitialWallpaper = enabled ? initialWallpaper : nil
                     switch initialWallpaper {
                     case let .color(color):
-                        strongSelf.patternPanelNode?.backgroundColors = ([color], nil, nil)
-                    case let .gradient(_, colors, settings):
-                        strongSelf.patternPanelNode?.backgroundColors = (colors, settings.rotation, nil)
+                        strongSelf.patternPanelNode?.backgroundColors = ([HSBColor(rgb: color)], nil, nil)
+                    case let .gradient(gradient):
+                        strongSelf.patternPanelNode?.backgroundColors = (gradient.colors.map { HSBColor(rgb: $0) }, gradient.settings.rotation, nil)
                     case let .file(file) where file.isPattern:
-                        strongSelf.patternPanelNode?.backgroundColors = (file.settings.colors, file.settings.rotation, file.settings.intensity)
+                        strongSelf.patternPanelNode?.backgroundColors = (file.settings.colors.map { HSBColor(rgb: $0) }, file.settings.rotation, file.settings.intensity)
                     default:
                         break
                     }
@@ -653,7 +652,7 @@ public class WallpaperGalleryController: ViewController {
                         case let .file(file):
                             if !file.settings.colors.isEmpty {
                                 if file.settings.colors.count >= 2 {
-                                    strongSelf.updateEntries(wallpaper: .gradient(nil, file.settings.colors, WallpaperSettings(rotation: file.settings.rotation)))
+                                    strongSelf.updateEntries(wallpaper: .gradient(TelegramWallpaper.Gradient(id: nil, colors: file.settings.colors, settings: WallpaperSettings(rotation: file.settings.rotation))))
                                 } else {
                                     strongSelf.updateEntries(wallpaper: .color(file.settings.colors[0]))
                                 }
@@ -679,7 +678,7 @@ public class WallpaperGalleryController: ViewController {
                         strongSelf.colorsPanelNode?.updateState({ _ in
                             return WallpaperColorPanelNodeState(
                                 selection: 0,
-                                colors: colors.map(\.rgb),
+                                colors: colors.map { HSBColor(color: $0) },
                                 maximumNumberOfColors: 4,
                                 rotateAvailable: false,
                                 rotation: 0,
@@ -702,16 +701,6 @@ public class WallpaperGalleryController: ViewController {
                 var settings = wallpaper.settings ?? WallpaperSettings()
                 settings.rotation = angle
                 strongSelf.updateEntries(wallpaper: wallpaper.withUpdatedSettings(settings))
-            }
-            
-            if let entry = self.currentEntry(), case let .wallpaper(wallpaper, _) = entry, case let .file(_, _, _, _, true, _, _, _ , settings) = wallpaper, !settings.colors.isEmpty {
-                /*if self.patternPanelNode?.backgroundColors != nil, let snapshotView = self.patternPanelNode?.scrollNode.view.snapshotContentTree() {
-                    self.patternPanelNode?.view.addSubview(snapshotView)
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false) { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
-                    }
-                }*/
-                //self.patternPanelNode?.backgroundColors = ([settings.colors[0]], nil)
             }
 
             if updated {
@@ -788,22 +777,22 @@ public class WallpaperGalleryController: ViewController {
                     entryColors = [color]
                 } else if case let .file(file) = wallpaper, file.isPattern {
                     entryColors = file.settings.colors
-                } else if case let .gradient(_, colors, _) = wallpaper {
-                    entryColors = colors
+                } else if case let .gradient(gradient) = wallpaper {
+                    entryColors = gradient.colors
                 }
             }
             
             if !entryColors.isEmpty {
                 if let pattern = pattern, case let .file(file) = pattern {
                     let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, colors: entryColors, intensity: intensity)
-                    let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: pattern.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: newSettings)
+                    let newWallpaper = TelegramWallpaper.file(TelegramWallpaper.File(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: pattern.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: newSettings))
                     updatedEntries.append(.wallpaper(newWallpaper, nil))
                 } else {
                     if entryColors.count == 1 {
                         let newWallpaper = TelegramWallpaper.color(entryColors[0])
                         updatedEntries.append(.wallpaper(newWallpaper, nil))
                     } else {
-                        let newWallpaper = TelegramWallpaper.gradient(nil, entryColors, WallpaperSettings(rotation: nil))
+                        let newWallpaper = TelegramWallpaper.gradient(TelegramWallpaper.Gradient(id: nil, colors: entryColors, settings: WallpaperSettings(rotation: nil)))
                         updatedEntries.append(.wallpaper(newWallpaper, nil))
                     }
                 }
@@ -853,9 +842,9 @@ public class WallpaperGalleryController: ViewController {
                     case let .file(file):
                         colors = file.settings.colors
                         rotation = file.settings.rotation
-                    case let .gradient(_, colorsValue, settings):
-                        colors = colorsValue
-                        rotation = settings.rotation
+                    case let .gradient(gradient):
+                        colors = gradient.colors
+                        rotation = gradient.settings.rotation
                     default:
                         break
                     }
@@ -863,7 +852,7 @@ public class WallpaperGalleryController: ViewController {
                     case .color, .file, .gradient:
                         if let pattern = pattern, case let .file(file) = pattern {
                             let newSettings = WallpaperSettings(blur: file.settings.blur, motion: file.settings.motion, colors: colors, intensity: intensity)
-                            let newWallpaper = TelegramWallpaper.file(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: pattern.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: newSettings)
+                            let newWallpaper = TelegramWallpaper.file(TelegramWallpaper.File(id: file.id, accessHash: file.accessHash, isCreator: file.isCreator, isDefault: file.isDefault, isPattern: pattern.isPattern, isDark: file.isDark, slug: file.slug, file: file.file, settings: newSettings))
 
                             strongSelf.savedPatternWallpaper = newWallpaper
                             strongSelf.savedPatternIntensity = intensity
@@ -874,7 +863,7 @@ public class WallpaperGalleryController: ViewController {
                         break
                     }
 
-                    strongSelf.patternPanelNode?.backgroundColors = (colors, rotation, intensity)
+                    strongSelf.patternPanelNode?.backgroundColors = (colors.map { HSBColor(rgb: $0) }, rotation, intensity)
                 }
             }
             self.patternPanelNode = patternPanelNode
@@ -891,7 +880,7 @@ public class WallpaperGalleryController: ViewController {
             currentColorsPanelNode = colorsPanelNode
             self.overlayNode?.insertSubnode(colorsPanelNode, belowSubnode: self.toolbarNode!)
 
-            colorsPanelNode.colorsChanged = { [weak self] colors, _ in
+            colorsPanelNode.colorsChanged = { [weak self] colors, _, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -899,10 +888,10 @@ public class WallpaperGalleryController: ViewController {
                     return
                 }
 
-                var wallpaper: TelegramWallpaper = .gradient(nil, colors, WallpaperSettings(blur: false, motion: false, colors: [], intensity: nil, rotation: nil))
+                var wallpaper: TelegramWallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: colors.map { $0.rgb }, settings: WallpaperSettings(blur: false, motion: false, colors: [], intensity: nil, rotation: nil)))
 
                 if case let .file(file) = currentWallpaper {
-                    wallpaper = currentWallpaper.withUpdatedSettings(WallpaperSettings(blur: false, motion: false, colors: colors, intensity: file.settings.intensity, rotation: file.settings.rotation))
+                    wallpaper = currentWallpaper.withUpdatedSettings(WallpaperSettings(blur: false, motion: false, colors: colors.map { $0.rgb }, intensity: file.settings.intensity, rotation: file.settings.rotation))
                 }
 
                 strongSelf.updateEntries(wallpaper: wallpaper)
@@ -983,14 +972,14 @@ public class WallpaperGalleryController: ViewController {
                         self?.present(shareController, in: .window(.root), blockInteraction: true)
                     }
                 })
-            case let .file(_, _, _, _, isPattern, _, slug, _, settings):
-                if isPattern {
-                    if !settings.colors.isEmpty {
-                        if settings.colors.count == 2 {
-                            options.append("bg_color=\(UIColor(rgb: settings.colors[0]).hexString)-\(UIColor(rgb: settings.colors[1]).hexString)")
-                        } else if settings.colors.count >= 3 {
+            case let .file(file):
+                if file.isPattern {
+                    if !file.settings.colors.isEmpty {
+                        if file.settings.colors.count == 2 {
+                            options.append("bg_color=\(UIColor(rgb: file.settings.colors[0]).hexString)-\(UIColor(rgb: file.settings.colors[1]).hexString)")
+                        } else if file.settings.colors.count >= 3 {
                             var colorsString = ""
-                            for color in settings.colors {
+                            for color in file.settings.colors {
                                 if !colorsString.isEmpty {
                                     colorsString.append("~")
                                 }
@@ -998,13 +987,13 @@ public class WallpaperGalleryController: ViewController {
                             }
                             options.append("bg_color=\(colorsString)")
                         } else {
-                            options.append("bg_color=\(UIColor(rgb: settings.colors[0]).hexString)")
+                            options.append("bg_color=\(UIColor(rgb: file.settings.colors[0]).hexString)")
                         }
                     }
-                    if let intensity = settings.intensity {
+                    if let intensity = file.settings.intensity {
                         options.append("intensity=\(intensity)")
                     }
-                    if let rotation = settings.rotation {
+                    if let rotation = file.settings.rotation {
                         options.append("rotation=\(rotation)")
                     }
                 }
@@ -1014,15 +1003,15 @@ public class WallpaperGalleryController: ViewController {
                     optionsString = "?\(options.joined(separator: "&"))"
                 }
                 
-                controller = ShareController(context: context, subject: .url("https://t.me/bg/\(slug)\(optionsString)"))
+                controller = ShareController(context: context, subject: .url("https://t.me/bg/\(file.slug)\(optionsString)"))
             case let .color(color):
                 controller = ShareController(context: context, subject: .url("https://t.me/bg/\(UIColor(rgb: color).hexString)"))
-            case let .gradient(_, colors, _):
+            case let .gradient(gradient):
                 var colorsString = ""
 
-                for color in colors {
+                for color in gradient.colors {
                     if !colorsString.isEmpty {
-                        if colors.count >= 3 {
+                        if gradient.colors.count >= 3 {
                             colorsString.append("~")
                         } else {
                             colorsString.append("-")
@@ -1031,7 +1020,7 @@ public class WallpaperGalleryController: ViewController {
                     colorsString.append(UIColor(rgb: color).hexString)
                 }
 
-                controller = ShareController(context: context, subject:. url("https://t.me/bg/\(colorsString)"))
+                controller = ShareController(context: context, subject: .url("https://t.me/bg/\(colorsString)"))
             default:
                 break
         }

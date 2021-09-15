@@ -80,17 +80,17 @@ private enum GroupPreHistorySetupEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! GroupPreHistorySetupArguments
         switch self {
-            case let .header(theme, text):
+            case let .header(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .visible(theme, text, value):
+            case let .visible(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.toggle(true)
                 })
-            case let .hidden(theme, text, value):
+            case let .hidden(_, text, value):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.toggle(false)
                 })
-            case let .info(theme, text):
+            case let .info(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         }
     }

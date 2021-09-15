@@ -31,18 +31,18 @@ enum ChatMediaInputPanelEntryStableId: Hashable {
 }
 
 enum ChatMediaInputPanelEntry: Comparable, Identifiable {
-    case recentGifs(PresentationTheme, Bool)
-    case savedStickers(PresentationTheme, Bool)
-    case recentPacks(PresentationTheme, Bool)
-    case trending(Bool, PresentationTheme, Bool)
-    case settings(PresentationTheme, Bool)
+    case recentGifs(PresentationTheme, PresentationStrings, Bool)
+    case savedStickers(PresentationTheme, PresentationStrings, Bool)
+    case recentPacks(PresentationTheme, PresentationStrings, Bool)
+    case trending(Bool, PresentationTheme, PresentationStrings, Bool)
+    case settings(PresentationTheme, PresentationStrings, Bool)
     case peerSpecific(theme: PresentationTheme, peer: Peer, expanded: Bool)
     case stickerPack(index: Int, info: StickerPackCollectionInfo, topItem: StickerPackItem?, theme: PresentationTheme, expanded: Bool)
     
-    case stickersMode(PresentationTheme, Bool)
-    case savedGifs(PresentationTheme, Bool)
-    case trendingGifs(PresentationTheme, Bool)
-    case gifEmotion(Int, PresentationTheme, String, Bool)
+    case stickersMode(PresentationTheme, PresentationStrings, Bool)
+    case savedGifs(PresentationTheme, PresentationStrings, Bool)
+    case trendingGifs(PresentationTheme, PresentationStrings, Bool)
+    case gifEmotion(Int, PresentationTheme, PresentationStrings, String, TelegramMediaFile?, Bool)
     
     var stableId: ChatMediaInputPanelEntryStableId {
         switch self {
@@ -66,39 +66,39 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
             return .savedGifs
         case .trendingGifs:
             return .trendingGifs
-        case let .gifEmotion(_, _, emoji, _):
+        case let .gifEmotion(_, _, _, emoji, _, _):
             return .gifEmotion(emoji)
         }
     }
     
     static func ==(lhs: ChatMediaInputPanelEntry, rhs: ChatMediaInputPanelEntry) -> Bool {
         switch lhs {
-            case let .recentGifs(lhsTheme, lhsExpanded):
-                if case let .recentGifs(rhsTheme, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsExpanded == rhsExpanded {
+            case let .recentGifs(lhsTheme, lhsStrings, lhsExpanded):
+                if case let .recentGifs(rhsTheme, rhsStrings, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsExpanded == rhsExpanded {
                     return true
                 } else {
                     return false
                 }
-            case let .savedStickers(lhsTheme, lhsExpanded):
-                if case let .savedStickers(rhsTheme, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsExpanded == rhsExpanded {
+            case let .savedStickers(lhsTheme, lhsStrings, lhsExpanded):
+                if case let .savedStickers(rhsTheme, rhsStrings, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsExpanded == rhsExpanded {
                     return true
                 } else {
                     return false
                 }
-            case let .recentPacks(lhsTheme, lhsExpanded):
-                if case let .recentPacks(rhsTheme, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsExpanded == rhsExpanded {
+            case let .recentPacks(lhsTheme, lhsStrings, lhsExpanded):
+                if case let .recentPacks(rhsTheme, rhsStrings, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsExpanded == rhsExpanded {
                     return true
                 } else {
                     return false
                 }
-            case let .trending(lhsElevated, lhsTheme, lhsExpanded):
-                if case let .trending(rhsElevated, rhsTheme, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsElevated == rhsElevated, lhsExpanded == rhsExpanded {
+            case let .trending(lhsElevated, lhsTheme, lhsStrings, lhsExpanded):
+                if case let .trending(rhsElevated, rhsTheme, rhsStrings, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsElevated == rhsElevated, lhsExpanded == rhsExpanded {
                     return true
                 } else {
                     return false
                 }
-            case let .settings(lhsTheme, lhsExpanded):
-                if case let .settings(rhsTheme, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsExpanded == rhsExpanded {
+            case let .settings(lhsTheme, lhsStrings, lhsExpanded):
+                if case let .settings(rhsTheme, rhsStrings, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsExpanded == rhsExpanded {
                     return true
                 } else {
                     return false
@@ -115,26 +115,33 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .stickersMode(lhsTheme, lhsExpanded):
-                if case let .stickersMode(rhsTheme, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsExpanded == rhsExpanded {
+            case let .stickersMode(lhsTheme, lhsStrings, lhsExpanded):
+                if case let .stickersMode(rhsTheme, rhsStrings, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsExpanded == rhsExpanded {
                     return true
                 } else {
                     return false
                 }
-            case let .savedGifs(lhsTheme, lhsExpanded):
-                if case let .savedGifs(rhsTheme, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsExpanded == rhsExpanded {
+            case let .savedGifs(lhsTheme, lhsStrings, lhsExpanded):
+                if case let .savedGifs(rhsTheme, rhsStrings, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsExpanded == rhsExpanded {
                     return true
                 } else {
                     return false
                 }
-            case let .trendingGifs(lhsTheme, lhsExpanded):
-                if case let .trendingGifs(rhsTheme, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsExpanded == rhsExpanded {
+            case let .trendingGifs(lhsTheme, lhsStrings, lhsExpanded):
+                if case let .trendingGifs(rhsTheme, rhsStrings, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsExpanded == rhsExpanded {
                     return true
                 } else {
                     return false
                 }
-            case let .gifEmotion(lhsIndex, lhsTheme, lhsEmoji, lhsExpanded):
-                if case let .gifEmotion(rhsIndex, rhsTheme, rhsEmoji, rhsExpanded) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsEmoji == rhsEmoji, lhsExpanded == rhsExpanded {
+            case let .gifEmotion(lhsIndex, lhsTheme, lhsStrings, lhsEmoji, lhsFile, lhsExpanded):
+                if case let .gifEmotion(rhsIndex, rhsTheme, rhsStrings, rhsEmoji, rhsFile, rhsExpanded) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsEmoji == rhsEmoji, lhsExpanded == rhsExpanded {
+                    if let lhsFile = lhsFile, let rhsFile = rhsFile {
+                        if !lhsFile.isEqual(to: rhsFile) {
+                            return false
+                        }
+                    } else if (lhsFile != nil) != (rhsFile != nil) {
+                        return false
+                    }
                     return true
                 } else {
                     return false
@@ -155,7 +162,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 switch rhs {
                     case .recentGifs, savedStickers:
                         return false
-                    case let .trending(elevated, _, _) where elevated:
+                    case let .trending(elevated, _, _, _) where elevated:
                         return false
                     default:
                         return true
@@ -164,7 +171,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 switch rhs {
                     case .recentGifs, .savedStickers, recentPacks:
                         return false
-                    case let .trending(elevated, _, _) where elevated:
+                    case let .trending(elevated, _, _, _) where elevated:
                         return false
                     default:
                         return true
@@ -173,7 +180,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 switch rhs {
                     case .recentGifs, .savedStickers, recentPacks, .peerSpecific:
                         return false
-                    case let .trending(elevated, _, _) where elevated:
+                    case let .trending(elevated, _, _, _) where elevated:
                         return false
                     default:
                         return true
@@ -182,7 +189,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 switch rhs {
                     case .recentGifs, .savedStickers, .recentPacks, .peerSpecific:
                         return false
-                    case let .trending(elevated, _, _):
+                    case let .trending(elevated, _, _, _):
                         if elevated {
                             return false
                         } else {
@@ -199,7 +206,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                     default:
                         return true
                 }
-            case let .trending(elevated, _, _):
+            case let .trending(elevated, _, _, _):
                 if elevated {
                     switch rhs {
                         case .recentGifs, .trending:
@@ -230,11 +237,11 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 default:
                     return true
                 }
-            case let .gifEmotion(lhsIndex, _, _, _):
+            case let .gifEmotion(lhsIndex, _, _, _, _, _):
                 switch rhs {
                     case .stickersMode, .savedGifs, .trendingGifs:
                         return false
-                    case let .gifEmotion(rhsIndex, _, _, _):
+                    case let .gifEmotion(rhsIndex, _, _, _, _, _):
                         return lhsIndex < rhsIndex
                     default:
                         return true
@@ -250,28 +257,28 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
     
     func item(context: AccountContext, inputNodeInteraction: ChatMediaInputNodeInteraction) -> ListViewItem {
         switch self {
-            case let .recentGifs(theme, expanded):
-                return ChatMediaInputRecentGifsItem(inputNodeInteraction: inputNodeInteraction, theme: theme, expanded: expanded, selected: {
+            case let .recentGifs(theme, strings, expanded):
+                return ChatMediaInputRecentGifsItem(inputNodeInteraction: inputNodeInteraction, theme: theme, strings: strings, expanded: expanded, selected: {
                     let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentGifs.rawValue, id: 0)
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })
-            case let .savedStickers(theme, expanded):
-                return ChatMediaInputMetaSectionItem(inputNodeInteraction: inputNodeInteraction, type: .savedStickers, theme: theme, expanded: expanded, selected: {
+            case let .savedStickers(theme, strings, expanded):
+                return ChatMediaInputMetaSectionItem(account: context.account, inputNodeInteraction: inputNodeInteraction, type: .savedStickers, theme: theme, strings: strings, expanded: expanded, selected: {
                     let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0)
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })
-            case let .recentPacks(theme, expanded):
-                return ChatMediaInputMetaSectionItem(inputNodeInteraction: inputNodeInteraction, type: .recentStickers, theme: theme, expanded: expanded, selected: {
+            case let .recentPacks(theme, strings, expanded):
+                return ChatMediaInputMetaSectionItem(account: context.account, inputNodeInteraction: inputNodeInteraction, type: .recentStickers, theme: theme, strings: strings, expanded: expanded, selected: {
                     let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0)
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })
-            case let .trending(elevated, theme, expanded):
-                return ChatMediaInputTrendingItem(inputNodeInteraction: inputNodeInteraction, elevated: elevated, theme: theme, expanded: expanded, selected: {
+            case let .trending(elevated, theme, strings, expanded):
+                return ChatMediaInputTrendingItem(inputNodeInteraction: inputNodeInteraction, elevated: elevated, theme: theme, strings: strings, expanded: expanded, selected: {
                     let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0)
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })
-            case let .settings(theme, expanded):
-                return ChatMediaInputSettingsItem(inputNodeInteraction: inputNodeInteraction, theme: theme, expanded: expanded, selected: {
+            case let .settings(theme, strings, expanded):
+                return ChatMediaInputSettingsItem(inputNodeInteraction: inputNodeInteraction, theme: theme, strings: strings, expanded: expanded, selected: {
                     inputNodeInteraction.openSettings()
                 })
             case let .peerSpecific(theme, peer, expanded):
@@ -283,20 +290,20 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 return ChatMediaInputStickerPackItem(account: context.account, inputNodeInteraction: inputNodeInteraction, collectionId: info.id, collectionInfo: info, stickerPackItem: topItem, index: index, theme: theme, expanded: expanded, selected: {
                     inputNodeInteraction.navigateToCollectionId(info.id)
                 })
-            case let .stickersMode(theme, expanded):
-                return ChatMediaInputMetaSectionItem(inputNodeInteraction: inputNodeInteraction, type: .stickersMode, theme: theme, expanded: expanded, selected: {
+            case let .stickersMode(theme, strings, expanded):
+                return ChatMediaInputMetaSectionItem(account: context.account, inputNodeInteraction: inputNodeInteraction, type: .stickersMode, theme: theme, strings: strings, expanded: expanded, selected: {
                     inputNodeInteraction.navigateBackToStickers()
                 })
-            case let .savedGifs(theme, expanded):
-                return ChatMediaInputMetaSectionItem(inputNodeInteraction: inputNodeInteraction, type: .savedGifs, theme: theme, expanded: expanded, selected: {
+            case let .savedGifs(theme, strings, expanded):
+                return ChatMediaInputMetaSectionItem(account: context.account, inputNodeInteraction: inputNodeInteraction, type: .savedGifs, theme: theme, strings: strings, expanded: expanded, selected: {
                     inputNodeInteraction.setGifMode(.recent)
                 })
-            case let .trendingGifs(theme, expanded):
-                return ChatMediaInputMetaSectionItem(inputNodeInteraction: inputNodeInteraction, type: .trendingGifs, theme: theme, expanded: expanded, selected: {
+            case let .trendingGifs(theme, strings, expanded):
+                return ChatMediaInputMetaSectionItem(account: context.account, inputNodeInteraction: inputNodeInteraction, type: .trendingGifs, theme: theme, strings: strings, expanded: expanded, selected: {
                     inputNodeInteraction.setGifMode(.trending)
                 })
-            case let .gifEmotion(_, theme, emoji, expanded):
-                return ChatMediaInputMetaSectionItem(inputNodeInteraction: inputNodeInteraction, type: .gifEmoji(emoji), theme: theme, expanded: expanded, selected: {
+            case let .gifEmotion(_, theme, strings, emoji, file, expanded):
+                return ChatMediaInputMetaSectionItem(account: context.account, inputNodeInteraction: inputNodeInteraction, type: .gifEmoji(emoji, file), theme: theme, strings: strings, expanded: expanded, selected: {
                     inputNodeInteraction.setGifMode(.emojiSearch(emoji))
                 })
         }

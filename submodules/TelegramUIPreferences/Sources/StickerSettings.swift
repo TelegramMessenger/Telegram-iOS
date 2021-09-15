@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public enum EmojiStickerSuggestionMode: Int32 {
@@ -52,7 +53,7 @@ public struct StickerSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateStickerSettingsInteractively(accountManager: AccountManager, _ f: @escaping (StickerSettings) -> StickerSettings) -> Signal<Void, NoError> {
+public func updateStickerSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (StickerSettings) -> StickerSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.stickerSettings, { entry in
             let currentSettings: StickerSettings

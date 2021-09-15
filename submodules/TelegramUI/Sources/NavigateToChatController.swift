@@ -49,6 +49,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if params.activateInput {
                     controller.activateInput()
                 }
+                if params.changeColors {
+                    controller.presentThemeSelection()
+                }
                 if let botStart = params.botStart {
                     controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
                         return state.updatedBotStartPayload(botStart.payload)
@@ -70,7 +73,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 })
             }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter)
         }
         controller.purposefulAction = params.purposefulAction
         if let search = params.activateMessageSearch {
@@ -115,6 +118,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
         }
         if params.activateInput {
             controller.activateInput()
+        }
+        if params.changeColors {
+            controller.presentThemeSelection()
         }
     }
     

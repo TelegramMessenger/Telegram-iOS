@@ -63,8 +63,9 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
                 _effectView.frame = self.bounds;
                 [self addSubview:_effectView];
                 
-                if (iosMajorVersion() >= 11)
+                if (@available(iOS 11.0, *)) {
                     _effectView.accessibilityIgnoresInvertColors = true;
+                }
             }
             else
             {
@@ -211,8 +212,9 @@ const CGFloat TGMenuSheetInterSectionSpacing = 8.0f;
                     _mainBackgroundView.backgroundColor = _pallete.backgroundColor;
                 
                 _scrollView = [[TGMenuSheetScrollView alloc] initWithFrame:CGRectZero];
-                if (iosMajorVersion() >= 11)
+                if (@available(iOS 11.0, *)) {
                     _scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+                }
                 _scrollView.delegate = self;
                 [_mainBackgroundView addSubview:_scrollView];
             }

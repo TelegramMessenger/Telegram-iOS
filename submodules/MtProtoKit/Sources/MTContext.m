@@ -283,6 +283,13 @@ static int32_t fixedTimeDifferenceValue = 0;
     return queue;
 }
 
++ (void)performWithObjCTry:(dispatch_block_t _Nonnull)block {
+    @try {
+        block();
+    } @finally {
+    }
+}
+
 - (void)cleanup
 {
     NSDictionary *datacenterAuthActions = _datacenterAuthActions;
@@ -414,11 +421,11 @@ static int32_t fixedTimeDifferenceValue = 0;
                 _cleanupSessionIdsByAuthKeyId = [[NSMutableDictionary alloc] initWithDictionary:cleanupSessionIdsByAuthKeyId];
             
             if (MTLogEnabled()) {
-                MTLog(@"[MTContext#%x: received keychain globalTimeDifference:%f datacenterAuthInfoById:%@]", (int)self, _globalTimeDifference, _datacenterAuthInfoById);
+                MTLog(@"[MTContext#%" PRIxPTR ": received keychain globalTimeDifference:%f datacenterAuthInfoById:%@]", (intptr_t)self, _globalTimeDifference, _datacenterAuthInfoById);
             }
         } else {
             if (MTLogEnabled()) {
-                MTLog(@"[MTContext#%x: received keychain nil]", (int)self);
+                MTLog(@"[MTContext#%" PRIxPTR ": received keychain nil]", (intptr_t)self);
             }
         }
     }];
@@ -477,7 +484,7 @@ static int32_t fixedTimeDifferenceValue = 0;
         _globalTimeDifference = globalTimeDifference;
         
         if (MTLogEnabled()) {
-            MTLog(@"[MTContext#%x: global time difference changed: %.1fs]", (int)self, globalTimeDifference);
+            MTLog(@"[MTContext#%" PRIxPTR ": global time difference changed: %.1fs]", (intptr_t)self, globalTimeDifference);
         }
         
         [_keychain setObject:@(_globalTimeDifference) forKey:@"globalTimeDifference" group:@"temp"];
@@ -499,7 +506,7 @@ static int32_t fixedTimeDifferenceValue = 0;
         if (addressSet != nil && datacenterId != 0)
         {
             if (MTLogEnabled()) {
-                MTLog(@"[MTContext#%x: address set updated for %d]", (int)self, datacenterId);
+                MTLog(@"[MTContext#%" PRIxPTR ": address set updated for %d]", (intptr_t)self, datacenterId);
             }
             
             bool updateSchemes = forceUpdateSchemes;
@@ -592,7 +599,7 @@ static int32_t fixedTimeDifferenceValue = 0;
         if (updated)
         {
             if (MTLogEnabled()) {
-                MTLog(@"[MTContext#%x: added address %@ for datacenter %d]", (int)self, address, datacenterId);
+                MTLog(@"[MTContext#%" PRIxPTR ": added address %@ for datacenter %d]", (intptr_t)self, address, datacenterId);
             }
             
             _datacenterAddressSetById[@(datacenterId)] = addressSet;
@@ -631,7 +638,7 @@ static int32_t fixedTimeDifferenceValue = 0;
             if (MTLogEnabled()) {
                 MTDatacenterAuthInfo *persistentInfo = _datacenterAuthInfoById[authInfoMapIntegerKey((int32_t)datacenterId, MTDatacenterAuthInfoSelectorPersistent)];
                 
-                MTLog(@"[MTContext#%x: auth info updated for %d selector %d to %@ (persistent key id is %llu)]", (int)self, datacenterId, selector, authInfo, persistentInfo.authKeyId);
+                MTLog(@"[MTContext#%" PRIxPTR ": auth info updated for %d selector %d to %@ (persistent key id is %llu)]", (intptr_t)self, datacenterId, selector, authInfo, persistentInfo.authKeyId);
             }
             
             [_keychain setObject:_datacenterAuthInfoById forKey:@"datacenterAuthInfoById" group:@"persistent"];
@@ -706,7 +713,7 @@ static int32_t fixedTimeDifferenceValue = 0;
             NSArray *currentListeners = [[NSArray alloc] initWithArray:_changeListeners];
             
             if (MTLogEnabled()) {
-                MTLog(@"[MTContext#%x: %@ transport scheme updated for %d: %@]", (int)self, media ? @"media" : @"generic", datacenterId, transportScheme);
+                MTLog(@"[MTContext#%" PRIxPTR ": %@ transport scheme updated for %d: %@]", (intptr_t)self, media ? @"media" : @"generic", datacenterId, transportScheme);
             }
             
             for (id<MTContextChangeListener> listener in currentListeners) {

@@ -440,7 +440,6 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
         } else if let targetNode = targetNode as? VoiceChatFullscreenParticipantItemNode {
             let backgroundTargetRect = targetRect
             
-            let initialSize = self.bounds
             self.updateInfo(size: targetRect.size, sourceSize: targetRect.size, animate: true)
             
             targetNode.avatarNode.isHidden = false

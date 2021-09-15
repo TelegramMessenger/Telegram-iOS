@@ -11,8 +11,8 @@ typedef NS_ENUM(NSUInteger, FFMpegAVFrameColorRange) {
 
 @property (nonatomic, readonly) int32_t width;
 @property (nonatomic, readonly) int32_t height;
-@property (nonatomic, readonly) uint8_t **data;
-@property (nonatomic, readonly) int *lineSize;
+@property (nonatomic, readonly) uint8_t * _Nullable * _Nonnull data;
+@property (nonatomic, readonly) int * _Nonnull lineSize;
 @property (nonatomic, readonly) int64_t pts;
 @property (nonatomic, readonly) int64_t duration;
 @property (nonatomic, readonly) FFMpegAVFrameColorRange colorRange;

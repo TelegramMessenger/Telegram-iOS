@@ -80,7 +80,7 @@ public enum GetCurrentGroupCallError {
 }
 
 func _internal_getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int64, peerId: PeerId? = nil) -> Signal<GroupCallSummary?, GetCurrentGroupCallError> {
-    return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+    return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), limit: 4))
     |> mapError { _ -> GetCurrentGroupCallError in
         return .generic
     }
@@ -1981,7 +1981,7 @@ public final class GroupCallParticipantsContext {
         self.updateMuteState(peerId: self.myPeerId, muteState: nil, volume: nil, raiseHand: false)
     }
     
-    public func updateShouldBeRecording(_ shouldBeRecording: Bool, title: String?) {
+    public func updateShouldBeRecording(_ shouldBeRecording: Bool, title: String?, videoOrientation: Bool?) {
         var flags: Int32 = 0
         if shouldBeRecording {
             flags |= 1 << 0
@@ -1989,7 +1989,13 @@ public final class GroupCallParticipantsContext {
         if let title = title, !title.isEmpty {
             flags |= (1 << 1)
         }
-        self.updateShouldBeRecordingDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallRecord(flags: flags, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), title: title))
+        var videoPortrait: Api.Bool?
+        if let videoOrientation = videoOrientation {
+            flags |= (1 << 2)
+            videoPortrait = videoOrientation ? .boolTrue : .boolFalse
+        }
+
+        self.updateShouldBeRecordingDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallRecord(flags: flags, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), title: title, videoPortrait: videoPortrait))
         |> deliverOnMainQueue).start(next: { [weak self] updates in
             guard let strongSelf = self else {
                 return
@@ -2363,7 +2369,7 @@ public final class AudioBroadcastDataSource {
 }
 
 func _internal_getAudioBroadcastDataSource(account: Account, callId: Int64, accessHash: Int64) -> Signal<AudioBroadcastDataSource?, NoError> {
-    return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+    return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), limit: 4))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.phone.GroupCall?, NoError> in
         return .single(nil)
@@ -2396,6 +2402,11 @@ public struct GetAudioBroadcastPartResult {
     
     public var status: Status
     public var responseTimestamp: Double
+
+    public init(status: Status, responseTimestamp: Double) {
+        self.status = status
+        self.responseTimestamp = responseTimestamp
+    }
 }
 
 func _internal_getAudioBroadcastPart(dataSource: AudioBroadcastDataSource, callId: Int64, accessHash: Int64, timestampIdMilliseconds: Int64, durationMilliseconds: Int64) -> Signal<GetAudioBroadcastPartResult, NoError> {
@@ -2409,7 +2420,58 @@ func _internal_getAudioBroadcastPart(dataSource: AudioBroadcastDataSource, callI
         return .single(GetAudioBroadcastPartResult(status: .notReady, responseTimestamp: Double(timestampIdMilliseconds) / 1000.0))
     }
     
-    return dataSource.download.requestWithAdditionalData(Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(call: .inputGroupCall(id: callId, accessHash: accessHash), timeMs: timestampIdMilliseconds, scale: scale), offset: 0, limit: 128 * 1024), automaticFloodWait: false, failOnServerErrors: true)
+    return dataSource.download.requestWithAdditionalData(Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(flags: 0, call: .inputGroupCall(id: callId, accessHash: accessHash), timeMs: timestampIdMilliseconds, scale: scale, videoChannel: nil, videoQuality: nil), offset: 0, limit: 128 * 1024), automaticFloodWait: false, failOnServerErrors: true)
+    |> map { result, responseTimestamp -> GetAudioBroadcastPartResult in
+        switch result {
+        case let .file(_, _, bytes):
+            return GetAudioBroadcastPartResult(
+                status: .data(bytes.makeData()),
+                responseTimestamp: responseTimestamp
+            )
+        case .fileCdnRedirect:
+            return GetAudioBroadcastPartResult(
+                status: .notReady,
+                responseTimestamp: responseTimestamp
+            )
+        }
+    }
+    |> `catch` { error, responseTimestamp -> Signal<GetAudioBroadcastPartResult, NoError> in
+        if error.errorDescription == "GROUPCALL_JOIN_MISSING" {
+            return .single(GetAudioBroadcastPartResult(
+                status: .rejoinNeeded,
+                responseTimestamp: responseTimestamp
+            ))
+        } else if error.errorDescription.hasPrefix("FLOOD_WAIT") || error.errorDescription == "TIME_TOO_BIG" {
+            return .single(GetAudioBroadcastPartResult(
+                status: .notReady,
+                responseTimestamp: responseTimestamp
+            ))
+        } else if error.errorDescription == "TIME_INVALID" || error.errorDescription == "TIME_TOO_SMALL" {
+            return .single(GetAudioBroadcastPartResult(
+                status: .resyncNeeded,
+                responseTimestamp: responseTimestamp
+            ))
+        } else {
+            return .single(GetAudioBroadcastPartResult(
+                status: .resyncNeeded,
+                responseTimestamp: responseTimestamp
+            ))
+        }
+    }
+}
+
+func _internal_getVideoBroadcastPart(dataSource: AudioBroadcastDataSource, callId: Int64, accessHash: Int64, timestampIdMilliseconds: Int64, durationMilliseconds: Int64, channelId: Int32, quality: Int32) -> Signal<GetAudioBroadcastPartResult, NoError> {
+    let scale: Int32
+    switch durationMilliseconds {
+    case 1000:
+        scale = 0
+    case 500:
+        scale = 1
+    default:
+        return .single(GetAudioBroadcastPartResult(status: .notReady, responseTimestamp: Double(timestampIdMilliseconds) / 1000.0))
+    }
+
+    return dataSource.download.requestWithAdditionalData(Api.functions.upload.getFile(flags: 0, location: .inputGroupCallStream(flags: 1 << 0, call: .inputGroupCall(id: callId, accessHash: accessHash), timeMs: timestampIdMilliseconds, scale: scale, videoChannel: channelId, videoQuality: quality), offset: 0, limit: 512 * 1024), automaticFloodWait: false, failOnServerErrors: true)
     |> map { result, responseTimestamp -> GetAudioBroadcastPartResult in
         switch result {
         case let .file(_, _, bytes):

@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import Contacts
-import AddressBook
 import TelegramUIPreferences
 import DeviceAccess
 import AccountContext
@@ -308,157 +307,6 @@ private final class DeviceContactDataModernContext: DeviceContactDataContext {
     }
 }
 
-private func withAddressBook(_ f: (ABAddressBook) -> Void) {
-    let addressBookRef = ABAddressBookCreateWithOptions(nil, nil)
-    
-    if let addressBook = addressBookRef?.takeRetainedValue() {
-        f(addressBook)
-    }
-}
-
-private final class DeviceContactDataLegacyContext: DeviceContactDataContext {
-    var currentContacts: [DeviceContactStableId: DeviceContactBasicData] = [:]
-    
-    init(queue: Queue, updated: @escaping ([DeviceContactStableId: DeviceContactBasicData]) -> Void) {
-        self.currentContacts = self.retrieveContacts()
-        updated(self.currentContacts)
-        /*let handle = NotificationCenter.default.addObserver(forName: NSNotification.Name.CNContactStoreDidChange, object: nil, queue: nil, using: { [weak self] _ in
-            queue.async {
-                guard let strongSelf = self else {
-                    return
-                }
-                let contacts = strongSelf.retrieveContacts()
-                if strongSelf.currentContacts != contacts {
-                    strongSelf.currentContacts = contacts
-                    updated(strongSelf.currentContacts)
-                }
-            }
-        })*/
-        //self.updateHandle = handle
-    }
-    
-    deinit {
-        /*if let updateHandle = updateHandle {
-            NotificationCenter.default.removeObserver(updateHandle)
-        }*/
-    }
-    
-    private func retrieveContacts() -> [DeviceContactStableId: DeviceContactBasicData] {
-        var result: [DeviceContactStableId: DeviceContactBasicData] = [:]
-        withAddressBook { addressBook in
-            guard let peopleRef = ABAddressBookCopyArrayOfAllPeople(addressBook)?.takeRetainedValue() else {
-                return
-            }
-            
-            for recordRef in peopleRef as NSArray {
-                let record = recordRef as ABRecord
-                let (stableId, basicData) = DeviceContactDataLegacyContext.parseContact(record)
-                result[stableId] = basicData
-            }
-        }
-        return result
-    }
-    
-    private func getContactById(stableId: String) -> ABRecord? {
-        let recordId: ABRecordID
-        if stableId.hasPrefix("ab-"), let idValue = Int(String(stableId[stableId.index(stableId.startIndex, offsetBy: 3)])) {
-            recordId = Int32(clamping: idValue)
-        } else {
-            return nil
-        }
-        
-        var result: ABRecord?
-        withAddressBook { addressBook in
-            result = ABAddressBookGetPersonWithRecordID(addressBook, recordId)?.takeUnretainedValue()
-        }
-        return result
-    }
-    
-    private static func parseContact(_ contact: ABRecord) -> (DeviceContactStableId, DeviceContactBasicData) {
-        let stableId = "ab-\(ABRecordGetRecordID(contact))"
-        var firstName = ""
-        var lastName = ""
-        if let value = ABRecordCopyValue(contact, kABPersonFirstNameProperty)?.takeRetainedValue() {
-            firstName = value as! CFString as String
-        }
-        if let value = ABRecordCopyValue(contact, kABPersonLastNameProperty)?.takeRetainedValue() {
-            lastName = value as! CFString as String
-        }
-        
-        var phoneNumbers: [DeviceContactPhoneNumberData] = []
-        if let value = ABRecordCopyValue(contact, kABPersonPhoneProperty)?.takeRetainedValue() {
-            let phones = value as ABMultiValue
-            let count = ABMultiValueGetCount(phones)
-            for i in 0 ..< count {
-                if let phoneRef = ABMultiValueCopyValueAtIndex(phones, i)?.takeRetainedValue() {
-                    let phone = phoneRef as! CFString as String
-                    var label = ""
-                    if let labelRef = ABMultiValueCopyLabelAtIndex(phones, i)?.takeRetainedValue() {
-                        label = labelRef as String
-                    }
-                    phoneNumbers.append(DeviceContactPhoneNumberData(label: label, value: phone))
-                }
-            }
-        }
-        
-        return (stableId, DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: phoneNumbers))
-    }
-    
-    func personNameDisplayOrder() -> PresentationPersonNameOrder {
-        if ABPersonGetCompositeNameFormat() == kABPersonCompositeNameFormatFirstNameFirst {
-            return .firstLast
-        } else {
-            return .lastFirst
-        }
-    }
-    
-    func getExtendedContactData(stableId: DeviceContactStableId) -> DeviceContactExtendedData? {
-        if let contact = self.getContactById(stableId: stableId) {
-            let basicData = DeviceContactDataLegacyContext.parseContact(contact).1
-            return DeviceContactExtendedData(basicData: basicData, middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
-        } else {
-            return nil
-        }
-    }
-    
-    func appendContactData(_ contactData: DeviceContactExtendedData, to stableId: DeviceContactStableId) -> DeviceContactExtendedData? {
-        return nil
-    }
-    
-    func appendPhoneNumber(_ phoneNumber: DeviceContactPhoneNumberData, to stableId: DeviceContactStableId) -> DeviceContactExtendedData? {
-        return nil
-    }
-    
-    func createContactWithData(_ contactData: DeviceContactExtendedData) -> (DeviceContactStableId, DeviceContactExtendedData)? {
-        var result: (DeviceContactStableId, DeviceContactExtendedData)?
-        withAddressBook { addressBook in
-            let contact = ABPersonCreate()?.takeRetainedValue()
-            ABRecordSetValue(contact, kABPersonFirstNameProperty, contactData.basicData.firstName as CFString, nil)
-            ABRecordSetValue(contact, kABPersonLastNameProperty, contactData.basicData.lastName as CFString, nil)
-            
-            let phones = ABMultiValueCreateMutable(ABPropertyType(kABMultiStringPropertyType))?.takeRetainedValue()
-            for phone in contactData.basicData.phoneNumbers {
-                ABMultiValueAddValueAndLabel(phones, phone.value as CFString, phone.label as CFString, nil)
-            }
-            ABRecordSetValue(contact, kABPersonPhoneProperty, phones, nil)
-            
-            if ABAddressBookAddRecord(addressBook, contact, nil) {
-                ABAddressBookSave(addressBook, nil)
-                
-                let stableId = "ab-\(ABRecordGetRecordID(contact))"
-                if let contact = self.getContactById(stableId: stableId) {
-                    let parsedContact = DeviceContactDataLegacyContext.parseContact(contact).1
-                    result = (stableId, DeviceContactExtendedData(basicData: parsedContact, middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: ""))
-                }
-            }
-        }
-        return result
-    }
-    
-    func deleteContactWithAppSpecificReference(peerId: PeerId) {
-    }
-}
-
 private final class ExtendedContactDataContext {
     var value: DeviceContactExtendedData?
     let subscribers = Bag<(DeviceContactExtendedData) -> Void>()
@@ -507,30 +355,19 @@ private final class DeviceContactDataManagerPrivateImpl {
             }
             strongSelf.accessInitialized = true
             if authorizationStatus == .allowed {
-                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                    let dataContext = DeviceContactDataModernContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.updateAll(stableIdToBasicContactData)
-                    }, appSpecificReferencesUpdated: { appSpecificReferences in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.updateAppSpecificReferences(appSpecificReferences: appSpecificReferences)
-                    })
-                    strongSelf.dataContext = dataContext
-                    strongSelf.personNameDisplayOrder.set(dataContext.personNameDisplayOrder())
-                } else {
-                    let dataContext = DeviceContactDataLegacyContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.updateAll(stableIdToBasicContactData)
-                    })
-                    strongSelf.dataContext = dataContext
-                    strongSelf.personNameDisplayOrder.set(dataContext.personNameDisplayOrder())
-                }
+                let dataContext = DeviceContactDataModernContext(queue: strongSelf.queue, updated: { stableIdToBasicContactData in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.updateAll(stableIdToBasicContactData)
+                }, appSpecificReferencesUpdated: { appSpecificReferences in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.updateAppSpecificReferences(appSpecificReferences: appSpecificReferences)
+                })
+                strongSelf.dataContext = dataContext
+                strongSelf.personNameDisplayOrder.set(dataContext.personNameDisplayOrder())
             } else {
                 strongSelf.updateAll([:])
             }

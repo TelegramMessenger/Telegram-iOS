@@ -36,12 +36,12 @@ public final class TelegramEngine {
         return Stickers(account: self.account)
     }()
 
-    public lazy var peerManagement: PeerManagement = {
-        return PeerManagement(account: self.account)
-    }()
-
     public lazy var localization: Localization = {
         return Localization(account: self.account)
+    }()
+    
+    public lazy var themes: Themes = {
+        return Themes(account: self.account)
     }()
 
     public lazy var messages: Messages = {

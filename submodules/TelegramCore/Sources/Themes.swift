@@ -3,7 +3,6 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-
 #if os(macOS)
 let telegramThemeFormat = "macos"
 let telegramThemeFileExtension = "palette"
@@ -12,7 +11,7 @@ let telegramThemeFormat = "ios"
 let telegramThemeFileExtension = "tgios-theme"
 #endif
 
-public func telegramThemes(postbox: Postbox, network: Network, accountManager: AccountManager?, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
+public func telegramThemes(postbox: Postbox, network: Network, accountManager: AccountManager<TelegramAccountManagerTypes>?, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
     let fetch: ([TelegramTheme]?, Int32?) -> Signal<[TelegramTheme], NoError> = { current, hash in
         network.request(Api.functions.account.getThemes(format: telegramThemeFormat, hash: hash ?? 0))
         |> retryRequest
@@ -101,11 +100,7 @@ public func getTheme(account: Account, slug: String) -> Signal<TelegramTheme, Ge
         return .generic
     }
     |> mapToSignal { theme -> Signal<TelegramTheme, GetThemeError> in
-        if let theme = TelegramTheme(apiTheme: theme) {
-            return .single(theme)
-        } else {
-            return .fail(.generic)
-        }
+        return .single(TelegramTheme(apiTheme: theme))
     }
 }
 
@@ -122,15 +117,11 @@ private func checkThemeUpdated(network: Network, theme: TelegramTheme) -> Signal
     return network.request(Api.functions.account.getTheme(format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), documentId: documentId))
     |> mapError { _ -> GetThemeError in return .generic }
     |> map { theme -> ThemeUpdatedResult in
-        if let theme = TelegramTheme(apiTheme: theme) {
-            return .updated(theme)
-        } else {
-            return .notModified
-        }
+        return .updated(TelegramTheme(apiTheme: theme))
     }
 }
 
-private func saveUnsaveTheme(account: Account, accountManager: AccountManager, theme: TelegramTheme, unsave: Bool) -> Signal<Void, NoError> {
+private func saveUnsaveTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme, unsave: Bool) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
         var items = entries.map { $0.contents as! TelegramTheme }
@@ -310,24 +301,21 @@ public func createTheme(account: Account, title: String, resource: MediaResource
                             return .generic
                         }
                         |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
-                            if let theme = TelegramTheme(apiTheme: apiTheme) {
-                                return account.postbox.transaction { transaction -> CreateThemeResult in
-                                    let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
-                                    var items = entries.map { $0.contents as! TelegramTheme }
-                                    items.insert(theme, at: 0)
-                                    var updatedEntries: [OrderedItemListEntry] = []
-                                    for item in items {
-                                        var intValue = Int32(updatedEntries.count)
-                                        let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                                        updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
-                                    }
-                                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
-                                    return .result(theme)
+                            let theme = TelegramTheme(apiTheme: apiTheme)
+                            return account.postbox.transaction { transaction -> CreateThemeResult in
+                                let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
+                                var items = entries.map { $0.contents as! TelegramTheme }
+                                items.insert(theme, at: 0)
+                                var updatedEntries: [OrderedItemListEntry] = []
+                                for item in items {
+                                    var intValue = Int32(updatedEntries.count)
+                                    let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
+                                    updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
                                 }
-                                |> castError(CreateThemeError.self)
-                            } else {
-                                return .fail(.generic)
+                                transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
+                                return .result(theme)
                             }
+                            |> castError(CreateThemeError.self)
                         }
                     }
                     else {
@@ -348,29 +336,28 @@ public func createTheme(account: Account, title: String, resource: MediaResource
                 return .generic
             }
             |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
-                if let theme = TelegramTheme(apiTheme: apiTheme) {
-                    return account.postbox.transaction { transaction -> CreateThemeResult in
-                        let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
-                        var items = entries.map { $0.contents as! TelegramTheme }
-                        items.insert(theme, at: 0)
-                        var updatedEntries: [OrderedItemListEntry] = []
-                        for item in items {
-                            var intValue = Int32(updatedEntries.count)
-                            let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                            updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
-                        }
-                        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
-                        return .result(theme)
-                        }
-                        |> castError(CreateThemeError.self)
-                } else {
-                    return .fail(.generic)
+                var theme = TelegramTheme(apiTheme: apiTheme)
+                theme = TelegramTheme(id: theme.id, accessHash: theme.accessHash, slug: theme.slug, title: theme.title, file: theme.file, settings: settings, isCreator: theme.isCreator, isDefault: theme.isDefault, installCount: theme.installCount)
+
+                return account.postbox.transaction { transaction -> CreateThemeResult in
+                    let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
+                    var items = entries.map { $0.contents as! TelegramTheme }
+                    items.insert(theme, at: 0)
+                    var updatedEntries: [OrderedItemListEntry] = []
+                    for item in items {
+                        var intValue = Int32(updatedEntries.count)
+                        let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
+                        updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
+                    }
+                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
+                    return .result(theme)
                 }
+                |> castError(CreateThemeError.self)
         }
     }
 }
 
-public func updateTheme(account: Account, accountManager: AccountManager, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil, settings: TelegramThemeSettings?) -> Signal<CreateThemeResult, CreateThemeError> {
+public func updateTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil, settings: TelegramThemeSettings?) -> Signal<CreateThemeResult, CreateThemeError> {
     guard title != nil || slug != nil || resource != nil else {
         return .complete()
     }
@@ -427,52 +414,51 @@ public func updateTheme(account: Account, accountManager: AccountManager, theme:
             return .generic
         }
         |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
-            if let updatedTheme = TelegramTheme(apiTheme: apiTheme) {
-                let _ = accountManager.transaction { transaction in
-                    transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
-                        var updated = current as? ThemeSettings ?? ThemeSettings(currentTheme: nil)
-                        if updatedTheme.id == updated.currentTheme?.id {
-                            updated = ThemeSettings(currentTheme: updatedTheme)
-                        }
-                        return updated
-                    })
-                }.start()
-                return account.postbox.transaction { transaction -> CreateThemeResult in
-                    let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
-                    let items = entries.map { entry -> TelegramTheme in
-                        let theme = entry.contents as! TelegramTheme
-                        if theme.id == updatedTheme.id {
-                            return updatedTheme
-                        } else {
-                            return theme
-                        }
+            let theme = TelegramTheme(apiTheme: apiTheme)
+            let updatedTheme = TelegramTheme(id: theme.id, accessHash: theme.accessHash, slug: theme.slug, title: theme.title, file: theme.file, settings: settings, isCreator: theme.isCreator, isDefault: theme.isDefault, installCount: theme.installCount)
+
+            let _ = accountManager.transaction { transaction in
+                transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
+                    var updated = current as? ThemeSettings ?? ThemeSettings(currentTheme: nil)
+                    if updatedTheme.id == updated.currentTheme?.id {
+                        updated = ThemeSettings(currentTheme: updatedTheme)
                     }
-                    var updatedEntries: [OrderedItemListEntry] = []
-                    for item in items {
-                        var intValue = Int32(updatedEntries.count)
-                        let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                        updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
+                    return updated
+                })
+            }.start()
+            return account.postbox.transaction { transaction -> CreateThemeResult in
+                let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
+                let items = entries.map { entry -> TelegramTheme in
+                    let theme = entry.contents as! TelegramTheme
+                    if theme.id == updatedTheme.id {
+                        return updatedTheme
+                    } else {
+                        return theme
                     }
-                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
-                    return .result(updatedTheme)
                 }
-                |> castError(CreateThemeError.self)
-            } else {
-                return .fail(.generic)
+                var updatedEntries: [OrderedItemListEntry] = []
+                for item in items {
+                    var intValue = Int32(updatedEntries.count)
+                    let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
+                    updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
+                }
+                transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
+                return .result(updatedTheme)
             }
+            |> castError(CreateThemeError.self)
         }
     }
 }
 
-public func saveThemeInteractively(account: Account, accountManager: AccountManager, theme: TelegramTheme) -> Signal<Void, NoError> {
+public func saveThemeInteractively(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme) -> Signal<Void, NoError> {
     return saveUnsaveTheme(account: account, accountManager: accountManager, theme: theme, unsave: false)
 }
 
-public func deleteThemeInteractively(account: Account, accountManager: AccountManager, theme: TelegramTheme) -> Signal<Void, NoError> {
+public func deleteThemeInteractively(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme) -> Signal<Void, NoError> {
     return saveUnsaveTheme(account: account, accountManager: accountManager, theme: theme, unsave: true)
 }
 
-public func applyTheme(accountManager: AccountManager, account: Account, theme: TelegramTheme?, autoNight: Bool = false) -> Signal<Never, NoError> {
+public func applyTheme(accountManager: AccountManager<TelegramAccountManagerTypes>, account: Account, theme: TelegramTheme?, autoNight: Bool = false) -> Signal<Never, NoError> {
     return accountManager.transaction { transaction -> Signal<Never, NoError> in
         transaction.updateSharedData(SharedDataKeys.themeSettings, { _ in
             return ThemeSettings(currentTheme: theme)
@@ -487,7 +473,7 @@ public func applyTheme(accountManager: AccountManager, account: Account, theme: 
     |> switchToLatest
 }
 
-func managedThemesUpdates(accountManager: AccountManager, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func managedThemesUpdates(accountManager: AccountManager<TelegramAccountManagerTypes>, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let currentTheme = Atomic<TelegramTheme?>(value: nil)
     return accountManager.sharedData(keys: [SharedDataKeys.themeSettings])
     |> map { sharedData -> TelegramTheme? in
@@ -555,7 +541,7 @@ private func areThemesEqual(_ lhs: TelegramTheme, _ rhs: TelegramTheme) -> Bool 
     return true
 }
 
-public func actualizedTheme(account: Account, accountManager: AccountManager, theme: TelegramTheme) -> Signal<TelegramTheme, NoError> {
+public func actualizedTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme) -> Signal<TelegramTheme, NoError> {
     var currentTheme = theme
     return accountManager.sharedData(keys: [SharedDataKeys.themeSettings])
     |> mapToSignal { sharedData -> Signal<TelegramTheme, NoError> in

@@ -87,6 +87,22 @@ public final class Transaction {
         assert(!self.disposed)
         return self.postbox!.messageHistoryThreadHoleIndexTable.closest(peerId: peerId, threadId: threadId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1))
     }
+
+    public func getThreadMessageCount(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, fromId: Int32?, toIndex: MessageIndex) -> Int? {
+        assert(!self.disposed)
+        let fromIndex: MessageIndex?
+        if let fromId = fromId {
+            fromIndex = self.postbox!.messageHistoryIndexTable.closestIndex(id: MessageId(peerId: peerId, namespace: namespace, id: fromId))
+        } else {
+            fromIndex = nil
+        }
+
+        if let fromIndex = fromIndex {
+            return self.postbox!.messageHistoryThreadsTable.getMessageCountInRange(threadId: threadId, peerId: peerId, namespace: namespace, lowerBound: fromIndex, upperBound: toIndex)
+        } else {
+            return nil
+        }
+    }
     
     public func doesChatListGroupContainHoles(groupId: PeerGroupId) -> Bool {
         assert(!self.disposed)
@@ -259,29 +275,24 @@ public final class Transaction {
         }
     }
     
-    /*public func getPeerGroupState(_ id: PeerGroupId) -> PeerGroupState? {
-        assert(!self.disposed)
-        return self.postbox?.peerGroupStateTable.get(id)
-    }
-    
-    public func setPeerGroupState(_ id: PeerGroupId, state: PeerGroupState) {
-        assert(!self.disposed)
-        self.postbox?.setPeerGroupState(id, state: state)
-    }*/
-    
-    public func getPeerChatInterfaceState(_ id: PeerId) -> PeerChatInterfaceState? {
+    public func getPeerChatInterfaceState(_ id: PeerId) -> StoredPeerChatInterfaceState? {
         assert(!self.disposed)
         return self.postbox?.peerChatInterfaceStateTable.get(id)
     }
-    
-    public func updatePeerChatInterfaceState(_ id: PeerId, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
+
+    public func getPeerChatThreadInterfaceState(_ id: PeerId, threadId: Int64) -> StoredPeerChatInterfaceState? {
         assert(!self.disposed)
-        self.postbox?.updatePeerChatInterfaceState(id, update: update)
+        return self.postbox?.peerChatThreadInterfaceStateTable.get(PeerChatThreadId(peerId: id, threadId: threadId))
     }
     
-    public func updatePeerChatThreadInterfaceState(_ id: PeerId, threadId: Int64, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
+    public func setPeerChatInterfaceState(_ id: PeerId, state: StoredPeerChatInterfaceState?) {
         assert(!self.disposed)
-        self.postbox?.updatePeerChatThreadInterfaceState(id, threadId: threadId, update: update)
+        self.postbox?.setPeerChatInterfaceState(id, state: state)
+    }
+    
+    public func setPeerChatThreadInterfaceState(_ id: PeerId, threadId: Int64, state: StoredPeerChatInterfaceState?) {
+        assert(!self.disposed)
+        self.postbox?.setPeerChatThreadInterfaceState(id, threadId: threadId, state: state)
     }
     
     public func getPeer(_ id: PeerId) -> Peer? {
@@ -701,6 +712,11 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
     }
+
+    public func putItemCacheEntryData(id: ItemCacheEntryId, entry: Data, collectionSpec: ItemCacheCollectionSpec) {
+        assert(!self.disposed)
+        self.postbox?.putItemCacheEntryData(id: id, entry: entry, collectionSpec: collectionSpec)
+    }
     
     public func removeItemCacheEntry(id: ItemCacheEntryId) {
         assert(!self.disposed)
@@ -710,6 +726,11 @@ public final class Transaction {
     public func retrieveItemCacheEntry(id: ItemCacheEntryId) -> PostboxCoding? {
         assert(!self.disposed)
         return self.postbox?.retrieveItemCacheEntry(id: id)
+    }
+
+    public func retrieveItemCacheEntryData(id: ItemCacheEntryId) -> Data? {
+        assert(!self.disposed)
+        return self.postbox?.retrieveItemCacheEntryData(id: id)
     }
     
     public func clearItemCacheCollection(collectionId: ItemCacheCollectionId) {
@@ -1306,7 +1327,7 @@ public final class Postbox {
     private var currentUpdatedPeerNotificationBehaviorTimestamps: [PeerId: PeerNotificationSettingsBehaviorTimestamp] = [:]
     private var currentUpdatedCachedPeerData: [PeerId: CachedPeerData] = [:]
     private var currentUpdatedPeerPresences: [PeerId: PeerPresence] = [:]
-    private var currentUpdatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?] = [:]
+    private var currentUpdatedPeerChatListEmbeddedStates = Set<PeerId>()
     private var currentUpdatedTotalUnreadStates: [PeerGroupId: ChatListTotalUnreadState] = [:]
     private var currentUpdatedGroupTotalUnreadSummaries: [PeerGroupId: PeerGroupUnreadCountersCombinedSummary] = [:]
     private var currentPeerMergedOperationLogOperations: [PeerMergedOperationLogOperation] = []
@@ -1479,8 +1500,8 @@ public final class Postbox {
         self.itemCollectionInfoTable = ItemCollectionInfoTable(valueBox: self.valueBox, table: ItemCollectionInfoTable.tableSpec(21))
         self.itemCollectionReverseIndexTable = ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>(valueBox: self.valueBox, table: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>.tableSpec(36))
         self.itemCollectionItemTable = ItemCollectionItemTable(valueBox: self.valueBox, table: ItemCollectionItemTable.tableSpec(22), reverseIndexTable: self.itemCollectionReverseIndexTable)
-        self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox, table: PeerChatInterfaceStateTable.tableSpec(23))
-        self.peerChatThreadInterfaceStateTable = PeerChatThreadInterfaceStateTable(valueBox: self.valueBox, table: PeerChatThreadInterfaceStateTable.tableSpec(64))
+        self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox, table: PeerChatInterfaceStateTable.tableSpec(67))
+        self.peerChatThreadInterfaceStateTable = PeerChatThreadInterfaceStateTable(valueBox: self.valueBox, table: PeerChatThreadInterfaceStateTable.tableSpec(68))
         self.itemCacheMetaTable = ItemCacheMetaTable(valueBox: self.valueBox, table: ItemCacheMetaTable.tableSpec(24))
         self.itemCacheTable = ItemCacheTable(valueBox: self.valueBox, table: ItemCacheTable.tableSpec(25))
         self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, table: ChatListIndexTable.tableSpec(8), peerNameIndexTable: self.peerNameIndexTable, metadataTable: self.messageHistoryMetadataTable, readStateTable: self.readStateTable, notificationSettingsTable: self.peerNotificationSettingsTable)
@@ -2204,16 +2225,16 @@ public final class Postbox {
         self.currentUpdatedPeerChatStates.insert(id)
     }
     
-    fileprivate func updatePeerChatInterfaceState(_ id: PeerId, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
-        let updatedState = update(self.peerChatInterfaceStateTable.get(id))
+    fileprivate func setPeerChatInterfaceState(_ id: PeerId, state: StoredPeerChatInterfaceState?) {
+        let updatedState = state
         let (_, updatedEmbeddedState) = self.peerChatInterfaceStateTable.set(id, state: updatedState)
         if updatedEmbeddedState {
-            self.currentUpdatedPeerChatListEmbeddedStates[id] = updatedState?.chatListEmbeddedState
+            self.currentUpdatedPeerChatListEmbeddedStates.insert(id)
         }
     }
     
-    fileprivate func updatePeerChatThreadInterfaceState(_ id: PeerId, threadId: Int64, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
-        let updatedState = update(self.peerChatThreadInterfaceStateTable.get(PeerChatThreadId(peerId: id, threadId: threadId)))
+    fileprivate func setPeerChatThreadInterfaceState(_ id: PeerId, threadId: Int64, state: StoredPeerChatInterfaceState?) {
+        let updatedState = state
         let _ = self.peerChatThreadInterfaceStateTable.set(PeerChatThreadId(peerId: id, threadId: threadId), state: updatedState)
     }
     
@@ -2321,9 +2342,18 @@ public final class Postbox {
         self.itemCacheTable.put(id: id, entry: entry, metaTable: self.itemCacheMetaTable)
         self.currentUpdatedCacheEntryKeys.insert(id)
     }
+
+    fileprivate func putItemCacheEntryData(id: ItemCacheEntryId, entry: Data, collectionSpec: ItemCacheCollectionSpec) {
+        self.itemCacheTable.putData(id: id, entry: entry, metaTable: self.itemCacheMetaTable)
+        self.currentUpdatedCacheEntryKeys.insert(id)
+    }
     
     func retrieveItemCacheEntry(id: ItemCacheEntryId) -> PostboxCoding? {
         return self.itemCacheTable.retrieve(id: id, metaTable: self.itemCacheMetaTable)
+    }
+
+    func retrieveItemCacheEntryData(id: ItemCacheEntryId) -> Data? {
+        return self.itemCacheTable.retrieveData(id: id, metaTable: self.itemCacheMetaTable)
     }
     
     func clearItemCacheCollection(collectionId: ItemCacheCollectionId) {
@@ -2797,7 +2827,7 @@ public final class Postbox {
                     }
                 }
             }
-            return InitialMessageHistoryData(peer: self.peerTable.get(peerId), chatInterfaceState: chatInterfaceState, associatedMessages: associatedMessages)
+            return InitialMessageHistoryData(peer: self.peerTable.get(peerId), storedInterfaceState: chatInterfaceState, associatedMessages: associatedMessages)
         } else {
             let chatInterfaceState = self.peerChatInterfaceStateTable.get(peerId)
             var associatedMessages: [MessageId: Message] = [:]
@@ -2808,7 +2838,7 @@ public final class Postbox {
                     }
                 }
             }
-            return InitialMessageHistoryData(peer: self.peerTable.get(peerId), chatInterfaceState: chatInterfaceState, associatedMessages: associatedMessages)
+            return InitialMessageHistoryData(peer: self.peerTable.get(peerId), storedInterfaceState: chatInterfaceState, associatedMessages: associatedMessages)
         }
     }
     

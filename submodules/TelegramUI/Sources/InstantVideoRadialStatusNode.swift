@@ -11,13 +11,15 @@ private final class InstantVideoRadialStatusNodeParameters: NSObject {
     let progress: CGFloat
     let dimProgress: CGFloat
     let playProgress: CGFloat
+    let blinkProgress: CGFloat
     let hasSeek: Bool
     
-    init(color: UIColor, progress: CGFloat, dimProgress: CGFloat, playProgress: CGFloat, hasSeek: Bool) {
+    init(color: UIColor, progress: CGFloat, dimProgress: CGFloat, playProgress: CGFloat, blinkProgress: CGFloat, hasSeek: Bool) {
         self.color = color
         self.progress = progress
         self.dimProgress = dimProgress
         self.playProgress = playProgress
+        self.blinkProgress = blinkProgress
         self.hasSeek = hasSeek
     }
 }
@@ -59,6 +61,12 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
     }
     
     private var effectivePlayProgress: CGFloat = 0.0 {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
+    
+    private var effectiveBlinkProgress: CGFloat = 0.0 {
         didSet {
             self.setNeedsDisplay()
         }
@@ -196,8 +204,38 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
                 if let seekingProgress = self.seekingProgress {
                     if seekingProgress > 0.98 && fraction > 0.0 && fraction < 0.05 {
                         self.hapticFeedback.impact(.light)
+                        
+                        let blinkAnimation = POPBasicAnimation()
+                        blinkAnimation.property = POPAnimatableProperty.property(withName: "blinkProgress", initializer: { property in
+                            property?.readBlock = { node, values in
+                                values?.pointee = (node as! InstantVideoRadialStatusNode).effectiveBlinkProgress
+                            }
+                            property?.writeBlock = { node, values in
+                                (node as! InstantVideoRadialStatusNode).effectiveBlinkProgress = values!.pointee
+                            }
+                            property?.threshold = 0.01
+                        }) as? POPAnimatableProperty
+                        blinkAnimation.fromValue = 1.0 as NSNumber
+                        blinkAnimation.toValue = 0.0 as NSNumber
+                        blinkAnimation.duration = 0.5
+                        self.pop_add(blinkAnimation, forKey: "blinkProgress")
                     } else if seekingProgress > 0.0 && seekingProgress < 0.05 && fraction > 0.98 {
                         self.hapticFeedback.impact(.light)
+                        
+                        let blinkAnimation = POPBasicAnimation()
+                        blinkAnimation.property = POPAnimatableProperty.property(withName: "blinkProgress", initializer: { property in
+                            property?.readBlock = { node, values in
+                                values?.pointee = (node as! InstantVideoRadialStatusNode).effectiveBlinkProgress
+                            }
+                            property?.writeBlock = { node, values in
+                                (node as! InstantVideoRadialStatusNode).effectiveBlinkProgress = values!.pointee
+                            }
+                            property?.threshold = 0.01
+                        }) as? POPAnimatableProperty
+                        blinkAnimation.fromValue = -1.0 as NSNumber
+                        blinkAnimation.toValue = 0.0 as NSNumber
+                        blinkAnimation.duration = 0.5
+                        self.pop_add(blinkAnimation, forKey: "blinkProgress")
                     }
                 }
                 let newProgress = min(0.99, fraction)
@@ -216,7 +254,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return InstantVideoRadialStatusNodeParameters(color: self.color, progress: self.effectiveProgress, dimProgress: self.effectiveDimProgress, playProgress: self.effectivePlayProgress, hasSeek: self.hasSeek)
+        return InstantVideoRadialStatusNodeParameters(color: self.color, progress: self.effectiveProgress, dimProgress: self.effectiveDimProgress, playProgress: self.effectivePlayProgress, blinkProgress: self.effectiveBlinkProgress, hasSeek: self.hasSeek)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -231,9 +269,23 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
         if let parameters = parameters as? InstantVideoRadialStatusNodeParameters {
             context.setStrokeColor(parameters.color.cgColor)
             
+            context.addEllipse(in: bounds)
+            context.clip()
+            
             if !parameters.dimProgress.isZero {
-                context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.35 * min(1.0, parameters.dimProgress)).cgColor)
-                context.fillEllipse(in: bounds)
+                if parameters.playProgress == 1.0 {
+                    context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.35 * min(1.0, parameters.dimProgress)).cgColor)
+                    context.fillEllipse(in: bounds)
+                } else {
+                    var locations: [CGFloat] = [0.0, 0.8, 1.0]
+                    let alpha: CGFloat = 0.2 + 0.15 * parameters.playProgress
+                    let colors: [CGColor] = [UIColor(rgb: 0x000000, alpha: alpha * min(1.0, parameters.dimProgress * parameters.playProgress)).cgColor, UIColor(rgb: 0x000000, alpha: alpha * min(1.0, parameters.dimProgress * parameters.playProgress)).cgColor, UIColor(rgb: 0x000000, alpha: alpha * min(1.0, parameters.dimProgress)).cgColor]
+                    let colorSpace = CGColorSpaceCreateDeviceRGB()
+                    let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                    
+                    let center = bounds.center
+                    context.drawRadialGradient(gradient, startCenter: center, startRadius: 0.0, endCenter: center, endRadius: bounds.width / 2.0, options: .drawsAfterEndLocation)
+                }
             }
             
             context.setBlendMode(.normal)
@@ -255,9 +307,19 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
             }
                 
             if !parameters.dimProgress.isZero {
+                context.setLineWidth(lineWidth)
+                
+                if parameters.blinkProgress > 0.0 {
+                    context.setStrokeColor(parameters.color.withAlphaComponent(0.2 * parameters.blinkProgress).cgColor)
+                    context.strokeEllipse(in: CGRect(x: (bounds.size.width - pathDiameter) / 2.0 , y: (bounds.size.height - pathDiameter) / 2.0, width: pathDiameter, height: pathDiameter))
+                }
+                
                 if parameters.hasSeek {
-                    context.setStrokeColor(parameters.color.withAlphaComponent(0.2 * parameters.dimProgress).cgColor)
-                    context.setLineWidth(lineWidth)
+                    var progress = parameters.dimProgress
+                    if parameters.blinkProgress < 0.0 {
+                        progress = parameters.dimProgress + parameters.blinkProgress
+                    }
+                    context.setStrokeColor(parameters.color.withAlphaComponent(0.2 * progress).cgColor)
                     context.strokeEllipse(in: CGRect(x: (bounds.size.width - pathDiameter) / 2.0 , y: (bounds.size.height - pathDiameter) / 2.0, width: pathDiameter, height: pathDiameter))
                 }
                     

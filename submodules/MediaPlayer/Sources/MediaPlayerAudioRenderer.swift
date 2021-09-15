@@ -690,7 +690,10 @@ private final class AudioPlayerRendererContext {
                                         strongSelf.bufferContext.with { context in
                                             let copyOffset = context.overflowData.count
                                             context.overflowData.count += dataLength - takeLength
-                                            context.overflowData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                            context.overflowData.withUnsafeMutableBytes { buffer -> Void in
+                                                guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                                                    return
+                                                }
                                                 CMBlockBufferCopyDataBytes(dataBuffer, atOffset: takeLength, dataLength: dataLength - takeLength, destination: bytes.advanced(by: copyOffset))
                                             }
                                         }
@@ -727,7 +730,10 @@ private final class AudioPlayerRendererContext {
         
         self.bufferContext.with { context in
             let bytesToCopy = min(context.buffer.size - context.buffer.availableBytes, data.count)
-            data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            data.withUnsafeBytes { buffer -> Void in
+                guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                    return
+                }
                 let _ = context.buffer.enqueue(UnsafeRawPointer(bytes), count: bytesToCopy)
                 context.bufferMaxChannelSampleIndex = sampleIndex + Int64(data.count / (2 * 2))
             }

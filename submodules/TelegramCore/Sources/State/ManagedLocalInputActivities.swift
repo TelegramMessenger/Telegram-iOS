@@ -129,6 +129,8 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
                 return .sendMessageUploadRoundAction(progress: progress)
             case .speakingInGroupCall:
                 return .speakingInGroupCallAction
+            case .choosingSticker:
+                return .sendMessageChooseStickerAction
         }
     } else {
         return .sendMessageCancelAction

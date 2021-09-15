@@ -288,6 +288,81 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single([])
     }
+
+    if messages.count == 1, let _ = messages[0].adAttribute {
+        let message = messages[0]
+
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+        var actions: [ContextMenuItem] = []
+        actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+        }, iconSource: nil, action: { _, f in
+            f(.default)
+
+            controllerInteraction.presentController(textAlertController(context: context, title: nil, text: presentationData.strings.SponsoredMessageInfo_Text, actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                }),
+                TextAlertAction(type: .defaultAction, title: presentationData.strings.SponsoredMessageInfo_Action, action: {
+                    context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.SponsoredMessageInfo_ActionUrl, forceExternal: true, presentationData: presentationData, navigationController: controllerInteraction.navigationController(), dismissInput: {
+                        controllerInteraction.navigationController()?.view.endEditing(true)
+                    })
+                }),
+            ]), nil)
+        })))
+
+        actions.append(.separator)
+
+        actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+        }, action: { _, f in
+            let copyTextWithEntities = {
+                var messageEntities: [MessageTextEntity]?
+                var restrictedText: String?
+                for attribute in message.attributes {
+                    if let attribute = attribute as? TextEntitiesMessageAttribute {
+                        messageEntities = attribute.entities
+                    }
+                    if let attribute = attribute as? RestrictedContentMessageAttribute {
+                        restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                    }
+                }
+
+                if let restrictedText = restrictedText {
+                    storeMessageTextInPasteboard(restrictedText, entities: nil)
+                } else {
+                    storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                }
+
+                Queue.mainQueue().after(0.2, {
+                    let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
+                    controllerInteraction.displayUndo(content)
+                })
+            }
+
+            copyTextWithEntities()
+            f(.default)
+        })))
+
+        if let author = message.author, let addressName = author.addressName {
+            let link = "https://t.me/\(addressName)"
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                UIPasteboard.general.string = link
+
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+                Queue.mainQueue().after(0.2, {
+                    controllerInteraction.displayUndo(.linkCopied(text: presentationData.strings.Conversation_LinkCopied))
+                })
+
+                f(.default)
+            })))
+        }
+
+        return .single(actions)
+    }
     
     var loadStickerSaveStatus: MediaId?
     var loadCopyMediaResource: MediaResource?
@@ -615,17 +690,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
             if resourceAvailable, !message.containsSecretMedia {
                 var mediaReference: AnyMediaReference?
+                var isVideo = false
                 for media in message.media {
                     if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
                         mediaReference = ImageMediaReference.standalone(media: image).abstract
                         break
                     } else if let file = media as? TelegramMediaFile, file.isVideo {
                         mediaReference = FileMediaReference.standalone(media: file).abstract
+                        isVideo = true
                         break
                     }
                 }
                 if let mediaReference = mediaReference {
-                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Preview_SaveToCameraRoll, icon: { theme in
+                    actions.append(.action(ContextMenuActionItem(text: isVideo ? chatPresentationInterfaceState.strings.Gallery_SaveVideo : chatPresentationInterfaceState.strings.Gallery_SaveImage, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
                         let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference)

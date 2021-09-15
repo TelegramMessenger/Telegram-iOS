@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public enum MusicPlaybackSettingsOrder: Int32 {
@@ -88,7 +89,7 @@ public struct MusicPlaybackSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateMusicPlaybackSettingsInteractively(accountManager: AccountManager, _ f: @escaping (MusicPlaybackSettings) -> MusicPlaybackSettings) -> Signal<Void, NoError> {
+public func updateMusicPlaybackSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (MusicPlaybackSettings) -> MusicPlaybackSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { entry in
             let currentSettings: MusicPlaybackSettings

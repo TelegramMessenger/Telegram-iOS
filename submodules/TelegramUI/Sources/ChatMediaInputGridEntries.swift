@@ -8,6 +8,7 @@ import MergeLists
 
 enum ChatMediaInputGridEntryStableId: Equatable, Hashable {
     case search
+    case trendingList
     case peerSpecificSetup
     case sticker(ItemCollectionId, ItemCollectionItemIndex.Id)
     case trending(ItemCollectionId)
@@ -15,6 +16,7 @@ enum ChatMediaInputGridEntryStableId: Equatable, Hashable {
 
 enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
     case search
+    case trendingList
     case peerSpecificSetup(dismissed: Bool)
     case collectionIndex(ItemCollectionViewEntryIndex)
     case trending(ItemCollectionId, Int)
@@ -23,6 +25,8 @@ enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
         switch self {
         case .search:
             return .search
+        case .trendingList:
+            return .trendingList
         case .peerSpecificSetup:
             return .peerSpecificSetup
         case let .collectionIndex(index):
@@ -40,9 +44,16 @@ enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
             } else {
                 return true
             }
+        case .trendingList:
+            switch rhs {
+            case .search, .trendingList:
+                return false
+            case .peerSpecificSetup, .collectionIndex, .trending:
+                return true
+            }
         case let .peerSpecificSetup(lhsDismissed):
             switch rhs {
-            case .search, .peerSpecificSetup:
+            case .search, .trendingList, .peerSpecificSetup:
                 return false
             case let .collectionIndex(index):
                 if lhsDismissed {
@@ -59,7 +70,7 @@ enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
             }
         case let .collectionIndex(lhsIndex):
             switch rhs {
-            case .search:
+            case .search, .trendingList:
                 return false
             case let .peerSpecificSetup(dismissed):
                 if dismissed {
@@ -74,7 +85,7 @@ enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
             }
         case let .trending(_, lhsIndex):
             switch rhs {
-            case .search, .peerSpecificSetup, .collectionIndex:
+            case .search, .trendingList, .peerSpecificSetup, .collectionIndex:
                 return false
             case let .trending(_, rhsIndex):
                 return lhsIndex < rhsIndex
@@ -85,6 +96,7 @@ enum ChatMediaInputGridEntryIndex: Equatable, Comparable {
 
 enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
     case search(theme: PresentationTheme, strings: PresentationStrings)
+    case trendingList(theme: PresentationTheme, strings: PresentationStrings, packs: [FeaturedStickerPackItem])
     case peerSpecificSetup(theme: PresentationTheme, strings: PresentationStrings, dismissed: Bool)
     case sticker(index: ItemCollectionViewEntryIndex, stickerItem: StickerPackItem, stickerPackInfo: StickerPackCollectionInfo?, canManagePeerSpecificPack: Bool?, maybeManageable: Bool, theme: PresentationTheme)
     case trending(TrendingPanePackEntry)
@@ -93,6 +105,8 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
         switch self {
         case .search:
             return .search
+        case .trendingList:
+            return .trendingList
         case let .peerSpecificSetup(_, _, dismissed):
             return .peerSpecificSetup(dismissed: dismissed)
         case let .sticker(index, _, _, _, _, _):
@@ -115,6 +129,26 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
                 }
                 if lhsStrings !== rhsStrings {
                     return false
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .trendingList(lhsTheme, lhsStrings, lhsPacks):
+            if case let .trendingList(rhsTheme, rhsStrings, rhsPacks) = rhs {
+                if lhsTheme !== rhsTheme {
+                    return false
+                }
+                if lhsStrings !== rhsStrings {
+                    return false
+                }
+                for i in 0 ..< lhsPacks.count {
+                    if lhsPacks[i].unread != rhsPacks[i].unread {
+                        return false
+                    }
+                    if lhsPacks[i].info != rhsPacks[i].info {
+                        return false
+                    }
                 }
                 return true
             } else {
@@ -168,6 +202,10 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
         case let .search(theme, strings):
             return PaneSearchBarPlaceholderItem(theme: theme, strings: strings, type: .stickers, activate: {
                 inputNodeInteraction.toggleSearch(true, .sticker, "")
+            })
+        case let .trendingList(theme, strings, packs):
+            return StickerPaneTrendingListGridItem(account: account, theme: theme, strings: strings, trendingPacks: packs, inputNodeInteraction: inputNodeInteraction, dismiss: {
+                inputNodeInteraction.dismissTrendingPacks(packs.map { $0.info.id })
             })
         case let .peerSpecificSetup(theme, strings, dismissed):
             return StickerPanePeerSpecificSetupGridItem(theme: theme, strings: strings, setup: {

@@ -394,7 +394,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                                             }
                                             
-                                            var text = caption ?? ""                                            
+                                            let text = caption ?? ""                                            
                                             messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
                                         }
                                     }
@@ -504,7 +504,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     finalDuration = adjustments.trimEndValue - adjustments.trimStartValue
                                 }
                                 
-                                let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()))
+                                let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()!))
                                 let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
                                 resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest)
                             }

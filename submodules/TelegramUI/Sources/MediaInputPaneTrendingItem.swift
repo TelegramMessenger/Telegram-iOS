@@ -92,21 +92,22 @@ final class TrendingTopItemNode: ASDisplayNode {
         self.theme = theme
         self.listAppearance = listAppearance
         
-        let backgroundColor: UIColor
+        let backgroundColor: UIColor?
         let foregroundColor: UIColor
         let shimmeringColor: UIColor
         if listAppearance {
-            backgroundColor = theme.list.plainBackgroundColor
-            foregroundColor = theme.list.itemPlainSeparatorColor.blitOver(backgroundColor, alpha: 0.3)
+            backgroundColor = nil
+            foregroundColor = theme.list.itemPlainSeparatorColor.blitOver(theme.list.plainBackgroundColor, alpha: 0.3)
             shimmeringColor = theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4)
         } else {
-            backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
-            foregroundColor = theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(backgroundColor, alpha: 0.15)
+            let color = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
+            backgroundColor = color
+            foregroundColor = theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(color, alpha: 0.15)
             shimmeringColor = theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3)
         }
         
         if let placeholderNode = self.placeholderNode, let file = self.file {
-            placeholderNode.update(backgroundColor: backgroundColor, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: file.immediateThumbnailData, size: placeholderNode.frame.size)
+            placeholderNode.update(backgroundColor: backgroundColor, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, data: file.immediateThumbnailData, size: self.itemSize ?? CGSize(width: 75.0, height: 75.0))
         }
     }
     

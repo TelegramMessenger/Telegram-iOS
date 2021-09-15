@@ -132,7 +132,7 @@ public enum MediaManagerPlayerType {
     case file
 }
 
-public protocol MediaManager: class {
+public protocol MediaManager: AnyObject {
     var audioSession: ManagedAudioSession { get }
     var galleryHiddenMediaManager: GalleryHiddenMediaManager { get }
     var universalVideoManager: UniversalVideoManager { get }
@@ -177,11 +177,11 @@ public enum GalleryHiddenMediaId: Hashable {
     }
 }
 
-public protocol GalleryHiddenMediaTarget: class {
+public protocol GalleryHiddenMediaTarget: AnyObject {
     func getTransitionInfo(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> (UIView?, UIView?))?
 }
 
-public protocol GalleryHiddenMediaManager: class {
+public protocol GalleryHiddenMediaManager: AnyObject {
     func hiddenIds() -> Signal<Set<GalleryHiddenMediaId>, NoError>
     func addSource(_ signal: Signal<GalleryHiddenMediaId?, NoError>) -> Int
     func removeSource(_ index: Int)
@@ -190,7 +190,7 @@ public protocol GalleryHiddenMediaManager: class {
     func findTarget(messageId: MessageId, media: Media) -> ((UIView) -> Void, ASDisplayNode, () -> (UIView?, UIView?))?
 }
 
-public protocol UniversalVideoManager: class {
+public protocol UniversalVideoManager: AnyObject {
     func attachUniversalVideoContent(content: UniversalVideoContent, priority: UniversalVideoPriority, create: () -> UniversalVideoContentNode & ASDisplayNode, update: @escaping (((UniversalVideoContentNode & ASDisplayNode), Bool)?) -> Void) -> (AnyHashable, Int32)
     func detachUniversalVideoContent(id: AnyHashable, index: Int32)
     func withUniversalVideoContent(id: AnyHashable, _ f: ((UniversalVideoContentNode & ASDisplayNode)?) -> Void)
@@ -218,7 +218,7 @@ public struct RecordedAudioData {
     }
 }
 
-public protocol ManagedAudioRecorder: class {
+public protocol ManagedAudioRecorder: AnyObject {
     var beginWithTone: Bool { get }
     var micLevel: Signal<Float, NoError> { get }
     var recordingState: Signal<AudioRecordingState, NoError> { get }

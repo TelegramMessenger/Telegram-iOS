@@ -59,6 +59,8 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 text = strings.Activity_PlayingGame
                             case .typingText:
                                 text = strings.DialogList_Typing
+                            case .choosingSticker:
+                                text = strings.Activity_ChoosingSticker
                             case .speakingInGroupCall:
                                 text = ""
                         }
@@ -77,6 +79,8 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 state = .playingGame(string, lightColor)
                             case .speakingInGroupCall:
                                 state = .typingText(string, lightColor)
+                            case .choosingSticker:
+                                state = .choosingSticker(string, lightColor)
                         }
                     } else {
                         let text: String
@@ -99,6 +103,8 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                     text = strings.DialogList_SinglePlayingGameSuffix(peerTitle).string
                                 case .typingText:
                                     text = strings.DialogList_SingleTypingSuffix(peerTitle).string
+                                case .choosingSticker:
+                                    text = strings.DialogList_SingleChoosingStickerSuffix(peerTitle).string
                                 case .speakingInGroupCall:
                                     text = ""
                             }
@@ -120,6 +126,8 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 state = .playingGame(string, lightColor)
                             case .speakingInGroupCall:
                                 state = .typingText(string, lightColor)
+                            case .choosingSticker:
+                                state = .none
                         }
                     }
                 } else {

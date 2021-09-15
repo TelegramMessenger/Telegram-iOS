@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-
 public enum EnqueueMessageGrouping {
     case none
     case auto
@@ -114,6 +113,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
                 return true
             case _ as EmojiSearchQueryMessageAttribute:
                 return true
+            case _ as ForwardOptionsMessageAttribute:
+                return true
             default:
                 return false
         }
@@ -130,6 +131,8 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
             case _ as NotificationInfoMessageAttribute:
                 return true
             case _ as OutgoingScheduleInfoMessageAttribute:
+                return true
+            case _ as ForwardOptionsMessageAttribute:
                 return true
             default:
                 return false
@@ -517,6 +520,8 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                 case let .forward(source, grouping, requestedAttributes, correlationId):
                     let sourceMessage = transaction.getMessage(source)
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
+                        var messageText = sourceMessage.text
+                        
                         if let peer = peer as? TelegramSecretChat {
                             var isAction = false
                             for media in sourceMessage.media {
@@ -559,6 +564,25 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         }
                         
                         var forwardInfo: StoreMessageForwardInfo?
+                        
+                        var hideSendersNames = false
+                        var hideCaptions = false
+                        for attribute in requestedAttributes {
+                            if let attribute = attribute as? ForwardOptionsMessageAttribute {
+                                hideSendersNames = attribute.hideNames
+                                hideCaptions = attribute.hideCaptions
+                                break
+                            }
+                        }
+                        
+                        if hideCaptions {
+                            for media in sourceMessage.media {
+                                if media is TelegramMediaImage || media is TelegramMediaFile {
+                                    messageText = ""
+                                    break
+                                }
+                            }
+                        }
                         
                         if sourceMessage.id.namespace == Namespaces.Message.Cloud && peerId.namespace != Namespaces.Peer.SecretChat {
                             attributes.append(ForwardSourceInfoAttribute(messageId: sourceMessage.id))
@@ -606,7 +630,9 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 }
                             }
                             
-                            if let sourceForwardInfo = sourceMessage.forwardInfo {
+                            if hideSendersNames {
+                                
+                            } else if let sourceForwardInfo = sourceMessage.forwardInfo {
                                 forwardInfo = StoreMessageForwardInfo(authorId: sourceForwardInfo.author?.id, sourceId: sourceForwardInfo.source?.id, sourceMessageId: sourceForwardInfo.sourceMessageId, date: sourceForwardInfo.date, authorSignature: sourceForwardInfo.authorSignature, psaType: nil, flags: [])
                             } else {
                                 if sourceMessage.id.peerId != account.peerId {
@@ -712,7 +738,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             augmentedMediaList = augmentedMediaList.map(convertForwardedMediaForSecretChat)
                         }
                                                 
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, threadId: threadId, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: augmentedMediaList))
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, threadId: threadId, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: augmentedMediaList))
                     }
             }
         }

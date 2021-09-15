@@ -106,7 +106,7 @@ static void generate_public_key(unsigned char key[32], id<EncryptionProvider> pr
     }
 }
 
-typedef enum {
+/*typedef enum {
     HelloGenerationCommandInvalid = 0,
     HelloGenerationCommandString = 1,
     HelloGenerationCommandZero = 2,
@@ -471,7 +471,7 @@ static NSData *executeGenerationCode(id<EncryptionProvider> provider, NSData *do
     ((uint8_t *)resultData.mutableBytes)[paddingLengthPosition + 1] = ((uint8_t *)&calculatedLength)[0];
     
     return resultData;
-}
+}*/
 
 @interface MTTcpConnectionData : NSObject
 
@@ -861,14 +861,14 @@ struct ctr_state {
                     if (MTLogEnabled()) {
                         if (strongSelf->_socksIp != nil) {
                             if (strongSelf->_socksUsername.length == 0) {
-                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort);
+                                MTLog(@"[MTTcpConnection#%" PRIxPTR " connecting to %@:%d via %@:%d]", (intptr_t)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort);
                             } else {
-                                MTLog(@"[MTTcpConnection#%x connecting to %@:%d via %@:%d using %@:%@]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort, strongSelf->_socksUsername, strongSelf->_socksPassword);
+                                MTLog(@"[MTTcpConnection#%" PRIxPTR " connecting to %@:%d via %@:%d using %@:%@]", (intptr_t)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_socksIp, (int)strongSelf->_socksPort, strongSelf->_socksUsername, strongSelf->_socksPassword);
                             }
                         } else if (strongSelf->_mtpIp != nil) {
-                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d via mtp://%@:%d:%@]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_mtpIp, (int)strongSelf->_mtpPort, strongSelf->_mtpSecret);
+                            MTLog(@"[MTTcpConnection#%" PRIxPTR " connecting to %@:%d via mtp://%@:%d:%@]", (intptr_t)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port, strongSelf->_mtpIp, (int)strongSelf->_mtpPort, strongSelf->_mtpSecret);
                         } else {
-                            MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port);
+                            MTLog(@"[MTTcpConnection#%" PRIxPTR " connecting to %@:%d]", (intptr_t)strongSelf, strongSelf->_scheme.address.ip, (int)strongSelf->_scheme.address.port);
                         }
                     }
                     
@@ -1280,7 +1280,7 @@ struct ctr_state {
     _responseTimeoutTimer = nil;
     
     if (MTLogEnabled()) {
-        MTLog(@"[MTTcpConnection#%x response timeout]", (int)self);
+        MTLog(@"[MTTcpConnection#%" PRIxPTR " response timeout]", (intptr_t)self);
     }
     [self closeAndNotifyWithError:true];
 }
@@ -1421,7 +1421,7 @@ struct ctr_state {
         
         if (resp.Reply != 0x00) {
             if (MTLogEnabled()) {
-                MTLog(@"***** %x %s: socks5 connect failed, error 0x%02x", (int)self, __PRETTY_FUNCTION__, resp.Reply);
+                MTLog(@"***** " PRIxPTR " %s: socks5 connect failed, error 0x%02x", (intptr_t)self, __PRETTY_FUNCTION__, resp.Reply);
             }
             [self closeAndNotifyWithError:true];
             return;
@@ -1772,7 +1772,7 @@ struct ctr_state {
         } else {
             if (length > 16 * 1024 * 1024) {
                 if (MTLogEnabled()) {
-                    MTLog(@"[MTTcpConnection#%x received invalid length %d]", (int)self, length);
+                    MTLog(@"[MTTcpConnection#%" PRIxPTR " received invalid length %d]", (intptr_t)self, length);
                 }
                 [self closeAndNotifyWithError:true];
             } else {
@@ -1848,7 +1848,7 @@ struct ctr_state {
                 }
             } else if (header == 0 && packetData.length < 16) {
                 if (MTLogEnabled()) {
-                    MTLog(@"[MTTcpConnection#%x received nop packet]", (int)self);
+                    MTLog(@"[MTTcpConnection#%" PRIxPTR " received nop packet]", (intptr_t)self);
                 }
                 ignorePacket = true;
             }
@@ -1907,12 +1907,12 @@ struct ctr_state {
 {
     if (error != nil) {
         if (MTLogEnabled()) {
-            MTLog(@"[MTTcpConnection#%x disconnected from %@ (%@)]", (int)self, _scheme.address.ip, error);
+            MTLog(@"[MTTcpConnection#%" PRIxPTR " disconnected from %@ (%@)]", (intptr_t)self, _scheme.address.ip, error);
         }
     }
     else {
         if (MTLogEnabled()) {
-            MTLog(@"[MTTcpConnection#%x disconnected from %@]", (int)self, _scheme.address.ip);
+            MTLog(@"[MTTcpConnection#%" PRIxPTR " disconnected from %@]", (intptr_t)self, _scheme.address.ip);
         }
     }
     

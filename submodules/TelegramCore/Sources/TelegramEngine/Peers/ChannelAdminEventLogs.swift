@@ -63,6 +63,7 @@ public enum AdminLogEventAction {
     case editExportedInvitation(previous: ExportedInvitation, updated: ExportedInvitation)
     case participantJoinedViaInvite(ExportedInvitation)
     case changeHistoryTTL(previousValue: Int32?, updatedValue: Int32?)
+    case changeTheme(previous: String?, updated: String?)
 }
 
 public enum ChannelAdminLogEventError {
@@ -249,6 +250,8 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                         action = .groupCallUpdateParticipantVolume(peerId: parsedParticipant.peerId, volume: parsedParticipant.volume ?? 10000)
                                     case let .channelAdminLogEventActionChangeHistoryTTL(prevValue, newValue):
                                         action = .changeHistoryTTL(previousValue: prevValue, updatedValue: newValue)
+                                    case let .channelAdminLogEventActionChangeTheme(prevValue, newValue):
+                                        action = .changeTheme(previous: prevValue, updated: newValue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
                                 if let action = action {

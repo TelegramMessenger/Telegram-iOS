@@ -369,7 +369,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                         fillColor = UIColor(rgb: 0xd92326).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
                     case .green:
                         fillColor = UIColor(rgb: 0x74db58).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
-                    case let .custom(color, alpha):
+                    case let .custom(color, _):
                         fillColor = UIColor(rgb: color).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
                     }
                 }

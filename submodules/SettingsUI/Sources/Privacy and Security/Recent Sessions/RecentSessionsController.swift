@@ -267,7 +267,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
         switch self {
         case let .currentSessionHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .currentSession(_, strings, dateTimeFormat, session):
+        case let .currentSession(_, _, dateTimeFormat, session):
             return ItemListRecentSessionItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, session: session, enabled: true, editable: false, editing: false, revealed: false, sectionId: self.section, setSessionIdWithRevealedOptions: { _, _ in
             }, removeSession: { _ in
             })
@@ -512,6 +512,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         |> deliverOnMainQueue).start(next: { _ in
             dismissImpl?()
         })
+        actionsDisposable.add(autoDismissDisposable)
     }
     
     let mode = ValuePromise<RecentSessionsMode>(websitesOnly ? .websites : .sessions)
@@ -593,12 +594,8 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         
         removeSessionDisposable.set(((webSessionsContext.remove(hash: sessionId)
         |> mapToSignal { _ -> Signal<Void, NoError> in
-            return .complete()
         })
         |> deliverOnMainQueue).start(error: { _ in
-            updateState {
-                return $0.withUpdatedRemovingSessionId(nil)
-            }
         }, completed: {
             updateState {
                 return $0.withUpdatedRemovingSessionId(nil)
@@ -621,9 +618,6 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
                     
                     terminateOtherSessionsDisposable.set((webSessionsContext.removeAll()
                     |> deliverOnMainQueue).start(error: { _ in
-                        updateState {
-                            return $0.withUpdatedTerminatingOtherSessions(false)
-                        }
                     }, completed: {
                         updateState {
                             return $0.withUpdatedTerminatingOtherSessions(false)

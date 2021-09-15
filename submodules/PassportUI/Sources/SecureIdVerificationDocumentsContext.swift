@@ -55,10 +55,7 @@ final class SecureIdVerificationDocumentsContext {
                                         }
                                 }
                             }
-                        }, error: { [weak self] _ in
-                            if let strongSelf = self {
-                                
-                            }
+                        }, error: { _ in
                         }))
                     }
                 case .remote:

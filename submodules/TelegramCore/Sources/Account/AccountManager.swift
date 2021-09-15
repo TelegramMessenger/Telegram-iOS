@@ -4,14 +4,120 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-
 private enum AccountKind {
     case authorized
     case unauthorized
 }
 
+public enum TelegramAccountRecordAttribute: AccountRecordAttribute, Equatable {
+    enum CodingKeys: String, CodingKey {
+        case backupData
+        case environment
+        case sortOrder
+        case loggedOut
+        case continueDoubleBottom
+        case hiddenDoubleBottom
+        case legacyRootObject = "_"
+    }
+
+    case backupData(AccountBackupDataAttribute)
+    case environment(AccountEnvironmentAttribute)
+    case sortOrder(AccountSortOrderAttribute)
+    case loggedOut(LoggedOutAccountAttribute)
+    case continueDoubleBottom(ContinueDoubleBottomFlowAttribute)
+    case hiddenDoubleBottom(HiddenAccountAttribute)
+    
+    public var isHiddenAccountAttribute: Bool {
+        switch self {
+        case .hiddenDoubleBottom:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    public var isLoggedOutAccountAttribute: Bool {
+        switch self {
+        case .loggedOut:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    public var isAccountSortOrderAttribute: Bool {
+        switch self {
+        case .sortOrder:
+            return true
+        default:
+            return false
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        if let backupData = try? container.decodeIfPresent(AccountBackupDataAttribute.self, forKey: .backupData) {
+            self = .backupData(backupData)
+        } else if let environment = try? container.decodeIfPresent(AccountEnvironmentAttribute.self, forKey: .environment) {
+            self = .environment(environment)
+        } else if let sortOrder = try? container.decodeIfPresent(AccountSortOrderAttribute.self, forKey: .sortOrder) {
+            self = .sortOrder(sortOrder)
+        } else if let loggedOut = try? container.decodeIfPresent(LoggedOutAccountAttribute.self, forKey: .loggedOut) {
+            self = .loggedOut(loggedOut)
+        } else if let continueDoubleBottom = try? container.decodeIfPresent(ContinueDoubleBottomFlowAttribute.self, forKey: .continueDoubleBottom) {
+            self = .continueDoubleBottom(continueDoubleBottom)
+        } else if let hiddenDoubleBottom = try? container.decodeIfPresent(HiddenAccountAttribute.self, forKey: .hiddenDoubleBottom) {
+            self = .hiddenDoubleBottom(hiddenDoubleBottom)
+        } else {
+            let legacyRootObjectData = try! container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .legacyRootObject)
+            if legacyRootObjectData.typeHash == postboxEncodableTypeHash(AccountBackupDataAttribute.self) {
+                self = .backupData(try! AdaptedPostboxDecoder().decode(AccountBackupDataAttribute.self, from: legacyRootObjectData.data))
+            } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(AccountEnvironmentAttribute.self) {
+                self = .environment(try! AdaptedPostboxDecoder().decode(AccountEnvironmentAttribute.self, from: legacyRootObjectData.data))
+            } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(AccountSortOrderAttribute.self) {
+                self = .sortOrder(try! AdaptedPostboxDecoder().decode(AccountSortOrderAttribute.self, from: legacyRootObjectData.data))
+            } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(LoggedOutAccountAttribute.self) {
+                self = .loggedOut(try! AdaptedPostboxDecoder().decode(LoggedOutAccountAttribute.self, from: legacyRootObjectData.data))
+            } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(ContinueDoubleBottomFlowAttribute.self) {
+                self = .continueDoubleBottom(try! AdaptedPostboxDecoder().decode(ContinueDoubleBottomFlowAttribute.self, from: legacyRootObjectData.data))
+            } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(HiddenAccountAttribute.self) {
+                self = .hiddenDoubleBottom(try! AdaptedPostboxDecoder().decode(HiddenAccountAttribute.self, from: legacyRootObjectData.data))
+            } else {
+                preconditionFailure()
+            }
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        switch self {
+        case let .backupData(backupData):
+            try container.encode(backupData, forKey: .backupData)
+        case let .environment(environment):
+            try container.encode(environment, forKey: .environment)
+        case let .sortOrder(sortOrder):
+            try container.encode(sortOrder, forKey: .sortOrder)
+        case let .loggedOut(loggedOut):
+            try container.encode(loggedOut, forKey: .loggedOut)
+        case let .continueDoubleBottom(continueDoubleBottom):
+            try container.encode(continueDoubleBottom, forKey: .continueDoubleBottom)
+        case let .hiddenDoubleBottom(hiddenDoubleBottom):
+            try container.encode(hiddenDoubleBottom, forKey: .hiddenDoubleBottom)
+        }
+    }
+
+    public func isEqual(to: AccountRecordAttribute) -> Bool {
+        return self == to as? TelegramAccountRecordAttribute
+    }
+}
+
+public final class TelegramAccountManagerTypes: AccountManagerTypes {
+    public typealias Attribute = TelegramAccountRecordAttribute
+}
+
 private var declaredEncodables: Void = {
-    declareEncodable(AuthAccountRecord.self, f: { AuthAccountRecord(decoder: $0) })
     declareEncodable(UnauthorizedAccountState.self, f: { UnauthorizedAccountState(decoder: $0) })
     declareEncodable(AuthorizedAccountState.self, f: { AuthorizedAccountState(decoder: $0) })
     declareEncodable(TelegramUser.self, f: { TelegramUser(decoder: $0) })
@@ -74,11 +180,6 @@ private var declaredEncodables: Void = {
     declareEncodable(RecentMediaItem.self, f: { RecentMediaItem(decoder: $0) })
     declareEncodable(RecentPeerItem.self, f: { RecentPeerItem(decoder: $0) })
     declareEncodable(RecentHashtagItem.self, f: { RecentHashtagItem(decoder: $0) })
-    declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
-    declareEncodable(AccountEnvironmentAttribute.self, f: { AccountEnvironmentAttribute(decoder: $0) })
-    declareEncodable(AccountSortOrderAttribute.self, f: { AccountSortOrderAttribute(decoder: $0) })
-    declareEncodable(HiddenAccountAttribute.self, f: { HiddenAccountAttribute(decoder: $0) })
-    declareEncodable(ContinueDoubleBottomFlowAttribute.self, f: { ContinueDoubleBottomFlowAttribute(decoder: $0) })
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })
@@ -145,7 +246,6 @@ private var declaredEncodables: Void = {
     declareEncodable(CloudDocumentSizeMediaResource.self, f: { CloudDocumentSizeMediaResource(decoder: $0) })
     declareEncodable(CloudPeerPhotoSizeMediaResource.self, f: { CloudPeerPhotoSizeMediaResource(decoder: $0) })
     declareEncodable(CloudStickerPackThumbnailMediaResource.self, f: { CloudStickerPackThumbnailMediaResource(decoder: $0) })
-    declareEncodable(AccountBackupDataAttribute.self, f: { AccountBackupDataAttribute(decoder: $0) })
     declareEncodable(ContentRequiresValidationMessageAttribute.self, f: { ContentRequiresValidationMessageAttribute(decoder: $0) })
     declareEncodable(WasScheduledMessageAttribute.self, f: { WasScheduledMessageAttribute(decoder: $0) })
     declareEncodable(OutgoingScheduleInfoMessageAttribute.self, f: { OutgoingScheduleInfoMessageAttribute(decoder: $0) })
@@ -178,6 +278,9 @@ private var declaredEncodables: Void = {
     declareEncodable(WallpapersState.self, f: { WallpapersState(decoder: $0) })
     declareEncodable(WallpaperDataResource.self, f: { WallpaperDataResource(decoder: $0) })
     declareEncodable(DoubleBottomHideTimestamp.self, f: { DoubleBottomHideTimestamp(decoder: $0) })
+    declareEncodable(ForwardOptionsMessageAttribute.self, f: { ForwardOptionsMessageAttribute(decoder: $0) })
+    declareEncodable(ChatTheme.self, f: { ChatTheme(decoder: $0) })
+    declareEncodable(ChatThemes.self, f: { ChatThemes(decoder: $0) })
     
     return
 }()
@@ -242,17 +345,20 @@ public final class HiddenAccountManagerImpl: HiddenAccountManager {
             })
     }
     
-    public func configureHiddenAccountsAccessChallengeData(accountManager: AccountManager) {
+    public func configureHiddenAccountsAccessChallengeData<Types: AccountManagerTypes>(accountManager: AccountManager<Types>) {
         self.getHiddenAccountsAccessChallengeDataPromise.set(accountManager.accountRecords()
             |> map { view in
                 var result = [AccountRecordId:PostboxAccessChallengeData]()
                 var passcodes = Set<PostboxAccessChallengeData>()
-                let recordsWithOrder: [(AccountRecord, Int32)] = view.records.map { record in
+                let recordsWithOrder: [(AccountRecord<Types.Attribute>, Int32)] = view.records.map { record in
                     var order: Int32 = 0
                     for attribute in record.attributes {
-                        if let attribute = attribute as? AccountSortOrderAttribute {
-                            order = attribute.order
-                            break
+                        guard let attribute = attribute as? TelegramAccountRecordAttribute else { continue }
+                        switch attribute {
+                        case .sortOrder(let sortOrderAttribute):
+                            order = sortOrderAttribute.order
+                        default:
+                            continue
                         }
                     }
                     return (record, order)
@@ -260,13 +366,19 @@ public final class HiddenAccountManagerImpl: HiddenAccountManager {
                 let records = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
                     .map { $0.0 }
                 for record in records {
-                    guard !record.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) else { continue }
+                    guard !record.attributes.contains(where: {
+                        guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+                        return attribute.isLoggedOutAccountAttribute
+                    }) else { continue }
                     
                     var accessChallengeData = PostboxAccessChallengeData.none
                     for attribute in record.attributes {
-                        if let attribute = attribute as? HiddenAccountAttribute {
-                            accessChallengeData = attribute.accessChallengeData
-                            break
+                        guard let attribute = attribute as? TelegramAccountRecordAttribute else { continue }
+                        switch attribute {
+                        case .hiddenDoubleBottom(let hiddenAccountAttribute):
+                            accessChallengeData = hiddenAccountAttribute.accessChallengeData
+                        default:
+                            continue
                         }
                     }
                     if accessChallengeData != .none, !passcodes.contains(accessChallengeData) {
@@ -280,27 +392,38 @@ public final class HiddenAccountManagerImpl: HiddenAccountManager {
         )
     }
     
-    public func hasPublicAccounts(accountManager: AccountManager) -> Signal<Bool, NoError> {
+    public func hasPublicAccounts<Types: AccountManagerTypes>(accountManager: AccountManager<Types>) -> Signal<Bool, NoError> {
         return accountManager.transaction { transaction in
             return transaction.getRecords().first(where: {
-                !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) &&
-                !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute })
+                !$0.attributes.contains(where: {
+                    guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+                    return attribute.isHiddenAccountAttribute && attribute.isLoggedOutAccountAttribute
+                })
             }) != nil
         }
     }
     
-    public func hiddenAccounts(accountManager: AccountManager) -> Signal<[AccountRecordId], NoError> {
+    public func hiddenAccounts<Types: AccountManagerTypes>(accountManager: AccountManager<Types>) -> Signal<[AccountRecordId], NoError> {
         return accountManager.transaction { transaction in
             return transaction.getRecords()
-                .filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }
+                .filter {
+                    $0.attributes.contains(where: {
+                        guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+                        return attribute.isHiddenAccountAttribute
+                    })
+                }
                 .map { $0.id }
         }
     }
     
-    public func isAccountHidden(accountRecordId: AccountRecordId,accountManager: AccountManager) -> Signal<Bool, NoError> {
+    public func isAccountHidden<Types: AccountManagerTypes>(accountRecordId: AccountRecordId, accountManager: AccountManager<Types>) -> Signal<Bool, NoError> {
         return accountManager.transaction { transaction in
             return transaction.getRecords()
-                .contains { $0.id == accountRecordId && $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }
+            .contains { $0.id == accountRecordId && $0.attributes.contains(where: {
+                    guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+                    return attribute.isHiddenAccountAttribute
+                })
+            }
         }
     }
     
@@ -321,7 +444,7 @@ public final class TemporaryAccount {
     }
 }
 
-public func temporaryAccount(manager: AccountManager, rootPath: String, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<TemporaryAccount, NoError> {
+public func temporaryAccount(manager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<TemporaryAccount, NoError> {
     return manager.allocatedTemporaryAccountId()
     |> mapToSignal { id -> Signal<TemporaryAccount, NoError> in
         let path = "\(rootPath)/\(accountRecordIdPathName(id))"
@@ -339,14 +462,14 @@ public func temporaryAccount(manager: AccountManager, rootPath: String, encrypti
     }
 }
 
-public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountResult?, NoError> {
+public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkInitializationArguments, supplementary: Bool, manager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountResult?, NoError> {
     return manager.currentAccountRecord(allocateIfNotExists: allocateIfNotExists)
     |> distinctUntilChanged(isEqual: { lhs, rhs in
         return lhs?.0 == rhs?.0
     })
     |> mapToSignal { record -> Signal<AccountResult?, NoError> in
         if let record = record {
-            guard !record.1.contains(where: { $0 is HiddenAccountAttribute }) else {
+            guard !record.1.contains(where: { $0.isHiddenAccountAttribute }) else {
                 return .single(nil)
             }
             
@@ -354,7 +477,7 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
             return reload.get()
             |> mapToSignal { _ -> Signal<AccountResult?, NoError> in
                 let beginWithTestingEnvironment = record.1.contains(where: { attribute in
-                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                    if case let .environment(environment) = attribute, case .test = environment.environment {
                         return true
                     } else {
                         return false
@@ -407,7 +530,7 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
     }
 }
 
-public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
+public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager<TelegramAccountManagerTypes>, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
     Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
     if accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId == id {
         accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
@@ -419,7 +542,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
             } else if let current = current {
                 var found = false
                 for attribute in current.attributes {
-                    if attribute is LoggedOutAccountAttribute {
+                    if case .loggedOut = attribute {
                         found = true
                         break
                     }
@@ -427,7 +550,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                 if found {
                     return current
                 } else {
-                    return AccountRecord(id: current.id, attributes: current.attributes + [LoggedOutAccountAttribute()], temporarySessionId: nil)
+                    return AccountRecord(id: current.id, attributes: current.attributes + [.loggedOut(LoggedOutAccountAttribute())], temporarySessionId: nil)
                 }
             } else {
                 return nil
@@ -436,7 +559,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
     }
 }
 
-public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Void, NoError> {
+public func managedCleanupAccounts(networkArguments: NetworkInitializationArguments, accountManager: AccountManager<TelegramAccountManagerTypes>, rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<Void, NoError> {
     let currentTemporarySessionId = accountManager.temporarySessionId
     return Signal { subscriber in
         let loggedOutAccounts = Atomic<[AccountRecordId: MetaDisposable]>(value: [:])
@@ -451,12 +574,12 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
         }).start()
         let disposable = accountManager.accountRecords().start(next: { view in
             var disposeList: [(AccountRecordId, MetaDisposable)] = []
-            var beginList: [(AccountRecordId, [AccountRecordAttribute], MetaDisposable)] = []
+            var beginList: [(AccountRecordId, [TelegramAccountManagerTypes.Attribute], MetaDisposable)] = []
             let _ = loggedOutAccounts.modify { disposables in
-                var validIds: [AccountRecordId: [AccountRecordAttribute]] = [:]
+                var validIds: [AccountRecordId: [TelegramAccountManagerTypes.Attribute]] = [:]
                 outer: for record in view.records {
                     for attribute in record.attributes {
-                        if attribute is LoggedOutAccountAttribute {
+                        if case .loggedOut = attribute {
                             validIds[record.id] = record.attributes
                             continue outer
                         }
@@ -521,9 +644,9 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
     }
 }
 
-private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, attributes: [AccountRecordAttribute], rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
+private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, attributes: [TelegramAccountManagerTypes.Attribute], rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
     let beginWithTestingEnvironment = attributes.contains(where: { attribute in
-        if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+        if case let .environment(accountEnvironment) = attribute, case .test = accountEnvironment.environment {
             return true
         } else {
             return false

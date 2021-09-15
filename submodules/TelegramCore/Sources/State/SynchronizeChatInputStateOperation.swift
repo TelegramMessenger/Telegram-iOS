@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 
-
 func addSynchronizeChatInputStateOperation(transaction: Transaction, peerId: PeerId) {
     var updateLocalIndex: Int32?
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeChatInputStates
@@ -17,8 +16,8 @@ func addSynchronizeChatInputStateOperation(transaction: Transaction, peerId: Pee
     var previousState: SynchronizeableChatInputState?
     if let previousOperation = previousOperation {
         previousState = previousOperation.previousState
-    } else if let peerChatInterfaceState = transaction.getPeerChatInterfaceState(peerId) as? SynchronizeableChatInterfaceState {
-        previousState = peerChatInterfaceState.synchronizeableInputState
+    } else if let peerChatInterfaceState = transaction.getPeerChatInterfaceState(peerId), let data = peerChatInterfaceState.data {
+        previousState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))?.synchronizeableInputState
     }
     let operationContents = SynchronizeChatInputStateOperation(previousState: previousState)
     if let updateLocalIndex = updateLocalIndex {

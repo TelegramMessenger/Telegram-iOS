@@ -147,9 +147,8 @@ public final class MediaPlayerNode: ASDisplayNode {
     }
     
     private func poll(completion: @escaping (PollStatus) -> Void) {
-        if let (takeFrameQueue, takeFrame) = self.takeFrameAndQueue, let videoLayer = self.videoLayer, let (timebase, _, _, _) = self.state {
+        if let (takeFrameQueue, takeFrame) = self.takeFrameAndQueue, let _ = self.videoLayer, let (timebase, _, _, _) = self.state {
             let layerTime = CMTimeGetSeconds(CMTimebaseGetTime(timebase))
-            let rate = CMTimebaseGetRate(timebase)
             
             struct PollState {
                 var numFrames: Int
@@ -403,7 +402,7 @@ public final class MediaPlayerNode: ASDisplayNode {
         assert(Queue.mainQueue().isCurrent())
         self.videoLayer?.removeFromSuperlayer()
         
-        if let (takeFrameQueue, _) = self.takeFrameAndQueue {
+        if let _ = self.takeFrameAndQueue {
             if let videoLayer = self.videoLayer {
                 videoLayer.flushAndRemoveImage()
                 

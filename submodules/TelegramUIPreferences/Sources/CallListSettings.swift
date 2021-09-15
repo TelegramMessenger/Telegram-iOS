@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
 public struct CallListSettings: PreferencesEntry, Equatable {
@@ -34,9 +35,7 @@ public struct CallListSettings: PreferencesEntry, Equatable {
     }
     
     public init(decoder: PostboxDecoder) {
-        var defaultValue = CallListSettings.defaultSettings.showTab
         if let alternativeDefaultValue = decoder.decodeOptionalInt32ForKey("defaultShowTab") {
-            defaultValue = alternativeDefaultValue != 0
             self.defaultShowTab = alternativeDefaultValue != 0
         }
         if let value = decoder.decodeOptionalInt32ForKey("showTab") {
@@ -74,7 +73,7 @@ public struct CallListSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateCallListSettingsInteractively(accountManager: AccountManager, _ f: @escaping (CallListSettings) -> CallListSettings) -> Signal<Void, NoError> {
+public func updateCallListSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (CallListSettings) -> CallListSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.callListSettings, { entry in
             let currentSettings: CallListSettings

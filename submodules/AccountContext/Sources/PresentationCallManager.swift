@@ -131,7 +131,7 @@ public final class PresentationCallVideoView {
     }
 }
 
-public protocol PresentationCall: class {
+public protocol PresentationCall: AnyObject {
     var context: AccountContext { get }
     var isIntegratedWithCallKit: Bool { get }
     var internalId: CallSessionInternalId { get }
@@ -391,7 +391,7 @@ public extension GroupCallParticipantsContext.Participant {
     }
 }
 
-public protocol PresentationGroupCall: class {
+public protocol PresentationGroupCall: AnyObject {
     var account: Account { get }
     var accountContext: AccountContext { get }
     var internalId: CallSessionInternalId { get }
@@ -443,7 +443,7 @@ public protocol PresentationGroupCall: class {
     func playTone(_ tone: PresentationGroupCallTone)
     
     func updateMuteState(peerId: PeerId, isMuted: Bool) -> GroupCallParticipantsContext.Participant.MuteState?
-    func setShouldBeRecording(_ shouldBeRecording: Bool, title: String?)
+    func setShouldBeRecording(_ shouldBeRecording: Bool, title: String?, videoOrientation: Bool?)
     
     func updateTitle(_ title: String)
     
@@ -459,11 +459,11 @@ public protocol PresentationGroupCall: class {
     func loadMoreMembers(token: String)
 }
 
-public protocol PresentationCallManager: class {
+public protocol PresentationCallManager: AnyObject {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
-    func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
+    func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: EngineGroupCallDescription, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult
     func scheduleGroupCall(context: AccountContext, peerId: PeerId, endCurrentIfAny: Bool) -> RequestScheduleGroupCallResult
 }

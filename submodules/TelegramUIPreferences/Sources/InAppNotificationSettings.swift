@@ -123,13 +123,13 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func updateInAppNotificationSettingsInteractively(accountManager: AccountManager, _ f: @escaping (InAppNotificationSettings) -> InAppNotificationSettings) -> Signal<Void, NoError> {
+public func updateInAppNotificationSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, _ f: @escaping (InAppNotificationSettings) -> InAppNotificationSettings) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         updateInAppNotificationSettingsInteractively(transaction: transaction, f)
     }
 }
 
-public func updateInAppNotificationSettingsInteractively(transaction: AccountManagerModifier, _ f: @escaping (InAppNotificationSettings) -> InAppNotificationSettings) {
+public func updateInAppNotificationSettingsInteractively(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, _ f: @escaping (InAppNotificationSettings) -> InAppNotificationSettings) {
     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings, { entry in
         let currentSettings: InAppNotificationSettings
         if let entry = entry as? InAppNotificationSettings {
@@ -141,9 +141,9 @@ public func updateInAppNotificationSettingsInteractively(transaction: AccountMan
     })
 }
 
-public func updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: AccountManagerModifier) {
+public func updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: AccountManagerModifier<TelegramAccountManagerTypes>) {
     let accountIds = transaction.getRecords()
-        .filter { $0.attributes.contains { $0 is HiddenAccountAttribute } }
+        .filter { $0.attributes.contains { $0.isHiddenAccountAttribute } }
         .map { $0.id }
 
     updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
@@ -153,7 +153,7 @@ public func updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: A
     })
 }
 
-public func updatePushNotificationsSettingsAfterOnMasterPasscode(transaction: AccountManagerModifier) {
+public func updatePushNotificationsSettingsAfterOnMasterPasscode(transaction: AccountManagerModifier<TelegramAccountManagerTypes>) {
     updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
         var settings = settings
         settings.disabledNotificationsAccountRecords = []
@@ -161,10 +161,10 @@ public func updatePushNotificationsSettingsAfterOnMasterPasscode(transaction: Ac
     })
 }
 
-public func updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: AccountManager) {
+public func updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: AccountManager<TelegramAccountManagerTypes>) {
     let _ = (accountManager.transaction { transaction in
         let accountIds = transaction.getRecords()
-            .filter { $0.attributes.contains { $0 is HiddenAccountAttribute } }
+            .filter { $0.attributes.contains { $0.isHiddenAccountAttribute } }
             .map { $0.id }
         
         updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
@@ -175,7 +175,7 @@ public func updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: 
     } |> deliverOnMainQueue).start()
 }
 
-public func updatePushNotificationsSettingsAfterLogin(accountManager: AccountManager) {
+public func updatePushNotificationsSettingsAfterLogin(accountManager: AccountManager<TelegramAccountManagerTypes>) {
     let _ = (accountManager.transaction { transaction -> Void in
         updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
             var settings = settings

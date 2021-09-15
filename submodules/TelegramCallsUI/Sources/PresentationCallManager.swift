@@ -49,7 +49,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     private let isMediaPlaying: () -> Bool
     private let resumeMediaPlayback: () -> Void
 
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let audioSession: ManagedAudioSession
     private let callKitIntegration: CallKitIntegration?
     
@@ -113,7 +113,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return OngoingCallContext.versions(includeExperimental: includeExperimental, includeReference: includeReference)
     }
     
-    public init(accountManager: AccountManager, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), isMediaPlaying: @escaping () -> Bool, resumeMediaPlayback: @escaping () -> Void, audioSession: ManagedAudioSession, activeAccounts: Signal<[AccountContext], NoError>) {
+    public init(accountManager: AccountManager<TelegramAccountManagerTypes>, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), isMediaPlaying: @escaping () -> Bool, resumeMediaPlayback: @escaping () -> Void, audioSession: ManagedAudioSession, activeAccounts: Signal<[AccountContext], NoError>) {
         self.getDeviceAccessData = getDeviceAccessData
         self.accountManager = accountManager
         self.audioSession = audioSession
@@ -650,15 +650,23 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
         |> runOn(Queue.mainQueue())
         
-        return accessEnabledSignal
+        return combineLatest(queue: .mainQueue(),
+            accessEnabledSignal,
+            accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        )
         |> deliverOnMainQueue
-        |> mapToSignal { [weak self] accessEnabled -> Signal<Bool, NoError> in
+        |> mapToSignal { [weak self] accessEnabled, peer -> Signal<Bool, NoError> in
             guard let strongSelf = self else {
                 return .single(false)
             }
             
             if !accessEnabled {
                 return .single(false)
+            }
+
+            var isChannel = false
+            if let peer = peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                isChannel = true
             }
                     
             let call = PresentationGroupCallImpl(
@@ -669,6 +677,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 initialCall: nil,
                 internalId: internalId,
                 peerId: peerId,
+                isChannel: isChannel,
                 invite: nil,
                 joinAsPeerId: nil
             )
@@ -728,7 +737,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return .success
     }
     
-    public func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
+    public func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: EngineGroupCallDescription, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
         let begin: () -> Void = { [weak self] in
             if let requestJoinAsPeerId = requestJoinAsPeerId {
                 requestJoinAsPeerId({ joinAsPeerId in
@@ -772,7 +781,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         peerId: PeerId,
         invite: String?,
         joinAsPeerId: PeerId?,
-        initialCall: CachedChannelData.ActiveCall,
+        initialCall: EngineGroupCallDescription,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
@@ -803,15 +812,23 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
         |> runOn(Queue.mainQueue())
         
-        return accessEnabledSignal
+        return combineLatest(queue: .mainQueue(),
+            accessEnabledSignal,
+            accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        )
         |> deliverOnMainQueue
-        |> mapToSignal { [weak self] accessEnabled -> Signal<Bool, NoError> in
+        |> mapToSignal { [weak self] accessEnabled, peer -> Signal<Bool, NoError> in
             guard let strongSelf = self else {
                 return .single(false)
             }
             
             if !accessEnabled {
                 return .single(false)
+            }
+
+            var isChannel = false
+            if let peer = peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                isChannel = true
             }
                     
             let call = PresentationGroupCallImpl(
@@ -822,6 +839,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 initialCall: initialCall,
                 internalId: internalId,
                 peerId: peerId,
+                isChannel: isChannel,
                 invite: invite,
                 joinAsPeerId: joinAsPeerId
             )

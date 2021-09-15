@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import AccountContext
 
@@ -25,7 +24,7 @@ public final class BotCheckoutController: ViewController {
             self.validatedFormInfo = validatedFormInfo
         }
 
-        public static func fetch(context: AccountContext, messageId: MessageId) -> Signal<InputData, FetchError> {
+        public static func fetch(context: AccountContext, messageId: EngineMessage.Id) -> Signal<InputData, FetchError> {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let themeParams: [String: Any] = [
                 "bg_color": Int32(bitPattern: presentationData.theme.list.plainBackgroundColor.argb),
@@ -78,8 +77,8 @@ public final class BotCheckoutController: ViewController {
     
     private let context: AccountContext
     private let invoice: TelegramMediaInvoice
-    private let messageId: MessageId
-    private let completed: (String, MessageId?) -> Void
+    private let messageId: EngineMessage.Id
+    private let completed: (String, EngineMessage.Id?) -> Void
     
     private var presentationData: PresentationData
     
@@ -87,7 +86,7 @@ public final class BotCheckoutController: ViewController {
 
     private let inputData: Promise<BotCheckoutController.InputData?>
     
-    public init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, inputData: Promise<BotCheckoutController.InputData?>, completed: @escaping (String, MessageId?) -> Void) {
+    public init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: EngineMessage.Id, inputData: Promise<BotCheckoutController.InputData?>, completed: @escaping (String, EngineMessage.Id?) -> Void) {
         self.context = context
         self.invoice = invoice
         self.messageId = messageId
@@ -119,8 +118,6 @@ public final class BotCheckoutController: ViewController {
         }, dismissAnimated: { [weak self] in
             self?.dismiss()
         }, completed: self.completed)
-        
-        //displayNode.enableInteractiveDismiss = true
         
         displayNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)

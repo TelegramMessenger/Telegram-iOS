@@ -794,17 +794,12 @@
     CGSize rotatedCropSize = cropRect.size;
     if (orientation == UIImageOrientationLeft || orientation == UIImageOrientationRight)
         rotatedCropSize = CGSizeMake(rotatedCropSize.height, rotatedCropSize.width);
-        
-    CGSize containerSize = _imageView.frame.size;
-    CGSize fittedSize = TGScaleToSize(rotatedCropSize, containerSize);
-    CGRect previewFrame = CGRectMake((containerSize.width - fittedSize.width) / 2, (containerSize.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
     
     CGAffineTransform rotationTransform = CGAffineTransformMakeRotation(TGRotationForOrientation(orientation));
     _contentView.transform = rotationTransform;
     _contentView.frame = _imageView.frame;
     
     CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:cropRect orientation:orientation originalSize:originalSize];
-    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:false];
     _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
     
     CGFloat contentScale = ratio;
@@ -817,13 +812,7 @@
     
     CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
     CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, 0.0);
-    CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
-    
-    CGFloat scale = fittedOriginalSize.width / originalSize.width;
-    CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoPaintController fittedCropRect:cropRect centerScale:scale]);
-    
-    CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
-//    _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, CGPointMake(offset.x / contentScale, offset.y / contentScale));
+    __unused CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
 }
 
 - (TGPhotoEntitiesContainerView *)entitiesView {
@@ -1423,7 +1412,7 @@
     TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[self.item.editingContext adjustmentsForItem:self.item.editableMediaItem];
     if ([self itemIsLivePhoto]) {
         if (adjustments.sendAsGif) {
-            return [[TGCameraCapturedVideo alloc] initWithAsset:self.item.editableMediaItem livePhoto:true];
+            return [[TGCameraCapturedVideo alloc] initWithAsset:(TGMediaAsset *)self.item.editableMediaItem livePhoto:true];
         } else {
             return self.item.editableMediaItem;
         }
@@ -1595,8 +1584,7 @@
 {
     if (timestamps.count == 0)
         return;
-    
-    SSignal *avAsset = self.item.avAsset ?: [SSignal single:_player.currentItem.asset];
+
     TGMediaEditingContext *editingContext = self.item.editingContext;
     id<TGMediaEditableItem> editableItem = self.editableMediaItem;
     

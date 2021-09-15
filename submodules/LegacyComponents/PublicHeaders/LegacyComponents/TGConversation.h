@@ -211,8 +211,8 @@ typedef enum {
 @property (nonatomic) NSData *chatPhotoFileReferenceSmall;
 @property (nonatomic) NSData *chatPhotoFileReferenceBig;
 
-@property (nonatomic, strong) NSString *chatPhotoFullSmall;
-@property (nonatomic, strong) NSString *chatPhotoFullBig;
+@property (nonatomic, strong, readonly) NSString *chatPhotoFullSmall;
+@property (nonatomic, strong, readonly) NSString *chatPhotoFullBig;
 
 @property (nonatomic) int chatParticipantCount;
 

@@ -719,7 +719,7 @@ public class ChatMessageItemView: ListViewItemNode {
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom, merged.dateAtBottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
-            apply(.None, false)
+            apply(.None, ListViewItemApply(isOnScreen: false), false)
         }
     }
     
@@ -741,9 +741,9 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
+    func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         return { _, _, _, _, _ in
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: 32.0, height: 32.0), insets: UIEdgeInsets()), { _, _ in
+            return (ListViewItemNodeLayout(contentSize: CGSize(width: 32.0, height: 32.0), insets: UIEdgeInsets()), { _, _, _ in
                 
             })
         }
@@ -891,6 +891,14 @@ public class ChatMessageItemView: ListViewItemNode {
             if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
                 transition.updateSublayerTransformOffset(layer: headerNode.layer, offset: CGPoint(x: offset, y: 0.0))
             }
+        }
+    }
+
+    override public var preferredAnimationCurve: (CGFloat) -> CGFloat {
+        if false, let item = self.item, let subject = item.associatedData.subject, case .forwardedMessages = subject {
+            return listViewAnimationCurveEaseInOut
+        } else {
+            return listViewAnimationCurveSystem
         }
     }
 }

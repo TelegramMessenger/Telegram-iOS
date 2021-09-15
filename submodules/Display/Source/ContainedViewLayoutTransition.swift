@@ -799,8 +799,6 @@ public extension ContainedViewLayoutTransition {
     }
 
     func animateTransformScale(node: ASDisplayNode, from fromScale: CGPoint, completion: ((Bool) -> Void)? = nil) {
-        let t = node.layer.transform
-
         switch self {
         case .immediate:
             if let completion = completion {

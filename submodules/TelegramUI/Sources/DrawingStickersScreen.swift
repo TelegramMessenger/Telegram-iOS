@@ -224,6 +224,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue {
                     strongSelf.controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
                         context: strongSelf.context,
+                        highlightedPackId: nil,
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
@@ -262,12 +263,9 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             }
         }, navigateBackToStickers: {
         }, setGifMode: { _ in
-        }, openSettings: { [weak self] in
-            if let strongSelf = self {
-//                let controller = installedStickerPacksController(context: context, mode: .modal)
-//                controller.navigationPresentation = .modal
-//                strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
-            }
+        }, openSettings: {
+        }, openTrending: { _ in
+        }, dismissTrendingPacks: { _ in
         }, toggleSearch: { [weak self] value, searchMode, query in
             if let strongSelf = self {
                 if let searchMode = searchMode, value {
@@ -292,8 +290,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                             if let strongSelf = self {
                                 strongSelf.controllerInteraction.updateInputMode { current in
                                     switch current {
-                                        case let .media(mode, _):
-                                            return .media(mode: mode, expanded: .search(searchMode))
+                                        case let .media(mode, _, focused):
+                                            return .media(mode: mode, expanded: .search(searchMode), focused: focused)
                                         default:
                                             return current
                                     }
@@ -304,8 +302,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 } else {
                     strongSelf.controllerInteraction.updateInputMode { current in
                         switch current {
-                            case let .media(mode, _):
-                                return .media(mode: mode, expanded: nil)
+                            case let .media(mode, _, focused):
+                                return .media(mode: mode, expanded: nil, focused: focused)
                             default:
                                 return current
                         }
@@ -341,6 +339,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue {
                     strongSelf.controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
                         context: strongSelf.context,
+                        highlightedPackId: nil,
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
@@ -379,13 +378,10 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             }
             }, navigateBackToStickers: {
         }, setGifMode: { _ in
-        }, openSettings: { [weak self] in
-            if let strongSelf = self {
-                //                let controller = installedStickerPacksController(context: context, mode: .modal)
-                //                controller.navigationPresentation = .modal
-                //                strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
-            }
-            }, toggleSearch: { [weak self] value, searchMode, query in
+        }, openSettings: {
+        }, openTrending: { _ in
+        }, dismissTrendingPacks: { _ in
+        }, toggleSearch: { [weak self] value, searchMode, query in
                 if let strongSelf = self {
                     if let searchMode = searchMode, value {
                         var searchContainerNode: PaneSearchContainerNode?
@@ -409,8 +405,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                                     if let strongSelf = self {
                                         strongSelf.controllerInteraction.updateInputMode { current in
                                             switch current {
-                                                case let .media(mode, _):
-                                                    return .media(mode: mode, expanded: .search(searchMode))
+                                                case let .media(mode, _, focused):
+                                                    return .media(mode: mode, expanded: .search(searchMode), focused: focused)
                                                 default:
                                                     return current
                                             }
@@ -421,8 +417,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     } else {
                         strongSelf.controllerInteraction.updateInputMode { current in
                             switch current {
-                                case let .media(mode, _):
-                                    return .media(mode: mode, expanded: nil)
+                                case let .media(mode, _, focused):
+                                    return .media(mode: mode, expanded: nil, focused: focused)
                                 default:
                                     return current
                             }
@@ -592,20 +588,9 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             for info in view.collectionInfos {
                 installedPacks.insert(info.0)
             }
-            
-            var hasUnreadTrending: Bool?
-            for pack in trendingPacks {
-                if hasUnreadTrending == nil {
-                    hasUnreadTrending = false
-                }
-                if pack.unread {
-                    hasUnreadTrending = true
-                    break
-                }
-            }
-            
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false, hasSettings: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
+                        
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, strings: strings, hasGifs: false, hasSettings: false)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: trendingPacks, installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
             
             let (previousPanelEntries, previousGridEntries) = previousStickerEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: stickersInputNodeInteraction, scrollToItem: nil), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: stickersInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
@@ -639,8 +624,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 installedPacks.insert(info.0)
             }
             
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasUnreadTrending: nil, theme: theme, hasGifs: false, hasSettings: false)
-            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, theme: theme, strings: strings, hasGifs: false, hasSettings: false)
+            let gridEntries = chatMediaInputGridEntries(view: view, savedStickers: nil, recentStickers: nil, peerSpecificPack: nil, canInstallPeerSpecificPack: .none, trendingPacks: [], installedPacks: installedPacks, hasSearch: false, hasAccessories: false, strings: strings, theme: theme)
                         
             let (previousPanelEntries, previousGridEntries) = previousMaskEntries.swap((panelEntries, gridEntries))
             return (view, preparedChatMediaInputPanelEntryTransition(context: context, from: previousPanelEntries, to: panelEntries, inputNodeInteraction: masksInputNodeInteraction, scrollToItem: nil), previousPanelEntries.isEmpty, preparedChatMediaInputGridEntryTransition(account: context.account, view: view, from: previousGridEntries, to: gridEntries, update: update, interfaceInteraction: controllerInteraction, inputNodeInteraction: masksInputNodeInteraction, trendingInteraction: trendingInteraction), previousGridEntries.isEmpty)
@@ -967,22 +952,16 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     }
     
     func updateLayout(width: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
-        var searchMode: ChatMediaInputSearchMode?
+        let searchMode: ChatMediaInputSearchMode? = nil
                 
-        var displaySearch = false
+        let displaySearch = false
         let separatorHeight = max(UIScreenPixel, 1.0 - UIScreenPixel)
         let topPanelHeight: CGFloat = 56.0
         let panelHeight: CGFloat
         
-        var isExpanded: Bool = true
-//            switch expanded {
-//                case .content:
-                    panelHeight = maximumHeight
-//                case let .search(mode):
-//                    panelHeight = maximumHeight
-//                    displaySearch = true
-//                    searchMode = mode
-//            }
+        let isExpanded: Bool = true
+        panelHeight = maximumHeight
+
         self.stickerPane.collectionListPanelOffset = 0.0
         
         transition.updateFrame(node: self.topPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: topInset + topPanelHeight)))
@@ -1006,8 +985,8 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     searchContainerNode.frame = containerFrame
                     searchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics, transition: .immediate)
                     var placeholderNode: PaneSearchBarPlaceholderNode?
-                    var anchorTop = CGPoint(x: 0.0, y: 0.0)
-                    var anchorTopView: UIView = self.view
+                    let anchorTop = CGPoint(x: 0.0, y: 0.0)
+                    let anchorTopView: UIView = self.view
                     if let searchMode = searchMode {
                         switch searchMode {
                         case .sticker:
@@ -1022,7 +1001,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                     }
                     
                     if let placeholderNode = placeholderNode {
-                        searchContainerNode.animateIn(from: placeholderNode, anchorTop: anchorTop, anhorTopView: anchorTopView, transition: transition, completion: { [weak self] in
+                        searchContainerNode.animateIn(from: placeholderNode, anchorTop: anchorTop, anhorTopView: anchorTopView, transition: transition, completion: {
                         })
                     }
                 }
@@ -1044,7 +1023,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
-        let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0 + 5.0)
+        let listPosition = CGPoint(x: width / 2.0, y: (bottomPanelHeight - collectionListPanelOffset) / 2.0 + 15.0)
         self.stickerListView.bounds = CGRect(x: 0.0, y: 0.0, width: bottomPanelHeight + 31.0, height: width)
         transition.updatePosition(node: self.stickerListView, position: listPosition)
         

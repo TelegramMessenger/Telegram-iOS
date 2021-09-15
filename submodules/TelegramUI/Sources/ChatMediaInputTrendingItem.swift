@@ -13,17 +13,19 @@ final class ChatMediaInputTrendingItem: ListViewItem {
     let elevated: Bool
     let expanded: Bool
     let theme: PresentationTheme
+    let strings: PresentationStrings
     
     var selectable: Bool {
         return true
     }
     
-    init(inputNodeInteraction: ChatMediaInputNodeInteraction, elevated: Bool, theme: PresentationTheme, expanded: Bool, selected: @escaping () -> Void) {
+    init(inputNodeInteraction: ChatMediaInputNodeInteraction, elevated: Bool, theme: PresentationTheme, strings: PresentationStrings, expanded: Bool, selected: @escaping () -> Void) {
         self.inputNodeInteraction = inputNodeInteraction
         self.elevated = elevated
         self.selectedItem = selected
         self.expanded = expanded
         self.theme = theme
+        self.strings = strings
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -35,7 +37,7 @@ final class ChatMediaInputTrendingItem: ListViewItem {
             node.updateIsHighlighted()
             node.updateAppearanceTransition(transition: .immediate)
             Queue.mainQueue().async {
-                node.updateTheme(elevated: self.elevated, theme: self.theme, expanded: self.expanded)
+                node.updateTheme(elevated: self.elevated, theme: self.theme, strings: self.strings, expanded: self.expanded)
                 completion(node, {
                     return (nil, { _ in })
                 })
@@ -46,7 +48,7 @@ final class ChatMediaInputTrendingItem: ListViewItem {
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             completion(ListViewItemNodeLayout(contentSize: self.expanded ? expandedBoundingSize : boundingSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), { _ in
-                (node() as? ChatMediaInputTrendingItemNode)?.updateTheme(elevated: self.elevated, theme: self.theme, expanded: self.expanded)
+                (node() as? ChatMediaInputTrendingItemNode)?.updateTheme(elevated: self.elevated, theme: self.theme, strings: self.strings, expanded: self.expanded)
             })
         }
     }
@@ -91,6 +93,7 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
+        self.imageNode.contentMode = .scaleAspectFit
         
         self.badgeBackground = ASImageNode()
         self.badgeBackground.displaysAsynchronously = false
@@ -112,7 +115,7 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
         self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0)
     }
     
-    func updateTheme(elevated: Bool, theme: PresentationTheme, expanded: Bool) {
+    func updateTheme(elevated: Bool, theme: PresentationTheme, strings: PresentationStrings, expanded: Bool) {
         let imageSize = CGSize(width: 26.0 * 1.85, height: 26.0 * 1.85)
         let imageFrame = CGRect(origin: CGPoint(x: floor((expandedBoundingSize.width - imageSize.width) / 2.0), y: floor((expandedBoundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
         self.imageNode.frame = imageFrame
@@ -128,12 +131,11 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
                 self.badgeBackground.frame = CGRect(origin: CGPoint(x: floor(imageFrame.maxX - image.size.width - 7.0), y: 18.0), size: image.size)
             }
             
-            self.titleNode.attributedText = NSAttributedString(string: "Trending", font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: strings.Stickers_Trending, font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
         }
         
         if self.elevated != elevated {
             self.elevated = elevated
-            self.badgeBackground.isHidden = !self.elevated
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedBoundingSize)
@@ -143,14 +145,17 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
         let expandScale: CGFloat = expanded ? 1.0 : boundingImageScale
         let expandTransition: ContainedViewLayoutTransition = self.currentExpanded != expanded ? .animated(duration: 0.3, curve: .spring) : .immediate
         expandTransition.updateTransformScale(node: self.scalingNode, scale: expandScale)
-        expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -2.0 : 3.0)))
+        expandTransition.updatePosition(node: self.scalingNode, position: CGPoint(x: boundsSize.width / 2.0, y: boundsSize.height / 2.0 + (expanded ? -53.0 : -7.0)))
 
-        expandTransition.updateAlpha(node: self.titleNode, alpha: expanded ? 1.0 : 0.0)
         let titleSize = self.titleNode.updateLayout(CGSize(width: expandedBoundingSize.width - 8.0, height: expandedBoundingSize.height))
         
-        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 2.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((expandedBoundingSize.width - titleSize.width) / 2.0), y: expandedBoundingSize.height - titleSize.height + 6.0), size: titleSize)
         let displayTitleFrame = expanded ? titleFrame : CGRect(origin: CGPoint(x: titleFrame.minX, y: self.imageNode.position.y - titleFrame.size.height), size: titleFrame.size)
         expandTransition.updateFrameAsPositionAndBounds(node: self.titleNode, frame: displayTitleFrame)
+        expandTransition.updateTransformScale(node: self.titleNode, scale: expanded ? 1.0 : 0.001)
+        
+        let alphaTransition: ContainedViewLayoutTransition = self.currentExpanded != expanded ? .animated(duration: expanded ? 0.15 : 0.1, curve: .linear) : .immediate
+        alphaTransition.updateAlpha(node: self.titleNode, alpha: expanded ? 1.0 : 0.0, delay: expanded ? 0.05 : 0.0)
         
         self.currentExpanded = expanded
         

@@ -127,19 +127,19 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! NotificationSoundSelectionArguments
         switch self {
-            case let.modernHeader(theme, text):
+            case let.modernHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .classicHeader(theme, text):
+            case let .classicHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .none(_, theme, text, selected):
+            case let .none(_, _, text, selected):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: true, sectionId: self.section, action: {
                     arguments.selectSound(.none)
                 })
-            case let .default(_, theme, text, selected):
+            case let .default(_, _, text, selected):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.selectSound(.default)
                 })
-            case let .sound(_, _, theme, text, sound, selected):
+            case let .sound(_, _, _, text, sound, selected):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.selectSound(sound)
                 })

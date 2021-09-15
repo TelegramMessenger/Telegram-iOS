@@ -4,6 +4,7 @@
 
 #import <LegacyComponents/TGMenuSheetView.h>
 #import "TGAttachmentMenuCell.h"
+#import "TGCameraController.h"
 
 #import <LegacyComponents/PGCamera.h>
 #import <LegacyComponents/TGCameraPreviewView.h>
@@ -46,6 +47,8 @@
         _camera = camera;
         
         _previewView = [[TGCameraPreviewView alloc] initWithFrame:CGRectMake(0, 0, 84.0f, 84.0f)];
+        [_previewView fadeInAnimated:false];
+        [_previewView beginTransitionWithSnapshotImage:[TGCameraController startImage] animated:false];
         [_wrapperView addSubview:_previewView];
         [camera attachPreviewView:_previewView];
         
@@ -101,8 +104,7 @@
         _zoomedView.userInteractionEnabled = false;
         [self addSubview:_zoomedView];
         
-        if (iosMajorVersion() >= 11)
-        {
+        if (@available(iOS 11.0, *)) {
             _fadeView.accessibilityIgnoresInvertColors = true;
             _iconView.accessibilityIgnoresInvertColors = true;
         }
@@ -243,6 +245,17 @@
         previewView.frame = self.bounds;
     
     _iconView.frame = CGRectMake((self.frame.size.width - _iconView.frame.size.width) / 2, (self.frame.size.height - _iconView.frame.size.height) / 2, _iconView.frame.size.width, _iconView.frame.size.height);
+}
+
+- (void)saveStartImage:(void (^)(void))completion {
+    [_camera captureNextFrameCompletion:^(UIImage *frameImage) {
+        [[SQueue concurrentDefaultQueue] dispatch:^{
+            [TGCameraController generateStartImageWithImage:frameImage];
+            TGDispatchOnMainThread(^{
+                completion();
+            });
+        }];
+    }];
 }
 
 @end

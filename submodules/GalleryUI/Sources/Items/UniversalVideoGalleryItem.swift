@@ -19,6 +19,7 @@ import ContextUI
 import SaveToCameraRoll
 import UndoUI
 import TelegramUIPreferences
+import OpenInExternalAppUI
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message)
@@ -524,6 +525,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let isInteractingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let controlsVisiblePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
     private let isShowingContextMenuPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let hasExpandedCaptionPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private var hideControlsDisposable: Disposable?
     
     var playbackCompleted: (() -> Void)?
@@ -701,12 +703,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.titleContentView = GalleryTitleView(frame: CGRect())
         self._titleView.set(.single(self.titleContentView))
         
-        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get())
-        |> mapToSignal { isPlaying, isIntracting, controlsVisible, isShowingContextMenu -> Signal<Void, NoError> in
-            if isShowingContextMenu {
+        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get(), self.hasExpandedCaptionPromise.get())
+        |> mapToSignal { isPlaying, isInteracting, controlsVisible, isShowingContextMenu, hasExpandedCaptionPromise -> Signal<Void, NoError> in
+            if isShowingContextMenu || hasExpandedCaptionPromise {
                 return .complete()
             }
-            if isPlaying && !isIntracting && controlsVisible {
+            if isPlaying && !isInteracting && controlsVisible {
                 return .single(Void())
                 |> delay(4.0, queue: Queue.mainQueue())
             } else {
@@ -2087,8 +2089,38 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
                 c.setItems(strongSelf.contextMenuSpeedItems())
             })))
+            
+            if let (message, _, _) = strongSelf.contentInfo() {
+                for media in message.media {
+                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                        let url = content.url
+                        
+                        let item = OpenInItem.url(url: url)
+                        let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: item).count > 1
+                        let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
+                        items.append(.action(ContextMenuActionItem(text: openText, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                            f(.default)
+
+                            if let strongSelf = self, let controller = strongSelf.galleryController() {
+                                var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                if !presentationData.theme.overallDarkAppearance {
+                                    presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                                }
+                                let actionSheet = OpenInActionSheetController(context: strongSelf.context, forceTheme: presentationData.theme, item: item, openUrl: { [weak self] url in
+                                    if let strongSelf = self {
+                                        strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: strongSelf.baseNavigationController(), dismissInput: {})
+                                    }
+                                })
+                                controller.present(actionSheet, in: .window(.root))
+                            }
+                        })))
+                        break
+                    }
+                }
+            }
+            
             if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile {
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveToGallery, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveVideo, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                     f(.default)
 
                     if let strongSelf = self {

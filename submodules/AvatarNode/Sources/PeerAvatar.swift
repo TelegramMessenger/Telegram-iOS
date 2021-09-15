@@ -60,8 +60,7 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
                                 subscriber.putNext(nil)
                             }
                         }
-                    }, error: { error in
-                        subscriber.putError(error)
+                    }, error: { _ in
                     }, completed: {
                         subscriber.putCompletion()
                     })

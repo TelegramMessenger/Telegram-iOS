@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import AvatarNode
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import AccountContext
 import AudioBlob
@@ -13,12 +12,12 @@ public final class AnimatedAvatarSetContext {
     public final class Content {
         fileprivate final class Item {
             fileprivate struct Key: Hashable {
-                var peerId: PeerId
+                var peerId: EnginePeer.Id
             }
             
-            fileprivate let peer: Peer
+            fileprivate let peer: EnginePeer
             
-            fileprivate init(peer: Peer) {
+            fileprivate init(peer: EnginePeer) {
                 self.peer = peer
             }
         }
@@ -31,20 +30,20 @@ public final class AnimatedAvatarSetContext {
     }
     
     private final class ItemState {
-        let peer: Peer
+        let peer: EnginePeer
         
-        init(peer: Peer) {
+        init(peer: EnginePeer) {
             self.peer = peer
         }
     }
     
-    private var peers: [Peer] = []
-    private var itemStates: [PeerId: ItemState] = [:]
+    private var peers: [EnginePeer] = []
+    private var itemStates: [EnginePeer.Id: ItemState] = [:]
     
     public init() {
     }
     
-    public func update(peers: [Peer], animated: Bool) -> Content {
+    public func update(peers: [EnginePeer], animated: Bool) -> Content {
         var items: [(Content.Item.Key, Content.Item)] = []
         for peer in peers {
             items.append((Content.Item.Key(peerId: peer.id), Content.Item(peer: peer)))
@@ -63,7 +62,7 @@ private final class ContentNode: ASDisplayNode {
     
     private var disposable: Disposable?
     
-    init(context: AccountContext, peer: Peer, synchronousLoad: Bool) {
+    init(context: AccountContext, peer: EnginePeer, synchronousLoad: Bool) {
         self.unclippedNode = ASImageNode()
         self.clippedNode = ASImageNode()
         
@@ -72,7 +71,7 @@ private final class ContentNode: ASDisplayNode {
         self.addSubnode(self.unclippedNode)
         self.addSubnode(self.clippedNode)
         
-        if let representation = peer.smallProfileImage, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: representation, displayDimensions: CGSize(width: 30.0, height: 30.0), synchronousLoad: synchronousLoad) {
+        if let representation = peer.smallProfileImage, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: representation, displayDimensions: CGSize(width: 30.0, height: 30.0), synchronousLoad: synchronousLoad) {
             let image = generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(UIColor.lightGray.cgColor)
@@ -252,8 +251,7 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
         return CGSize(width: contentWidth, height: contentHeight)
     }
     
-    public func updateAudioLevels(color: UIColor, backgroundColor: UIColor, levels: [PeerId: Float]) {
-        //print("updateAudioLevels visible: \(self.contentNodes.keys.map(\.peerId.id)) data: \(levels)")
+    public func updateAudioLevels(color: UIColor, backgroundColor: UIColor, levels: [EnginePeer.Id: Float]) {
         for (key, itemNode) in self.contentNodes {
             if let value = levels[key.peerId] {
                 itemNode.updateAudioLevel(color: color, backgroundColor: backgroundColor, value: value)

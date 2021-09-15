@@ -91,7 +91,10 @@
         if (_numberOfLines == 1) {
             [_textLabel sizeToFit];
         } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             CGSize textSize = [_textLabel.text sizeWithFont:_textLabel.font constrainedToSize:CGSizeMake(_maxWidth - 20.0f, CGFLOAT_MAX) lineBreakMode:NSLineBreakByWordWrapping];
+#pragma clang diagnostic pop
             textSize.width = CGCeil(textSize.width);
             textSize.height = CGCeil(textSize.height);
             _textLabel.frame = CGRectMake(_textLabel.frame.origin.x, _textLabel.frame.origin.y, textSize.width, textSize.height);
@@ -110,7 +113,10 @@
     if (_numberOfLines == 1) {
         [_textLabel sizeToFit];
     } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         CGSize textSize = [_textLabel.text sizeWithFont:_textLabel.font constrainedToSize:CGSizeMake(maxWidth - 20.0f, CGFLOAT_MAX) lineBreakMode:NSLineBreakByWordWrapping];
+#pragma clang diagnostic pop
         textSize.width = CGCeil(textSize.width);
         textSize.height = CGCeil(textSize.height);
         _textLabel.frame = CGRectMake(_textLabel.frame.origin.x, _textLabel.frame.origin.y, textSize.width, textSize.height);

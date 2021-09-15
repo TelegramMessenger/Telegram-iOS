@@ -146,7 +146,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     
     override public func superLongTapped() {
         displaysAlternativeIcon.toggle()
-        let displayAlternativeIcon = displaysAlternativeIcon ?? false
+        let displayAlternativeIcon = displaysAlternativeIcon
         let duration = 0.3
         
         if displayAlternativeIcon {

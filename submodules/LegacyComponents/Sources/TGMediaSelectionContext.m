@@ -276,7 +276,7 @@
 + (instancetype)changeWithItem:(id<TGMediaSelectableItem>)item selected:(bool)selected animated:(bool)animated sender:(id)sender
 {
     TGMediaSelectionChange *change = [[TGMediaSelectionChange alloc] init];
-    change->_item = item;
+    change->_item = (NSObject<TGMediaSelectableItem> *)item;
     change->_selected = selected;
     change->_animated = animated;
     change->_sender = sender;

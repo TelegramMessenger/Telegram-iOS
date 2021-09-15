@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
+import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
@@ -37,7 +38,7 @@ public final class PasscodeEntryController: ViewController {
     }
     
     private let applicationBindings: TelegramApplicationBindings
-    private let accountManager: AccountManager
+    private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let appLockContext: AppLockContext
     private let presentationDataSignal: Signal<PresentationData, NoError>
     
@@ -66,7 +67,8 @@ public final class PasscodeEntryController: ViewController {
     private let hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData]
     private var hasPublicAccounts: Bool = true
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData], biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments, hasPublicAccountsSignal: Signal<Bool, NoError> = .single(true)) {
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments, hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData], hasPublicAccountsSignal: Signal<Bool, NoError> = .single(true)) {
+
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.appLockContext = appLockContext

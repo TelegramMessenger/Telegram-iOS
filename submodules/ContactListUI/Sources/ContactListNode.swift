@@ -1258,8 +1258,8 @@ public final class ContactListNode: ASDisplayNode {
                             var peers: [(Peer, Int32)] = []
                             for entry in view.entries {
                                 switch entry {
-                                    case let .MessageEntry(messageEntry):
-                                        if let peer = messageEntry.5.peer {
+                                    case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
+                                        if let peer = renderedPeer.peer {
                                             if peer is TelegramGroup {
                                                 peers.append((peer, 0))
                                             } else if let channel = peer as? TelegramChannel, case .group = channel.info {
@@ -1407,7 +1407,7 @@ public final class ContactListNode: ASDisplayNode {
             }
         })
         
-        self.listNode.didEndScrolling = { [weak self] in
+        self.listNode.didEndScrolling = { [weak self] _ in
             if let strongSelf = self {
                 let _ = strongSelf.contentScrollingEnded?(strongSelf.listNode)
             }

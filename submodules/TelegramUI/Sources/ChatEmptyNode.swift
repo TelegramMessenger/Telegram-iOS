@@ -175,6 +175,10 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
                         },
                         openSettings: {
                         },
+                        openTrending: { _ in
+                        },
+                        dismissTrendingPacks: { _ in
+                        },
                         toggleSearch: { _, _, _ in
                         },
                         openPeerSpecificSettings: {
@@ -341,6 +345,10 @@ final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerC
                         setGifMode: { _ in
                         },
                         openSettings: {
+                        },
+                        openTrending: { _ in
+                        },
+                        dismissTrendingPacks: { _ in
                         },
                         toggleSearch: { _, _, _ in
                         },

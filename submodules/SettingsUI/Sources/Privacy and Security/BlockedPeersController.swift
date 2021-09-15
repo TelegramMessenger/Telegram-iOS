@@ -211,7 +211,6 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
-    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -262,7 +261,7 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
             }
         }))
     }, openPeer: { peer in
-        if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+        if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
             pushControllerImpl?(controller)
         }
     })
@@ -310,11 +309,6 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
     pushControllerImpl = { [weak controller] c in
         if let controller = controller {
             (controller.navigationController as? NavigationController)?.pushViewController(c)
-        }
-    }
-    presentControllerImpl = { [weak controller] c, a in
-        if let controller = controller {
-            controller.present(c, in: .window(.root), with: a)
         }
     }
     controller.visibleBottomContentOffsetChanged = { offset in

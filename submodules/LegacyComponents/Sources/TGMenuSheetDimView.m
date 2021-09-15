@@ -111,8 +111,9 @@
             setupView(_topView);
         }
         
-        if (iosMajorVersion() >= 11)
+        if (@available(iOS 11.0, *)) {
             self.accessibilityIgnoresInvertColors = true;
+        }
     }
     return self;
 }

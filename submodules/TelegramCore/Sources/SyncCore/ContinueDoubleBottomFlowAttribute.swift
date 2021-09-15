@@ -1,17 +1,17 @@
 import Foundation
 import Postbox
 
-public final class ContinueDoubleBottomFlowAttribute: AccountRecordAttribute {
+public final class ContinueDoubleBottomFlowAttribute: Codable, Equatable {
     public init() {
     }
     
-    public init(decoder: PostboxDecoder) {
+    public init(from decoder: Decoder) throws {
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
     }
-    
-    public func isEqual(to: AccountRecordAttribute) -> Bool {
-        return to is ContinueDoubleBottomFlowAttribute
+
+    public static func ==(lhs: ContinueDoubleBottomFlowAttribute, rhs: ContinueDoubleBottomFlowAttribute) -> Bool {
+        return true
     }
 }

@@ -29,6 +29,10 @@ private func dateStringForDay(strings: PresentationStrings, dateTimeFormat: Pres
 }
 
 func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular, reactionCount: Int) -> String {
+    if message.adAttribute != nil {
+        return strings.Message_SponsoredLabel
+    }
+
     let timestamp: Int32
     if let scheduleTime = message.scheduleTime {
         timestamp = scheduleTime

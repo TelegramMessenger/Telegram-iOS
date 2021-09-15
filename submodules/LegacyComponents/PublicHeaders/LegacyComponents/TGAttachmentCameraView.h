@@ -22,6 +22,7 @@
 
 - (void)setZoomedProgress:(CGFloat)progress;
 
+- (void)saveStartImage:(void (^)(void))completion;
 - (TGCameraPreviewView *)previewView;
 
 @end

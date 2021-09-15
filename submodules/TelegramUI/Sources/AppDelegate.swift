@@ -685,8 +685,8 @@ final class SharedApplicationContext {
         })
         
         let hiddenAccountManager = HiddenAccountManagerImpl()
-        let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager, isTemporary: false, isReadOnly: false)
+        let accountManagerSignal = Signal<AccountManager<TelegramAccountManagerTypes>, NoError> { subscriber in
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, hiddenAccountManager: hiddenAccountManager)
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
@@ -778,7 +778,7 @@ final class SharedApplicationContext {
         |> take(1)
         |> deliverOnMainQueue
         |> take(1)
-        |> mapToSignal { accountManager -> Signal<(AccountManager, InitialPresentationDataAndSettings), NoError> in
+        |> mapToSignal { accountManager -> Signal<(AccountManager<TelegramAccountManagerTypes>, InitialPresentationDataAndSettings), NoError> in
             var systemUserInterfaceStyle: WindowUserInterfaceStyle = .light
             if #available(iOS 13.0, *) {
                 if let traitCollection = window.rootViewController?.traitCollection {
@@ -1220,7 +1220,7 @@ final class SharedApplicationContext {
 
         let logoutDataSignal: Signal<(AccountManager, Set<PeerId>), NoError> = self.sharedContextPromise.get()
         |> take(1)
-        |> mapToSignal { sharedContext -> Signal<(AccountManager, Set<PeerId>), NoError> in
+        |> mapToSignal { sharedContext -> Signal<(AccountManager<TelegramAccountManagerTypes>, Set<PeerId>), NoError> in
             return sharedContext.sharedContext.activeAccountContexts
             |> map { _, accounts, _ -> Set<PeerId> in
                 return Set(accounts.map { $0.1.account.peerId })
@@ -1231,7 +1231,7 @@ final class SharedApplicationContext {
                 }
                 return updated
             }
-            |> map { loggedOutAccountPeerIds -> (AccountManager, Set<PeerId>) in
+            |> map { loggedOutAccountPeerIds -> (AccountManager<TelegramAccountManagerTypes>, Set<PeerId>) in
                 return (sharedContext.sharedContext.accountManager, loggedOutAccountPeerIds)
             }
         }
@@ -1513,7 +1513,7 @@ final class SharedApplicationContext {
                 
             let _ = (sharedApplicationContext.sharedContext.accountManager.transaction({ [weak sharedApplicationContext] transaction in
                 if let sharedApplicationContext = sharedApplicationContext, let record = transaction.getRecords().first(where: { $0.id == accountId }),
-                    !record.attributes.contains(where: { $0 is HiddenAccountAttribute }) {
+                   !record.attributes.contains(where: { $0.isHiddenAccountAttribute }) {
                     sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
                         completionHandler(.newData)
                     }, timeout: 29.0)
@@ -1965,7 +1965,7 @@ final class SharedApplicationContext {
             if let accountId = accountId {
                 let _ = (sharedApplicationContext.sharedContext.accountManager.transaction({ transaction -> Bool in
                     if let record = transaction.getRecords().first(where: { $0.id == accountId }) {
-                        return !record.attributes.contains(where: { $0 is HiddenAccountAttribute })
+                        return !record.attributes.contains(where: { $0.isHiddenAccountAttribute })
                     } else {
                         return false
                     }
@@ -2014,7 +2014,7 @@ final class SharedApplicationContext {
         
         let hiddenIdsAndPasscodeSettings = self.sharedContextPromise.get() |> mapToSignal { context in
             return context.sharedContext.accountManager.transaction({ transaction -> (hiddenIds: [AccountRecordId], hasMasterPasscode: Bool) in
-                let hiddenIds = transaction.getRecords().filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }.map { $0.id }
+                let hiddenIds = transaction.getRecords().filter { $0.attributes.contains(where: { $0.isHiddenAccountAttribute }) }.map { $0.id }
                 let hasMasterPasscode = transaction.getAccessChallengeData() != .none
                 return (hiddenIds, hasMasterPasscode)
             })
@@ -2243,7 +2243,7 @@ final class SharedApplicationContext {
             if let context = self.contextValue, let accountId = accountId, context.context.account.id != accountId {
                 let _ = context.context.sharedContext.accountManager.transaction { transaction in
                     if let record = transaction.getRecords().first(where: { $0.id == accountId }),
-                        !record.attributes.contains(where: { $0 is HiddenAccountAttribute }) {
+                       !record.attributes.contains(where: { $0.isHiddenAccountAttribute }) {
                         completionHandler([.alert])
                     }
                 }.start()

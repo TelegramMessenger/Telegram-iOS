@@ -50,8 +50,9 @@
     self.view.backgroundColor = self.pallete != nil ? self.pallete.backgroundColor : [UIColor whiteColor];
     
     _tableView = [[UITableView alloc] initWithFrame:self.view.bounds];
-    if (iosMajorVersion() >= 11)
+    if (@available(iOS 11.0, *)) {
         _tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+    }
     _tableView.alwaysBounceVertical = true;
     _tableView.backgroundColor = self.view.backgroundColor;
     _tableView.delaysContentTouches = true;

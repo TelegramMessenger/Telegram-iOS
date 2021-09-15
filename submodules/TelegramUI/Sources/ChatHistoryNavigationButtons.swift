@@ -163,4 +163,34 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
             }
         }
     }
+
+    final class SnapshotState {
+        fileprivate let downButtonSnapshotView: UIView?
+
+        fileprivate init(
+            downButtonSnapshotView: UIView?
+        ) {
+            self.downButtonSnapshotView = downButtonSnapshotView
+        }
+    }
+
+    func prepareSnapshotState() -> SnapshotState {
+        var downButtonSnapshotView: UIView?
+        if !self.downButton.isHidden {
+            downButtonSnapshotView = self.downButton.view.snapshotView(afterScreenUpdates: false)!
+        }
+        return SnapshotState(
+            downButtonSnapshotView: downButtonSnapshotView
+        )
+    }
+
+    func animateFromSnapshot(_ snapshotState: SnapshotState) {
+        if self.downButton.isHidden != (snapshotState.downButtonSnapshotView == nil) {
+            if self.downButton.isHidden {
+            } else {
+                self.downButton.layer.animateAlpha(from: 0.0, to: self.downButton.alpha, duration: 0.3)
+                self.downButton.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true)
+            }
+        }
+    }
 }

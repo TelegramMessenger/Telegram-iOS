@@ -8,19 +8,21 @@ typedef enum {
 
 @interface RuntimeUtils : NSObject
 
-+ (void)swizzleInstanceMethodOfClass:(Class)targetClass currentSelector:(SEL)currentSelector newSelector:(SEL)newSelector;
-+ (void)swizzleInstanceMethodOfClass:(Class)targetClass currentSelector:(SEL)currentSelector withAnotherClass:(Class)anotherClass newSelector:(SEL)newSelector;
-+ (void)swizzleClassMethodOfClass:(Class)targetClass currentSelector:(SEL)currentSelector newSelector:(SEL)newSelector;
++ (void)swizzleInstanceMethodOfClass:(Class _Nonnull)targetClass currentSelector:(SEL _Nonnull)currentSelector newSelector:(SEL _Nonnull)newSelector;
++ (void)swizzleInstanceMethodOfClass:(Class _Nonnull)targetClass currentSelector:(SEL _Nonnull)currentSelector withAnotherClass:(Class _Nonnull)anotherClass newSelector:(SEL _Nonnull)newSelector;
++ (void)swizzleClassMethodOfClass:(Class _Nonnull)targetClass currentSelector:(SEL _Nonnull)currentSelector newSelector:(SEL _Nonnull)newSelector;
 + (CALayer * _Nonnull)makeLayerHostCopy:(CALayer * _Nonnull)another;
 
 @end
 
 @interface NSObject (AssociatedObject)
 
-- (void)setAssociatedObject:(id)object forKey:(void const *)key;
-- (void)setAssociatedObject:(id)object forKey:(void const *)key associationPolicy:(NSObjectAssociationPolicy)associationPolicy;
-- (id)associatedObjectForKey:(void const *)key;
-- (bool)checkObjectIsKindOfClass:(Class)targetClass;
-- (void)setClass:(Class)newClass;
+- (void)setAssociatedObject:(id _Nullable)object forKey:(void const * _Nonnull)key;
+- (void)setAssociatedObject:(id _Nullable)object forKey:(void const * _Nonnull)key associationPolicy:(NSObjectAssociationPolicy)associationPolicy;
+- (id _Nullable)associatedObjectForKey:(void const * _Nonnull)key;
+- (bool)checkObjectIsKindOfClass:(Class _Nonnull)targetClass;
+- (void)setClass:(Class _Nonnull)newClass;
 
 @end
+
+SEL _Nonnull makeSelectorFromString(NSString * _Nonnull string);

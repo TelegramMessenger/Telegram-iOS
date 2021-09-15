@@ -95,7 +95,7 @@ typedef enum
 - (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *, NSString *))descriptionGenerator;
 
 - (void)completeWithAvatarImage:(UIImage *)image;
-- (void)completeWithAvatarVideo:(AVAsset *)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image;
+- (void)completeWithAvatarVideo:(id)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image;
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting scheduleTime:(int32_t)scheduleTime;
 
 - (void)dismiss;

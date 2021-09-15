@@ -76,6 +76,7 @@ typedef enum {
 
 + (UIInterfaceOrientation)_interfaceOrientationForDeviceOrientation:(UIDeviceOrientation)orientation;
 
-+ (bool)useLegacyCamera;
++ (UIImage *)startImage;
++ (void)generateStartImageWithImage:(UIImage *)frameImage;
 
 @end

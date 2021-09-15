@@ -221,14 +221,7 @@ final class SharedMediaPlayer {
                         if case .music = playbackData.type {
                             rateValue = 1.0
                         } else {
-                            switch strongSelf.playbackRate {
-                                case .x1:
-                                    rateValue = 1.0
-                                case .x2:
-                                    rateValue = 1.8
-                                default:
-                                    rateValue = 1.0
-                            }
+                            rateValue = strongSelf.playbackRate.doubleValue
                         }
                         
                         switch playbackData.type {

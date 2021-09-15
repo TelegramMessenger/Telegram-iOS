@@ -714,7 +714,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsersViaLink),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
-                                    (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
+                                    (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageLiveStreams)
                                 ]
                                 prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.broadcastSpecific)
                                 newFlags = newFlags.intersection(TelegramChatAdminRightsFlags.broadcastSpecific)
@@ -1122,9 +1122,17 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 
                 let rawText: PresentationStrings.FormattedString
                 if case .startGroupCall = self.entry.event.action {
-                    rawText = self.presentationData.strings.Channel_AdminLog_StartedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        rawText = self.presentationData.strings.Channel_AdminLog_StartedLiveStream(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    } else {
+                        rawText = self.presentationData.strings.Channel_AdminLog_StartedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    }
                 } else {
-                    rawText = self.presentationData.strings.Channel_AdminLog_EndedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        rawText = self.presentationData.strings.Channel_AdminLog_EndedLiveStream(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    } else {
+                        rawText = self.presentationData.strings.Channel_AdminLog_EndedVoiceChat(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    }
                 }
                     
                 appendAttributedText(text: rawText, generateEntities: { index in
@@ -1352,6 +1360,37 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     rawText = self.presentationData.strings.Channel_AdminLog_MessageChangedAutoremoveTimeoutSet(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", timeIntervalString(strings: self.presentationData.strings, value: updatedValue))
                 } else {
                     rawText = self.presentationData.strings.Channel_AdminLog_MessageChangedAutoremoveTimeoutRemove(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                }
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+                return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))
+            case let .changeTheme(_, updatedValue):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+ 
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText: PresentationStrings.FormattedString
+                if let updatedValue = updatedValue {
+                    rawText = self.presentationData.strings.Channel_AdminLog_MessageChangedThemeSet(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", updatedValue)
+                } else {
+                    rawText = self.presentationData.strings.Channel_AdminLog_MessageChangedThemeRemove(author?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
                 }
                 
                 appendAttributedText(text: rawText, generateEntities: { index in

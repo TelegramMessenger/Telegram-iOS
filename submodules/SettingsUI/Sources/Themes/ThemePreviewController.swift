@@ -145,7 +145,7 @@ public final class ThemePreviewController: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] theme, presentationTheme in
             if let strongSelf = self, let theme = theme {
                 let titleView = CounterContollerTitleView(theme: strongSelf.previewTheme)
-                titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount)))
+                titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount ?? 0)))
                 strongSelf.navigationItem.titleView = titleView
                 strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings))
             }
@@ -423,7 +423,7 @@ public final class ThemePreviewController: ViewController {
                 Queue.mainQueue().after(0.3) {
                     if layout.size.width >= 375.0 {
                         let navigationController = strongSelf.navigationController as? NavigationController
-                        if let (previousDefaultTheme, previousAccentColor, autoNightMode, theme, existing) = previousDefaultTheme {
+                        if let (previousDefaultTheme, previousAccentColor, autoNightMode, theme, _) = previousDefaultTheme {
                             let _ = (ApplicationSpecificNotice.getThemeChangeTip(accountManager: strongSelf.context.sharedContext.accountManager)
                             |> deliverOnMainQueue).start(next: { [weak self] displayed in
                                 guard let strongSelf = self, !displayed else {
@@ -485,7 +485,7 @@ public final class ThemePreviewController: ViewController {
         let subject: ShareControllerSubject
         let preferredAction: ShareControllerPreferredAction
         switch self.source {
-            case let .settings(reference):
+            case .settings:
                 return
             case let .theme(theme):
                 subject = .url("https://t.me/addtheme/\(theme.slug)")

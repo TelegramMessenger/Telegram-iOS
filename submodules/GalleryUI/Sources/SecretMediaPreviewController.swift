@@ -237,17 +237,8 @@ public final class SecretMediaPreviewController: ViewController {
                 strongSelf._hiddenMedia.set(.single(nil))
                 
                 let animatedOutNode = true
-                var animatedOutInterface = false
-                
-                let completion = {
-                    if animatedOutNode && animatedOutInterface {
-                        //self?.presentingViewController?.dismiss(animated: false, completion: nil)
-                    }
-                }
                 
                 strongSelf.controllerNode.animateOut(animateContent: animatedOutNode, completion: {
-                    animatedOutInterface = true
-                    //completion()
                 })
             }
         }

@@ -30,6 +30,7 @@ objc_library(
     ]),
     copts = [
         "-I{}/PublicHeaders/LegacyComponents".format(package_name()),
+        #"-Werror",
     ],
     includes = [
         "PublicHeaders",

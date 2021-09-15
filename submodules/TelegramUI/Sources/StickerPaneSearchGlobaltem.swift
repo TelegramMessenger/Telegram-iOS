@@ -78,6 +78,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let listAppearance: Bool
+    let fillsRow: Bool
     let info: StickerPackCollectionInfo
     let topItems: [StickerPackItem]
     let topSeparator: Bool
@@ -102,14 +103,15 @@ final class StickerPaneSearchGlobalItem: GridItem {
             }
         }
         
-        return (128.0 + additionalHeight, !self.listAppearance)
+        return (128.0 + additionalHeight, self.fillsRow)
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, info: StickerPackCollectionInfo, topItems: [StickerPackItem], topSeparator: Bool, regularInsets: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext, sectionTitle: String? = nil) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, fillsRow: Bool = true, info: StickerPackCollectionInfo, topItems: [StickerPackItem], topSeparator: Bool, regularInsets: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext, sectionTitle: String? = nil) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.listAppearance = listAppearance
+        self.fillsRow = fillsRow
         self.info = info
         self.topItems = topItems
         self.topSeparator = topSeparator
@@ -155,8 +157,9 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     private let uninstallButtonNode: HighlightTrackingButtonNode
     private var itemNodes: [TrendingTopItemNode]
     private let topSeparatorNode: ASDisplayNode
+    private var highlightNode: ASDisplayNode?
     
-    private var item: StickerPaneSearchGlobalItem?
+    var item: StickerPaneSearchGlobalItem?
     private var appliedItem: StickerPaneSearchGlobalItem?
     private let preloadDisposable = MetaDisposable()
     private let preloadedStickerPackThumbnailDisposable = MetaDisposable()
@@ -328,6 +331,27 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         }
         
         self.canPlayMedia = item.itemContext.canPlayMedia
+    }
+    
+    func highlight() {
+        guard self.highlightNode == nil else {
+            return
+        }
+        
+        let highlightNode = ASDisplayNode()
+        highlightNode.frame = self.bounds
+        if let theme = self.item?.theme {
+            highlightNode.backgroundColor = theme.list.itemCheckColors.fillColor.withAlphaComponent(0.08)
+        }
+        self.highlightNode = highlightNode
+        self.insertSubnode(highlightNode, at: 0)
+        
+        Queue.mainQueue().after(1.5) {
+            self.highlightNode = nil
+            highlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak highlightNode] _ in
+                highlightNode?.removeFromSupernode()
+            })
+        }
     }
     
     override func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {

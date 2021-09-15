@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxCoding {
+public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxCoding, Codable {
     public typealias Namespace = Int32
     public typealias Id = Int32
     
@@ -38,6 +38,22 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxC
         
         buffer.offset += 16
     }
+
+    private init(bytes: UnsafePointer<UInt8>, offset: inout Int) {
+        var peerIdInt64Value: Int64 = 0
+        memcpy(&peerIdInt64Value, bytes.advanced(by: offset), 8)
+
+        self.peerId = PeerId(peerIdInt64Value)
+
+        var namespaceValue: Int32 = 0
+        memcpy(&namespaceValue, bytes.advanced(by: offset + 8), 4)
+        self.namespace = namespaceValue
+        var idValue: Int32 = 0
+        memcpy(&idValue, bytes.advanced(by: offset + 12), 4)
+        self.id = idValue
+
+        offset += 16
+    }
     
     public init(decoder: PostboxDecoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
@@ -59,6 +75,15 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxC
         buffer.write(&namespace, offset: 0, length: 4)
         buffer.write(&id, offset: 0, length: 4)
     }
+
+    public func encodeToData(_ data: inout Data) {
+        var peerIdValue = self.peerId.toInt64()
+        var namespace = self.namespace
+        var id = self.id
+        data.append(Data(bytesNoCopy: &peerIdValue, count: 8, deallocator: .none))
+        data.append(Data(bytesNoCopy: &namespace, count: 4, deallocator: .none))
+        data.append(Data(bytesNoCopy: &id, count: 4, deallocator: .none))
+    }
     
     public static func encodeArrayToBuffer(_ array: [MessageId], buffer: WriteBuffer) {
         var length: Int32 = Int32(array.count)
@@ -66,6 +91,16 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxC
         for id in array {
             id.encodeToBuffer(buffer)
         }
+    }
+
+    public static func encodeArrayToData(_ array: [MessageId]) -> Data {
+        var result = Data()
+        var length: Int32 = Int32(array.count)
+        result.append(Data(bytesNoCopy: &length, count: 4, deallocator: .none))
+        for id in array {
+            id.encodeToData(&result)
+        }
+        return result
     }
     
     public static func decodeArrayFromBuffer(_ buffer: ReadBuffer) -> [MessageId] {
@@ -81,6 +116,25 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxC
         return array
     }
 
+    public static func decodeArrayFromData(_ data: Data) -> [MessageId] {
+        return data.withUnsafeBytes { bytes -> [MessageId] in
+            guard let baseAddress = bytes.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                return []
+            }
+            var offset = 0
+            var length: Int32 = 0
+            memcpy(&length, baseAddress, 4)
+            offset += 4
+            var i = 0
+            var array: [MessageId] = []
+            while i < Int(length) {
+                array.append(MessageId(bytes: baseAddress, offset: &offset))
+                i += 1
+            }
+            return array
+        }
+    }
+
     public static func <(lhs: MessageId, rhs: MessageId) -> Bool {
         if lhs.namespace == rhs.namespace {
             if lhs.id == rhs.id {
@@ -94,7 +148,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxC
     }
 }
 
-public struct MessageIndex: Comparable, Hashable {
+public struct MessageIndex: Codable, Comparable, Hashable {
     public let id: MessageId
     public let timestamp: Int32
     
@@ -514,7 +568,7 @@ public struct MessageForwardInfo: Equatable {
     }
 }
 
-public protocol MessageAttribute: class, PostboxCoding {
+public protocol MessageAttribute: AnyObject, PostboxCoding {
     var associatedPeerIds: [PeerId] { get }
     var associatedMessageIds: [MessageId] { get }
     var automaticTimestampBasedAttribute: (UInt16, Int32)? { get }
@@ -588,6 +642,14 @@ public final class Message {
         self.associatedMessageIds = associatedMessageIds
     }
     
+    public func withUpdatedText(_ text: String) -> Message {
+        return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, author: self.author, text: text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds)
+    }
+    
+    public func withUpdatedTimestamp(_ timestamp: Int32) -> Message {
+        return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, author: self.author, text: self.text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds)
+    }
+    
     public func withUpdatedMedia(_ media: [Media]) -> Message {
         return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, author: self.author, text: self.text, attributes: self.attributes, media: media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds)
     }
@@ -610,6 +672,14 @@ public final class Message {
     
     func withUpdatedAssociatedMessages(_ associatedMessages: SimpleDictionary<MessageId, Message>) -> Message {
         return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, author: self.author, text: self.text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: associatedMessages, associatedMessageIds: self.associatedMessageIds)
+    }
+    
+    public func withUpdatedForwardInfo(_ forwardInfo: MessageForwardInfo?) -> Message {
+        return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: forwardInfo, author: self.author, text: self.text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds)
+    }
+    
+    public func withUpdatedAuthor(_ author: Peer?) -> Message {
+        return Message(stableId: self.stableId, stableVersion: self.stableVersion, id: self.id, globallyUniqueId: self.globallyUniqueId, groupingKey: self.groupingKey, groupInfo: self.groupInfo, threadId: self.threadId, timestamp: self.timestamp, flags: self.flags, tags: self.tags, globalTags: self.globalTags, localTags: self.localTags, forwardInfo: self.forwardInfo, author: author, text: self.text, attributes: self.attributes, media: self.media, peers: self.peers, associatedMessages: self.associatedMessages, associatedMessageIds: self.associatedMessageIds)
     }
 }
 

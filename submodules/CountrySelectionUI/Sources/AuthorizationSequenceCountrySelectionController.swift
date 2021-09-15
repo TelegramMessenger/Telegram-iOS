@@ -69,7 +69,7 @@ private func loadCountryCodes() -> [Country] {
 private var countryCodes: [Country] = loadCountryCodes()
 private var countryCodesByPrefix: [String: (Country, Country.CountryCode)] = [:]
 
-public func loadServerCountryCodes(accountManager: AccountManager, engine: TelegramEngineUnauthorized, completion: @escaping () -> Void) {
+public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccountManagerTypes>, engine: TelegramEngineUnauthorized, completion: @escaping () -> Void) {
     let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
     |> deliverOnMainQueue).start(next: { countries in
         countryCodes = countries
@@ -93,7 +93,7 @@ public func loadServerCountryCodes(accountManager: AccountManager, engine: Teleg
     })
 }
 
-public func loadServerCountryCodes(accountManager: AccountManager, engine: TelegramEngine, completion: @escaping () -> Void) {
+public func loadServerCountryCodes(accountManager: AccountManager<TelegramAccountManagerTypes>, engine: TelegramEngine, completion: @escaping () -> Void) {
     let _ = (engine.localization.getCountriesList(accountManager: accountManager, langCode: nil)
     |> deliverOnMainQueue).start(next: { countries in
         countryCodes = countries

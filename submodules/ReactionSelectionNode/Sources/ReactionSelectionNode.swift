@@ -215,7 +215,7 @@ final class ReactionSelectionNode: ASDisplayNode {
         }
         
         let reactionSideInset: CGFloat = 10.0
-        var reactionSpacing: CGFloat = 6.0
+        let reactionSpacing: CGFloat = 6.0
         let minReactionSpacing: CGFloat = 2.0
         let minimizedReactionSize = self.minimizedReactionSize
         let contentWidth: CGFloat = CGFloat(self.reactions.count) * (minimizedReactionSize) + CGFloat(self.reactions.count - 1) * reactionSpacing + reactionSideInset * 2.0
@@ -252,9 +252,7 @@ final class ReactionSelectionNode: ASDisplayNode {
             interReactionSpacing = reactionSpacing
         }
         
-        if isInitial && self.reactionNodes.isEmpty {
-            let availableContentWidth = constrainedSize.width //max(100.0, initialAnchorX)
-            
+        if isInitial && self.reactionNodes.isEmpty {            
             self.shadowBlur = floor(minimizedReactionSize * 0.26)
             self.smallCircleSize = 14.0
             

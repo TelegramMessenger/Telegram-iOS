@@ -554,7 +554,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         
         if self.previousPeerId != peer.id {
             self.previousPeerId = peer.id
-            avatarNode.setPeer(context: context, theme: theme, peer: peer)
+            avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer))
         }
     }
     

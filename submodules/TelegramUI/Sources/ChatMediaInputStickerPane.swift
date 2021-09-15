@@ -28,7 +28,10 @@ private func fixGridScrolling(_ gridNode: GridNode) {
             var scrollIndex: Int?
             if itemFrame.minY + itemFrame.height * 0.6 < contentInset {
                 for i in 0 ..< gridNode.items.count {
-                    if let _ = gridNode.items[i] as? ChatMediaInputStickerGridItem {
+                    if let _ = gridNode.items[i] as? StickerPaneTrendingListGridItem {
+                        scrollIndex = i
+                        break
+                    } else if let _ = gridNode.items[i] as? ChatMediaInputStickerGridItem {
                         scrollIndex = i
                         break
                     }
@@ -66,6 +69,9 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
     private var didScrollPreviousOffset: CGFloat?
     private var didScrollPreviousState: ChatMediaInputPaneScrollState?
     
+    var beganScrolling: (() -> Void)?
+    var endedScrolling: (() -> Void)?
+    
     init(theme: PresentationTheme, strings: PresentationStrings, paneDidScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState, ContainedViewLayoutTransition) -> Void, fixPaneScroll: @escaping (ChatMediaInputPane, ChatMediaInputPaneScrollState) -> Void) {
         self.gridNode = GridNode()
         self.paneDidScroll = paneDidScroll
@@ -95,12 +101,16 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
                 }
             }
         }
+        self.gridNode.scrollingInitiated = { [weak self] in
+            self?.beganScrolling?()
+        }
         self.gridNode.scrollingCompleted = { [weak self] in
             if let strongSelf = self {
                 if let didScrollPreviousState = strongSelf.didScrollPreviousState {
                     strongSelf.fixPaneScroll(strongSelf, didScrollPreviousState)
                 }
                 fixGridScrolling(strongSelf.gridNode)
+                strongSelf.endedScrolling?()
             }
         }
         self.gridNode.setupNode = { [weak self] itemNode in
@@ -108,6 +118,8 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
                 return
             }
             if let itemNode = itemNode as? ChatMediaInputStickerGridItemNode {
+                itemNode.updateIsPanelVisible(strongSelf.isPaneVisible)
+            } else if let itemNode = itemNode as? StickerPaneTrendingListGridItemNode {
                 itemNode.updateIsPanelVisible(strongSelf.isPaneVisible)
             }
         }
@@ -172,6 +184,8 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
                     itemNode.updateIsPanelVisible(isVisible)
                 } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                     itemNode.updateCanPlayMedia()
+                } else if let itemNode = itemNode as? StickerPaneTrendingListGridItemNode {
+                    itemNode.updateIsPanelVisible(isVisible)
                 }
             }
         }
