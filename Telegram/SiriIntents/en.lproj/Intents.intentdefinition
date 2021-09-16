@@ -9,11 +9,11 @@
 	<key>INIntentDefinitionNamespace</key>
 	<string>p74MWb</string>
 	<key>INIntentDefinitionSystemVersion</key>
-	<string>20C69</string>
+	<string>20G165</string>
 	<key>INIntentDefinitionToolsBuildVersion</key>
-	<string>12D4e</string>
+	<string>12E507</string>
 	<key>INIntentDefinitionToolsVersion</key>
-	<string>12.4</string>
+	<string>12.5.1</string>
 	<key>INIntents</key>
 	<array>
 		<dict>

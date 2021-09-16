@@ -413,10 +413,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
                 return item.unread ? count + 1 : count
             })
             
-            var enableQRLogin = false
-            if let appConfiguration = accountPreferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration, let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR {
-                enableQRLogin = true
-            }
+            let enableQRLogin = PostufgramConstants.enableQRLogin
             
             let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: suggestions.contains(.validatePhoneNumber), suggestPasswordConfirmation: suggestions.contains(.validatePassword), accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions?.0, webSessionsContext: accountSessions?.2, otherSessionsCount: accountSessions?.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
             
