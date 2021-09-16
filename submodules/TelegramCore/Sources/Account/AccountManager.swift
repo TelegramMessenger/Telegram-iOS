@@ -82,7 +82,7 @@ public enum TelegramAccountRecordAttribute: AccountRecordAttribute, Equatable {
             } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(ContinueDoubleBottomFlowAttribute.self) {
                 self = .continueDoubleBottom(try! AdaptedPostboxDecoder().decode(ContinueDoubleBottomFlowAttribute.self, from: legacyRootObjectData.data))
             } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(HiddenAccountAttribute.self) {
-                self = .hiddenDoubleBottom(try! AdaptedPostboxDecoder().decode(HiddenAccountAttribute.self, from: legacyRootObjectData.data))
+                self = .hiddenDoubleBottom(HiddenAccountAttribute(decoder: PostboxDecoder(buffer: MemoryBuffer(data: legacyRootObjectData.data))))
             } else {
                 preconditionFailure()
             }
