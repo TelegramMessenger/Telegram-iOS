@@ -2887,9 +2887,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.choosingStickerActivityPromise.set(value)
             }
         }, commitEmojiInteraction: { [weak self] messageId, emoji, interaction, file in
-            guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer else {
+            guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, peer.id != strongSelf.context.account.peerId else {
                 return
             }
+            
             strongSelf.context.account.updateLocalInputActivity(peerId: PeerActivitySpace(peerId: messageId.peerId, category: .global), activity: .interactingWithEmoji(emoticon: emoji, messageId: messageId, interaction: interaction), isPresent: true)
             
             let currentTimestamp = Int32(Date().timeIntervalSince1970)

@@ -110,9 +110,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                 }, action: { _, f in
                                     if let strongSelf = self, let peekController = strongSelf.peekController {
                                         if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, animationNode, animationNode.bounds)
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, animationNode, animationNode.bounds)
                                         } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, imageNode, imageNode.bounds)
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, imageNode, imageNode.bounds)
                                         }
                                     }
                                     f(.default)
@@ -124,9 +124,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                             }, action: { _, f in
                                 if let strongSelf = self, let peekController = strongSelf.peekController {
                                     if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode, animationNode.bounds)
+                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, animationNode, animationNode.bounds)
                                     } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode, imageNode.bounds)
+                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, imageNode, imageNode.bounds)
                                     }
                                 }
                                 f(.default)
