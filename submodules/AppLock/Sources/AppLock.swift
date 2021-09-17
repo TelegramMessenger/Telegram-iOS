@@ -97,7 +97,9 @@ public final class AppLockContextImpl: AppLockContext {
     private var applicationInForegroundDisposable: Disposable?
     
     public var lockingIsCompletePromise = Promise<Bool>()
-    
+    // MARK: Postufgram Code: {
+    public var onUnlockedDismiss = ValuePipe<Void>()
+    // MARK: Postufgram Code: }
     public var isUnlockedAndReady: Signal<Void, NoError> {
         return self.isCurrentlyLockedPromise.get()
             |> filter { !$0 }
@@ -260,12 +262,18 @@ public final class AppLockContextImpl: AppLockContext {
                     }
                 } else if let passcodeController = strongSelf.passcodeController {
                     strongSelf.passcodeController = nil
-                    passcodeController.dismiss()
+                    // MARK: Postufgram Code: {
+                    passcodeController.dismiss() { [weak self] in
+                        self?.onUnlockedDismiss.putNext(())
+                    }
+                    // MARK: Postufgram Code: }
                 }
             }
             
             strongSelf.updateTimestampRenewTimer(shouldRun: appInForeground && !isCurrentlyLocked)
-            strongSelf.isCurrentlyLockedPromise.set(.single(!appInForeground || isCurrentlyLocked))
+            // MARK: Postufgram Code: {
+            strongSelf.isCurrentlyLockedPromise.set(.single(isCurrentlyLocked))
+            // MARK: Postufgram Code: }
             
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window {

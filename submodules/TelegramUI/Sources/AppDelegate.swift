@@ -184,6 +184,12 @@ final class SharedApplicationContext {
     private var buildConfig: BuildConfig?
     let episodeId = arc4random()
     
+    // MARK: Postufgram Code: {
+    private var isCurrentlyLocked = true
+    /// property for universal links handling
+    private var needOpenURL = false
+    private let unlockedAndReady = ValuePipe<Void>()
+    // MARK: Postufgram Code: }
     private let isInForegroundPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private var isInForegroundValue = false
     private let isActivePromise = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -800,6 +806,17 @@ final class SharedApplicationContext {
             let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
                 return (self.mainWindow?.viewController as? TelegramRootController)?.chatListController?.lockViewFrame
             })
+            // MARK: Postufgram Code: {
+            appLockContext.onUnlockedDismiss.signal()
+                .start { [weak self] _ in
+                    self?.unlockedAndReady.putNext(())
+                }
+            
+            appLockContext.isCurrentlyLocked
+                .start { [weak self] isCurrentlyLocked in
+                    self?.isCurrentlyLocked = isCurrentlyLocked
+                }
+            // MARK: Postufgram Code: }
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
             let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
@@ -1693,7 +1710,9 @@ final class SharedApplicationContext {
     }
     
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        self.openUrl(url: url)
+        // MARK: Postufgram Code: {
+        self.handleUniversalLink(url)
+        // MARK: Postufgram Code: }
         return true
     }
     
@@ -1701,6 +1720,27 @@ final class SharedApplicationContext {
         self.openUrl(url: url)
         return true
     }
+    
+    // MARK: Postufgram Code: {
+    private func handleUniversalLink(_ url: URL) {
+        if isCurrentlyLocked {
+            handleURLWhenUnlocked(url)
+        } else {
+            openUrl(url: url)
+        }
+    }
+    
+    private func handleURLWhenUnlocked(_ url: URL) {
+        self.needOpenURL = true
+        (self.unlockedAndReady.signal()
+            |> filter { self.needOpenURL }
+            |> take(1))
+            .start { [weak self] in
+                self?.needOpenURL = false
+                self?.openUrl(url: url)
+            }
+    }
+    // MARK: Postufgram Code: }
     
     private func openUrl(url: URL) {
         let _ = (self.sharedContextPromise.get()

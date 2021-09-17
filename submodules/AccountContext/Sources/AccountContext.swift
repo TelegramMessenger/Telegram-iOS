@@ -541,6 +541,9 @@ public enum CreateGroupMode {
 
 public protocol AppLockContext: AnyObject {
     var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
+    // MARK: Postufgram Code: {
+    var onUnlockedDismiss: ValuePipe<Void> { get }
+    // MARK: Postufgram Code: }
     var autolockDeadline: Signal<Int32?, NoError> { get }
     var lockingIsCompletePromise: Promise<Bool> { get }
     var hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData] { get }
