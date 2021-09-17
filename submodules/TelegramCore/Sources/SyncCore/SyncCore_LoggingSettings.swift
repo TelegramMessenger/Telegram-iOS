@@ -28,9 +28,9 @@ public final class LoggingSettings: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        try container.encode(self.logToFile ? 1 : 0, forKey: "logToFile")
-        try container.encode(self.logToConsole ? 1 : 0, forKey: "logToConsole")
-        try container.encode(self.redactSensitiveData ? 1 : 0, forKey: "redactSensitiveData")
+        try container.encode((self.logToFile ? 1 : 0) as Int32, forKey: "logToFile")
+        try container.encode((self.logToConsole ? 1 : 0) as Int32, forKey: "logToConsole")
+        try container.encode((self.redactSensitiveData ? 1 : 0) as Int32, forKey: "redactSensitiveData")
     }
     
     public func withUpdatedLogToFile(_ logToFile: Bool) -> LoggingSettings {

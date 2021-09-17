@@ -523,7 +523,23 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 self.updateVisibility()
                 
-                if let animationItems = item.associatedData.additionalAnimatedEmojiStickers[item.message.text.strippedEmoji] {
+                let textEmoji = item.message.text.strippedEmoji
+                var additionalTextEmoji = textEmoji
+                let (basicEmoji, fitz) = item.message.text.basicEmoji
+                if ["💛", "💙", "💚", "💜", "🧡", "🖤"].contains(textEmoji) {
+                    additionalTextEmoji = "❤️".strippedEmoji
+                } else if fitz != nil {
+                    additionalTextEmoji = basicEmoji
+                }
+                
+                var animationItems: [Int: StickerPackItem]?
+                if let items = item.associatedData.additionalAnimatedEmojiStickers[item.message.text.strippedEmoji] {
+                    animationItems = items
+                } else if let items = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji] {
+                    animationItems = items
+                }
+                
+                if let animationItems = animationItems {
                     for (_, animationItem) in animationItems {
                         self.disposables.add(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: animationItem.file)).start())
                     }
@@ -1405,7 +1421,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         let textEmoji = item.message.text.strippedEmoji
-        guard let animationItems = item.associatedData.additionalAnimatedEmojiStickers[textEmoji], index < 10, let file = animationItems[index]?.file else {
+        var additionalTextEmoji = textEmoji
+        let (basicEmoji, fitz) = item.message.text.basicEmoji
+        if ["💛", "💙", "💚", "💜", "🧡", "🖤"].contains(textEmoji) {
+            additionalTextEmoji = "❤️".strippedEmoji
+        } else if fitz != nil {
+            additionalTextEmoji = basicEmoji
+        }
+        
+        guard let animationItems = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji], index < 10, let file = animationItems[index]?.file else {
             return
         }
         let source = AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: nil)
@@ -1564,11 +1588,21 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let text = item.message.text
                         if var firstScalar = text.unicodeScalars.first {
                             var textEmoji = text.strippedEmoji
-                            let originalTextEmoji = textEmoji
+                            var additionalTextEmoji = textEmoji
                             if beatingHearts.contains(firstScalar.value) {
                                 textEmoji = "❤️"
                                 firstScalar = UnicodeScalar(heart)!
                             }
+                            
+                            let (basicEmoji, fitz) = text.basicEmoji
+                            if ["💛", "💙", "💚", "💜", "🧡", "🖤", "❤️"].contains(textEmoji) {
+                                additionalTextEmoji = "❤️".strippedEmoji
+                            } else if fitz != nil {
+                                additionalTextEmoji = basicEmoji
+                            }
+                            
+                            let syncAnimations = item.message.id.peerId.namespace == Namespaces.Peer.CloudUser
+                        
                             return .optionalAction({
                                 var haptic: EmojiHaptic?
                                 if let current = self.haptic {
@@ -1585,8 +1619,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                     self.haptic = haptic
                                 }
                                 
-                                if let animationItems = item.associatedData.additionalAnimatedEmojiStickers[originalTextEmoji] {
-                                    let syncAnimations = item.message.id.peerId.namespace == Namespaces.Peer.CloudUser
+                                if syncAnimations, let animationItems = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji] {
                                     let playHaptic = haptic == nil
                                     
                                     var hapticFeedback: HapticFeedback

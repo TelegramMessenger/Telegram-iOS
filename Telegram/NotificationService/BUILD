@@ -16,7 +16,10 @@ swift_library(
         "//submodules/AppLockState:AppLockState",
         "//submodules/NotificationsPresentationData:NotificationsPresentationData",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider"
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
+        "//submodules/WebPBinding:WebPBinding",
+        "//submodules/rlottie:RLottieBinding",
+        "//submodules/GZip:GZip",
     ],
     visibility = [
         "//visibility:public",

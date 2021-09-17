@@ -22,7 +22,7 @@ func addMessageMediaResourceIdsToRemove(message: Message, resourceIds: inout [Wr
     }
 }
 
-func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true, manualAddMessageThreadStatsDifference: ((MessageId, Int, Int) -> Void)? = nil) {
+public func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true, manualAddMessageThreadStatsDifference: ((MessageId, Int, Int) -> Void)? = nil) {
     var resourceIds: [WrappedMediaResourceId] = []
     if deleteMedia {
         for id in ids {

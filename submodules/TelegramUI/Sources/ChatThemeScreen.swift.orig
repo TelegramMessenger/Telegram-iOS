@@ -165,7 +165,12 @@ private struct ThemeSettingsThemeItemNodeTransition {
 
 private func ensureThemeVisible(listNode: ListView, emoticon: String?, animated: Bool) -> Bool {
     var resultNode: ThemeSettingsThemeItemIconNode?
+<<<<<<< HEAD
+    var previousNode: ThemeSettingsThemeItemIconNode?
+    let _ = previousNode
+=======
 //    var previousNode: ThemeSettingsThemeItemIconNode?
+>>>>>>> beta
     var nextNode: ThemeSettingsThemeItemIconNode?
     listNode.forEachItemNode { node in
         guard let node = node as? ThemeSettingsThemeItemIconNode else {

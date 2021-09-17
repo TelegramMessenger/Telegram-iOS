@@ -195,7 +195,7 @@ public final class AccountStateManager {
         self.appliedQtsDisposable.dispose()
 
         var postbox: Postbox? = self.postbox
-        postbox?.queue.async {
+        postbox?.queue.after(0.5) {
             postbox = nil
         }
     }

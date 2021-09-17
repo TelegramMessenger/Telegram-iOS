@@ -65,6 +65,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             self.bubbleType = bubbleType
 
             self.contentNode = ASImageNode()
+            self.contentNode.displaysAsynchronously = false
             self.contentNode.isUserInteractionEnabled = false
 
             super.init()
@@ -165,6 +166,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 if needsWallpaperBackground {
                     if self.cleanWallpaperNode == nil {
                         let cleanWallpaperNode = ASImageNode()
+                        cleanWallpaperNode.displaysAsynchronously = false
                         self.cleanWallpaperNode = cleanWallpaperNode
                         cleanWallpaperNode.frame = self.bounds
                         self.insertSubnode(cleanWallpaperNode, at: 0)
