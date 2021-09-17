@@ -34,6 +34,8 @@ swift_library(
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/StickerResources:StickerResources",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",
