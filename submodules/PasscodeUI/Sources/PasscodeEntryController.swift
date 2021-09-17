@@ -199,7 +199,7 @@ public final class PasscodeEntryController: ViewController {
             }
             
             var succeed = check(passcode: passcode, challengeData: strongSelf.challengeData)
-            
+            // MARK: Postufgram Code: {
             if succeed {
                 strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
             } else if strongSelf.hasPublicAccounts {
@@ -211,6 +211,7 @@ public final class PasscodeEntryController: ViewController {
                     }
                 }
             }
+            // MARK: Postufgram Code: }
             
             if succeed {
                 if let completed = strongSelf.completed {
