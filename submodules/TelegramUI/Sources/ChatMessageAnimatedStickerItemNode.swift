@@ -1699,8 +1699,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                             return
                                         }
                                         let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
+                                        var hasSound = false
                                         for (emoji, file) in emojiSounds.sounds {
                                             if emoji.strippedEmoji == textEmoji.strippedEmoji {
+                                                hasSound = true
                                                 let mediaManager = item.context.sharedContext.mediaManager
                                                 let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
                                                 mediaPlayer.togglePlayPause()
@@ -1728,7 +1730,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                 return
                                             }
                                         }
-                                        animationNode?.play()
+                                        if !hasSound {
+                                            if let haptic = haptic, !haptic.active {
+                                                haptic.start(time: 0.0)
+                                            }
+                                            animationNode?.play()
+                                        }
                                     })
                                 }
                             })
