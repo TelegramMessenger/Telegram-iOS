@@ -1581,7 +1581,7 @@ public final class AccountViewTracker {
             if let account = self.account {
                 let view = account.postbox.combinedView(keys: [.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)]).start(next: { next in
                     if let view = next.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)] as? OrderedItemListView {
-                        subscriber.putNext(view.items.map { $0.contents as! FeaturedStickerPackItem })
+                        subscriber.putNext(view.items.map { $0.contents.get(FeaturedStickerPackItem.self)! })
                     } else {
                         subscriber.putNext([])
                     }

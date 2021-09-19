@@ -71,7 +71,8 @@ func _internal_randomGreetingSticker(account: Account) -> Signal<FoundStickerIte
     }
     |> take(1)
     |> map { items -> FoundStickerItem? in
-        if let randomItem = items?.randomElement(), let item = randomItem.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
+        if let randomItem = items?.randomElement(), let item = randomItem.contents.get(RecentMediaItem.self) {
+            let file = item.media
             return FoundStickerItem(file: file, stringRepresentations: [])
         }
         return nil
@@ -90,7 +91,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
         var result: [FoundStickerItem] = []
         if scope.contains(.installed) {
             for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudSavedStickers) {
-                if let item = entry.contents as? SavedStickerItem {
+                if let item = entry.contents.get(SavedStickerItem.self) {
                     for representation in item.stringRepresentations {
                         if representation.hasPrefix(query) {
                             result.append(FoundStickerItem(file: item.file, stringRepresentations: item.stringRepresentations))
@@ -107,7 +108,9 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
             var matchingRecentItemsIds = Set<MediaId>()
             
             for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentStickers) {
-                if let item = entry.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
+                if let item = entry.contents.get(RecentMediaItem.self) {
+                    let file = item.media
+
                     if !currentItems.contains(file.fileId) {
                         for case let .Sticker(displayText, _, _) in file.attributes {
                             if displayText.hasPrefix(query) {

@@ -19,9 +19,6 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(LocalFileGifMediaResource.self, f: { LocalFileGifMediaResource(decoder: $0) })
     declareEncodable(PhotoLibraryMediaResource.self, f: { PhotoLibraryMediaResource(decoder: $0) })
     declareEncodable(ICloudFileResource.self, f: { ICloudFileResource(decoder: $0) })
-    declareEncodable(RecentWebSearchQueryItem.self, f: { RecentWebSearchQueryItem(decoder: $0) })
-    declareEncodable(RecentWallpaperSearchQueryItem.self, f: { RecentWallpaperSearchQueryItem(decoder: $0) })
-    declareEncodable(RecentSettingsSearchQueryItem.self, f: { RecentSettingsSearchQueryItem(decoder: $0) })
     return
 }()
 

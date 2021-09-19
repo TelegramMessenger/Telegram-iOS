@@ -204,8 +204,12 @@ func _internal_managedRecentlyUsedInlineBots(postbox: Postbox, network: Network,
                     
                     let sortedPeersWithRating = peersWithRating.sorted(by: { $0.1 > $1.1 })
                     
-                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, items: sortedPeersWithRating.map { (peerId, rating) in
-                        return OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: RecentPeerItem(rating: rating))
+                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, items: sortedPeersWithRating.compactMap { (peerId, rating) in
+                        if let entry = CodableEntry(RecentPeerItem(rating: rating)) {
+                            return OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: entry)
+                        } else {
+                            return nil
+                        }
                     })
                 }
             } else {
@@ -220,11 +224,13 @@ func _internal_addRecentlyUsedInlineBot(postbox: Postbox, peerId: PeerId) -> Sig
     return postbox.transaction { transaction -> Void in
         var maxRating = 1.0
         for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots) {
-            if let contents = entry.contents as? RecentPeerItem {
+            if let contents = entry.contents.get(RecentPeerItem.self) {
                 maxRating = max(maxRating, contents.rating)
             }
         }
-        transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, item: OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: RecentPeerItem(rating: maxRating)), removeTailIfCountExceeds: 20)
+        if let entry = CodableEntry(RecentPeerItem(rating: maxRating)) {
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentInlineBots, item: OrderedItemListEntry(id: RecentPeerItemId(peerId).rawValue, contents: entry), removeTailIfCountExceeds: 20)
+        }
     }
 }
 
@@ -237,7 +243,7 @@ func _internal_recentlyUsedInlineBots(postbox: Postbox) -> Signal<[(Peer, Double
                 if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudRecentInlineBots)] as? OrderedItemListView {
                     for item in view.items {
                         let peerId = RecentPeerItemId(item.id).peerId
-                        if let peer = transaction.getPeer(peerId), let contents = item.contents as? RecentPeerItem {
+                        if let peer = transaction.getPeer(peerId), let contents = item.contents.get(RecentPeerItem.self) {
                             peers.append((peer, contents.rating))
                         }
                     }

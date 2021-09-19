@@ -18,7 +18,7 @@ public struct WallpapersState: Codable, Equatable {
 
         let wallpapersData = try container.decode([Data].self, forKey: "wallpapers")
         self.wallpapers = wallpapersData.map { data in
-            return TelegramWallpaper(decoder: PostboxDecoder(buffer: MemoryBuffer(data: data)))
+            return (try! AdaptedPostboxDecoder().decode(TelegramWallpaperNativeCodable.self, from: data)).value
         }
     }
 
@@ -26,9 +26,7 @@ public struct WallpapersState: Codable, Equatable {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         let wallpapersData: [Data] = self.wallpapers.map { wallpaper in
-            let innerEncoder = PostboxEncoder()
-            wallpaper.encode(innerEncoder)
-            return innerEncoder.makeData()
+            return try! AdaptedPostboxEncoder().encode(TelegramWallpaperNativeCodable(wallpaper))
         }
 
         try container.encode(wallpapersData, forKey: "wallpapers")

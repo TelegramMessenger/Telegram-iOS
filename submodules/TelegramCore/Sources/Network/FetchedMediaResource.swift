@@ -350,7 +350,8 @@ final class MediaReferenceRevalidationContext {
         return self.genericItem(key: .savedGifs, background: background, request: { next, error in
             let loadRecentGifs: Signal<[TelegramMediaFile], NoError> = postbox.transaction { transaction -> [TelegramMediaFile] in
                 return transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudRecentGifs).compactMap({ item -> TelegramMediaFile? in
-                    if let contents = item.contents as? RecentMediaItem, let file = contents.media as? TelegramMediaFile {
+                    if let contents = item.contents.get(RecentMediaItem.self) {
+                        let file = contents.media
                         return file
                     }
                     return nil

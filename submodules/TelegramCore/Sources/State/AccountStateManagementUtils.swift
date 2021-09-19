@@ -3409,7 +3409,9 @@ func replayFinalState(
             return $0.0 < $1.0
         }).map({ $0.1 })
         for file in stickerFiles {
-            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
+            if let entry = CodableEntry(RecentMediaItem(file)) {
+                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry), removeTailIfCountExceeds: 20)
+            }
         }
     }
     
@@ -3448,7 +3450,9 @@ func replayFinalState(
         }).map({ $0.1 })
         for file in gifFiles {
             if !file.hasLinkedStickers {
-                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
+                if let entry = CodableEntry(RecentMediaItem(file)) {
+                    transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry), removeTailIfCountExceeds: 200)
+                }
             }
         }
     }
@@ -3552,18 +3556,20 @@ func replayFinalState(
     if !updatedThemes.isEmpty {
         let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
         let themes = entries.map { entry -> TelegramTheme in
-            let theme = entry.contents as! TelegramTheme
-            if let updatedTheme = updatedThemes[theme.id] {
+            let theme = entry.contents.get(TelegramThemeNativeCodable.self)!
+            if let updatedTheme = updatedThemes[theme.value.id] {
                 return updatedTheme
             } else {
-                return theme
+                return theme.value
             }
         }
         var updatedEntries: [OrderedItemListEntry] = []
         for theme in themes {
             var intValue = Int32(updatedEntries.count)
             let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-            updatedEntries.append(OrderedItemListEntry(id: id, contents: theme))
+            if let entry = CodableEntry(TelegramThemeNativeCodable(theme)) {
+                updatedEntries.append(OrderedItemListEntry(id: id, contents: entry))
+            }
         }
         transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
         let _ = accountManager.transaction { transaction in

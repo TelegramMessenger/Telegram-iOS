@@ -17,14 +17,13 @@ public final class CachedWallpaper: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        let wallpaperData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: "wallpaper")
-        self.wallpaper = TelegramWallpaper(decoder: PostboxDecoder(buffer: MemoryBuffer(data: wallpaperData.data)))
+        self.wallpaper = (try container.decode(TelegramWallpaperNativeCodable.self, forKey: "wallpaper")).value
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        try container.encode(PostboxEncoder().encodeObjectToRawData(self.wallpaper), forKey: "wallpaper")
+        try container.encode(TelegramWallpaperNativeCodable(self.wallpaper), forKey: "wallpaper")
     }
 }
 

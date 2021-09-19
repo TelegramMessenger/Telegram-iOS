@@ -2,6 +2,10 @@ import Foundation
 
 import SwiftSignalKit
 
+public protocol PostboxTypes {
+    associatedtype Media
+}
+
 public protocol PeerChatState: PostboxCoding {
     func equals(_ other: PeerChatState) -> Bool
 }
@@ -649,7 +653,7 @@ public final class Transaction {
         return self.postbox?.getOrderedItemListItem(collectionId: collectionId, itemId: itemId)
     }
     
-    public func updateOrderedItemListItem(collectionId: Int32, itemId: MemoryBuffer, item: OrderedItemListEntryContents) {
+    public func updateOrderedItemListItem(collectionId: Int32, itemId: MemoryBuffer, item: CodableEntry) {
         assert(!self.disposed)
         self.postbox?.updateOrderedItemListItem(collectionId: collectionId, itemId: itemId, item: item)
     }
@@ -3400,7 +3404,7 @@ public final class Postbox {
         return self.orderedItemListTable.getItem(collectionId: collectionId, itemId: itemId)
     }
     
-    fileprivate func updateOrderedItemListItem(collectionId: Int32, itemId: MemoryBuffer, item: OrderedItemListEntryContents) {
+    fileprivate func updateOrderedItemListItem(collectionId: Int32, itemId: MemoryBuffer, item: CodableEntry) {
         self.orderedItemListTable.updateItem(collectionId: collectionId, itemId: itemId, item: item, operations: &self.currentOrderedItemListOperations)
     }
     

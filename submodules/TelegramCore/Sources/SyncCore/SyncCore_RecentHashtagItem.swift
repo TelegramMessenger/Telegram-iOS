@@ -1,12 +1,12 @@
 import Postbox
 
-public final class RecentHashtagItem: OrderedItemListEntryContents {
+public final class RecentHashtagItem: Codable {
     public init() {
     }
     
-    public init(decoder: PostboxDecoder) {
+    public init(from decoder: Decoder) throws {
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
     }
 }

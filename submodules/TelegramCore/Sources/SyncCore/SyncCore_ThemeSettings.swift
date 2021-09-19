@@ -10,19 +10,14 @@ public final class ThemeSettings: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        if let currentThemeData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "t") {
-            self.currentTheme = TelegramTheme(decoder: PostboxDecoder(buffer: MemoryBuffer(data: currentThemeData.data)))
-        } else {
-            self.currentTheme = nil
-        }
+        self.currentTheme = (try container.decodeIfPresent(TelegramThemeNativeCodable.self, forKey: "t"))?.value
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         if let currentTheme = self.currentTheme {
-            let currentThemeData = PostboxEncoder().encodeObjectToRawData(currentTheme)
-            try container.encode(currentThemeData, forKey: "t")
+            try container.encode(TelegramThemeNativeCodable(currentTheme), forKey: "t")
         } else {
             try container.encodeNil(forKey: "t")
         }

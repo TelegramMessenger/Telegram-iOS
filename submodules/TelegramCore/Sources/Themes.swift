@@ -49,7 +49,9 @@ public func telegramThemes(postbox: Postbox, network: Network, accountManager: A
                 for item in items {
                     var intValue = Int32(entries.count)
                     let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                    entries.append(OrderedItemListEntry(id: id, contents: item))
+                    if let entry = CodableEntry(TelegramThemeNativeCodable(item)) {
+                        entries.append(OrderedItemListEntry(id: id, contents: entry))
+                    }
                 }
                 transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: entries)
                 if let entry = CodableEntry(CachedThemesConfiguration(hash: hash)) {
@@ -61,7 +63,7 @@ public func telegramThemes(postbox: Postbox, network: Network, accountManager: A
             postbox.combinedView(keys: [PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudThemes)])
             |> map { view -> [TelegramTheme] in
                 if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudThemes)] as? OrderedItemListView {
-                    return view.items.compactMap { $0.contents as? TelegramTheme }
+                    return view.items.compactMap { $0.contents.get(TelegramThemeNativeCodable.self)?.value }
                 } else {
                     return []
                 }
@@ -75,7 +77,7 @@ public func telegramThemes(postbox: Postbox, network: Network, accountManager: A
         return postbox.transaction { transaction -> ([TelegramTheme], Int64?) in
             let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedThemesConfiguration, key: ValueBoxKey(length: 0)))?.get(CachedThemesConfiguration.self)
             let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
-            return (items.map { $0.contents as! TelegramTheme }, configuration?.hash)
+            return (items.compactMap { $0.contents.get(TelegramThemeNativeCodable.self)?.value }, configuration?.hash)
         }
         |> mapToSignal { current, hash -> Signal<[TelegramTheme], NoError> in
             return .single(current)
@@ -126,7 +128,7 @@ private func checkThemeUpdated(network: Network, theme: TelegramTheme) -> Signal
 private func saveUnsaveTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme, unsave: Bool) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
-        var items = entries.map { $0.contents as! TelegramTheme }
+        var items = entries.compactMap { $0.contents.get(TelegramThemeNativeCodable.self)?.value }
         items = items.filter { $0.id != theme.id }
         if !unsave {
             items.insert(theme, at: 0)
@@ -135,7 +137,9 @@ private func saveUnsaveTheme(account: Account, accountManager: AccountManager<Te
         for item in items {
             var intValue = Int32(updatedEntries.count)
             let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-            updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
+            if let entry = CodableEntry(TelegramThemeNativeCodable(item)) {
+                updatedEntries.append(OrderedItemListEntry(id: id, contents: entry))
+            }
         }
         transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
         
@@ -306,13 +310,15 @@ public func createTheme(account: Account, title: String, resource: MediaResource
                             let theme = TelegramTheme(apiTheme: apiTheme)
                             return account.postbox.transaction { transaction -> CreateThemeResult in
                                 let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
-                                var items = entries.map { $0.contents as! TelegramTheme }
+                                var items = entries.compactMap { $0.contents.get(TelegramThemeNativeCodable.self)?.value }
                                 items.insert(theme, at: 0)
                                 var updatedEntries: [OrderedItemListEntry] = []
                                 for item in items {
                                     var intValue = Int32(updatedEntries.count)
                                     let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                                    updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
+                                    if let entry = CodableEntry(TelegramThemeNativeCodable(item)) {
+                                        updatedEntries.append(OrderedItemListEntry(id: id, contents: entry))
+                                    }
                                 }
                                 transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
                                 return .result(theme)
@@ -343,13 +349,15 @@ public func createTheme(account: Account, title: String, resource: MediaResource
 
                 return account.postbox.transaction { transaction -> CreateThemeResult in
                     let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
-                    var items = entries.map { $0.contents as! TelegramTheme }
+                    var items = entries.compactMap { $0.contents.get(TelegramThemeNativeCodable.self)?.value }
                     items.insert(theme, at: 0)
                     var updatedEntries: [OrderedItemListEntry] = []
                     for item in items {
                         var intValue = Int32(updatedEntries.count)
                         let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                        updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
+                        if let entry = CodableEntry(TelegramThemeNativeCodable(item)) {
+                            updatedEntries.append(OrderedItemListEntry(id: id, contents: entry))
+                        }
                     }
                     transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
                     return .result(theme)
@@ -431,7 +439,7 @@ public func updateTheme(account: Account, accountManager: AccountManager<Telegra
             return account.postbox.transaction { transaction -> CreateThemeResult in
                 let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
                 let items = entries.map { entry -> TelegramTheme in
-                    let theme = entry.contents as! TelegramTheme
+                    let theme = entry.contents.get(TelegramThemeNativeCodable.self)!.value
                     if theme.id == updatedTheme.id {
                         return updatedTheme
                     } else {
@@ -442,7 +450,9 @@ public func updateTheme(account: Account, accountManager: AccountManager<Telegra
                 for item in items {
                     var intValue = Int32(updatedEntries.count)
                     let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                    updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
+                    if let entry = CodableEntry(TelegramThemeNativeCodable(item)) {
+                        updatedEntries.append(OrderedItemListEntry(id: id, contents: entry))
+                    }
                 }
                 transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
                 return .result(updatedTheme)
@@ -501,7 +511,7 @@ func managedThemesUpdates(accountManager: AccountManager<TelegramAccountManagerT
                         let _ = postbox.transaction { transaction in
                             let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
                             let items = entries.map { entry -> TelegramTheme in
-                                let theme = entry.contents as! TelegramTheme
+                                let theme = entry.contents.get(TelegramThemeNativeCodable.self)!.value
                                 if theme.id == updatedTheme.id {
                                     return updatedTheme
                                 } else {
@@ -512,7 +522,9 @@ func managedThemesUpdates(accountManager: AccountManager<TelegramAccountManagerT
                             for item in items {
                                 var intValue = Int32(updatedEntries.count)
                                 let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                                updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
+                                if let entry = CodableEntry(TelegramThemeNativeCodable(item)) {
+                                    updatedEntries.append(OrderedItemListEntry(id: id, contents: entry))
+                                }
                             }
                             transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
                         }.start()
@@ -559,7 +571,7 @@ public func actualizedTheme(account: Account, accountManager: AccountManager<Tel
             return account.postbox.combinedView(keys: [PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudThemes)])
             |> map { view -> [TelegramTheme] in
                 if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudThemes)] as? OrderedItemListView {
-                    return view.items.compactMap { $0.contents as? TelegramTheme }
+                    return view.items.compactMap { $0.contents.get(TelegramThemeNativeCodable.self)?.value }
                 } else {
                     return []
                 }

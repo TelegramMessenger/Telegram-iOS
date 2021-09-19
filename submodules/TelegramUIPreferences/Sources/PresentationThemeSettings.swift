@@ -67,14 +67,14 @@ public struct PresentationLocalTheme: PostboxCoding, Equatable {
     public init(decoder: PostboxDecoder) {
         self.title = decoder.decodeStringForKey("title", orElse: "")
         self.resource = decoder.decodeObjectForKey("resource", decoder: { LocalFileMediaResource(decoder: $0) }) as! LocalFileMediaResource
-        self.resolvedWallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
+        self.resolvedWallpaper = decoder.decode(TelegramWallpaperNativeCodable.self, forKey: "wallpaper")?.value
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.title, forKey: "title")
         encoder.encodeObject(self.resource, forKey: "resource")
         if let resolvedWallpaper = self.resolvedWallpaper {
-            encoder.encodeObject(resolvedWallpaper, forKey: "wallpaper")
+            encoder.encode(TelegramWallpaperNativeCodable(resolvedWallpaper), forKey: "wallpaper")
         } else {
             encoder.encodeNil(forKey: "wallpaper")
         }
@@ -106,15 +106,15 @@ public struct PresentationCloudTheme: PostboxCoding, Equatable {
     }
     
     public init(decoder: PostboxDecoder) {
-        self.theme = decoder.decodeObjectForKey("theme", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme
-        self.resolvedWallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
+        self.theme = decoder.decode(TelegramThemeNativeCodable.self, forKey: "theme")!.value
+        self.resolvedWallpaper = decoder.decode(TelegramWallpaperNativeCodable.self, forKey: "wallpaper")?.value
         self.creatorAccountId = decoder.decodeOptionalInt64ForKey("account").flatMap { AccountRecordId(rawValue: $0) }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.theme, forKey: "theme")
+        encoder.encode(TelegramThemeNativeCodable(self.theme), forKey: "theme")
         if let resolvedWallpaper = self.resolvedWallpaper {
-            encoder.encodeObject(resolvedWallpaper, forKey: "wallpaper")
+            encoder.encode(TelegramWallpaperNativeCodable(resolvedWallpaper), forKey: "wallpaper")
         } else {
             encoder.encodeNil(forKey: "wallpaper")
         }
@@ -480,7 +480,7 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
             }
         }
 
-        self.wallpaper = decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
+        self.wallpaper = decoder.decode(TelegramWallpaperNativeCodable.self, forKey: "w")?.value
         self.themeIndex = decoder.decodeOptionalInt64ForKey("t")
     }
     
@@ -494,7 +494,7 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         }
         encoder.encodeInt32Array(self.bubbleColors.map(Int32.init(bitPattern:)), forKey: "bubbleColors")
         if let wallpaper = self.wallpaper {
-            encoder.encodeObject(wallpaper, forKey: "w")
+            encoder.encode(TelegramWallpaperNativeCodable(wallpaper), forKey: "w")
         } else {
             encoder.encodeNil(forKey: "w")
         }
@@ -649,11 +649,10 @@ public struct PresentationThemeSettings: Codable {
             self.theme = .builtin(.dayClassic)
         }
 
-        let themeSpecificChatWallpapersDict = try container.decode([DictionaryKey: AdaptedPostboxDecoder.RawObjectData].self, forKey: "themeSpecificChatWallpapers")
+        let themeSpecificChatWallpapersDict = try container.decode([DictionaryKey: TelegramWallpaperNativeCodable].self, forKey: "themeSpecificChatWallpapers")
         var mappedThemeSpecificChatWallpapers: [Int64: TelegramWallpaper] = [:]
         for (key, value) in themeSpecificChatWallpapersDict {
-            let innerDecoder = PostboxDecoder(buffer: MemoryBuffer(data: value.data))
-            mappedThemeSpecificChatWallpapers[key.key] = TelegramWallpaper(decoder: innerDecoder)
+            mappedThemeSpecificChatWallpapers[key.key] = value.value
         }
         self.themeSpecificChatWallpapers = mappedThemeSpecificChatWallpapers
 
@@ -689,9 +688,9 @@ public struct PresentationThemeSettings: Codable {
         }
         try container.encode(mappedThemeSpecificAccentColors, forKey: "themeSpecificAccentColors")
 
-        var mappedThemeSpecificChatWallpapers: [DictionaryKey: AdaptedPostboxEncoder.RawObjectData] = [:]
+        var mappedThemeSpecificChatWallpapers: [DictionaryKey: TelegramWallpaperNativeCodable] = [:]
         for (key, value) in self.themeSpecificChatWallpapers {
-            mappedThemeSpecificChatWallpapers[DictionaryKey(key)] = PostboxEncoder().encodeObjectToRawData(value)
+            mappedThemeSpecificChatWallpapers[DictionaryKey(key)] = TelegramWallpaperNativeCodable(value)
         }
         try container.encode(mappedThemeSpecificChatWallpapers, forKey: "themeSpecificChatWallpapers")
 

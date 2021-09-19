@@ -43,7 +43,9 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
                 for item in items {
                     var intValue = Int32(entries.count)
                     let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                    entries.append(OrderedItemListEntry(id: id, contents: item))
+                    if let entry = CodableEntry(TelegramWallpaperNativeCodable(item)) {
+                        entries.append(OrderedItemListEntry(id: id, contents: entry))
+                    }
                 }
                 transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers, items: entries)
                 if let entry = CodableEntry(CachedWallpapersConfiguration(hash: hash)) {
@@ -63,7 +65,7 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
             if items.count == 0 {
                 return ([.builtin(WallpaperSettings())], 0)
             } else {
-                return (items.map { $0.contents as! TelegramWallpaper }, configuration?.hash)
+                return (items.map { $0.contents.get(TelegramWallpaperNativeCodable.self)!.value }, configuration?.hash)
             }
         }
         |> mapToSignal { current, hash -> Signal<[TelegramWallpaper], NoError> in

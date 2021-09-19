@@ -176,7 +176,7 @@ func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: Ordere
     var savedStickerIds = Set<Int64>()
     if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
         for i in 0 ..< savedStickers.items.count {
-            if let item = savedStickers.items[i].contents as? SavedStickerItem {
+            if let item = savedStickers.items[i].contents.get(SavedStickerItem.self) {
                 savedStickerIds.insert(item.file.fileId.id)
             }
         }
@@ -184,7 +184,7 @@ func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: Ordere
     if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
         var found = false
         for item in recentStickers.items {
-            if let item = item.contents as? RecentMediaItem, let _ = item.media as? TelegramMediaFile, let mediaId = item.media.id {
+            if let item = item.contents.get(RecentMediaItem.self), let mediaId = item.media.id {
                 if !savedStickerIds.contains(mediaId.id) {
                     found = true
                     break
@@ -273,7 +273,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
             let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FavoriteStickers.uppercased(), shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
             for i in 0 ..< savedStickers.items.count {
-                if let item = savedStickers.items[i].contents as? SavedStickerItem {
+                if let item = savedStickers.items[i].contents.get(SavedStickerItem.self) {
                     savedStickerIds.insert(item.file.fileId.id)
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
                     let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
@@ -294,7 +294,9 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
                 if addedCount >= 20 {
                     break
                 }
-                if let item = recentStickers.items[i].contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile, let mediaId = item.media.id {
+                if let item = recentStickers.items[i].contents.get(RecentMediaItem.self), let mediaId = item.media.id {
+                    let file = item.media
+
                     if !savedStickerIds.contains(mediaId.id) {
                         let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
                         let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
