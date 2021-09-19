@@ -815,7 +815,7 @@ public final class ChatListNode: ListView {
         if Namespaces.PeerGroup.archive == groupId {
             displayArchiveIntro = context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.archiveIntroDismissedKey())
             |> map { entry -> Bool in
-                if let value = entry.value as? ApplicationSpecificVariantNotice {
+                if let value = entry.value?.get(ApplicationSpecificVariantNotice.self) {
                     return !value.value
                 } else {
                     return true

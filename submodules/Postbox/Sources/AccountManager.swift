@@ -20,8 +20,8 @@ public struct AccountManagerModifier<Types: AccountManagerTypes> {
     public let setAccessChallengeData: (PostboxAccessChallengeData) -> Void
     public let getVersion: () -> Int32?
     public let setVersion: (Int32) -> Void
-    public let getNotice: (NoticeEntryKey) -> NoticeEntry?
-    public let setNotice: (NoticeEntryKey, NoticeEntry?) -> Void
+    public let getNotice: (NoticeEntryKey) -> CodableEntry?
+    public let setNotice: (NoticeEntryKey, CodableEntry?) -> Void
     public let clearNotices: () -> Void
 }
 

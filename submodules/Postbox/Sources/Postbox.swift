@@ -712,14 +712,9 @@ public final class Transaction {
         return self.postbox?.storedMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp)
     }
     
-    public func putItemCacheEntry(id: ItemCacheEntryId, entry: PostboxCoding, collectionSpec: ItemCacheCollectionSpec) {
+    public func putItemCacheEntry(id: ItemCacheEntryId, entry: CodableEntry, collectionSpec: ItemCacheCollectionSpec) {
         assert(!self.disposed)
         self.postbox?.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
-    }
-
-    public func putItemCacheEntryData(id: ItemCacheEntryId, entry: Data, collectionSpec: ItemCacheCollectionSpec) {
-        assert(!self.disposed)
-        self.postbox?.putItemCacheEntryData(id: id, entry: entry, collectionSpec: collectionSpec)
     }
     
     public func removeItemCacheEntry(id: ItemCacheEntryId) {
@@ -727,14 +722,9 @@ public final class Transaction {
         self.postbox?.removeItemCacheEntry(id: id)
     }
     
-    public func retrieveItemCacheEntry(id: ItemCacheEntryId) -> PostboxCoding? {
+    public func retrieveItemCacheEntry(id: ItemCacheEntryId) -> CodableEntry? {
         assert(!self.disposed)
         return self.postbox?.retrieveItemCacheEntry(id: id)
-    }
-
-    public func retrieveItemCacheEntryData(id: ItemCacheEntryId) -> Data? {
-        assert(!self.disposed)
-        return self.postbox?.retrieveItemCacheEntryData(id: id)
     }
     
     public func clearItemCacheCollection(collectionId: ItemCacheCollectionId) {
@@ -942,7 +932,7 @@ public final class Transaction {
         }
     }
     
-    public func getAllNoticeEntries() -> [ValueBoxKey: NoticeEntry] {
+    public func getAllNoticeEntries() -> [ValueBoxKey: CodableEntry] {
         assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.noticeTable.getAll()
@@ -951,7 +941,7 @@ public final class Transaction {
         }
     }
     
-    public func getNoticeEntry(key: NoticeEntryKey) -> PostboxCoding? {
+    public func getNoticeEntry(key: NoticeEntryKey) -> CodableEntry? {
         assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.noticeTable.get(key: key)
@@ -960,7 +950,7 @@ public final class Transaction {
         }
     }
     
-    public func setNoticeEntry(key: NoticeEntryKey, value: NoticeEntry?) {
+    public func setNoticeEntry(key: NoticeEntryKey, value: CodableEntry?) {
         assert(!self.disposed)
         self.postbox?.setNoticeEntry(key: key, value: value)
     }
@@ -2347,22 +2337,13 @@ public final class Postbox {
         }
     }
     
-    fileprivate func putItemCacheEntry(id: ItemCacheEntryId, entry: PostboxCoding, collectionSpec: ItemCacheCollectionSpec) {
+    fileprivate func putItemCacheEntry(id: ItemCacheEntryId, entry: CodableEntry, collectionSpec: ItemCacheCollectionSpec) {
         self.itemCacheTable.put(id: id, entry: entry, metaTable: self.itemCacheMetaTable)
         self.currentUpdatedCacheEntryKeys.insert(id)
     }
-
-    fileprivate func putItemCacheEntryData(id: ItemCacheEntryId, entry: Data, collectionSpec: ItemCacheCollectionSpec) {
-        self.itemCacheTable.putData(id: id, entry: entry, metaTable: self.itemCacheMetaTable)
-        self.currentUpdatedCacheEntryKeys.insert(id)
-    }
     
-    func retrieveItemCacheEntry(id: ItemCacheEntryId) -> PostboxCoding? {
+    func retrieveItemCacheEntry(id: ItemCacheEntryId) -> CodableEntry? {
         return self.itemCacheTable.retrieve(id: id, metaTable: self.itemCacheMetaTable)
-    }
-
-    func retrieveItemCacheEntryData(id: ItemCacheEntryId) -> Data? {
-        return self.itemCacheTable.retrieveData(id: id, metaTable: self.itemCacheMetaTable)
     }
     
     func clearItemCacheCollection(collectionId: ItemCacheCollectionId) {
@@ -2400,11 +2381,11 @@ public final class Postbox {
         }
     }
     
-    fileprivate func setNoticeEntry(key: NoticeEntryKey, value: NoticeEntry?) {
+    fileprivate func setNoticeEntry(key: NoticeEntryKey, value: CodableEntry?) {
         let current = self.noticeTable.get(key: key)
         let updated: Bool
         if let current = current, let value = value {
-            updated = !current.isEqual(to: value)
+            updated = current.data != value.data
         } else if (current != nil) != (value != nil) {
             updated = true
         } else {

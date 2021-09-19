@@ -35,7 +35,7 @@ func chatHistoryEntriesForView(
     if case let .peer(peerId) = location, peerId.namespace == Namespaces.Peer.CloudChannel {
         for additionalEntry in view.additionalData {
             if case let .cacheEntry(id, data) = additionalEntry {
-                if id == cachedChannelAdminRanksEntryId(peerId: peerId), let data = data as? CachedChannelAdminRanks {
+                if id == cachedChannelAdminRanksEntryId(peerId: peerId), let data = data?.get(CachedChannelAdminRanks.self) {
                     adminRanks = data.ranks
                 }
             } else if case let .peer(_, peer) = additionalEntry, let channel = peer as? TelegramChannel, !channel.flags.contains(.isGigagroup) {

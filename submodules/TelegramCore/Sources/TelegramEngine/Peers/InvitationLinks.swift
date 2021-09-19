@@ -296,7 +296,7 @@ public struct PeerExportedInvitationsState: Equatable {
     }
 }
 
-final class CachedPeerExportedInvitations: PostboxCoding {
+final class CachedPeerExportedInvitations: Codable {
     let invitations: [ExportedInvitation]
     let canLoadMore: Bool
     let count: Int32
@@ -314,16 +314,20 @@ final class CachedPeerExportedInvitations: PostboxCoding {
         self.count = count
     }
     
-    init(decoder: PostboxDecoder) {
-        self.invitations = decoder.decodeObjectArrayForKey("invitations")
-        self.canLoadMore = decoder.decodeBoolForKey("canLoadMore", orElse: false)
-        self.count = decoder.decodeInt32ForKey("count", orElse: 0)
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.invitations = try container.decode([ExportedInvitation].self, forKey: "invitations")
+        self.canLoadMore = try container.decode(Bool.self, forKey: "canLoadMore")
+        self.count = try container.decode(Int32.self, forKey: "count")
     }
     
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObjectArray(self.invitations, forKey: "invitations")
-        encoder.encodeBool(self.canLoadMore, forKey: "canLoadMore")
-        encoder.encodeInt32(self.count, forKey: "count")
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.invitations, forKey: "invitations")
+        try container.encode(self.canLoadMore, forKey: "canLoadMore")
+        try container.encode(self.count, forKey: "count")
     }
 }
 
@@ -361,7 +365,7 @@ private final class PeerExportedInvitationsContextImpl {
         if adminId == nil {
             self.isLoadingMore = true
             self.disposable.set((account.postbox.transaction { transaction -> CachedPeerExportedInvitations? in
-                return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked))) as? CachedPeerExportedInvitations
+                return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)))?.get(CachedPeerExportedInvitations.self)
             }
             |> deliverOn(self.queue)).start(next: { [weak self] cachedResult in
                 guard let strongSelf = self else {
@@ -448,7 +452,9 @@ private final class PeerExportedInvitationsContextImpl {
                             })
                             let invitations: [ExportedInvitation] = invites.compactMap { ExportedInvitation(apiExportedInvite: $0) }
                             if populateCache {
-                                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: CachedPeerExportedInvitations(invitations: invitations, canLoadMore: count >= 50, count: count), collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+                                if let entry = CodableEntry(CachedPeerExportedInvitations(invitations: invitations, canLoadMore: count >= 50, count: count)) {
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: entry, collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+                                }
                             }
                             return (invitations, count)
                         }
@@ -536,7 +542,9 @@ private final class PeerExportedInvitationsContextImpl {
         let canLoadMore = self.canLoadMore
         let count = self.count
         self.updateDisposable.set(self.account.postbox.transaction({ transaction in
-            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: CachedPeerExportedInvitations(invitations: invitations, canLoadMore: canLoadMore, count: count), collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+            if let entry = CodableEntry(CachedPeerExportedInvitations(invitations: invitations, canLoadMore: canLoadMore, count: count)) {
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: entry, collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+            }
         }).start())
     }
     
@@ -621,7 +629,7 @@ public struct PeerInvitationImportersState: Equatable {
     public var count: Int32
 }
 
-final class CachedPeerInvitationImporters: PostboxCoding {
+final class CachedPeerInvitationImporters: Codable {
     let peerIds: [PeerId]
     let dates: [PeerId: Int32]
     let count: Int32
@@ -647,11 +655,13 @@ final class CachedPeerInvitationImporters: PostboxCoding {
         self.count = count
     }
     
-    init(decoder: PostboxDecoder) {
-        self.peerIds = decoder.decodeInt64ArrayForKey("peerIds").map(PeerId.init)
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.peerIds = (try container.decode([Int64].self, forKey: "peerIds")).map(PeerId.init)
         
         var dates: [PeerId: Int32] = [:]
-        let datesArray = decoder.decodeInt64ArrayForKey("dates")
+        let datesArray = try container.decode([Int64].self, forKey: "dates")
         for index in stride(from: 0, to: datesArray.endIndex, by: 2) {
             let userId = datesArray[index]
             let date = datesArray[index + 1]
@@ -660,20 +670,22 @@ final class CachedPeerInvitationImporters: PostboxCoding {
         }
         self.dates = dates
         
-        self.count = decoder.decodeInt32ForKey("count", orElse: 0)
+        self.count = try container.decode(Int32.self, forKey: "count")
     }
     
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt64Array(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
         
         var dates: [Int64] = []
         for (peerId, date) in self.dates {
             dates.append(peerId.id._internalGetInt64Value())
             dates.append(Int64(date))
         }
-        encoder.encodeInt64Array(dates, forKey: "dates")
+        try container.encode(dates, forKey: "dates")
         
-        encoder.encodeInt32(self.count, forKey: "count")
+        try container.encode(self.count, forKey: "count")
     }
 }
 
@@ -704,7 +716,7 @@ private final class PeerInvitationImportersContextImpl {
         
         self.isLoadingMore = true
         self.disposable.set((account.postbox.transaction { transaction -> (peers: [PeerInvitationImportersState.Importer], canLoadMore: Bool)? in
-            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: invite.link))) as? CachedPeerInvitationImporters
+            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: invite.link)))?.get(CachedPeerInvitationImporters.self)
             if let cachedResult = cachedResult, Int(cachedResult.count) == count {
                 var result: [PeerInvitationImportersState.Importer] = []
                 for peerId in cachedResult.peerIds {
@@ -796,7 +808,9 @@ private final class PeerInvitationImportersContextImpl {
                                 }
                             }
                             if populateCache {
-                                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link)), entry: CachedPeerInvitationImporters(importers: resultImporters, count: count), collectionSpec: cachedPeerInvitationImportersCollectionSpec)
+                                if let entry = CodableEntry(CachedPeerInvitationImporters(importers: resultImporters, count: count)) {
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link)), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
+                                }
                             }
                             return (resultImporters, count)
                         }

@@ -26,11 +26,7 @@ public struct NoticeEntryKey: Hashable {
 }
 
 private struct CachedEntry {
-    let entry: NoticeEntry?
-}
-
-public protocol NoticeEntry: PostboxCoding {
-    func isEqual(to: NoticeEntry) -> Bool
+    let entry: CodableEntry?
 }
 
 final class NoticeTable: Table {
@@ -41,22 +37,22 @@ final class NoticeTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
-    func getAll() -> [ValueBoxKey: NoticeEntry] {
-        var result: [ValueBoxKey: NoticeEntry] = [:]
+    func getAll() -> [ValueBoxKey: CodableEntry] {
+        var result: [ValueBoxKey: CodableEntry] = [:]
         self.valueBox.scan(self.table, values: { key, value in
-            if let object = PostboxDecoder(buffer: value).decodeRootObject() as? NoticeEntry {
-                result[key] = object
-            }
+            let object = CodableEntry(data: value.makeData())
+            result[key] = object
             return true
         })
         return result
     }
     
-    func get(key: NoticeEntryKey) -> NoticeEntry? {
+    func get(key: NoticeEntryKey) -> CodableEntry? {
         if let cached = self.cachedEntries[key] {
             return cached.entry
         } else {
-            if let value = self.valueBox.get(self.table, key: key.combinedKey), let object = PostboxDecoder(buffer: value).decodeRootObject() as? NoticeEntry {
+            if let value = self.valueBox.get(self.table, key: key.combinedKey) {
+                let object = CodableEntry(data: value.makeData())
                 self.cachedEntries[key] = CachedEntry(entry: object)
                 return object
             } else {
@@ -66,7 +62,7 @@ final class NoticeTable: Table {
         }
     }
     
-    func set(key: NoticeEntryKey, value: NoticeEntry?) {
+    func set(key: NoticeEntryKey, value: CodableEntry?) {
         self.cachedEntries[key] = CachedEntry(entry: value)
         updatedEntryKeys.insert(key)
     }
@@ -92,11 +88,7 @@ final class NoticeTable: Table {
         if !self.updatedEntryKeys.isEmpty {
             for key in self.updatedEntryKeys {
                 if let value = self.cachedEntries[key]?.entry {
-                    let encoder = PostboxEncoder()
-                    encoder.encodeRootObject(value)
-                    withExtendedLifetime(encoder, {
-                        self.valueBox.set(self.table, key: key.combinedKey, value: encoder.readBufferNoCopy())
-                    })
+                    self.valueBox.set(self.table, key: key.combinedKey, value: ReadBuffer(data: value.data))
                 } else {
                     self.valueBox.remove(self.table, key: key.combinedKey, secure: false)
                 }

@@ -46,7 +46,9 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
                     entries.append(OrderedItemListEntry(id: id, contents: item))
                 }
                 transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers, items: entries)
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0)), entry: CachedWallpapersConfiguration(hash: hash), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                if let entry = CodableEntry(CachedWallpapersConfiguration(hash: hash)) {
+                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0)), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                }
                 return items
             }
         }
@@ -56,7 +58,7 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
         return fetch(nil, nil)
     } else {
         return postbox.transaction { transaction -> ([TelegramWallpaper], Int64?) in
-            let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0))) as? CachedWallpapersConfiguration
+            let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0)))?.get(CachedWallpapersConfiguration.self)
             let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers)
             if items.count == 0 {
                 return ([.builtin(WallpaperSettings())], 0)

@@ -1,6 +1,6 @@
 import Postbox
 
-public final class CachedRecentPeers: PostboxCoding {
+public final class CachedRecentPeers: Codable {
     public let enabled: Bool
     public let ids: [PeerId]
     
@@ -9,14 +9,18 @@ public final class CachedRecentPeers: PostboxCoding {
         self.ids = ids
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.enabled = decoder.decodeInt32ForKey("enabled", orElse: 0) != 0
-        self.ids = decoder.decodeInt64ArrayForKey("ids").map(PeerId.init)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.enabled = try container.decode(Int32.self, forKey: "enabled") != 0
+        self.ids = (try container.decode([Int64].self, forKey: "ids")).map(PeerId.init)
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.enabled ? 1 : 0, forKey: "enabled")
-        encoder.encodeInt64Array(self.ids.map({ $0.toInt64() }), forKey: "ids")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.enabled ? 1 : 0) as Int32, forKey: "enabled")
+        try container.encode(self.ids.map({ $0.toInt64() }), forKey: "ids")
     }
     
     public static func cacheKey() -> ValueBoxKey {

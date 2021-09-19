@@ -52,7 +52,9 @@ public func telegramThemes(postbox: Postbox, network: Network, accountManager: A
                     entries.append(OrderedItemListEntry(id: id, contents: item))
                 }
                 transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: entries)
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedThemesConfiguration, key: ValueBoxKey(length: 0)), entry: CachedThemesConfiguration(hash: hash), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                if let entry = CodableEntry(CachedThemesConfiguration(hash: hash)) {
+                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedThemesConfiguration, key: ValueBoxKey(length: 0)), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                }
                 return items
             }
         } |> then(
@@ -71,7 +73,7 @@ public func telegramThemes(postbox: Postbox, network: Network, accountManager: A
         return fetch(nil, nil)
     } else {
         return postbox.transaction { transaction -> ([TelegramTheme], Int64?) in
-            let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedThemesConfiguration, key: ValueBoxKey(length: 0))) as? CachedThemesConfiguration
+            let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedThemesConfiguration, key: ValueBoxKey(length: 0)))?.get(CachedThemesConfiguration.self)
             let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
             return (items.map { $0.contents as! TelegramTheme }, configuration?.hash)
         }

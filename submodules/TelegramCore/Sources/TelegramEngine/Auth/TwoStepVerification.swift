@@ -344,7 +344,7 @@ func _internal_cachedTwoStepPasswordToken(postbox: Postbox) -> Signal<TemporaryT
     return postbox.transaction { transaction -> TemporaryTwoStepPasswordToken? in
         let key = ValueBoxKey(length: 1)
         key.setUInt8(0, value: 0)
-        return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedTwoStepToken, key: key)) as? TemporaryTwoStepPasswordToken
+        return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedTwoStepToken, key: key))?.get(TemporaryTwoStepPasswordToken.self)
     }
 }
 
@@ -352,7 +352,7 @@ func _internal_cacheTwoStepPasswordToken(postbox: Postbox, token: TemporaryTwoSt
     return postbox.transaction { transaction -> Void in
         let key = ValueBoxKey(length: 1)
         key.setUInt8(0, value: 0)
-        if let token = token {
+        if let token = token.flatMap(CodableEntry.init) {
             transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedTwoStepToken, key: key), entry: token, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
         } else {
             transaction.removeItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedTwoStepToken, key: key))

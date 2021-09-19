@@ -43,7 +43,7 @@ func _internal_availableLocalizations(postbox: Postbox, network: Network, allowC
     let cached: Signal<[LocalizationInfo], NoError>
     if allowCached {
         cached = postbox.transaction { transaction -> Signal<[LocalizationInfo], NoError> in
-            if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0))) as? CachedLocalizationInfos {
+            if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)))?.get(CachedLocalizationInfos.self) {
                 return .single(entry.list)
             }
             return .complete()
@@ -56,7 +56,9 @@ func _internal_availableLocalizations(postbox: Postbox, network: Network, allowC
     |> mapToSignal { languages -> Signal<[LocalizationInfo], NoError> in
         let infos: [LocalizationInfo] = languages.map(LocalizationInfo.init(apiLanguage:))
         return postbox.transaction { transaction -> [LocalizationInfo] in
-            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: CachedLocalizationInfos(list: infos), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+            if let entry = CodableEntry(CachedLocalizationInfos(list: infos)) {
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAvailableLocalizations, key: ValueBoxKey(length: 0)), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+            }
             return infos
         }
     }

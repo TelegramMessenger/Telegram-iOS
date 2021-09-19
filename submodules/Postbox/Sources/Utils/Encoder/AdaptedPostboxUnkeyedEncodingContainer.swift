@@ -120,6 +120,18 @@ extension _AdaptedPostboxEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
             try self.encode(value as! String)
         } else if value is Data {
             try self.encode(value as! Data)
+        } else if let value = value as? AdaptedPostboxEncoder.RawObjectData {
+            let buffer = WriteBuffer()
+
+            var typeHash: Int32 = value.typeHash
+            buffer.write(&typeHash, offset: 0, length: 4)
+
+            var length: Int32 = Int32(value.data.count)
+            buffer.write(&length, offset: 0, length: 4)
+
+            buffer.write(value.data)
+
+            self.items.append(.object(buffer.makeData()))
         } else {
             let typeHash: Int32 = murMurHashString32("\(type(of: value))")
 

@@ -3056,7 +3056,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     onlineMemberCount = recentOnlineSignal
                     
                     self.reportIrrelvantGeoNoticePromise.set(context.account.postbox.transaction { transaction -> Bool? in
-                        if let _ = transaction.getNoticeEntry(key: ApplicationSpecificNotice.irrelevantPeerGeoReportKey(peerId: peerId)) as? ApplicationSpecificBoolNotice {
+                        if let _ = transaction.getNoticeEntry(key: ApplicationSpecificNotice.irrelevantPeerGeoReportKey(peerId: peerId))?.get(ApplicationSpecificBoolNotice.self) {
                             return true
                         } else {
                             return false

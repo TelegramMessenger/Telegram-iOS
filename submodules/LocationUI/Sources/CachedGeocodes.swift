@@ -8,7 +8,7 @@ import PersistentStringHash
 import AccountContext
 import Geocoding
 
-public final class CachedGeocode: PostboxCoding {
+public final class CachedGeocode: Codable {
     public let latitude: Double
     public let longitude: Double
     
@@ -17,14 +17,18 @@ public final class CachedGeocode: PostboxCoding {
         self.longitude = longitude
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.latitude = decoder.decodeDoubleForKey("lat", orElse: 0.0)
-        self.longitude = decoder.decodeDoubleForKey("lon", orElse: 0.0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.latitude = try container.decode(Double.self, forKey: "lat")
+        self.longitude = try container.decode(Double.self, forKey: "lon")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeDouble(self.latitude, forKey: "lat")
-        encoder.encodeDouble(self.longitude, forKey: "lon")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.latitude, forKey: "lat")
+        try container.encode(self.longitude, forKey: "lon")
     }
 }
 
@@ -32,7 +36,7 @@ private func cachedGeocode(postbox: Postbox, address: DeviceContactAddressData) 
     return postbox.transaction { transaction -> CachedGeocode? in
         let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: Int64(bitPattern: address.string.persistentHashValue))
-        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedGeocodes, key: key)) as? CachedGeocode {
+        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedGeocodes, key: key))?.get(CachedGeocode.self) {
             return entry
         } else {
             return nil
@@ -47,7 +51,9 @@ private func updateCachedGeocode(postbox: Postbox, address: DeviceContactAddress
         let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: Int64(bitPattern: address.string.persistentHashValue))
         let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.cachedGeocodes, key: key)
-        transaction.putItemCacheEntry(id: id, entry: CachedGeocode(latitude: latitude, longitude: longitude), collectionSpec: collectionSpec)
+        if let entry = CodableEntry(CachedGeocode(latitude: latitude, longitude: longitude)) {
+            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
+        }
         return (latitude, longitude)
     }
 }
