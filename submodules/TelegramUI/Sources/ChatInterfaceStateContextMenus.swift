@@ -783,7 +783,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference)
                         |> deliverOnMainQueue).start(completed: {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
+                            controllerInteraction.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: isVideo ? presentationData.strings.Gallery_VideoSaved : presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                         })
                         f(.default)
                     })))

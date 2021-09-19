@@ -526,14 +526,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 let textEmoji = item.message.text.strippedEmoji
                 var additionalTextEmoji = textEmoji
                 let (basicEmoji, fitz) = item.message.text.basicEmoji
-                if ["💛", "💙", "💚", "💜", "🧡", "🖤"].contains(textEmoji) {
+                if ["💛", "💙", "💚", "💜", "🧡", "🖤", "🤎", "🤍"].contains(textEmoji) {
                     additionalTextEmoji = "❤️".strippedEmoji
                 } else if fitz != nil {
                     additionalTextEmoji = basicEmoji
                 }
                 
                 var animationItems: [Int: StickerPackItem]?
-                if let items = item.associatedData.additionalAnimatedEmojiStickers[item.message.text.strippedEmoji] {
+                if let items = item.associatedData.additionalAnimatedEmojiStickers[textEmoji] {
                     animationItems = items
                 } else if let items = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji] {
                     animationItems = items
@@ -1349,10 +1349,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     private func commitEnqueuedAnimations() {
-        guard let item = self.item, !self.enqueuedAdditionalAnimations.isEmpty else {
+        guard let item = self.item, let file = self.emojiFile, !self.enqueuedAdditionalAnimations.isEmpty else {
             return
         }
-        let textEmoji = item.message.text.strippedEmoji
         
         let enqueuedAnimations = self.enqueuedAdditionalAnimations
         self.enqueuedAdditionalAnimations.removeAll()
@@ -1365,8 +1364,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         for (index, timestamp) in enqueuedAnimations {
             animations.append(EmojiInteraction.Animation(index: index, timeOffset: Float(max(0.0, timestamp - startTimestamp))))
         }
-        
-        item.context.account.updateLocalInputActivity(peerId: PeerActivitySpace(peerId: item.message.id.peerId, category: .global), activity: .interactingWithEmoji(emoticon: textEmoji, messageId: item.message.id, interaction: EmojiInteraction(animations: animations)), isPresent: true)
+        item.controllerInteraction.commitEmojiInteraction(item.message.id, item.message.text.strippedEmoji, EmojiInteraction(animations: animations), file)
     }
     
     func playEmojiInteraction(_ interaction: EmojiInteraction) {
@@ -1423,7 +1421,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let textEmoji = item.message.text.strippedEmoji
         var additionalTextEmoji = textEmoji
         let (basicEmoji, fitz) = item.message.text.basicEmoji
-        if ["💛", "💙", "💚", "💜", "🧡", "🖤"].contains(textEmoji) {
+        if ["💛", "💙", "💚", "💜", "🧡", "🖤", "🤎", "🤍"].contains(textEmoji) {
             additionalTextEmoji = "❤️".strippedEmoji
         } else if fitz != nil {
             additionalTextEmoji = basicEmoji
@@ -1595,7 +1593,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                             
                             let (basicEmoji, fitz) = text.basicEmoji
-                            if ["💛", "💙", "💚", "💜", "🧡", "🖤", "❤️"].contains(textEmoji) {
+                            if ["💛", "💙", "💚", "💜", "🧡", "🖤", "🤎", "🤍", "❤️"].contains(textEmoji) {
                                 additionalTextEmoji = "❤️".strippedEmoji
                             } else if fitz != nil {
                                 additionalTextEmoji = basicEmoji
@@ -1701,8 +1699,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                             return
                                         }
                                         let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
+                                        var hasSound = false
                                         for (emoji, file) in emojiSounds.sounds {
                                             if emoji.strippedEmoji == textEmoji.strippedEmoji {
+                                                hasSound = true
                                                 let mediaManager = item.context.sharedContext.mediaManager
                                                 let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
                                                 mediaPlayer.togglePlayPause()
@@ -1730,7 +1730,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                 return
                                             }
                                         }
-                                        animationNode?.play()
+                                        if !hasSound {
+                                            if let haptic = haptic, !haptic.active {
+                                                haptic.start(time: 0.0)
+                                            }
+                                            animationNode?.play()
+                                        }
                                     })
                                 }
                             })

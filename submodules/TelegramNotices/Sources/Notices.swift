@@ -159,6 +159,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case messageViewsPrivacyTips = 25
     case chatSpecificThemeLightPreviewTip = 26
     case chatSpecificThemeDarkPreviewTip = 27
+    case interactiveEmojiSyncTip = 28
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -313,6 +314,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func chatForwardOptionsTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatForwardOptionsTip.key)
+    }
+    
+    static func interactiveEmojiSyncTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.interactiveEmojiSyncTip.key)
     }
 }
 
@@ -979,6 +984,31 @@ public struct ApplicationSpecificNotice {
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.chatForwardOptionsTip(), entry)
             }
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func getInteractiveEmojiSyncTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<(Int32, Int32), NoError> {
+        return accountManager.transaction { transaction -> (Int32, Int32) in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.interactiveEmojiSyncTip()) as? ApplicationSpecificTimestampAndCounterNotice {
+                return (value.counter, value.timestamp)
+            } else {
+                return (0, 0)
+            }
+        }
+    }
+    
+    public static func incrementInteractiveEmojiSyncTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1, timestamp: Int32) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.interactiveEmojiSyncTip()) as? ApplicationSpecificTimestampAndCounterNotice {
+                currentValue = value.counter
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.interactiveEmojiSyncTip(), ApplicationSpecificTimestampAndCounterNotice(counter: currentValue, timestamp: timestamp))
             
             return Int(previousValue)
         }
