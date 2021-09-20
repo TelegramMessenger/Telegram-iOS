@@ -1254,8 +1254,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return nil
         }, chatControllerNode: {
             return nil
-        }, reactionContainerNode: {
-            return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
@@ -1272,8 +1270,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
-        }, updateMessageLike: { _, _ in
-        }, openMessageReactions: { _ in
         }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in

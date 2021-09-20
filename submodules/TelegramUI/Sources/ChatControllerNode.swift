@@ -10,7 +10,6 @@ import TelegramUIPreferences
 import TextFormat
 import AccountContext
 import TelegramNotices
-import ReactionSelectionNode
 import TelegramUniversalVideoContent
 import ChatInterfaceState
 import FastBlur
@@ -83,7 +82,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let backgroundNode: WallpaperBackgroundNode
     let historyNode: ChatHistoryListNode
     var blurredHistoryNode: ASImageNode?
-    let reactionContainerNode: ReactionSelectionParentNode
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
     private var emptyNode: ChatEmptyNode?
@@ -335,8 +333,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }, onTransitionEvent: { transition in
             onTransitionEventImpl?(transition)
         })
-        
-        self.reactionContainerNode = ReactionSelectionParentNode(account: context.account, theme: chatPresentationInterfaceState.theme)
         
         self.loadingNode = ChatLoadingNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners)
 
@@ -1178,9 +1174,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.updateFrame(node: emptyNode, frame: contentBounds)
         }
         
-        transition.updateFrame(node: self.reactionContainerNode, frame: contentBounds)
-        self.reactionContainerNode.updateLayout(size: contentBounds.size, insets: UIEdgeInsets(), transition: transition)
-        
         var contentBottomInset: CGFloat = inputPanelsHeight + 4.0
         
         if let scrollContainerNode = self.scrollContainerNode {
@@ -1851,10 +1844,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         } else {
             completion(.immediate)
-        }
-        
-        if self.reactionContainerNode.supernode == nil {
-            self.addSubnode(self.reactionContainerNode)
         }
     }
     

@@ -194,12 +194,12 @@ public func peerDebugDisplayTitles(_ peers: [Peer]) -> String {
     }
 }
 
-public func messageMainPeer(_ message: Message) -> Peer? {
+public func messageMainPeer(_ message: EngineMessage) -> EnginePeer? {
     if let peer = message.peers[message.id.peerId] {
         if let peer = peer as? TelegramSecretChat {
-            return message.peers[peer.regularPeerId]
+            return message.peers[peer.regularPeerId].flatMap(EnginePeer.init)
         } else {
-            return peer
+            return EnginePeer(peer)
         }
     } else {
         return nil

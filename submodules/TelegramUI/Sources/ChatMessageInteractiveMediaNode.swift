@@ -69,7 +69,6 @@ struct ChatMessageDateAndStatus {
     var edited: Bool
     var viewCount: Int?
     var dateReplies: Int
-    var dateReactions: [MessageReaction]
     var isPinned: Bool
     var dateText: String
 }
@@ -468,7 +467,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             var statusApply: ((Bool) -> Void)?
 
             if let dateAndStatus = dateAndStatus {
-                let (size, apply) = statusLayout(context, presentationData, dateAndStatus.edited, dateAndStatus.viewCount, dateAndStatus.dateText, dateAndStatus.type, CGSize(width: nativeSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateAndStatus.dateReactions, dateAndStatus.dateReplies, dateAndStatus.isPinned, message.isSelfExpiring)
+                let (size, apply) = statusLayout(context, presentationData, dateAndStatus.edited, dateAndStatus.viewCount, dateAndStatus.dateText, dateAndStatus.type, CGSize(width: nativeSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateAndStatus.dateReplies, dateAndStatus.isPinned, message.isSelfExpiring)
                 statusSize = size
                 statusApply = apply
             }

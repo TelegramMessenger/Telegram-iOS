@@ -648,7 +648,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                     if !hasHiddenForwardMedia {
                                         var sourceId: PeerId? = nil
                                         var sourceMessageId: MessageId? = nil
-                                        if let peer = messageMainPeer(sourceMessage) as? TelegramChannel, case .broadcast = peer.info {
+                                        if case let .channel(peer) = messageMainPeer(EngineMessage(sourceMessage)), case .broadcast = peer.info {
                                             sourceId = peer.id
                                             sourceMessageId = sourceMessage.id
                                         }

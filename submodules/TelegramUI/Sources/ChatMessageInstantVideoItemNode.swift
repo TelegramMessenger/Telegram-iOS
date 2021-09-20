@@ -980,10 +980,6 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             break
                         case .reply:
                             item.controllerInteraction.setupReply(item.message.id)
-                        case .like:
-                            item.controllerInteraction.updateMessageLike(item.message.id, true)
-                        case .unlike:
-                            item.controllerInteraction.updateMessageLike(item.message.id, true)
                         }
                     }
                 }

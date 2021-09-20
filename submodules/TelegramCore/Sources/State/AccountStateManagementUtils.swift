@@ -1381,8 +1381,6 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.updateLangPack(langCode: langCode, difference: difference)
             case let .updateMessagePoll(_, pollId, poll, results):
                 updatedState.updateMessagePoll(MediaId(namespace: Namespaces.Media.CloudPoll, id: pollId), poll: poll, results: results)
-            /*case let .updateMessageReactions(peer, msgId, reactions):
-                updatedState.updateMessageReactions(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), reactions: reactions)*/
             case let .updateFolderPeers(folderPeers, _, _):
                 for folderPeer in folderPeers {
                     switch folderPeer {
@@ -2685,26 +2683,6 @@ func replayFinalState(
                     updatedPoll = updatedPoll.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
                     updateMessageMedia(transaction: transaction, id: pollId, media: updatedPoll)
                 }
-            /*case let .UpdateMessageReactions(messageId, reactions):
-                transaction.updateMessage(messageId, update: { currentMessage in
-                    var storeForwardInfo: StoreMessageForwardInfo?
-                    if let forwardInfo = currentMessage.forwardInfo {
-                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
-                    }
-                    var attributes = currentMessage.attributes
-                    var found = false
-                    loop: for j in 0 ..< attributes.count {
-                        if let attribute = attributes[j] as? ReactionsMessageAttribute {
-                            attributes[j] = attribute.withUpdatedResults(reactions)
-                            found = true
-                            break loop
-                        }
-                    }
-                    if !found {
-                        attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
-                    }
-                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
-                })*/
             case let .UpdateMedia(id, media):
                 if let media = media as? TelegramMediaWebpage {
                     updatedWebpages[id] = media

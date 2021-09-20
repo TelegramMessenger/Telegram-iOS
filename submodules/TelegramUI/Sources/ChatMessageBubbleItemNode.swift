@@ -16,7 +16,6 @@ import MosaicLayout
 import TextSelectionNode
 import PlatformRestrictionMatching
 import Emoji
-import ReactionSelectionNode
 import PersistentStringHash
 import GridMessageSelectionNode
 import AppBundle
@@ -438,7 +437,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     private var appliedForwardInfo: (Peer?, String?)?
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
-    private var reactionRecognizer: ReactionSwipeGestureRecognizer?
     
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
@@ -799,7 +797,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.reactionRecognizer?.cancel()
+
             if let action = strongSelf.gestureRecognized(gesture: .longTap, location: point, recognizer: recognizer) {
                 switch action {
                 case let .action(f):
@@ -828,234 +826,35 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.tapRecognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
         self.view.isExclusiveTouch = true
-        
-        if true {
-            let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
-            replyRecognizer.shouldBegin = { [weak self] in
-                if let strongSelf = self, let item = strongSelf.item {
-                    if strongSelf.selectionNode != nil {
-                        return false
-                    }
-                    for media in item.content.firstMessage.media {
-                        if let _ = media as? TelegramMediaExpiredContent {
-                            return false
-                        }
-                        else if let media = media as? TelegramMediaAction {
-                            if case .phoneCall(_, _, _, _) = media.action {
-                            } else {
-                                return false
-                            }
-                        }
-                    }
-                    let action = item.controllerInteraction.canSetupReply(item.message)
-                    strongSelf.currentSwipeAction = action
-                    if case .none = action {
-                        return false
-                    } else {
-                        return true
-                    }
-                }
-                return false
-            }
-            self.view.addGestureRecognizer(replyRecognizer)
-        } else {
-            /*let reactionRecognizer = ReactionSwipeGestureRecognizer(target: nil, action: nil)
-            self.reactionRecognizer = reactionRecognizer
-            reactionRecognizer.availableReactions = { [weak self] in
-                guard let strongSelf = self, let item = strongSelf.item, !item.presentationData.isPreview && !Namespaces.Message.allScheduled.contains(item.message.id.namespace) else {
-                    return []
-                }
+
+        let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
+        replyRecognizer.shouldBegin = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item {
                 if strongSelf.selectionNode != nil {
-                    return []
+                    return false
                 }
                 for media in item.content.firstMessage.media {
                     if let _ = media as? TelegramMediaExpiredContent {
-                        return []
+                        return false
                     }
                     else if let media = media as? TelegramMediaAction {
-                        if case .phoneCall = media.action {
+                        if case .phoneCall(_, _, _, _) = media.action {
                         } else {
-                            return []
+                            return false
                         }
                     }
                 }
-                
-                let reactions: [(String, String, String)] = [
-                    ("😔", "Sad", "sad"),
-                    ("😳", "Surprised", "surprised"),
-                    ("😂", "Fun", "lol"),
-                    ("👍", "Like", "thumbsup"),
-                    ("❤", "Love", "heart"),
-                ]
-                
-                var reactionItems: [ReactionGestureItem] = []
-                for (value, text, name) in reactions.reversed() {
-                    if let path = getAppBundle().path(forResource: name, ofType: "tgs") {
-                        reactionItems.append(.reaction(value: value, text: text, path: path))
-                    }
-                }
-                if item.controllerInteraction.canSetupReply(item.message) {
-                    //reactionItems.append(.reply)
-                }
-                return reactionItems
-            }
-            reactionRecognizer.getReactionContainer = { [weak self] in
-                return self?.item?.controllerInteraction.reactionContainerNode()
-            }
-            reactionRecognizer.getAnchorPoint = { [weak self] in
-                guard let strongSelf = self else {
-                    return nil
-                }
-                return CGPoint(x: strongSelf.backgroundNode.frame.maxX, y: strongSelf.backgroundNode.frame.minY)
-            }
-            reactionRecognizer.shouldElevateAnchorPoint = { [weak self] in
-                guard let strongSelf = self, let item = strongSelf.item else {
+                let action = item.controllerInteraction.canSetupReply(item.message)
+                strongSelf.currentSwipeAction = action
+                if case .none = action {
                     return false
-                }
-                return item.controllerInteraction.canSetupReply(item.message)
-            }
-            reactionRecognizer.began = { [weak self] in
-                guard let strongSelf = self, let item = strongSelf.item else {
-                    return
-                }
-                item.controllerInteraction.cancelInteractiveKeyboardGestures()
-            }
-            reactionRecognizer.updateOffset = { [weak self] offset, animated in
-                guard let strongSelf = self else {
-                    return
-                }
-                var bounds = strongSelf.bounds
-                bounds.origin.x = offset
-                strongSelf.bounds = bounds
-                
-                var shadowBounds = strongSelf.shadowNode.bounds
-                shadowBounds.origin.x = offset
-                strongSelf.shadowNode.bounds = shadowBounds
-                
-                if animated {
-                    strongSelf.layer.animateBoundsOriginXAdditive(from: -offset, to: 0.0, duration: 0.1, mediaTimingFunction: CAMediaTimingFunction(name: .easeOut))
-                    strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: -offset, to: 0.0, duration: 0.1, mediaTimingFunction: CAMediaTimingFunction(name: .easeOut))
-                }
-                if let swipeToReplyNode = strongSelf.swipeToReplyNode {
-                    swipeToReplyNode.alpha = max(0.0, min(1.0, abs(offset / 40.0)))
-                }
-            }
-            reactionRecognizer.activateReply = { [weak self] in
-                guard let strongSelf = self, let item = strongSelf.item else {
-                    return
-                }
-                var bounds = strongSelf.bounds
-                let offset = bounds.origin.x
-                bounds.origin.x = 0.0
-                strongSelf.bounds = bounds
-                
-                var shadowBounds = strongSelf.shadowNode.bounds
-                let shadowOffset = shadowBounds.origin.x
-                shadowBounds.origin.x = 0.0
-                strongSelf.shadowNode.bounds = shadowBounds
-                
-                if !offset.isZero {
-                    strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-                }
-                if !shadowOffset.isZero {
-                    strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: shadowOffset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-                }
-                if let swipeToReplyNode = strongSelf.swipeToReplyNode {
-                    strongSelf.swipeToReplyNode = nil
-                    swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in
-                        swipeToReplyNode?.removeFromSupernode()
-                    })
-                    swipeToReplyNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                }
-                item.controllerInteraction.setupReply(item.message.id)
-            }
-            reactionRecognizer.displayReply = { [weak self] offset in
-                guard let strongSelf = self, let item = strongSelf.item else {
-                    return
-                }
-                if !item.controllerInteraction.canSetupReply(item.message) {
-                    return
-                }
-                if strongSelf.swipeToReplyFeedback == nil {
-                    strongSelf.swipeToReplyFeedback = HapticFeedback()
-                }
-                strongSelf.swipeToReplyFeedback?.tap()
-                if strongSelf.swipeToReplyNode == nil {
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
-                    strongSelf.swipeToReplyNode = swipeToReplyNode
-                    strongSelf.insertSubnode(swipeToReplyNode, belowSubnode: strongSelf.messageAccessibilityArea)
-                    swipeToReplyNode.frame = CGRect(origin: CGPoint(x: strongSelf.bounds.size.width, y: floor((strongSelf.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
-                    swipeToReplyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
-                    swipeToReplyNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
-                }
-            }
-            reactionRecognizer.completed = { [weak self] reaction in
-                guard let strongSelf = self else {
-                    return
-                }
-                if let item = strongSelf.item, let reaction = reaction {
-                    switch reaction {
-                    case let .reaction(value, _, _):
-                        var resolvedValue: String?
-                        if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), reactionsAttribute.reactions.contains(where: { $0.value == value }) {
-                            resolvedValue = nil
-                        } else {
-                            resolvedValue = value
-                        }
-                        strongSelf.awaitingAppliedReaction = (resolvedValue, {})
-                        item.controllerInteraction.updateMessageReaction(item.message.id, resolvedValue)
-                    case .reply:
-                        strongSelf.reactionRecognizer?.complete(into: nil, hideTarget: false)
-                        var bounds = strongSelf.bounds
-                        let offset = bounds.origin.x
-                        bounds.origin.x = 0.0
-                        strongSelf.bounds = bounds
-                        var shadowBounds = strongSelf.shadowNode.bounds
-                        let shadowOffset = shadowBounds.origin.x
-                        shadowBounds.origin.x = 0.0
-                        strongSelf.shadowNode.bounds = shadowBounds
-                        if !offset.isZero {
-                            strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-                        }
-                        if !shadowOffset.isZero {
-                            strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: shadowOffset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-                        }
-                        if let swipeToReplyNode = strongSelf.swipeToReplyNode {
-                            strongSelf.swipeToReplyNode = nil
-                            swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in
-                                swipeToReplyNode?.removeFromSupernode()
-                            })
-                            swipeToReplyNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                        }
-                        item.controllerInteraction.setupReply(item.message.id)
-                    }
                 } else {
-                    strongSelf.reactionRecognizer?.complete(into: nil, hideTarget: false)
-                    var bounds = strongSelf.bounds
-                    let offset = bounds.origin.x
-                    bounds.origin.x = 0.0
-                    strongSelf.bounds = bounds
-                    var shadowBounds = strongSelf.shadowNode.bounds
-                    let shadowOffset = shadowBounds.origin.x
-                    shadowBounds.origin.x = 0.0
-                    strongSelf.shadowNode.bounds = shadowBounds
-                    if !offset.isZero {
-                        strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-                    }
-                    if !shadowOffset.isZero {
-                        strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: shadowOffset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-                    }
-                    if let swipeToReplyNode = strongSelf.swipeToReplyNode {
-                        strongSelf.swipeToReplyNode = nil
-                        swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in
-                            swipeToReplyNode?.removeFromSupernode()
-                        })
-                        swipeToReplyNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                    }
+                    return true
                 }
             }
-            self.view.addGestureRecognizer(reactionRecognizer)*/
+            return false
         }
+        self.view.addGestureRecognizer(replyRecognizer)
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
@@ -1110,7 +909,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
-        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, [MessageReaction], Int, Bool, Bool) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
+        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, Int, Bool, Bool) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
         currentForwardInfo: (Peer?, String?)?,
@@ -1678,26 +1477,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 
-                var dateReactions: [MessageReaction] = []
-                var dateReactionCount = 0
-                if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
-                    for reaction in reactionsAttribute.reactions {
-                        if reaction.isSelected {
-                            dateReactions.insert(reaction, at: 0)
-                        } else {
-                            dateReactions.append(reaction)
-                        }
-                        dateReactionCount += Int(reaction.count)
-                    }
-                }
-                
                 let dateFormat: MessageTimestampStatusFormat
                 if let subject = item.associatedData.subject, case .forwardedMessages = subject {
                     dateFormat = .minimal
                 } else {
                     dateFormat = .regular
                 }
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, reactionCount: dateReactionCount)
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat)
                 
                 let statusType: ChatMessageDateAndStatusType
                 if message.effectivelyIncoming(item.context.account.peerId) {
@@ -1717,7 +1503,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     isReplyThread = true
                 }
                 
-                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, message.isSelfExpiring)
+                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReplies, message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, message.isSelfExpiring)
             }
         }
         
@@ -2889,45 +2675,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         strongSelf.updateSearchTextHighlightState()
-        
-        /*if let (awaitingAppliedReaction, f) = strongSelf.awaitingAppliedReaction {
-            var bounds = strongSelf.bounds
-            let offset = bounds.origin.x
-            bounds.origin.x = 0.0
-            strongSelf.bounds = bounds
-            var shadowBounds = strongSelf.shadowNode.bounds
-            let shadowOffset = shadowBounds.origin.x
-            shadowBounds.origin.x = 0.0
-            strongSelf.shadowNode.bounds = shadowBounds
-            if !offset.isZero {
-                strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-            }
-            if !shadowOffset.isZero {
-                strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: shadowOffset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-            }
-            if let swipeToReplyNode = strongSelf.swipeToReplyNode {
-                strongSelf.swipeToReplyNode = nil
-                swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in
-                    swipeToReplyNode?.removeFromSupernode()
-                })
-                swipeToReplyNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-            }
-            
-            strongSelf.awaitingAppliedReaction = nil
-            /*var targetNode: ASDisplayNode?
-            var hideTarget = false
-            if let awaitingAppliedReaction = awaitingAppliedReaction {
-                for contentNode in strongSelf.contentNodes {
-                    if let (reactionNode, count) = contentNode.reactionTargetNode(value: awaitingAppliedReaction) {
-                        targetNode = reactionNode
-                        hideTarget = count == 1
-                        break
-                    }
-                }
-            }
-            strongSelf.reactionRecognizer?.complete(into: targetNode, hideTarget: hideTarget)*/
-            f()
-        }*/
     }
     
     override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
@@ -3766,10 +3513,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                 break
                             case .reply:
                                 item.controllerInteraction.setupReply(item.message.id)
-                            case .like:
-                                item.controllerInteraction.updateMessageLike(item.message.id, true)
-                            case .unlike:
-                                item.controllerInteraction.updateMessageLike(item.message.id, false)
                             }
                         }
                     }
@@ -3852,15 +3595,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     
     override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
         self.mainContextSourceNode.contentNode.addSubnode(accessoryItemNode)
-    }
-    
-    override func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        for contentNode in self.contentNodes {
-            if let (emptyNode, filledNode) = contentNode.reactionTargetNode(value: value) {
-                return (emptyNode, filledNode)
-            }
-        }
-        return nil
     }
     
     private var backgroundMaskMode: Bool {

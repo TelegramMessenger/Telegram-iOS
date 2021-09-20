@@ -320,22 +320,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         edited = true
                     }
                     
-                    var dateReactions: [MessageReaction] = []
-                    var dateReactionCount = 0
-                    if let reactionsAttribute = mergedMessageReactions(attributes: message.attributes), !reactionsAttribute.reactions.isEmpty {
-                        for reaction in reactionsAttribute.reactions {
-                            if reaction.isSelected {
-                                dateReactions.insert(reaction, at: 0)
-                            } else {
-                                dateReactions.append(reaction)
-                            }
-                            dateReactionCount += Int(reaction.count)
-                        }
-                    }
+                    let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
                     
-                    let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, reactionCount: dateReactionCount)
-                    
-                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies, isPinned && !associatedData.isInPinnedListMode, message.isSelfExpiring)
+                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReplies, isPinned && !associatedData.isInPinnedListMode, message.isSelfExpiring)
                     statusSize = size
                     statusApply = apply
                 }
@@ -1136,13 +1123,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private func stopTimer() {
         self.playerUpdateTimer?.invalidate()
         self.playerUpdateTimer = nil
-    }
-    
-    func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        if !self.dateAndStatusNode.isHidden {
-            return self.dateAndStatusNode.reactionNode(value: value)
-        }
-        return nil
     }
 }
 

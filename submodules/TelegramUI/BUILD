@@ -188,7 +188,6 @@ swift_library(
         "//submodules/WatchBridge:WatchBridge",
         "//submodules/ShareItems:ShareItems",
         "//submodules/ShareItems/Impl:ShareItemsImpl",
-        "//submodules/ReactionSelectionNode:ReactionSelectionNode",
         "//submodules/SettingsUI:SettingsUI",
         "//submodules/UrlHandling:UrlHandling",
         "//submodules/HexColor:HexColor",

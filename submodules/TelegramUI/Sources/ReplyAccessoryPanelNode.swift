@@ -106,7 +106,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     authorName = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
                 if let message = message {
-                    (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
+                    (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
                 }
                 
                 var updatedMediaReference: AnyMediaReference?
@@ -172,7 +172,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 
                 let isMedia: Bool
                 if let message = message {
-                    switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId) {
+                    switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId) {
                         case .text:
                             isMedia = false
                         default:
