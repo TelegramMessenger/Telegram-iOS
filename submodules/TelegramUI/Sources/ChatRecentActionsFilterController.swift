@@ -206,7 +206,7 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
                     case .member:
                         peerText = strings.ChatAdmins_AdminLabel.capitalized
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: participant.peer, presence: nil, text: .text(peerText, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: checked, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(participant.peer), presence: nil, text: .text(peerText, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: ItemListPeerItemSwitch(value: checked, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.toggleAdmin(participant.peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 }, removePeer: { _ in })

@@ -854,9 +854,9 @@ public class ShareRootControllerImpl {
                                                             switch result {
                                                             case .allowed:
                                                                 if let title = title {
-                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                 } else {
-                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                 }
                                                             case let .alert(textValue):
                                                                 text = textValue
@@ -956,9 +956,9 @@ public class ShareRootControllerImpl {
                                                                     switch result {
                                                                     case .allowed:
                                                                         if let title = peerTitle {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                         } else {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                         }
                                                                     case let .alert(textValue):
                                                                         text = textValue

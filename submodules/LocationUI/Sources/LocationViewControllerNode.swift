@@ -720,7 +720,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
           
             var text: String = strongSelf.presentationData.strings.Location_ProximityGroupTip
             if peer.id.namespace == Namespaces.Peer.CloudUser {
-                text = strongSelf.presentationData.strings.Location_ProximityTip(peer.compactDisplayTitle).string
+                text = strongSelf.presentationData.strings.Location_ProximityTip(EnginePeer(peer).compactDisplayTitle).string
             }
             
             strongSelf.interaction.present(TooltipScreen(account: strongSelf.context.account, text: text, icon: nil, location: .point(location.offsetBy(dx: -9.0, dy: 0.0), .right), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in

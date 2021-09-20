@@ -204,7 +204,7 @@ final class ChatMessageAccessibilityData {
             var value: String = ""
             
             if let chatPeer = message.peers[item.message.id.peerId] {
-                let authorName = message.author?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                let authorName = message.author.flatMap(EnginePeer.init)?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 
                 let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [message], chatPeer: RenderedPeer(peer: chatPeer), accountPeerId: item.context.account.peerId)
                 
@@ -557,7 +557,7 @@ final class ChatMessageAccessibilityData {
             if label.isEmpty {
                 if let author = message.author {
                     if isIncoming {
-                        label = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                        label = EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     } else {
                         label = item.presentationData.strings.VoiceOver_Chat_YourMessage
                     }
@@ -602,7 +602,7 @@ final class ChatMessageAccessibilityData {
                 var replyLabel: String
                 if replyMessage.flags.contains(.Incoming) {
                     if let author = replyMessage.author {
-                        replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string
+                        replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyFrom(EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string
                     } else {
                         replyLabel = item.presentationData.strings.VoiceOver_Chat_Reply
                     }
@@ -629,9 +629,9 @@ final class ChatMessageAccessibilityData {
                 let peerString: String
                 if let peer = forwardInfo.author {
                     if let authorName = forwardInfo.authorSignature {
-                        peerString = "\(peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)) (\(authorName))"
+                        peerString = "\(EnginePeer(peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)) (\(authorName))"
                     } else {
-                        peerString = peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                        peerString = EnginePeer(peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     }
                 } else if let authorName = forwardInfo.authorSignature {
                     peerString = authorName

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TextFormat
@@ -76,7 +75,7 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
     func deactivate() {
     }
     
-    func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
+    func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
     }
     
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {

@@ -164,11 +164,11 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                         if author.id == context.account.peerId {
                             authors.append(strongSelf.strings.DialogList_You)
                         } else {
-                            authors.append(author.compactDisplayTitle)
+                            authors.append(EnginePeer(author).compactDisplayTitle)
                         }
                     }
                     if let peer = message.peers[message.id.peerId] {
-                        sourcePeer = (peer.id.namespace == Namespaces.Peer.CloudUser, peer.displayTitle(strings: strongSelf.strings, displayOrder: strongSelf.nameDisplayOrder))
+                        sourcePeer = (peer.id.namespace == Namespaces.Peer.CloudUser, EnginePeer(peer).displayTitle(strings: strongSelf.strings, displayOrder: strongSelf.nameDisplayOrder))
                     }
                 }
                 

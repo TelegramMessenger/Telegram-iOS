@@ -1261,7 +1261,7 @@ final class SharedApplicationContext {
                     }
                     |> map { accountAndPeer -> String? in
                         if let (_, peer, _) = accountAndPeer {
-                            return peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            return EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                         } else {
                             return nil
                         }

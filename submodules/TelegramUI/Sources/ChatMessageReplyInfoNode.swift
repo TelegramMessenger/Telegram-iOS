@@ -54,11 +54,11 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let titleFont = Font.medium(fontSize)
             let textFont = Font.regular(fontSize)
             
-            var titleString = message.effectiveAuthor?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
+            var titleString = message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
             
             if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                 if let author = forwardInfo.author {
-                    titleString = author.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
+                    titleString = EnginePeer(author).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
                 } else if let authorSignature = forwardInfo.authorSignature {
                     titleString = authorSignature
                 }

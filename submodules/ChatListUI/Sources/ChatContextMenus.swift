@@ -167,7 +167,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                             }
                             |> deliverOnMainQueue).start(completed: {
                                 c.dismiss(completion: {
-                                    chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatRemovedFromFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: currentFilter.title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                    chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatRemovedFromFolder(chatTitle: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: currentFilter.title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
                                         return false
                                     }), in: .current)
                                 })
@@ -239,7 +239,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                                 return filters
                                             }).start()
 
-                                            chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatAddedToFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: filter.title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                            chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatAddedToFolder(chatTitle: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: filter.title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
                                                 return false
                                             }), in: .current)
                                         })

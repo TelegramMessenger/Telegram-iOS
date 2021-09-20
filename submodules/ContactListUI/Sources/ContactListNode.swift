@@ -187,7 +187,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         } else {
                             if let _ = peer as? TelegramUser {
                                 let presence = presence ?? TelegramUserPresence(status: .none, lastActivity: 0)
-                                status = .presence(presence, dateTimeFormat)
+                                status = .presence(EnginePeer.Presence(presence), dateTimeFormat)
                             } else if let group = peer as? TelegramGroup {
                                 status = .custom(string: strings.Conversation_StatusMembers(Int32(group.participantCount)), multiline: false)
                             } else if let channel = peer as? TelegramChannel {
@@ -208,7 +208,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                                 status = .none
                             }
                         }
-                        itemPeer = .peer(peer: peer, chatPeer: peer)
+                        itemPeer = .peer(peer: EnginePeer(peer), chatPeer: EnginePeer(peer))
                     case let .deviceContact(id, contact):
                         status = .none
                         itemPeer = .deviceContact(stableId: id, contact: contact)
@@ -222,7 +222,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         switch itemPeer {
                         case let .peer(peer, _):
                             if let peer = peer {
-                                contextAction(peer, node, gesture)
+                                contextAction(peer._asPeer(), node, gesture)
                             }
                         case .deviceContact:
                             break

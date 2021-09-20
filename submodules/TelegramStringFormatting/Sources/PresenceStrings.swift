@@ -345,10 +345,8 @@ public func stringForRelativeLiveLocationUpdateTimestamp(strings: PresentationSt
     }
 }
 
-public func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: TelegramUserPresence, relativeTo timestamp: Int32, expanded: Bool = false) -> (String, Bool) {
+public func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: EnginePeer.Presence, relativeTo timestamp: Int32, expanded: Bool = false) -> (String, Bool) {
     switch presence.status {
-    case .none:
-        return (strings.LastSeen_Offline, false)
     case let .present(statusTimestamp):
         if statusTimestamp >= timestamp {
             return (strings.Presence_online, true)
@@ -402,6 +400,8 @@ public func stringAndActivityForUserPresence(strings: PresentationStrings, dateT
         return (strings.LastSeen_WithinAWeek, false)
     case .lastMonth:
         return (strings.LastSeen_WithinAMonth, false)
+    case .longTimeAgo:
+        return (strings.LastSeen_ALongTimeAgo, false)
     }
 }
 

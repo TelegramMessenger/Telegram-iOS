@@ -70,9 +70,9 @@ private final class ChannelDiscussionGroupActionSheetItemNode: ActionSheetItemNo
         
         let text: PresentationStrings.FormattedString
         if let channelPeer = channelPeer as? TelegramChannel, let addressName = channelPeer.addressName, !addressName.isEmpty {
-            text = strings.Channel_DiscussionGroup_PublicChannelLink(groupPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder), channelPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+            text = strings.Channel_DiscussionGroup_PublicChannelLink(EnginePeer(groupPeer).displayTitle(strings: strings, displayOrder: nameDisplayOrder), EnginePeer(channelPeer).displayTitle(strings: strings, displayOrder: nameDisplayOrder))
         } else {
-            text = strings.Channel_DiscussionGroup_PrivateChannelLink(groupPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder), channelPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))
+            text = strings.Channel_DiscussionGroup_PrivateChannelLink(EnginePeer(groupPeer).displayTitle(strings: strings, displayOrder: nameDisplayOrder), EnginePeer(channelPeer).displayTitle(strings: strings, displayOrder: nameDisplayOrder))
         }
         
         let textFont = Font.regular(floor(theme.baseFontSize * 14.0 / 17.0))

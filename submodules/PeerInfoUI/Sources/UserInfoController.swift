@@ -61,7 +61,7 @@ public func openAddPersonContactImpl(context: AccountContext, updatedPresentatio
                 }
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).string, true)), nil)
+                present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(EnginePeer(peer).compactDisplayTitle).string, true)), nil)
             }
         }), completed: nil, cancelled: nil))
     })

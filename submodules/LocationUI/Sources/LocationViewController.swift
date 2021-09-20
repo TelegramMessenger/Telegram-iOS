@@ -240,7 +240,7 @@ public final class LocationViewController: ViewController {
                         
                         var compactDisplayTitle: String?
                         if let peer = peer as? TelegramUser {
-                            compactDisplayTitle = peer.compactDisplayTitle
+                            compactDisplayTitle = EnginePeer(peer).compactDisplayTitle
                         }
                         
                         let controller = LocationDistancePickerScreen(context: context, style: .default, compactDisplayTitle: compactDisplayTitle, distances: strongSelf.controllerNode.headerNode.mapNode.distancesToAllAnnotations, updated: { [weak self] distance in
@@ -345,7 +345,7 @@ public final class LocationViewController: ViewController {
                         
                         var compactDisplayTitle: String?
                         if let peer = peer as? TelegramUser {
-                            compactDisplayTitle = peer.compactDisplayTitle
+                            compactDisplayTitle = EnginePeer(peer).compactDisplayTitle
                         }
                         
                         var text: String
@@ -379,7 +379,7 @@ public final class LocationViewController: ViewController {
                         let controller = ActionSheetController(presentationData: strongSelf.presentationData)
                         var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
                         if let user = peer as? TelegramUser {
-                            title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(user.compactDisplayTitle).string
+                            title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(EnginePeer(user).compactDisplayTitle).string
                         }
                         
                         let sendLiveLocationImpl: (Int32) -> Void = { [weak controller] period in

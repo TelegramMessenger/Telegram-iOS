@@ -178,12 +178,12 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                         displayTitle = presentationData.strings.DialogList_SavedMessages
                         nameComponents.givenName = displayTitle
                     } else {
-                        displayTitle = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        displayTitle = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                         nameComponents.givenName = peer.firstName
                         nameComponents.familyName = peer.lastName
                     }
                 } else {
-                    displayTitle = peer.compactDisplayTitle
+                    displayTitle = EnginePeer(peer).compactDisplayTitle
                     nameComponents.givenName = displayTitle
                 }
                 

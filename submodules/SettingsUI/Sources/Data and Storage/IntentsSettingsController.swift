@@ -187,7 +187,7 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
             case let .accountHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .account(_, peer, selected, _):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context.sharedContext.makeTempAccountContext(account: arguments.context.account), peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: false), revealOptions: nil, switchValue: ItemListPeerItemSwitch(value: selected, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context.sharedContext.makeTempAccountContext(account: arguments.context.account), peer: EnginePeer(peer), height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: false), revealOptions: nil, switchValue: ItemListPeerItemSwitch(value: selected, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.updateSettings { $0.withUpdatedAccount(peer.id) }
                 }, setPeerIdWithRevealedOptions: { _, _ in}, removePeer: { _ in })
             case let .accountInfo(_, text):

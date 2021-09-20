@@ -300,7 +300,7 @@ public final class SecretMediaPreviewController: ViewController {
                                 }, transition: .immediate)
                             } else {
                                 let contentNode = SecretMediaPreviewFooterContentNode()
-                                let peerTitle = messageMainPeer(message)?.compactDisplayTitle ?? ""
+                                let peerTitle = messageMainPeer(message).flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
                                 let text: String
                                 if let file = media as? TelegramMediaFile {
                                     if file.isAnimated {

@@ -396,7 +396,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
         let arguments = arguments as! DeviceContactInfoControllerArguments
         switch self {
             case let .info(_, _, _, dateTimeFormat, peer, state, jobSummary, _):
-                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: EnginePeer(peer), presence: nil, label: jobSummary, memberCount: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, context: nil, call: nil)
@@ -685,7 +685,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
             } else if !personName.1.isEmpty {
                 personCompactName = personName.1
             } else {
-                personCompactName = peer.compactDisplayTitle
+                personCompactName = EnginePeer(peer).compactDisplayTitle
             }
             
             if contactData.basicData.phoneNumbers.isEmpty {

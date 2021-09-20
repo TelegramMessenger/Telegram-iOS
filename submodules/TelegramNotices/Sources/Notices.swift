@@ -991,7 +991,7 @@ public struct ApplicationSpecificNotice {
     
     public static func getInteractiveEmojiSyncTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<(Int32, Int32), NoError> {
         return accountManager.transaction { transaction -> (Int32, Int32) in
-            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.interactiveEmojiSyncTip()) as? ApplicationSpecificTimestampAndCounterNotice {
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.interactiveEmojiSyncTip())?.get(ApplicationSpecificTimestampAndCounterNotice.self) {
                 return (value.counter, value.timestamp)
             } else {
                 return (0, 0)
@@ -1002,13 +1002,15 @@ public struct ApplicationSpecificNotice {
     public static func incrementInteractiveEmojiSyncTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1, timestamp: Int32) -> Signal<Int, NoError> {
         return accountManager.transaction { transaction -> Int in
             var currentValue: Int32 = 0
-            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.interactiveEmojiSyncTip()) as? ApplicationSpecificTimestampAndCounterNotice {
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.interactiveEmojiSyncTip())?.get(ApplicationSpecificTimestampAndCounterNotice.self) {
                 currentValue = value.counter
             }
             let previousValue = currentValue
             currentValue += Int32(count)
-            
-            transaction.setNotice(ApplicationSpecificNoticeKeys.interactiveEmojiSyncTip(), ApplicationSpecificTimestampAndCounterNotice(counter: currentValue, timestamp: timestamp))
+
+            if let entry = CodableEntry(ApplicationSpecificTimestampAndCounterNotice(counter: currentValue, timestamp: timestamp)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.interactiveEmojiSyncTip(), entry)
+            }
             
             return Int(previousValue)
         }

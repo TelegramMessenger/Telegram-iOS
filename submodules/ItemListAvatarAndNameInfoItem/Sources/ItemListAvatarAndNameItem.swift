@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -31,13 +30,13 @@ public enum ItemListAvatarAndNameInfoItemName: Equatable {
     case personName(firstName: String, lastName: String, phone: String)
     case title(title: String, type: ItemListAvatarAndNameInfoItemTitleType)
     
-    public init(_ peer: Peer) {
+    public init(_ peer: EnginePeer) {
         switch peer.indexName {
         case let .personName(first, last, _, phone):
             self = .personName(firstName: first, lastName: last, phone: phone ?? "")
         case let .title(title, _):
             let type: ItemListAvatarAndNameInfoItemTitleType
-            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+            if case let .channel(peer) = peer, case .broadcast = peer.info {
                 type = .channel
             } else {
                 type = .group
@@ -132,10 +131,10 @@ public class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
     let mode: ItemListAvatarAndNameInfoItemMode
-    let peer: Peer?
-    let presence: PeerPresence?
+    let peer: EnginePeer?
+    let presence: EnginePeer.Presence?
     let label: String?
-    let cachedData: CachedPeerData?
+    let memberCount: Int?
     let state: ItemListAvatarAndNameInfoItemState
     public let sectionId: ItemListSectionId
     let style: ItemListAvatarAndNameInfoItemStyle
@@ -151,7 +150,7 @@ public class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
     
     public let selectable: Bool
 
-    public init(accountContext: AccountContext, presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, mode: ItemListAvatarAndNameInfoItemMode, peer: Peer?, presence: PeerPresence?, label: String? = nil, cachedData: CachedPeerData?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListAvatarAndNameInfoItemStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, editingNameCompleted: @escaping () -> Void = {}, avatarTapped: @escaping () -> Void, context: ItemListAvatarAndNameInfoItemContext? = nil, updatingImage: ItemListAvatarAndNameInfoItemUpdatingAvatar? = nil, call: (() -> Void)? = nil, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, tag: ItemListItemTag? = nil) {
+    public init(accountContext: AccountContext, presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, mode: ItemListAvatarAndNameInfoItemMode, peer: EnginePeer?, presence: EnginePeer.Presence?, label: String? = nil, memberCount: Int?, state: ItemListAvatarAndNameInfoItemState, sectionId: ItemListSectionId, style: ItemListAvatarAndNameInfoItemStyle, editingNameUpdated: @escaping (ItemListAvatarAndNameInfoItemName) -> Void, editingNameCompleted: @escaping () -> Void = {}, avatarTapped: @escaping () -> Void, context: ItemListAvatarAndNameInfoItemContext? = nil, updatingImage: ItemListAvatarAndNameInfoItemUpdatingAvatar? = nil, call: (() -> Void)? = nil, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, tag: ItemListItemTag? = nil) {
         self.accountContext = accountContext
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
@@ -159,7 +158,7 @@ public class ItemListAvatarAndNameInfoItem: ListViewItem, ItemListItem {
         self.peer = peer
         self.presence = presence
         self.label = label
-        self.cachedData = cachedData
+        self.memberCount = memberCount
         self.state = state
         self.sectionId = sectionId
         self.style = style
@@ -396,7 +395,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
             
             var statusText: String = ""
             let statusColor: UIColor
-            if let peer = item.peer as? TelegramUser {
+            if case let .user(peer) = item.peer {
                 let servicePeer = isServicePeer(peer)
                 switch item.mode {
                     case .settings:
@@ -423,8 +422,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                         } else if let _ = peer.botInfo {
                             statusText = item.presentationData.strings.Bot_GenericBotStatus
                             statusColor = item.presentationData.theme.list.itemSecondaryTextColor
-                        } else if case .generic = item.mode, !servicePeer {
-                            let presence = (item.presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none, lastActivity: 0)
+                        } else if case .generic = item.mode, !servicePeer, let presence = item.presence {
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                             let (string, activity) = stringAndActivityForUserPresence(strings: item.presentationData.strings, dateTimeFormat: item.dateTimeFormat, presence: presence, relativeTo: Int32(timestamp), expanded: true)
                             statusText = string
@@ -438,19 +436,19 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                             statusColor = item.presentationData.theme.list.itemPrimaryTextColor
                         }
                 }
-            } else if let channel = item.peer as? TelegramChannel {
-                if let cachedChannelData = item.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
+            } else if case let .channel(channel) = item.peer {
+                if let memberCount = item.memberCount {
                     if case .group = channel.info {
                         if memberCount == 0 {
                             statusText = item.presentationData.strings.Group_Status
                         } else {
-                            statusText = item.presentationData.strings.Conversation_StatusMembers(memberCount)
+                            statusText = item.presentationData.strings.Conversation_StatusMembers(Int32(memberCount))
                         }
                     } else {
                         if memberCount == 0 {
                             statusText = item.presentationData.strings.Channel_Status
                         } else {
-                            statusText = item.presentationData.strings.Conversation_StatusSubscribers(memberCount)
+                            statusText = item.presentationData.strings.Conversation_StatusSubscribers(Int32(memberCount))
                         }
                     }
                     statusColor = item.presentationData.theme.list.itemSecondaryTextColor
@@ -464,7 +462,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                             statusColor = item.presentationData.theme.list.itemSecondaryTextColor
                     }
                 }
-            } else if let group = item.peer as? TelegramGroup {
+            } else if case let .legacyGroup(group) = item.peer {
                 statusText = item.presentationData.strings.GroupInfo_ParticipantCount(Int32(group.participantCount))
                 statusColor = item.presentationData.theme.list.itemSecondaryTextColor
             } else {
@@ -666,7 +664,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                             overrideImage = .deletedIcon
                         }
                         
-                        strongSelf.avatarNode.setPeer(context: item.accountContext, theme: item.presentationData.theme, peer: EnginePeer(peer), overrideImage: overrideImage, emptyColor: ignoreEmpty ? nil : item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+                        strongSelf.avatarNode.setPeer(context: item.accountContext, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: ignoreEmpty ? nil : item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
                     }
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floor((layout.contentSize.height - 66.0) / 2.0)), size: CGSize(width: 66.0, height: 66.0))
@@ -950,7 +948,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                             strongSelf.credibilityIconNode?.alpha = 1.0
                         }
                     }
-                    if let presence = item.presence as? TelegramUserPresence {
+                    if let presence = item.presence {
                         strongSelf.peerPresenceManager?.reset(presence: presence)
                     }
                     

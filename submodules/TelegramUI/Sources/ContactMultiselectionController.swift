@@ -20,7 +20,7 @@ private func peerTokenTitle(accountPeerId: PeerId, peer: Peer, strings: Presenta
     } else if peer.id.isReplies {
         return strings.DialogList_Replies
     } else {
-        return peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+        return EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
     }
 }
 

@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import WebKit
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
@@ -31,9 +30,9 @@ final class GameControllerNode: ViewControllerTracingNode {
     private let context: AccountContext
     var presentationData: PresentationData
     private let present: (ViewController, Any?) -> Void
-    private let message: Message
+    private let message: EngineMessage
     
-    init(context: AccountContext, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: Message) {
+    init(context: AccountContext, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: EngineMessage) {
         self.context = context
         self.presentationData = presentationData
         self.present = present
@@ -107,14 +106,14 @@ final class GameControllerNode: ViewControllerTracingNode {
         })
     }
     
-    private func shareData() -> (Peer, String)? {
-        var botPeer: Peer?
+    private func shareData() -> (EnginePeer, String)? {
+        var botPeer: EnginePeer?
         var gameName: String?
         for media in self.message.media {
             if let game = media as? TelegramMediaGame {
                 inner: for attribute in self.message.attributes {
                     if let attribute = attribute as? InlineBotMessageAttribute, let peerId = attribute.peerId {
-                        botPeer = self.message.peers[peerId]
+                        botPeer = self.message.peers[peerId].flatMap(EnginePeer.init)
                         break inner
                     }
                 }

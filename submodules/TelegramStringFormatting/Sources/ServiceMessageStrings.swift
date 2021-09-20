@@ -45,7 +45,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
     
     for media in message.media {
         if let action = media as? TelegramMediaAction {
-            let authorName = message.author?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
+            let authorName = message.author.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
             
             var isChannel = false
             if message.id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
@@ -263,7 +263,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case let .messageAutoremoveTimeoutUpdated(timeout):
                 let authorString: String
                 if let author = messageMainPeer(message) {
-                    authorString = author.compactDisplayTitle
+                    authorString = EnginePeer(author).compactDisplayTitle
                 } else {
                     authorString = ""
                 }
@@ -326,7 +326,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case .historyScreenshot:
                 let text: String
                 if message.effectivelyIncoming(accountPeerId) {
-                    text = strings.Notification_SecretChatMessageScreenshot(message.author?.compactDisplayTitle ?? "").string
+                    text = strings.Notification_SecretChatMessageScreenshot(message.author.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "").string
                 } else {
                     text = strings.Notification_SecretChatMessageScreenshotSelf
                 }
@@ -391,7 +391,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 if let invoiceTitle = invoiceTitle {
                     let botString: String
                     if let peer = messageMainPeer(message) {
-                        botString = peer.compactDisplayTitle
+                        botString = EnginePeer(peer).compactDisplayTitle
                     } else {
                         botString = ""
                     }
@@ -514,7 +514,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         typesString.append(strings.Notification_PassportValueEmail)
                     }
                 }
-                attributedString = NSAttributedString(string: strings.Notification_PassportValuesSentMessage(message.peers[message.id.peerId]?.compactDisplayTitle ?? "", typesString).string, font: titleFont, textColor: primaryTextColor)
+                attributedString = NSAttributedString(string: strings.Notification_PassportValuesSentMessage(message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? "", typesString).string, font: titleFont, textColor: primaryTextColor)
             case .peerJoined:
                 attributedString = addAttributesToStringWithRanges(strings.Notification_Joined(authorName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
             case .phoneNumberRequest:
@@ -522,11 +522,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case let .geoProximityReached(fromId, toId, distance):
                 let distanceString = stringForDistance(strings: strings, distance: Double(distance))
                 if fromId == accountPeerId {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityYouReached(distanceString, message.peers[toId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "")._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(1, toId)]))
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityYouReached(distanceString, message.peers[toId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "")._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(1, toId)]))
                 } else if toId == accountPeerId {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReachedYou(message.peers[fromId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId)]))
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReachedYou(message.peers[fromId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId)]))
                 } else {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReached(message.peers[fromId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString, message.peers[toId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "")._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId), (2, toId)]))
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReached(message.peers[fromId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString, message.peers[toId].flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "")._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId), (2, toId)]))
                 }
             case let .inviteToGroupPhoneCall(_, _, peerIds):
                 var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]

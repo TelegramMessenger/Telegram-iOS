@@ -261,7 +261,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             case let .adminsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .admin(_, _, creator):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: creator.peer.peer!, height: .peerList, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .none, label: creator.count > 1 ? .disclosure("\(creator.count)") : .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(creator.peer.peer!), height: .peerList, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .none, label: creator.count > 1 ? .disclosure("\(creator.count)") : .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
                     arguments.openAdmin(creator)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil)
         }
@@ -309,7 +309,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     
     entries.append(.mainLink(presentationData.theme, mainInvite, importers?.importers.prefix(3).compactMap { $0.peer.peer } ?? [], importersCount, isPublic))
     if let adminPeer = admin?.peer.peer, let peer = peerViewMainPeer(view) {
-        let string = presentationData.strings.InviteLink_OtherPermanentLinkInfo(adminPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))
+        let string = presentationData.strings.InviteLink_OtherPermanentLinkInfo(EnginePeer(adminPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))
         entries.append(.mainLinkOtherInfo(presentationData.theme, string.string))
     }
     
@@ -814,7 +814,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
         
         let title: ItemListControllerTitle
         if let admin = admin, let peer = admin.peer.peer {
-            title = .textWithSubtitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), presentationData.strings.InviteLink_InviteLinks(admin.count))
+            title = .textWithSubtitle(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), presentationData.strings.InviteLink_InviteLinks(admin.count))
         } else {
             title = .text(presentationData.strings.InviteLink_Title)
         }

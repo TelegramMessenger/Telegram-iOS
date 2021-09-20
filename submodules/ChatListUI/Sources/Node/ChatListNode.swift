@@ -309,7 +309,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             }
                         }
 
-                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings), sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: status, enabled: enabled, selection: editing ? .selectable(selected: selected) : .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings), sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: itemPeer.flatMap(EnginePeer.init), chatPeer: chatPeer.flatMap(EnginePeer.init)), status: status, enabled: enabled, selection: editing ? .selectable(selected: selected) : .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                             if let chatPeer = chatPeer {
                                 if editing {
                                     nodeInteraction.togglePeerSelected(chatPeer)
@@ -390,7 +390,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             }
                         }
                         
-                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings), sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: itemPeer, chatPeer: chatPeer), status: status, enabled: enabled, selection: editing ? .selectable(selected: selected) : .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
+                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings), sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, context: context, peerMode: .generalSearch, peer: .peer(peer: itemPeer.flatMap(EnginePeer.init), chatPeer: chatPeer.flatMap(EnginePeer.init)), status: status, enabled: enabled, selection: editing ? .selectable(selected: selected) : .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                             if let chatPeer = chatPeer {
                                 if editing {
                                     nodeInteraction.togglePeerSelected(chatPeer)

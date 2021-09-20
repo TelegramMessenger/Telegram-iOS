@@ -2014,7 +2014,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else if peer.id == self.context.account.peerId && !self.isSettings {
                 titleString = NSAttributedString(string: presentationData.strings.DialogList_Replies, font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             } else {
-                titleString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                titleString = NSAttributedString(string: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             }
             
             if self.isSettings, let user = peer as? TelegramUser {

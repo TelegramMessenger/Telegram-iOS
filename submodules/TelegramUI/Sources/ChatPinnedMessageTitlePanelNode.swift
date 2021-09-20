@@ -406,7 +406,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             if isReplyThread {
                 let titleString: String
                 if let author = message.effectiveAuthor {
-                    titleString = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                    titleString = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 } else {
                     titleString = ""
                 }

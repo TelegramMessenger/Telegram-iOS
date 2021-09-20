@@ -1244,15 +1244,15 @@ public final class VoiceChatController: ViewController {
                             if strongSelf.call.invitePeer(participant.peer.id) {
                                 let text: String
                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 } else {
-                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 }
                                 strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: participant.peer, text: text), action: { _ in return false })
                             }
                         } else {
                             if let groupPeer = groupPeer as? TelegramChannel, let listenerLink = inviteLinks?.listenerLink, !groupPeer.hasPermission(.inviteMembers) {
-                                let text = strongSelf.presentationData.strings.VoiceChat_SendPublicLinkText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                let text = strongSelf.presentationData.strings.VoiceChat_SendPublicLinkText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 
                                 strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_SendPublicLinkSend, action: { [weak self] in
                                     dismissController?()
@@ -1261,7 +1261,7 @@ public final class VoiceChatController: ViewController {
                                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: listenerLink, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)])
                                         |> deliverOnMainQueue).start(next: { [weak self] _ in
                                             if let strongSelf = self {
-                                                strongSelf.presentUndoOverlay(content: .forward(savedMessages: false, text: strongSelf.presentationData.strings.UserInfo_LinkForwardTooltip_Chat_One(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), action: { _ in return true })
+                                                strongSelf.presentUndoOverlay(content: .forward(savedMessages: false, text: strongSelf.presentationData.strings.UserInfo_LinkForwardTooltip_Chat_One(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), action: { _ in return true })
                                             }
                                         })
                                     }
@@ -1269,9 +1269,9 @@ public final class VoiceChatController: ViewController {
                             } else {
                                 let text: String
                                 if let groupPeer = groupPeer as? TelegramChannel, case .broadcast = groupPeer.info {
-                                    text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToChannelFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                    text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToChannelFirstText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 } else {
-                                    text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), groupPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                    text = strongSelf.presentationData.strings.VoiceChat_InviteMemberToGroupFirstText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 }
                                 
                                 strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: {
@@ -1350,9 +1350,9 @@ public final class VoiceChatController: ViewController {
                                             if strongSelf.call.invitePeer(peer.id) {
                                                 let text: String
                                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-                                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 } else {
-                                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 }
                                                 strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text), action: { _ in return false })
                                             }
@@ -1399,7 +1399,7 @@ public final class VoiceChatController: ViewController {
                                             case .privacy:
                                                 let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peer.id)
                                                 |> deliverOnMainQueue).start(next: { peer in
-                                                    self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(peer.compactDisplayTitle, peer.compactDisplayTitle).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                                    self?.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(peer).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                                 })
                                             case .notMutualContact:
                                                 strongSelf.controller?.present(textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
@@ -1418,9 +1418,9 @@ public final class VoiceChatController: ViewController {
                                             if strongSelf.call.invitePeer(peer.id) {
                                                 let text: String
                                                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-                                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                                    text = strongSelf.presentationData.strings.LiveStream_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 } else {
-                                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                                                    text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 }
                                                 strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text), action: { _ in return false })
                                             }
@@ -1620,7 +1620,7 @@ public final class VoiceChatController: ViewController {
                                         let _ = strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
                                         f(.default)
                                         
-                                        strongSelf.presentUndoOverlay(content: .voiceChatCanSpeak(text: presentationData.strings.VoiceChat_UserCanNowSpeak(entry.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), action: { _ in return true })
+                                        strongSelf.presentUndoOverlay(content: .voiceChatCanSpeak(text: presentationData.strings.VoiceChat_UserCanNowSpeak(EnginePeer(entry.peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), action: { _ in return true })
                                     })))
                                 } else {
                                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
@@ -1722,7 +1722,7 @@ public final class VoiceChatController: ViewController {
                                             let _ = strongSelf.context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: strongSelf.context.engine, peerId: strongSelf.call.peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
                                             strongSelf.call.removedPeer(peer.id)
                                             
-                                            strongSelf.presentUndoOverlay(content: .banned(text: strongSelf.presentationData.strings.VoiceChat_RemovedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), action: { _ in return false })
+                                            strongSelf.presentUndoOverlay(content: .banned(text: strongSelf.presentationData.strings.VoiceChat_RemovedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), action: { _ in return false })
                                         }))
 
                                         actionSheet.setItemGroups([
@@ -1997,7 +1997,7 @@ public final class VoiceChatController: ViewController {
                     
                     strongSelf.peer = peer
                     strongSelf.currentTitleIsCustom = title != nil
-                    strongSelf.currentTitle = title ?? peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+                    strongSelf.currentTitle = title ?? EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
                     
                     strongSelf.updateTitle(transition: .immediate)
                     strongSelf.titleNode.isRecording = isRecording
@@ -2230,7 +2230,7 @@ public final class VoiceChatController: ViewController {
                     if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
                         return
                     }
-                    let text = strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                    let text = strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(EnginePeer(event.peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                     strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: event.peer, text: text), action: { _ in return false })
                 }
             }))
@@ -2242,9 +2242,9 @@ public final class VoiceChatController: ViewController {
                 }
                 let text: String
                 if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-                    text = strongSelf.presentationData.strings.LiveStream_DisplayAsSuccess(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                    text = strongSelf.presentationData.strings.LiveStream_DisplayAsSuccess(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                 } else {
-                    text = strongSelf.presentationData.strings.VoiceChat_DisplayAsSuccess(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                    text = strongSelf.presentationData.strings.VoiceChat_DisplayAsSuccess(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                 }
                 strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text), action: { _ in return false })
             }))
@@ -2483,7 +2483,7 @@ public final class VoiceChatController: ViewController {
                 if peers.count > 1 {
                     for peer in peers {
                         if peer.peer.id == myPeerId {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)), action: { c, _ in
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(EnginePeer(peer.peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)), action: { c, _ in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -2899,7 +2899,7 @@ public final class VoiceChatController: ViewController {
                         }
                     }
 
-                    items.append(.action(ContextMenuActionItem(text: peer.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: isSelected ? extendedAvatarSize : avatarSize, signal: avatarSignal), action: { _, f in
+                    items.append(.action(ContextMenuActionItem(text: EnginePeer(peer.peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: isSelected ? extendedAvatarSize : avatarSize, signal: avatarSignal), action: { _, f in
                         f(.default)
 
                         guard let strongSelf = self else {
@@ -3381,14 +3381,14 @@ public final class VoiceChatController: ViewController {
                                     var isSavedMessages = false
                                     if peers.count == 1, let peer = peers.first {
                                         isSavedMessages = peer.id == strongSelf.context.account.peerId
-                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                         text = presentationData.strings.VoiceChat_ForwardTooltip_Chat(peerName).string
                                     } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                         text = presentationData.strings.VoiceChat_ForwardTooltip_TwoChats(firstPeerName, secondPeerName).string
                                     } else if let peer = peers.first {
-                                        let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                         text = presentationData.strings.VoiceChat_ForwardTooltip_ManyChats(peerName, "\(peers.count - 1)").string
                                     } else {
                                         text = ""
@@ -5406,7 +5406,7 @@ public final class VoiceChatController: ViewController {
                 for peerId in Array(speakingPeers) {
                     updatedSpeakers.append(peerId)
                     if let peer = entryByPeerId[peerId]?.peer {
-                        let displayName = speakingPeers.count == 1 ? peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) : peer.compactDisplayTitle
+                        let displayName = speakingPeers.count == 1 ? EnginePeer(peer).displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) : EnginePeer(peer).compactDisplayTitle
                         if currentSpeakingSubtitle.isEmpty {
                             currentSpeakingSubtitle.append(displayName)
                         } else {
@@ -6062,7 +6062,7 @@ public final class VoiceChatController: ViewController {
                     text = strongSelf.presentationData.strings.VoiceChat_EditTitleText
                 }
 
-                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: title, text: text, placeholder: chatPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), value: initialTitle, maxLength: 40, apply: { title in
+                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: title, text: text, placeholder: EnginePeer(chatPeer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), value: initialTitle, maxLength: 40, apply: { title in
                     if let strongSelf = self, let title = title, title != initialTitle {
                         strongSelf.call.updateTitle(title)
 
@@ -6133,7 +6133,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    let controller = WebSearchController(context: strongSelf.context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.id.namespace == Namespaces.Peer.CloudUser ? nil : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
+                    let controller = WebSearchController(context: strongSelf.context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.id.namespace == Namespaces.Peer.CloudUser ? nil : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
                         assetsController?.dismiss()
                         self?.updateProfilePhoto(result)
                     }))

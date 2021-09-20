@@ -287,16 +287,16 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     case .active:
                         switch secretChat.role {
                             case .creator:
-                                messageText = strings.DialogList_EncryptedChatStartedOutgoing(peer?.compactDisplayTitle ?? "").string
+                                messageText = strings.DialogList_EncryptedChatStartedOutgoing(peer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "").string
                             case .participant:
-                                messageText = strings.DialogList_EncryptedChatStartedIncoming(peer?.compactDisplayTitle ?? "").string
+                                messageText = strings.DialogList_EncryptedChatStartedIncoming(peer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "").string
                         }
                     case .terminated:
                         messageText = strings.DialogList_EncryptionRejected
                     case .handshake:
                         switch secretChat.role {
                             case .creator:
-                                messageText = strings.DialogList_AwaitingEncryption(peer?.compactDisplayTitle ?? "").string
+                                messageText = strings.DialogList_AwaitingEncryption(peer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "").string
                             case .participant:
                                 messageText = strings.DialogList_EncryptionProcessing
                         }

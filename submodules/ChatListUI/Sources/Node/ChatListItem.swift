@@ -492,7 +492,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if item.context.account.peerId == chatMainPeer.id {
                         result += item.presentationData.strings.DialogList_SavedMessages
                     } else {
-                        result += chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                        result += EnginePeer(chatMainPeer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     }
                     if let combinedReadState = combinedReadState, combinedReadState.count > 0 {
                         result += "\n\(item.presentationData.strings.VoiceOver_Chat_UnreadMessages(combinedReadState.count))"
@@ -520,7 +520,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
-                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
+                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
                         }
                         result += "\n\(messageText)"
                         return result
@@ -529,7 +529,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         var isFirst = true
                         for peer in peers {
                             if let chatMainPeer = peer.peer.chatMainPeer {
-                                let peerTitle = chatMainPeer.compactDisplayTitle
+                                let peerTitle = EnginePeer(chatMainPeer).compactDisplayTitle
                                 if !peerTitle.isEmpty {
                                     if isFirst {
                                         isFirst = false
@@ -554,7 +554,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         let (_, initialHideAuthor, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, author is TelegramUser {
-                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
+                            result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
                         }
                         if !message.flags.contains(.Incoming), let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageRead)"
@@ -981,7 +981,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if author.id == item.context.account.peerId {
                         inlineAuthorPrefix = item.presentationData.strings.DialogList_You
                     } else if messages.last?.id.peerId.namespace != Namespaces.Peer.CloudUser && messages.last?.id.peerId.namespace != Namespaces.Peer.SecretChat {
-                        inlineAuthorPrefix = author.compactDisplayTitle
+                        inlineAuthorPrefix = EnginePeer(author).compactDisplayTitle
                     }
                 }
             }
@@ -1000,7 +1000,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var peerText: String?
                     if case .groupReference = item.content {
                         if let messagePeer = itemPeer.chatMainPeer {
-                            peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                            peerText = EnginePeer(messagePeer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                         }
                     } else if let message = messages.last, let author = message.author as? TelegramUser, let peer = itemPeer.chatMainPeer, !(peer is TelegramUser) {
                         if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
@@ -1008,7 +1008,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
                                 peerText = authorSignature
                             } else {
-                                peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                                peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                             }
                         }
                     }
@@ -1137,7 +1137,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         var peerText: String?
                         if case .groupReference = item.content {
                             if let messagePeer = itemPeer.chatMainPeer {
-                                peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                                peerText = EnginePeer(messagePeer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                             }
                         }
                         
@@ -1150,7 +1150,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var isFirst = true
                     for peer in peers {
                         if let chatMainPeer = peer.peer.chatMainPeer {
-                            let peerTitle = chatMainPeer.compactDisplayTitle
+                            let peerTitle = EnginePeer(chatMainPeer).compactDisplayTitle
                             if !peerTitle.isEmpty {
                                 if isFirst {
                                     isFirst = false
@@ -1177,14 +1177,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch contentData {
                 case let .chat(itemPeer, _, _, _):
                     if let message = messages.last, let author = message.author as? TelegramUser, displayAsMessage {
-                        titleAttributedString = NSAttributedString(string: author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder), font: titleFont, textColor: theme.titleColor)
+                        titleAttributedString = NSAttributedString(string: author.id == account.peerId ? item.presentationData.strings.DialogList_You : EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder), font: titleFont, textColor: theme.titleColor)
                     } else if isPeerGroup {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_ArchivedChatsTitle, font: titleFont, textColor: theme.titleColor)
                     } else if itemPeer.chatMainPeer?.id == item.context.account.peerId {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
                     } else if let id = itemPeer.chatMainPeer?.id, id.isReplies {
                          titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleFont, textColor: theme.titleColor)
-                     } else if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
+                    } else if let displayTitle = itemPeer.chatMainPeer.flatMap(EnginePeer.init)?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
                 case .group:
@@ -1865,7 +1865,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     
                     if let peerPresence = peerPresence as? TelegramUserPresence {
-                        strongSelf.peerPresenceManager?.reset(presence: TelegramUserPresence(status: peerPresence.status, lastActivity: 0), isOnline: online)
+                        strongSelf.peerPresenceManager?.reset(presence: EnginePeer.Presence(TelegramUserPresence(status: peerPresence.status, lastActivity: 0)), isOnline: online)
                     }
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)

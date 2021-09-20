@@ -482,7 +482,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     let data = manager.with { manager -> PeerInfoStatusData? in
                         if let presence = manager.currentValue {
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                            let (text, isActivity) = stringAndActivityForUserPresence(strings: strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp), expanded: true)
+                            let (text, isActivity) = stringAndActivityForUserPresence(strings: strings, dateTimeFormat: dateTimeFormat, presence: EnginePeer.Presence(presence), relativeTo: Int32(timestamp), expanded: true)
                             return PeerInfoStatusData(text: text, isActivity: isActivity)
                         } else {
                             return nil
@@ -537,7 +537,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                                     })
                                 }
                                 updateManager.with { updateManager in
-                                    updateManager.reset(presence: presence)
+                                    updateManager.reset(presence: EnginePeer.Presence(presence))
                                 }
                             } else if let _ = manager.updateManager {
                                 manager.updateManager = nil
