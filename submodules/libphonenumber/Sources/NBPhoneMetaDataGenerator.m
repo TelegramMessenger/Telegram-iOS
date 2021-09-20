@@ -11,19 +11,6 @@
 - (id)customSafeObjectAtIndex:(NSUInteger)index;
 @end
 
-@implementation NSArray (NBAdditions)
-- (id)customSafeObjectAtIndex:(NSUInteger)index {
-    @synchronized(self) {
-        if (index >= [self count]) return nil;
-        id res = [self objectAtIndex:index];
-        if (res == nil || (NSNull*)res == [NSNull null]) {
-            return nil;
-        }
-        return res;
-    }
-}
-@end
-
 #define kNBSRCDirectoryName @"src"
 
 #define INDENT_TAB @"    "
