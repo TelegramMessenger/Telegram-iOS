@@ -710,13 +710,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 let settings = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings, ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData())
                 |> take(1)
                 |> map { sharedData, accessChallengeData -> WebBrowserSettings in
-                    let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings ?? PresentationPasscodeSettings.defaultSettings
-                    if accessChallengeData.data.isLockable {
-                        if passcodeSettings.autolockTimeout != nil {
-                            return WebBrowserSettings(defaultWebBrowser: "Safari")
-                        }
-                    }
-                    
+                    // MARK: Postufgram changes
                     if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings {
                         return current   
                     } else {
