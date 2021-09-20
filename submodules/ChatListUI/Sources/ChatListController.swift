@@ -1131,14 +1131,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    // MARK: Postufgram Code: {
-    override public func viewDidLoad() {
-        super.viewDidLoad()
-        
-        self.dismissActivityViewControllerIfNeeded()
-    }
-    // MARK: Postufgram Code: }
-    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
@@ -1448,17 +1440,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     override public func navigationStackConfigurationUpdated(next: [ViewController]) {
         super.navigationStackConfigurationUpdated(next: next)
     }
-    
-    // MARK: Postufgram Code: {
-    private func dismissActivityViewControllerIfNeeded() {
-        // Close the UIActivityViewController when reload ChatList.
-        guard let rootViewController = self.view.window?.rootViewController,
-              let presentedViewController = rootViewController.presentedViewController,
-                  presentedViewController is UIActivityViewController else { return }
-            
-        presentedViewController.dismiss(animated: true)
-    }
-    // MARK: Postufgram Code: }
     
     @objc private func editPressed() {
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))

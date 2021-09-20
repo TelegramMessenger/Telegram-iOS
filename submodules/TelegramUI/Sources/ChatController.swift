@@ -7933,11 +7933,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.dismissAllTooltips()
         
         self.sendMessageActionsController?.dismiss()
+        // MARK: Postufgram Code: {
+        self.dismissActivityViewControllerIfNeeded()
+        // MARK: Postufgram Code: }
         
         if let _ = self.peekData {
             self.peekTimerDisposable.set(nil)
         }
     }
+    
+    // MARK: Postufgram Code: {
+    private func dismissActivityViewControllerIfNeeded() {
+        // Close the UIActivityViewController when reload ChatList.
+        guard let rootViewController = self.view.window?.rootViewController,
+              let presentedViewController = rootViewController.presentedViewController,
+                  presentedViewController is UIActivityViewController else { return }
+            
+        presentedViewController.dismiss(animated: true)
+    }
+    // MARK: Postufgram Code: }
     
     private func saveInterfaceState(includeScrollState: Bool = true) {
         if case .forwardedMessages = self.subject {
