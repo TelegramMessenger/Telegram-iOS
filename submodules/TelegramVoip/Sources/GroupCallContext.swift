@@ -1,7 +1,6 @@
 import Foundation
 import SwiftSignalKit
 import TgVoipWebrtc
-import Postbox
 import TelegramCore
 
 private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {

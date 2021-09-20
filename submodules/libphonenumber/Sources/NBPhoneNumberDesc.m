@@ -7,11 +7,11 @@
 #import "NBPhoneNumberDesc.h"
 
 @interface NSArray (NBAdditions)
-- (id)safeObjectAtIndex:(NSUInteger)index;
+- (id)customSafeObjectAtIndex:(NSUInteger)index;
 @end
 
 @implementation NSArray (NBAdditions)
-- (id)safeObjectAtIndex:(NSUInteger)index {
+- (id)customSafeObjectAtIndex:(NSUInteger)index {
     @synchronized(self) {
         if (index >= [self count]) return nil;
         id res = [self objectAtIndex:index];
@@ -33,9 +33,9 @@
     NSString *exp = nil;
     
     if (data != nil && [data isKindOfClass:[NSArray class]]) {
-        /* 2 */ nnp = [data safeObjectAtIndex:2];
-        /* 3 */ pnp = [data safeObjectAtIndex:3];
-        /* 6 */ exp = [data safeObjectAtIndex:6];
+        /* 2 */ nnp = [data customSafeObjectAtIndex:2];
+        /* 3 */ pnp = [data customSafeObjectAtIndex:3];
+        /* 6 */ exp = [data customSafeObjectAtIndex:6];
     }
     
     return [self initWithNationalNumberPattern:nnp withPossibleNumberPattern:pnp withExample:exp];

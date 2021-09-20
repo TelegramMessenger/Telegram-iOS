@@ -37,7 +37,7 @@ private struct ApplicationSettings {
 private func applicationSettings(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<ApplicationSettings, NoError> {
     return accountManager.transaction { transaction -> ApplicationSettings in
         let loggingSettings: LoggingSettings
-        if let value = transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings {
+        if let value = transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) {
             loggingSettings = value
         } else {
             loggingSettings = LoggingSettings.defaultSettings
@@ -943,7 +943,7 @@ private final class WidgetIntentHandler {
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
             
-            let presentationData = WidgetPresentationData.getForExtension()
+            //let presentationData = WidgetPresentationData.getForExtension()
             
             let error = NSError(domain: "Locked", code: 1, userInfo: [
                 NSLocalizedDescriptionKey: "Open Telegram and enter passcode to edit widget."
