@@ -447,7 +447,7 @@ final class ChatHistoryPreloadManager {
                                 
                                 switch index.entity {
                                 case let .peer(peerId):
-                                    Logger.shared.log("HistoryPreload", "view \(peerId) hole \(updatedHole) isUpdated: \(holeIsUpdated)")
+                                    Logger.shared.log("HistoryPreload", "view \(peerId) hole \(String(describing: updatedHole)) isUpdated: \(holeIsUpdated)")
                                 }
                                 
                                 if previousHole != updatedHole {

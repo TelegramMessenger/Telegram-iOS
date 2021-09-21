@@ -337,7 +337,7 @@ final class MutableChatListView {
     private var additionalItems: [AdditionalChatListItem] = []
     fileprivate var additionalItemEntries: [MutableChatListAdditionalItemEntry] = []
     
-    init(postbox: PostboxImpl, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
+    init(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.groupId = groupId
         self.filterPredicate = filterPredicate
         self.summaryComponents = summaryComponents
@@ -358,8 +358,8 @@ final class MutableChatListView {
             spaces.append(.group(groupId: self.groupId, pinned: .includePinned, predicate: filterPredicate))
         }
         self.spaces = spaces
-        self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: aroundIndex, summaryComponents: self.summaryComponents, halfLimit: count)
-        self.sampledState = self.state.sample(postbox: postbox)
+        self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: aroundIndex, summaryComponents: self.summaryComponents, halfLimit: count)
+        self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
         
         self.count = count
         
@@ -451,11 +451,11 @@ final class MutableChatListView {
         }
     }
     
-    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+    func refreshDueToExternalTransaction(postbox: PostboxImpl, currentTransaction: Transaction) -> Bool {
         var updated = false
         
-        self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
-        self.sampledState = self.state.sample(postbox: postbox)
+        self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
+        self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
         updated = true
         
         let currentGroupEntries = self.groupEntries
@@ -469,16 +469,16 @@ final class MutableChatListView {
         return updated
     }
     
-    func replay(postbox: PostboxImpl, operations: [PeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: (PeerNotificationSettings?, PeerNotificationSettings)], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
+    func replay(postbox: PostboxImpl, currentTransaction: Transaction, operations: [PeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: (PeerNotificationSettings?, PeerNotificationSettings)], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         
         if transaction.updatedGlobalNotificationSettings && self.filterPredicate != nil {
-            self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
-            self.sampledState = self.state.sample(postbox: postbox)
+            self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
+            self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
             hasChanges = true
         } else {
-            if self.state.replay(postbox: postbox, transaction: transaction) {
-                self.sampledState = self.state.sample(postbox: postbox)
+            if self.state.replay(postbox: postbox, currentTransaction: currentTransaction, transaction: transaction) {
+                self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
                 hasChanges = true
             }
         }

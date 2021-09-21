@@ -222,7 +222,7 @@ final class ViewTracker {
         self.combinedViews.remove(index)
     }
     
-    func refreshViewsDueToExternalTransaction(postbox: PostboxImpl, fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
+    func refreshViewsDueToExternalTransaction(postbox: PostboxImpl, currentTransaction: Transaction, fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
         var updateTrackedHoles = false
         
         for (mutableView, pipe) in self.messageHistoryViews.copyItems() {
@@ -234,7 +234,7 @@ final class ViewTracker {
         }
         
         for (mutableView, pipe) in self.chatListViews.copyItems() {
-            if mutableView.refreshDueToExternalTransaction(postbox: postbox) {
+            if mutableView.refreshDueToExternalTransaction(postbox: postbox, currentTransaction: currentTransaction) {
                 mutableView.render(postbox: postbox)
                 pipe.putNext((ChatListView(mutableView), .Generic))
             }
@@ -259,7 +259,7 @@ final class ViewTracker {
         }
     }
     
-    func updateViews(postbox: PostboxImpl, transaction: PostboxTransaction) {
+    func updateViews(postbox: PostboxImpl, currentTransaction: Transaction, transaction: PostboxTransaction) {
         var updateTrackedHoles = false
         
         if let currentUpdatedState = transaction.currentUpdatedState {
@@ -337,7 +337,7 @@ final class ViewTracker {
         
         for (mutableView, pipe) in self.chatListViews.copyItems() {
             let context = MutableChatListViewReplayContext()
-            if mutableView.replay(postbox: postbox, operations: transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, updatedPeerPresences: transaction.currentUpdatedPeerPresences, transaction: transaction, context: context) {
+            if mutableView.replay(postbox: postbox, currentTransaction: currentTransaction, operations: transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedPeers: transaction.currentUpdatedPeers, updatedPeerPresences: transaction.currentUpdatedPeerPresences, transaction: transaction, context: context) {
                 mutableView.complete(postbox: postbox, context: context)
                 mutableView.render(postbox: postbox)
                 pipe.putNext((ChatListView(mutableView), .Generic))

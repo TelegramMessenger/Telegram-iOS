@@ -2,7 +2,7 @@ import Foundation
 
 final class MutableNoticeEntryView<Types: AccountManagerTypes> {
     private let key: NoticeEntryKey
-    fileprivate var value: NoticeEntry?
+    fileprivate var value: CodableEntry?
     
     init(accountManagerImpl: AccountManagerImpl<Types>, key: NoticeEntryKey) {
         self.key = key
@@ -23,7 +23,7 @@ final class MutableNoticeEntryView<Types: AccountManagerTypes> {
 }
 
 public final class NoticeEntryView<Types: AccountManagerTypes> {
-    public let value: NoticeEntry?
+    public let value: CodableEntry?
     
     init(_ view: MutableNoticeEntryView<Types>) {
         self.value = view.value

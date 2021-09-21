@@ -73,10 +73,6 @@ extension ChatMessageSwipeToReplyNode.Action {
                 self = .reply
             case .reply:
                 self = .reply
-            case .like:
-                self = .like
-            case .unlike:
-                self = .unlike
             }
         } else {
             self = .reply

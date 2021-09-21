@@ -2,7 +2,7 @@ import Foundation
 
 final class MutableCachedItemView: MutablePostboxView {
     private let id: ItemCacheEntryId
-    fileprivate var value: PostboxCoding?
+    fileprivate var value: CodableEntry?
     
     init(postbox: PostboxImpl, id: ItemCacheEntryId) {
         self.id = id
@@ -23,7 +23,7 @@ final class MutableCachedItemView: MutablePostboxView {
 }
 
 public final class CachedItemView: PostboxView {
-    public let value: PostboxCoding?
+    public let value: CodableEntry?
     
     init(_ view: MutableCachedItemView) {
         self.value = view.value

@@ -62,7 +62,7 @@ public func standaloneSendMessage(account: Account, peerId: PeerId, text: String
                     return .single(progress)
                 case let .result(result):
                     let sendContent = sendMessageContent(account: account, peerId: peerId, attributes: attributes, content: result) |> map({ _ -> Float in return 1.0 })
-                    return .single(1.0) |> then(sendContent |> mapError { _ -> StandaloneSendMessageError in return .generic })
+                    return .single(1.0) |> then(sendContent |> mapError { _ -> StandaloneSendMessageError in })
                 
             }
         }
@@ -128,7 +128,6 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                 return .complete()
             }
             |> `catch` { _ -> Signal<Void, NoError> in
-                return .complete()
             }
         } else {
             return .complete()

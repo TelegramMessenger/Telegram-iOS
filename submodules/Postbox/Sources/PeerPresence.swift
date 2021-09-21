@@ -1,5 +1,5 @@
 
-public protocol PeerPresence: class, PostboxCoding {
+public protocol PeerPresence: AnyObject, PostboxCoding {
     func isEqual(to: PeerPresence) -> Bool
 }
 

@@ -7,12 +7,12 @@ public func updateLoggingSettings(accountManager: AccountManager<TelegramAccount
     return accountManager.transaction { transaction -> Void in
         var updated: LoggingSettings?
         transaction.updateSharedData(SharedDataKeys.loggingSettings, { current in
-            if let current = current as? LoggingSettings {
+            if let current = current?.get(LoggingSettings.self) {
                 updated = f(current)
-                return updated
+                return PreferencesEntry(updated)
             } else {
                 updated = f(LoggingSettings.defaultSettings)
-                return updated
+                return PreferencesEntry(updated)
             }
         })
         

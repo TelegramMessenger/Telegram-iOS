@@ -80,7 +80,7 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
         }
     }
     return uploadedMedia
-    |> mapError { _ -> RequestEditMessageInternalError in return .error(.generic) }
+    |> mapError { _ -> RequestEditMessageInternalError in }
     |> mapToSignal { uploadedMediaResult -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
         var pendingMediaContent: PendingMessageUploadedContent?
         if let uploadedMediaResult = uploadedMediaResult {
@@ -122,7 +122,7 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
             }
             return (transaction.getPeer(messageId.peerId), message, peers)
         }
-        |> mapError { _ -> RequestEditMessageInternalError in return .error(.generic) }
+        |> mapError { _ -> RequestEditMessageInternalError in }
         |> mapToSignal { peer, message, associatedPeers -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
             if let peer = peer, let message = message, let inputPeer = apiInputPeer(peer) {
                 var flags: Int32 = 1 << 11
@@ -241,7 +241,6 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
                             return .done(true)
                         }
                         |> mapError { _ -> RequestEditMessageInternalError in
-                            return .error(.generic)
                         }
                     } else {
                         return .single(.done(false))

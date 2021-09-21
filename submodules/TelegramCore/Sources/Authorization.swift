@@ -227,8 +227,8 @@ public func authorizeWithCode(accountManager: AccountManager<TelegramAccountMana
                                 }
                                 |> mapToSignal { result -> Signal<AuthorizationCodeResult, AuthorizationCodeVerificationError> in
                                     switch result {
-                                        case let .password(password):
-                                            return .single(.password(hint: password.hint ?? ""))
+                                        case let .password(_, _, _, _, hint, _, _, _, _, _):
+                                            return .single(.password(hint: hint ?? ""))
                                     }
                                 }
                             case let (_, errorDescription):

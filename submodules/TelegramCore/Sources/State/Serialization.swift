@@ -210,7 +210,7 @@ public class BoxedMessage: NSObject {
 
 public class Serialization: NSObject, MTSerialization {
     public func currentLayer() -> UInt {
-        return 133
+        return 134
     }
     
     public func parseMessage(_ data: Data!) -> Any! {
@@ -246,9 +246,9 @@ public class Serialization: NSObject, MTSerialization {
         return { response -> MTDatacenterAddressListData? in
             if let config = parser.parse(Buffer(data: response)) {
                 switch config {
-                    case let .config(config):
+                    case let .config(_, _, _, _, _, dcOptions, _, _, _, _, _, _,_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                         var addressDict: [NSNumber: [Any]] = [:]
-                        for option in config.dcOptions {
+                        for option in dcOptions {
                             switch option {
                                 case let .dcOption(flags, id, ipAddress, port, secret):
                                     if addressDict[id as NSNumber] == nil {

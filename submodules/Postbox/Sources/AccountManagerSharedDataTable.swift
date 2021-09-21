@@ -11,8 +11,8 @@ final class AccountManagerSharedDataTable: Table {
     func get(key: ValueBoxKey) -> PreferencesEntry? {
         if let object = self.values[key] {
             return object
-        } else  if let value = self.valueBox.get(self.table, key: key), let object = PostboxDecoder(buffer: value).decodeRootObject() as? PreferencesEntry {
-            return object
+        } else if let value = self.valueBox.get(self.table, key: key) {
+            return PreferencesEntry(data: value.makeData())
         } else {
             return nil
         }
@@ -20,12 +20,10 @@ final class AccountManagerSharedDataTable: Table {
     
     func set(key: ValueBoxKey, value: PreferencesEntry?, updatedKeys: inout Set<ValueBoxKey>) {
         if let value = value {
-            if let current = self.get(key: key), current.isEqual(to: value) {
+            if let current = self.get(key: key), current == value {
                 return
             }
-            let encoder = PostboxEncoder()
-            encoder.encodeRootObject(value)
-            self.valueBox.set(self.table, key: key, value: encoder.makeReadBufferAndReset())
+            self.valueBox.set(self.table, key: key, value: ReadBuffer(data: value.data))
             updatedKeys.insert(key)
             
             self.values[key] = value

@@ -33,7 +33,9 @@ public func isGifSaved(transaction: Transaction, mediaId: MediaId) -> Bool {
 public func addSavedGif(postbox: Postbox, fileReference: FileMediaReference) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         if let resource = fileReference.media.resource as? CloudDocumentMediaResource {
-            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(fileReference.media.fileId).rawValue, contents: RecentMediaItem(fileReference.media)), removeTailIfCountExceeds: 200)
+            if let entry = CodableEntry(RecentMediaItem(fileReference.media)) {
+                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(fileReference.media.fileId).rawValue, contents: entry), removeTailIfCountExceeds: 200)
+            }
             addSynchronizeSavedGifsOperation(transaction: transaction, operation: .add(id: resource.fileId, accessHash: resource.accessHash, fileReference: fileReference))
         }
     }
@@ -41,8 +43,9 @@ public func addSavedGif(postbox: Postbox, fileReference: FileMediaReference) -> 
 
 public func removeSavedGif(postbox: Postbox, mediaId: MediaId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
-        if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents as? RecentMediaItem {
-            if let file = item.media as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
+        if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents.get(RecentMediaItem.self) {
+            let file = item.media
+            if let resource = file.resource as? CloudDocumentMediaResource {
                 transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, itemId: entry.id)
                 addSynchronizeSavedGifsOperation(transaction: transaction, operation: .remove(id: resource.fileId, accessHash: resource.accessHash))
             }

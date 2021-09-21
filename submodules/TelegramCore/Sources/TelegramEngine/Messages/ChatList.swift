@@ -116,7 +116,7 @@ public extension EngineChatList.Group {
 extension EngineChatList.Item {
     convenience init?(_ entry: ChatListEntry) {
         switch entry {
-        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedInterfaceState, renderedPeer, presence, summaryInfo, hasFailed, isContact):
+        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, _, renderedPeer, presence, summaryInfo, hasFailed, isContact):
             self.init(
                 index: index,
                 messages: messages.map(EngineMessage.init),

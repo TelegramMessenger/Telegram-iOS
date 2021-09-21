@@ -374,7 +374,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             if peer.isDeleted {
                 overrideImage = .deletedIcon
             } else if let previousItem = previousItem, item == nil {
-                if case let .image(image) = previousItem, let rep = image.1.last {
+                if case let .image(_, representations, _, _) = previousItem, let rep = representations.last {
                     self.removedPhotoResourceIds.insert(rep.representation.resource.id.uniqueId)
                 }
                 overrideImage = AvatarNodeImageOverride.none
@@ -596,9 +596,9 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                     }
                 }
                 
-                transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
+                transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: 1.0)
             } else {
-                let targetOverlayAlpha: CGFloat = overlayHidden ? 0.0 : 1.0
+                let targetOverlayAlpha: CGFloat = 0.0
                 if self.updatingAvatarOverlay.alpha != targetOverlayAlpha {
                     let update = {
                         self.statusNode.transitionToState(.none)
@@ -679,7 +679,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         if canEditPeerInfo(context: self.context, peer: peer), peer.profileImageRepresentations.isEmpty {
             overrideImage = .editAvatarIcon
         } else if let previousItem = previousItem, item == nil {
-            if case let .image(image) = previousItem, let rep = image.1.last {
+            if case let .image(_, representations, _, _) = previousItem, let rep = representations.last {
                 self.removedPhotoResourceIds.insert(rep.representation.resource.id.uniqueId)
             }
             overrideImage = AvatarNodeImageOverride.none
@@ -2014,7 +2014,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else if peer.id == self.context.account.peerId && !self.isSettings {
                 titleString = NSAttributedString(string: presentationData.strings.DialogList_Replies, font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             } else {
-                titleString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                titleString = NSAttributedString(string: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             }
             
             if self.isSettings, let user = peer as? TelegramUser {

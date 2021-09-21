@@ -53,8 +53,8 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
     var hideAuthor = false
     var messageText: String
     if let message = message {
-        if let messageMain = messageMainPeer(message) {
-            peer = messageMain
+        if let messageMain = messageMainPeer(EngineMessage(message)) {
+            peer = messageMain._asPeer()
         } else {
             peer = chatPeer.chatMainPeer
         }
@@ -261,12 +261,12 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 }
                             default:
                                 hideAuthor = true
-                                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
+                                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), accountPeerId: accountPeerId, forChatList: true) {
                                     messageText = text
                                 }
                         }
                     case _ as TelegramMediaExpiredContent:
-                        if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
+                        if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), accountPeerId: accountPeerId, forChatList: true) {
                             messageText = text
                         }
                     case let poll as TelegramMediaPoll:
@@ -287,16 +287,16 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     case .active:
                         switch secretChat.role {
                             case .creator:
-                                messageText = strings.DialogList_EncryptedChatStartedOutgoing(peer?.compactDisplayTitle ?? "").string
+                                messageText = strings.DialogList_EncryptedChatStartedOutgoing(peer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "").string
                             case .participant:
-                                messageText = strings.DialogList_EncryptedChatStartedIncoming(peer?.compactDisplayTitle ?? "").string
+                                messageText = strings.DialogList_EncryptedChatStartedIncoming(peer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "").string
                         }
                     case .terminated:
                         messageText = strings.DialogList_EncryptionRejected
                     case .handshake:
                         switch secretChat.role {
                             case .creator:
-                                messageText = strings.DialogList_AwaitingEncryption(peer?.compactDisplayTitle ?? "").string
+                                messageText = strings.DialogList_AwaitingEncryption(peer.flatMap(EnginePeer.init)?.compactDisplayTitle ?? "").string
                             case .participant:
                                 messageText = strings.DialogList_EncryptionProcessing
                         }

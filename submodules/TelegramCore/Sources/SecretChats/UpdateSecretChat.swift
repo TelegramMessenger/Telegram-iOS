@@ -14,10 +14,10 @@ struct SecretChatRequestData {
 func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: PeerId, transaction: Transaction, mediaBox: MediaBox, chat: Api.EncryptedChat, requestData: SecretChatRequestData?) {
     let currentPeer = transaction.getPeer(chat.peerId) as? TelegramSecretChat
     let currentState = transaction.getPeerChatState(chat.peerId) as? SecretChatState
-    let settings = transaction.getPreferencesEntry(key: PreferencesKeys.secretChatSettings) as? SecretChatSettings ?? SecretChatSettings.defaultSettings
+    let settings = transaction.getPreferencesEntry(key: PreferencesKeys.secretChatSettings)?.get(SecretChatSettings.self) ?? SecretChatSettings.defaultSettings
     assert((currentPeer == nil) == (currentState == nil))
     switch chat {
-        case let .encryptedChat(_, _, _, adminId, _, gAOrB, remoteKeyFingerprint):
+        case let .encryptedChat(_, _, _, adminId, _, gAOrB, _):
             if let currentPeer = currentPeer, let currentState = currentState, adminId == accountPeerId.id._internalGetInt64Value() {
                 if case let .handshake(handshakeState) = currentState.embeddedState, case let .requested(_, p, a) = handshakeState {
                     let pData = p.makeData()
@@ -43,7 +43,9 @@ func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: Pee
                     let keyHash = MTSha1(key)
                     
                     var keyFingerprint: Int64 = 0
-                    keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                    keyHash.withUnsafeBytes { rawBytes -> Void in
+                        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                         memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
                     }
                     

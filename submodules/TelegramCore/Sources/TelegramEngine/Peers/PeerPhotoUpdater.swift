@@ -72,7 +72,7 @@ func _internal_updatePeerPhoto(postbox: Postbox, network: Network, stateManager:
     
 func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, stateManager: AccountStateManager?, accountPeerId: PeerId, peer: Signal<Peer, NoError>, photo: Signal<UploadedPeerPhotoData, NoError>?, video: Signal<UploadedPeerPhotoData?, NoError>?, videoStartTimestamp: Double?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
     return peer
-    |> mapError { _ in return .generic }
+    |> mapError { _ -> UploadPeerPhotoError in }
     |> mapToSignal { peer -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
         if let photo = photo {
             let mappedPhoto = photo
@@ -99,7 +99,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
             }
             
             return combineLatest(mappedPhoto, mappedVideo)
-            |> mapError { _ -> UploadPeerPhotoError in return .generic }
+            |> mapError { _ -> UploadPeerPhotoError in }
             |> mapToSignal { photoResult, videoResult -> Signal<(UpdatePeerPhotoStatus, MediaResource?, MediaResource?), UploadPeerPhotoError> in
                 switch photoResult.content {
                     case .error:
@@ -200,7 +200,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                                 })
                                             }
                                             return (.complete(representations), photoResult.resource, videoResult?.resource)
-                                        } |> mapError {_ in return UploadPeerPhotoError.generic}
+                                        } |> mapError { _ -> UploadPeerPhotoError in }
                                     }
                                 } else {
                                     var flags: Int32 = (1 << 0)
@@ -248,7 +248,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                                 })
                                                 return (.complete(groupOrChannel.profileImageRepresentations), photoResult.resource, videoResult?.resource)
                                             }
-                                            |> mapError { _ in return .generic }
+                                            |> mapError { _ -> UploadPeerPhotoError in }
                                         }
                                     }
                                 }
@@ -322,7 +322,7 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                     })
                                     return .complete(groupOrChannel.profileImageRepresentations)
                                 }
-                                |> mapError { _ in return .generic }
+                                |> mapError { _ -> UploadPeerPhotoError in }
                             }
                         }
                     }

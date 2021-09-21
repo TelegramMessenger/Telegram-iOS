@@ -3,32 +3,6 @@ import Foundation
 enum PendingMessageActionsMetadataCountKey: Hashable {
     case peerNamespace(PeerId, MessageId.Namespace)
     case peerNamespaceAction(PeerId, MessageId.Namespace, PendingMessageActionType)
-    
-    static func ==(lhs: PendingMessageActionsMetadataCountKey, rhs: PendingMessageActionsMetadataCountKey) -> Bool {
-        switch lhs {
-            case let .peerNamespace(peerId, namespace):
-                if case .peerNamespace(peerId, namespace) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .peerNamespaceAction(peerId, namespace, actionType):
-                if case .peerNamespaceAction(peerId, namespace, actionType) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-    
-    var hashValue: Int {
-        switch self {
-            case let .peerNamespace(peerId, namespace):
-                return peerId.hashValue ^ namespace.hashValue
-            case let .peerNamespaceAction(peerId, namespace, actionType):
-                return peerId.hashValue ^ namespace.hashValue ^ actionType.hashValue
-        }
-    }
 }
 
 enum PendingMessageActionsMetadataKey {

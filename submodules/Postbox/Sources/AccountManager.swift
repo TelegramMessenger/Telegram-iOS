@@ -20,8 +20,8 @@ public struct AccountManagerModifier<Types: AccountManagerTypes> {
     public let setAccessChallengeData: (PostboxAccessChallengeData) -> Void
     public let getVersion: () -> Int32?
     public let setVersion: (Int32) -> Void
-    public let getNotice: (NoticeEntryKey) -> NoticeEntry?
-    public let setNotice: (NoticeEntryKey, NoticeEntry?) -> Void
+    public let getNotice: (NoticeEntryKey) -> CodableEntry?
+    public let setNotice: (NoticeEntryKey, CodableEntry?) -> Void
     public let clearNotices: () -> Void
 }
 
@@ -69,7 +69,7 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         }
     }
     
-    fileprivate init?(queue: Queue, basePath: String, isTemporary: Bool, isReadOnly: Bool, temporarySessionId: Int64) {
+    fileprivate init?(queue: Queue, basePath: String, isTemporary: Bool, isReadOnly: Bool, useCaches: Bool, temporarySessionId: Int64) {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         self.queue = queue
@@ -77,19 +77,19 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         self.atomicStatePath = "\(basePath)/atomic-state"
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
-        guard let guardValueBox = SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, isTemporary: isTemporary, isReadOnly: false, encryptionParameters: nil, upgradeProgress: { _ in }) else {
+        guard let guardValueBox = SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, isTemporary: isTemporary, isReadOnly: false, useCaches: useCaches, encryptionParameters: nil, upgradeProgress: { _ in }) else {
             return nil
         }
         self.guardValueBox = guardValueBox
-        guard let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, encryptionParameters: nil, upgradeProgress: { _ in }) else {
+        guard let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, encryptionParameters: nil, upgradeProgress: { _ in }) else {
             return nil
         }
         self.valueBox = valueBox
         
-        self.legacyMetadataTable = AccountManagerMetadataTable<Types.Attribute>(valueBox: self.valueBox, table: AccountManagerMetadataTable<Types.Attribute>.tableSpec(0))
-        self.legacyRecordTable = AccountManagerRecordTable<Types.Attribute>(valueBox: self.valueBox, table: AccountManagerRecordTable<Types.Attribute>.tableSpec(1))
-        self.sharedDataTable = AccountManagerSharedDataTable(valueBox: self.valueBox, table: AccountManagerSharedDataTable.tableSpec(2))
-        self.noticeTable = NoticeTable(valueBox: self.valueBox, table: NoticeTable.tableSpec(3))
+        self.legacyMetadataTable = AccountManagerMetadataTable<Types.Attribute>(valueBox: self.valueBox, table: AccountManagerMetadataTable<Types.Attribute>.tableSpec(0), useCaches: useCaches)
+        self.legacyRecordTable = AccountManagerRecordTable<Types.Attribute>(valueBox: self.valueBox, table: AccountManagerRecordTable<Types.Attribute>.tableSpec(1), useCaches: useCaches)
+        self.sharedDataTable = AccountManagerSharedDataTable(valueBox: self.valueBox, table: AccountManagerSharedDataTable.tableSpec(2), useCaches: useCaches)
+        self.noticeTable = NoticeTable(valueBox: self.valueBox, table: NoticeTable.tableSpec(3), useCaches: useCaches)
         
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath))
@@ -472,7 +472,7 @@ public final class AccountManager<Types: AccountManagerTypes> {
         return AccountManagerImpl<Types>.getCurrentRecords(basePath: basePath)
     }
     
-    public init(basePath: String, isTemporary: Bool, isReadOnly: Bool) {
+    public init(basePath: String, isTemporary: Bool, isReadOnly: Bool, useCaches: Bool) {
         self.queue = sharedQueue
         self.basePath = basePath
         var temporarySessionId: Int64 = 0
@@ -480,7 +480,7 @@ public final class AccountManager<Types: AccountManagerTypes> {
         self.temporarySessionId = temporarySessionId
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            if let value = AccountManagerImpl<Types>(queue: queue, basePath: basePath, isTemporary: isTemporary, isReadOnly: isReadOnly, temporarySessionId: temporarySessionId) {
+            if let value = AccountManagerImpl<Types>(queue: queue, basePath: basePath, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, temporarySessionId: temporarySessionId) {
                 return value
             } else {
                 preconditionFailure()

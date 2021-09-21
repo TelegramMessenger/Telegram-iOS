@@ -369,7 +369,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         let _ = (combineLatest(stagingSettingsPromise.get(), sharedData)
         |> take(1)
         |> deliverOnMainQueue).start(next: { stagingSettings, sharedData in
-            let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
             let updated = f(stagingSettings ?? settings.automaticThemeSwitchSetting)
             stagingSettingsPromise.set(updated)
             if areSettingsValid(updated) {
@@ -569,7 +569,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
     
     let signal = combineLatest(context.sharedContext.presentationData |> deliverOnMainQueue, sharedData |> deliverOnMainQueue, cloudThemes.get() |> deliverOnMainQueue, stagingSettingsPromise.get() |> deliverOnMainQueue)
     |> map { presentationData, sharedData, cloudThemes, stagingSettings -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+        let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
         
         let defaultThemes: [PresentationThemeReference] = [.builtin(.night), .builtin(.nightAccent)]
         let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? context.account.id : nil)) }

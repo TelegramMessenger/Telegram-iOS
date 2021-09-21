@@ -23,21 +23,23 @@ private struct WallpaperSearchRecentQueryItemId {
     }
 }
 
-public final class RecentWallpaperSearchQueryItem: OrderedItemListEntryContents {
+public final class RecentWallpaperSearchQueryItem: Codable {
     public init() {
     }
     
-    public init(decoder: PostboxDecoder) {
+    public init(from decoder: Decoder) throws {
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
     }
 }
 
 func addRecentWallpaperSearchQuery(postbox: Postbox, string: String) -> Signal<Void, NoError> {
     return postbox.transaction { transaction in
         if let itemId = WallpaperSearchRecentQueryItemId(string) {
-            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries, item: OrderedItemListEntry(id: itemId.rawValue, contents: RecentWallpaperSearchQueryItem()), removeTailIfCountExceeds: 100)
+            if let entry = CodableEntry(RecentWallpaperSearchQueryItem()) {
+                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.wallpaperSearchRecentQueries, item: OrderedItemListEntry(id: itemId.rawValue, contents: entry), removeTailIfCountExceeds: 100)
+            }
         }
     }
 }

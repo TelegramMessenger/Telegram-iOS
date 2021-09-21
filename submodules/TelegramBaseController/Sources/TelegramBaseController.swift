@@ -27,9 +27,9 @@ public enum LocationBroadcastPanelSource {
 }
 
 private func presentLiveLocationController(context: AccountContext, peerId: PeerId, controller: ViewController) {
-    let presentImpl: (Message?) -> Void = { [weak controller] message in
+    let presentImpl: (EngineMessage?) -> Void = { [weak controller] message in
         if let message = message, let strongController = controller {
-            let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
+            let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message._asMessage(), standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
                 controller?.view.endEditing(true)
             }, present: { c, a in
                 controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -48,13 +48,13 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
         }
     }
     if let id = context.liveLocationManager?.internalMessageForPeerId(peerId) {
-        let _ = (context.account.postbox.transaction { transaction -> Message? in
-            return transaction.getMessage(id)
+        let _ = (context.account.postbox.transaction { transaction -> EngineMessage? in
+            return transaction.getMessage(id).flatMap(EngineMessage.init)
         } |> deliverOnMainQueue).start(next: presentImpl)
     } else if let liveLocationManager = context.liveLocationManager {
         let _ = (liveLocationManager.summaryManager.peersBroadcastingTo(peerId: peerId)
         |> take(1)
-        |> map { peersAndMessages -> Message? in
+        |> map { peersAndMessages -> EngineMessage? in
             return peersAndMessages?.first?.1
         } |> deliverOnMainQueue).start(next: presentImpl)
     }
@@ -81,8 +81,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     public var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     
     private var locationBroadcastMode: LocationBroadcastNavigationAccessoryPanelMode?
-    private var locationBroadcastPeers: [Peer]?
-    private var locationBroadcastMessages: [MessageId: Message]?
+    private var locationBroadcastPeers: [EnginePeer]?
+    private var locationBroadcastMessages: [EngineMessage.Id: EngineMessage]?
     private var locationBroadcastAccessoryPanel: LocationBroadcastNavigationAccessoryPanel?
     
     private var groupCallPanelData: GroupCallPanelData?
@@ -175,7 +175,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 case .none:
                     self.locationBroadcastMode = nil
                 case .summary, .peer:
-                    let signal: Signal<([Peer]?, [MessageId: Message]?), NoError>
+                    let signal: Signal<([EnginePeer]?, [EngineMessage.Id: EngineMessage]?), NoError>
                     switch locationBroadcastPanelSource {
                         case let .peer(peerId):
                             self.locationBroadcastMode = .peer
@@ -195,14 +195,14 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         default:
                             self.locationBroadcastMode = .summary
                             signal = liveLocationManager.summaryManager.broadcastingToMessages()
-                            |> map { messages -> ([Peer]?, [MessageId: Message]?) in
+                            |> map { messages -> ([EnginePeer]?, [EngineMessage.Id: EngineMessage]?) in
                                 if messages.isEmpty {
                                     return (nil, nil)
                                 } else {
-                                    var peers: [Peer] = []
+                                    var peers: [EnginePeer] = []
                                     for message in messages.values.sorted(by: { $0.index < $1.index }) {
                                         if let peer = message.peers[message.id.peerId] {
-                                            peers.append(peer)
+                                            peers.append(EnginePeer(peer))
                                         }
                                     }
                                     return (peers, messages)
@@ -216,7 +216,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         if let strongSelf = self {
                             var updated = false
                             if let current = strongSelf.locationBroadcastPeers, let peers = peers {
-                                updated = !arePeerArraysEqual(current, peers)
+                                updated = current != peers
                             } else if (strongSelf.locationBroadcastPeers != nil) != (peers != nil) {
                                 updated = true
                             }
@@ -486,7 +486,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                                     }
                                                     
                                                     if let beginTimeAndTimeout = beginTimeAndTimeout {
-                                                        items.append(LocationBroadcastActionSheetItem(context: strongSelf.context, peer: peer, title: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), beginTimestamp: beginTimeAndTimeout.0, timeout: beginTimeAndTimeout.1, strings: presentationData.strings, action: {
+                                                        items.append(LocationBroadcastActionSheetItem(context: strongSelf.context, peer: peer, title: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), beginTimestamp: beginTimeAndTimeout.0, timeout: beginTimeAndTimeout.1, strings: presentationData.strings, action: {
                                                             dismissAction()
                                                             if let strongSelf = self {
                                                                 presentLiveLocationController(context: strongSelf.context, peerId: peer.id, controller: strongSelf)
@@ -518,8 +518,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     }
                 }, close: { [weak self] in
                     if let strongSelf = self {
-                        var closePeers: [Peer]?
-                        var closePeerId: PeerId?
+                        var closePeers: [EnginePeer]?
+                        var closePeerId: EnginePeer.Id?
                         switch strongSelf.locationBroadcastPanelSource {
                             case .none:
                                 break
@@ -676,10 +676,10 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         return
                     }
                     let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> AudioPlaybackRate in
-                        let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings) as? MusicPlaybackSettings ?? MusicPlaybackSettings.defaultSettings
+                        let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings)?.get(MusicPlaybackSettings.self) ?? MusicPlaybackSettings.defaultSettings
                         
                         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { _ in
-                            return settings.withUpdatedVoicePlaybackRate(rate)
+                            return PreferencesEntry(settings.withUpdatedVoicePlaybackRate(rate))
                         })
                         return rate
                     }
@@ -937,7 +937,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                 }
                             }
                             
-                            items.append(VoiceChatPeerActionSheetItem(context: context, peer: peer.peer, title: peer.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), subtitle: subtitle ?? "", action: {
+                            items.append(VoiceChatPeerActionSheetItem(context: context, peer: peer.peer, title: EnginePeer(peer.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), subtitle: subtitle ?? "", action: {
                                 dismissAction()
                                 completion(peer.peer.id)
                             }))

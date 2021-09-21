@@ -149,7 +149,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
     }
     if let parsed = URL(string: urlWithScheme) {
         parsedUrlValue = parsed
-    } else if let encoded = (urlWithScheme as NSString).addingPercentEscapes(using: String.Encoding.utf8.rawValue), let parsed = URL(string: encoded) {
+    } else if let encoded = (urlWithScheme as NSString).addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), let parsed = URL(string: encoded) {
         parsedUrlValue = parsed
     }
     
@@ -710,14 +710,14 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 let settings = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings, ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData())
                 |> take(1)
                 |> map { sharedData, accessChallengeData -> WebBrowserSettings in
-                    let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings ?? PresentationPasscodeSettings.defaultSettings
+                    let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? PresentationPasscodeSettings.defaultSettings
                     if accessChallengeData.data.isLockable {
                         if passcodeSettings.autolockTimeout != nil {
                             return WebBrowserSettings(defaultWebBrowser: "Safari")
                         }
                     }
                     
-                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings {
+                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) {
                         return current   
                     } else {
                         return WebBrowserSettings.defaultSettings

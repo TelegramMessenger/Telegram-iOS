@@ -26,21 +26,23 @@ private struct SettingsSearchRecentQueryItemId {
     }
 }
 
-public final class RecentSettingsSearchQueryItem: OrderedItemListEntryContents {
+public final class RecentSettingsSearchQueryItem: Codable {
     public init() {
     }
     
-    public init(decoder: PostboxDecoder) {
+    public init(from decoder: Decoder) throws {
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
     }
 }
 
 func addRecentSettingsSearchItem(postbox: Postbox, item: SettingsSearchableItemId) {
     let _ = (postbox.transaction { transaction in
         let itemId = SettingsSearchRecentQueryItemId(item.index)
-        transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems, item: OrderedItemListEntry(id: itemId.rawValue, contents: RecentSettingsSearchQueryItem()), removeTailIfCountExceeds: 100)
+        if let entry = CodableEntry(RecentSettingsSearchQueryItem()) {
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.settingsSearchRecentItems, item: OrderedItemListEntry(id: itemId.rawValue, contents: entry), removeTailIfCountExceeds: 100)
+        }
     }).start()
 }
 

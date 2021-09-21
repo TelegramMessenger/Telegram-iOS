@@ -21,7 +21,7 @@ public struct FeaturedStickerPackItemId {
     }
 }
 
-public final class FeaturedStickerPackItem: OrderedItemListEntryContents {
+public final class FeaturedStickerPackItem: Codable {
     public let info: StickerPackCollectionInfo
     public let topItems: [StickerPackItem]
     public let unread: Bool
@@ -32,15 +32,27 @@ public final class FeaturedStickerPackItem: OrderedItemListEntryContents {
         self.unread = unread
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.info = decoder.decodeObjectForKey("i") as! StickerPackCollectionInfo
-        self.topItems = decoder.decodeObjectArrayForKey("t")
-        self.unread = decoder.decodeInt32ForKey("u", orElse: 0) != 0
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        let infoData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: "i")
+        self.info = StickerPackCollectionInfo(decoder: PostboxDecoder(buffer: MemoryBuffer(data: infoData.data)))
+
+        self.topItems = (try container.decode([AdaptedPostboxDecoder.RawObjectData].self, forKey: "t")).map { itemData in
+            return StickerPackItem(decoder: PostboxDecoder(buffer: MemoryBuffer(data: itemData.data)))
+        }
+
+        self.unread = try container.decode(Int32.self, forKey: "u") != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.info, forKey: "i")
-        encoder.encodeObjectArray(self.topItems, forKey: "t")
-        encoder.encodeInt32(self.unread ? 1 : 0, forKey: "u")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(PostboxEncoder().encodeObjectToRawData(self.info), forKey: "i")
+        try container.encode(self.topItems.map { item in
+            return PostboxEncoder().encodeObjectToRawData(item)
+        }, forKey: "t")
+
+        try container.encode((self.unread ? 1 : 0) as Int32, forKey: "u")
     }
 }

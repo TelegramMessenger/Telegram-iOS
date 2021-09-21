@@ -221,7 +221,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             self.currentState = (context, theme, strings, peer, search, presence)
             self.setNeedsLayout()
             if let presence = presence as? TelegramUserPresence {
-                self.presenceManager?.reset(presence: presence)
+                self.presenceManager?.reset(presence: EnginePeer.Presence(presence))
             }
         }
         self.updateSelection(animated: false)

@@ -57,13 +57,13 @@ final class SecureIdAuthFormContentNode: ASDisplayNode, SecureIdAuthContentNode,
             let privacyPolicyAttributes = MarkdownAttributeSet(font: infoFont, textColor: theme.list.freeTextColor)
             let privacyPolicyLinkAttributes = MarkdownAttributeSet(font: infoFont, textColor: theme.list.itemAccentColor, additionalAttributes: [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber, TelegramTextAttributes.URL: privacyPolicyUrl])
             
-            text = parseMarkdownIntoAttributedString(strings.Passport_PrivacyPolicy(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder), (peer.addressName ?? "")).string.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: privacyPolicyAttributes, bold: privacyPolicyAttributes, link: privacyPolicyLinkAttributes, linkAttribute: { _ in
+            text = parseMarkdownIntoAttributedString(strings.Passport_PrivacyPolicy(EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder), (EnginePeer(peer).addressName ?? "")).string.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: privacyPolicyAttributes, bold: privacyPolicyAttributes, link: privacyPolicyLinkAttributes, linkAttribute: { _ in
                 return nil
             }), textAlignment: .center)
             
             
         } else {
-            text = NSAttributedString(string: strings.Passport_AcceptHelp(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder), (peer.addressName ?? "")).string, font: infoFont, textColor: theme.list.freeTextColor, paragraphAlignment: .left)
+            text = NSAttributedString(string: strings.Passport_AcceptHelp(EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder), (peer.addressName ?? "")).string, font: infoFont, textColor: theme.list.freeTextColor, paragraphAlignment: .left)
         }
         self.textNode.attributedText = text
         

@@ -334,7 +334,9 @@ func fetchEmojiSpriteResource(account: Account, resource: EmojiSpriteResource) -
                                         if buffer.data.count < range.count {
                                             buffer.data.count = range.count
                                         }
-                                        buffer.data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                        buffer.data.withUnsafeMutableBytes { rawBytes -> Void in
+                                            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                                             data.copyBytes(to: bytes, from: range)
                                         }
                                     }
@@ -343,7 +345,9 @@ func fetchEmojiSpriteResource(account: Account, resource: EmojiSpriteResource) -
                                         if buffer.data.count < resourceOffset + range.count {
                                             buffer.data.count = resourceOffset + range.count
                                         }
-                                        buffer.data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                                        buffer.data.withUnsafeMutableBytes { rawBytes -> Void in
+                                            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                                            
                                             data.copyBytes(to: bytes.advanced(by: resourceOffset), from: range)
                                         }
                                     }

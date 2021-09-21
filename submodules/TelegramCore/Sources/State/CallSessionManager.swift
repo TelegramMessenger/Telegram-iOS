@@ -562,7 +562,7 @@ private final class CallSessionManagerContext {
                                 |> timeout(5.0, queue: strongSelf.queue, alternate: .single(nil))
                                 |> deliverOnMainQueue).start(next: { debugLog in
                                     if let debugLog = debugLog {
-                                        _internal_saveCallDebugLog(network: network, callId: CallId(id: id, accessHash: accessHash), log: debugLog).start()
+                                        let _ = _internal_saveCallDebugLog(network: network, callId: CallId(id: id, accessHash: accessHash), log: debugLog).start()
                                     }
                                 })
                             }
@@ -688,7 +688,8 @@ private final class CallSessionManagerContext {
                             let keyHash = MTSha1(key)
                             
                             var keyId: Int64 = 0
-                            keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                            keyHash.withUnsafeBytes { rawBytes -> Void in
+                                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                                 memcpy(&keyId, bytes.advanced(by: keyHash.count - 8), 8)
                             }
                             
@@ -891,7 +892,8 @@ private final class CallSessionManagerContext {
         let keyHash = MTSha1(key)
         
         var keyId: Int64 = 0
-        keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        keyHash.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             memcpy(&keyId, bytes.advanced(by: keyHash.count - 8), 8)
         }
         
@@ -1267,9 +1269,9 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
                         switch update {
                             case .updatePhoneCall(let phoneCall):
                                 switch phoneCall {
-                                    case.phoneCallDiscarded(let values):
-                                        reportRating = (values.flags & (1 << 2)) != 0
-                                        sendDebugLogs = (values.flags & (1 << 3)) != 0
+                                    case let .phoneCallDiscarded(flags, _, _, _):
+                                        reportRating = (flags & (1 << 2)) != 0
+                                        sendDebugLogs = (flags & (1 << 3)) != 0
                                     default:
                                         break
                                 }

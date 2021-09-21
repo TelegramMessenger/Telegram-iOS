@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public struct AppConfiguration: PreferencesEntry, Equatable {
+public struct AppConfiguration: Codable, Equatable {
     public var data: JSON?
     
     public static var defaultValue: AppConfiguration {
@@ -12,22 +12,15 @@ public struct AppConfiguration: PreferencesEntry, Equatable {
         self.data = data
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.data = decoder.decodeObjectForKey("data", decoder: { JSON(decoder: $0) }) as? JSON
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.data = try container.decodeIfPresent(JSON.self, forKey: "data")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        if let data = self.data {
-            encoder.encodeObject(data, forKey: "data")
-        } else {
-            encoder.encodeNil(forKey: "data")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? AppConfiguration else {
-            return false
-        }
-        return self == to
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encodeIfPresent(self.data, forKey: "data")
     }
 }

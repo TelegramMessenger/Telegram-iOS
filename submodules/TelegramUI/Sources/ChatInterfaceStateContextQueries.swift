@@ -102,11 +102,11 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             
             let stickerConfiguration = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
             |> map { preferencesView -> StickersSearchConfiguration in
-                let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+                let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
                 return StickersSearchConfiguration.with(appConfiguration: appConfiguration)
             }
             let stickerSettings = context.sharedContext.accountManager.transaction { transaction -> StickerSettings in
-                let stickerSettings: StickerSettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings) as? StickerSettings) ?? .defaultSettings
+                let stickerSettings: StickerSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings)?.get(StickerSettings.self) ?? .defaultSettings
                 return stickerSettings
             }
 

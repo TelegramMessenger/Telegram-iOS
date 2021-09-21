@@ -113,7 +113,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         }
         var anchor: HistoryViewInputAnchor = self.anchor
         if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
-            var updatedAnchor: HistoryViewInputAnchor = .upperBound
+            let updatedAnchor: HistoryViewInputAnchor = .upperBound
             if let combinedState = postbox.readStateTable.getCombinedState(peerId), let state = combinedState.states.first, state.1.count != 0 {
                 switch state.1 {
                 case let .idBased(maxIncomingReadId, _, _, _, _):

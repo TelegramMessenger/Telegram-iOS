@@ -422,7 +422,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if peer.peerId == self.accountPeer.id {
                         text = self.strings.DialogList_SavedMessages
                     } else {
-                        text = peer.chatMainPeer?.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder) ?? ""
+                        text = peer.chatMainPeer.flatMap(EnginePeer.init)?.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder) ?? ""
                     }
                     
                     if !string.isEmpty {

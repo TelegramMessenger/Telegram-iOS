@@ -210,7 +210,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private func applyThemeAndStrings(themeUpdated: Bool) {
         if let peer = self.peer {
             let textColor = self.transparent ? UIColor.white : self.theme.panelPrimaryColor
-            self.nameNode.attributedText = NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: textColor)
+            self.nameNode.attributedText = NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: textColor)
         }
         let accentColor = self.transparent ? UIColor.white : self.theme.panelAccentColor
         self.joinNode.setAttributedTitle(NSAttributedString(string: self.strings.Channel_JoinChannel, font: Font.medium(17.0), textColor: accentColor), for: [])

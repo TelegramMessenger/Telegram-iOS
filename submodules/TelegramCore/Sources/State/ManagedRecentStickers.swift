@@ -55,7 +55,9 @@ func managedRecentStickers(postbox: Postbox, network: Network) -> Signal<Void, N
                     var items: [OrderedItemListEntry] = []
                     for sticker in stickers {
                         if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
-                            items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: RecentMediaItem(file)))
+                            if let entry = CodableEntry(RecentMediaItem(file)) {
+                                items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: entry))
+                            }
                         }
                     }
                     return .single(items)
@@ -76,7 +78,9 @@ func managedRecentGifs(postbox: Postbox, network: Network, forceFetch: Bool = fa
                         var items: [OrderedItemListEntry] = []
                         for gif in gifs {
                             if let file = telegramMediaFileFromApiDocument(gif), let id = file.id {
-                                items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: RecentMediaItem(file)))
+                                if let entry = CodableEntry(RecentMediaItem(file)) {
+                                    items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: entry))
+                                }
                             }
                         }
                         return .single(items)
@@ -116,7 +120,9 @@ func managedSavedStickers(postbox: Postbox, network: Network) -> Signal<Void, No
                                 if let representations = fileStringRepresentations[id] {
                                     stringRepresentations = representations
                                 }
-                                items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: SavedStickerItem(file: file, stringRepresentations: stringRepresentations)))
+                                if let entry = CodableEntry(SavedStickerItem(file: file, stringRepresentations: stringRepresentations)) {
+                                    items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: entry))
+                                }
                             }
                         }
                         return .single(items)
@@ -137,7 +143,9 @@ func managedGreetingStickers(postbox: Postbox, network: Network) -> Signal<Void,
                     var items: [OrderedItemListEntry] = []
                     for sticker in stickers {
                         if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
-                            items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: RecentMediaItem(file)))
+                            if let entry = CodableEntry(RecentMediaItem(file)) {
+                                items.append(OrderedItemListEntry(id: RecentMediaItemId(id).rawValue, contents: entry))
+                            }
                         }
                     }
                     return .single(items)

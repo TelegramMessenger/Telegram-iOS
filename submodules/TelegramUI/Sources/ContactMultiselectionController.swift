@@ -20,7 +20,7 @@ private func peerTokenTitle(accountPeerId: PeerId, peer: Peer, strings: Presenta
     } else if peer.id.isReplies {
         return strings.DialogList_Replies
     } else {
-        return peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+        return EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
     }
 }
 
@@ -205,8 +205,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
             self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             rightNavigationButton.isEnabled = false
-        case let .chatSelection(chatSelection):
-            self.titleView.title = CounterContollerTitle(title: chatSelection.title, counter: "")
+        case let .chatSelection(title, _, _, _):
+            self.titleView.title = CounterContollerTitle(title: title, counter: "")
             let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
             self.rightNavigationButton = rightNavigationButton
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))

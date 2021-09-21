@@ -2264,7 +2264,7 @@ func _internal_groupCallDisplayAsAvailablePeers(network: Network, postbox: Postb
     }
 }
 
-public final class CachedDisplayAsPeers: PostboxCoding {
+public final class CachedDisplayAsPeers: Codable {
     public let peerIds: [PeerId]
     public let timestamp: Int32
     
@@ -2273,14 +2273,18 @@ public final class CachedDisplayAsPeers: PostboxCoding {
         self.timestamp = timestamp
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.peerIds = decoder.decodeInt64ArrayForKey("peerIds").map { PeerId($0) }
-        self.timestamp = decoder.decodeInt32ForKey("timestamp", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.peerIds = (try container.decode([Int64].self, forKey: "peerIds")).map(PeerId.init)
+        self.timestamp = try container.decode(Int32.self, forKey: "timestamp")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt64Array(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
-        encoder.encodeInt32(self.timestamp, forKey: "timestamp")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
+        try container.encode(self.timestamp, forKey: "timestamp")
     }
 }
 
@@ -2297,7 +2301,7 @@ func _internal_cachedGroupCallDisplayAsAvailablePeers(account: Account, peerId: 
     let key = ValueBoxKey(length: 8)
     key.setInt64(0, value: peerId.toInt64())
     return account.postbox.transaction { transaction -> ([FoundPeer], Int32)? in
-        let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key)) as? CachedDisplayAsPeers
+        let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key))?.get(CachedDisplayAsPeers.self)
         if let cached = cached {
             var peers: [FoundPeer] = []
             for peerId in cached.peerIds {
@@ -2323,7 +2327,9 @@ func _internal_cachedGroupCallDisplayAsAvailablePeers(account: Account, peerId: 
             |> mapToSignal { peers -> Signal<[FoundPeer], NoError> in
                 return account.postbox.transaction { transaction -> [FoundPeer] in
                     let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key), entry: CachedDisplayAsPeers(peerIds: peers.map { $0.peer.id }, timestamp: currentTimestamp), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20))
+                    if let entry = CodableEntry(CachedDisplayAsPeers(peerIds: peers.map { $0.peer.id }, timestamp: currentTimestamp)) {
+                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers, key: key), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 10, highWaterItemCount: 20))
+                    }
                     return peers
                 }
             }

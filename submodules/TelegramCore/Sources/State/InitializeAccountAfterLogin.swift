@@ -11,7 +11,7 @@ func initializedAppSettingsAfterLogin(transaction: Transaction, appVersion: Stri
         return state
     })
     transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { _ in
-        return ContactsSettings(synchronizeContacts: syncContacts)
+        return PreferencesEntry(ContactsSettings(synchronizeContacts: syncContacts))
     })
 }
 

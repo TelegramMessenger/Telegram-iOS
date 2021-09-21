@@ -207,5 +207,39 @@ public extension TelegramEngine {
         public func messageReadStats(id: MessageId) -> Signal<MessageReadStats?, NoError> {
             return _internal_messageReadStats(account: self.account, id: id)
         }
+
+        public func requestCancelLiveLocation(ids: [MessageId]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for id in ids {
+                    transaction.updateMessage(id, update: { currentMessage in
+                        var storeForwardInfo: StoreMessageForwardInfo?
+                        if let forwardInfo = currentMessage.forwardInfo {
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+                        }
+                        var updatedMedia = currentMessage.media
+                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                        for i in 0 ..< updatedMedia.count {
+                            if let media = updatedMedia[i] as? TelegramMediaMap, let _ = media.liveBroadcastingTimeout {
+                                updatedMedia[i] = TelegramMediaMap(latitude: media.latitude, longitude: media.longitude, heading: media.heading, accuracyRadius: media.accuracyRadius, geoPlace: media.geoPlace, venue: media.venue, liveBroadcastingTimeout: max(0, timestamp - currentMessage.timestamp - 1), liveProximityNotificationRadius: nil)
+                            }
+                        }
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
+                    })
+                }
+            }
+            |> ignoreValues
+        }
+
+        public func activeLiveLocationMessages() -> Signal<[EngineMessage], NoError> {
+            let viewKey: PostboxViewKey = .localMessageTag(.OutgoingLiveLocation)
+            return self.account.postbox.combinedView(keys: [viewKey])
+            |> map { view in
+                if let view = view.views[viewKey] as? LocalMessageTagsView {
+                    return view.messages.values.map(EngineMessage.init)
+                } else {
+                    return []
+                }
+            }
+        }
     }
 }

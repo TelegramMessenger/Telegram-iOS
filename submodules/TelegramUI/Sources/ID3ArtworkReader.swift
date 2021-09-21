@@ -99,8 +99,8 @@ private class DataStream {
         guard self.position + count <= self.data.count else {
             return nil
         }
-        let value = self.data.subdata(in: self.position ..< self.position + count).withUnsafeBytes { (pointer: UnsafePointer<T>) -> T in
-            return pointer.pointee
+        let value = self.data.subdata(in: self.position ..< self.position + count).withUnsafeBytes { (pointer: UnsafeRawBufferPointer) -> T in
+            return pointer.baseAddress!.assumingMemoryBound(to: T.self).pointee
         }
         self.position += count
         return value

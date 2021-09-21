@@ -34,6 +34,7 @@ import LightweightAccountData
 import TelegramAudio
 import DebugSettingsUI
 import BackgroundTasks
+import UIKitRuntimeUtils
 
 #if canImport(AppCenter)
 import AppCenter
@@ -99,14 +100,14 @@ private class ApplicationStatusBarHost: StatusBarHost {
     
     func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool) {
         if self.shouldChangeStatusBarStyle?(style) ?? true {
-            self.application.setStatusBarStyle(style, animated: animated)
+            self.application.internalSetStatusBarStyle(style, animated: animated)
         }
     }
     
     var shouldChangeStatusBarStyle: ((UIStatusBarStyle) -> Bool)?
     
     func setStatusBarHidden(_ value: Bool, animated: Bool) {
-        self.application.setStatusBarHidden(value, with: animated ? .fade : .none)
+        self.application.internalSetStatusBarHidden(value, animation: animated ? .fade : .none)
     }
     
     var keyboardWindow: UIWindow? {
@@ -175,7 +176,7 @@ final class SharedApplicationContext {
     }
 }
 
-@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, UNUserNotificationCenterDelegate, UIAlertViewDelegate {
+@objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, UNUserNotificationCenterDelegate {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
@@ -235,14 +236,6 @@ final class SharedApplicationContext {
     private let idleTimerExtensionSubscribers = Bag<Void>()
     
     private var alertActions: (primary: (() -> Void)?, other: (() -> Void)?)?
-    
-    func alertView(_ alertView: UIAlertView, clickedButtonAt buttonIndex: Int) {
-        if buttonIndex == alertView.firstOtherButtonIndex {
-            self.alertActions?.other?()
-        } else {
-            self.alertActions?.primary?()
-        }
-    }
     
     private let deviceToken = Promise<Data?>(nil)
     
@@ -421,7 +414,7 @@ final class SharedApplicationContext {
         }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider())
         
         guard let appGroupUrl = maybeAppGroupUrl else {
-            UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()
+            self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
             return true
         }
         
@@ -684,7 +677,7 @@ final class SharedApplicationContext {
         })
         
         let accountManagerSignal = Signal<AccountManager<TelegramAccountManagerTypes>, NoError> { subscriber in
-            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false)
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true)
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
@@ -929,7 +922,7 @@ final class SharedApplicationContext {
             sharedApplicationContext.sharedContext.mediaManager.overlayMediaManager.attachOverlayMediaController(sharedApplicationContext.overlayMediaController)
             
             return accountManager.transaction { transaction -> (SharedApplicationContext, LoggingSettings) in
-                return (sharedApplicationContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
+                return (sharedApplicationContext, transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings)
             }
         }
         self.sharedContextPromise.set(sharedContextSignal
@@ -958,7 +951,7 @@ final class SharedApplicationContext {
             })
             |> mapToSignal { context -> Signal<(AccountContext, CallListSettings)?, NoError> in
                 return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings? in
-                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings
+                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings)?.get(CallListSettings.self)
                 }
                 |> reduceLeft(value: nil) { current, updated -> CallListSettings? in
                     var result: CallListSettings?
@@ -1040,12 +1033,12 @@ final class SharedApplicationContext {
             }
             |> mapToSignal { accountAndOtherAccountPhoneNumbers -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                 return sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> CallListSettings in
-                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings ?? CallListSettings.defaultSettings
+                    return transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings)?.get(CallListSettings.self) ?? CallListSettings.defaultSettings
                     }
                 |> mapToSignal { callListSettings -> Signal<(UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))?, NoError> in
                     if let (account, otherAccountPhoneNumbers) = accountAndOtherAccountPhoneNumbers {
                         return account.postbox.transaction { transaction -> (UnauthorizedAccount, LimitsConfiguration, CallListSettings, ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]))? in
-                            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+                            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
                             return (account, limitsConfiguration, callListSettings, otherAccountPhoneNumbers)
                         }
                     } else {
@@ -1268,7 +1261,7 @@ final class SharedApplicationContext {
                     }
                     |> map { accountAndPeer -> String? in
                         if let (_, peer, _) = accountAndPeer {
-                            return peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            return EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                         } else {
                             return nil
                         }
@@ -1313,7 +1306,7 @@ final class SharedApplicationContext {
         }
         
         if UIApplication.shared.isStatusBarHidden {
-            UIApplication.shared.setStatusBarHidden(false, with: .none)
+            UIApplication.shared.internalSetStatusBarHidden(false, animation: .none)
         }
         
         /*if #available(iOS 13.0, *) {
@@ -1496,6 +1489,10 @@ final class SharedApplicationContext {
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
+        if "".isEmpty {
+            return;
+        }
+
         if #available(iOS 9.0, *) {
             /*guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
                 return
@@ -2032,7 +2029,7 @@ final class SharedApplicationContext {
     private func registerForNotifications(context: AccountContextImpl, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = (context.sharedContext.accountManager.transaction { transaction -> Bool in
-            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
             return settings.displayNameOnLockscreen
         }
         |> deliverOnMainQueue).start(next: { displayNames in
@@ -2257,7 +2254,7 @@ final class SharedApplicationContext {
     
     private func resetIntentsIfNeeded(context: AccountContextImpl) {
         let _ = (context.sharedContext.accountManager.transaction { transaction in
-            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
+            let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings)?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
             if !settings.initiallyReset || settings.account == nil {
                 if #available(iOS 10.0, *) {
                     Queue.mainQueue().async {
@@ -2265,7 +2262,7 @@ final class SharedApplicationContext {
                     }
                 }
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.intentsSettings, { _ in
-                    return IntentsSettings(initiallyReset: true, account: context.account.peerId, contacts: settings.contacts, privateChats: settings.privateChats, savedMessages: settings.savedMessages, groups: settings.groups, onlyShared: settings.onlyShared)
+                    return PreferencesEntry(IntentsSettings(initiallyReset: true, account: context.account.peerId, contacts: settings.contacts, privateChats: settings.privateChats, savedMessages: settings.savedMessages, groups: settings.groups, onlyShared: settings.onlyShared))
                 })
             }
         }).start()

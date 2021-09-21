@@ -18,11 +18,7 @@ final class PreferencesTable: Table {
     
     func enumerateEntries(_ f: (PreferencesEntry) -> Bool) {
         self.valueBox.scan(self.table, values: { _, value in
-            if let object = PostboxDecoder(buffer: value).decodeRootObject() as? PreferencesEntry {
-                return f(object)
-            } else {
-                return true
-            }
+            return f(PreferencesEntry(data: value.makeData()))
         })
     }
     
@@ -30,7 +26,8 @@ final class PreferencesTable: Table {
         if let cached = self.cachedEntries[key] {
             return cached.entry
         } else {
-            if let value = self.valueBox.get(self.table, key: key), let object = PostboxDecoder(buffer: value).decodeRootObject() as? PreferencesEntry {
+            if let value = self.valueBox.get(self.table, key: key) {
+                let object = PreferencesEntry(data: value.makeData())
                 self.cachedEntries[key] = CachedEntry(entry: object)
                 return object
             } else {
@@ -54,11 +51,7 @@ final class PreferencesTable: Table {
         if !self.updatedEntryKeys.isEmpty {
             for key in self.updatedEntryKeys {
                 if let value = self.cachedEntries[key]?.entry {
-                    let encoder = PostboxEncoder()
-                    encoder.encodeRootObject(value)
-                    withExtendedLifetime(encoder, {
-                        self.valueBox.set(self.table, key: key, value: encoder.readBufferNoCopy())
-                    })
+                    self.valueBox.set(self.table, key: key, value: ReadBuffer(data: value.data))
                 } else {
                     self.valueBox.remove(self.table, key: key, secure: false)
                 }

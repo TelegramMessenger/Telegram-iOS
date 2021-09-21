@@ -169,7 +169,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             if let currentEditMediaReference = self.currentEditMediaReference {
                 effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
-            (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: effectiveMessage, strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, dateTimeFormat: self.dateTimeFormat, accountPeerId: self.context.account.peerId)
+            (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(effectiveMessage), strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, dateTimeFormat: self.dateTimeFormat, accountPeerId: self.context.account.peerId)
         }
         
         var updatedMediaReference: AnyMediaReference?
@@ -242,7 +242,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
                 effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            switch messageContentKind(contentSettings: self.context.currentContentSettings.with { $0 }, message: effectiveMessage, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: self.context.account.peerId) {
+            switch messageContentKind(contentSettings: self.context.currentContentSettings.with { $0 }, message: EngineMessage(effectiveMessage), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: self.context.account.peerId) {
                 case .text:
                     isMedia = false
                 default:

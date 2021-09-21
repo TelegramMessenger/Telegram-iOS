@@ -11,8 +11,8 @@ final class CachedPeerDataTable: Table {
     private var cachedDatas: [PeerId: CachedPeerData] = [:]
     private var updatedPeerIds = Set<PeerId>()
     
-    override init(valueBox: ValueBox, table: ValueBoxTable) {
-        super.init(valueBox: valueBox, table: table)
+    override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ id: PeerId) -> ValueBoxKey {
@@ -54,5 +54,8 @@ final class CachedPeerDataTable: Table {
         }
         
         self.updatedPeerIds.removeAll()
+        if !self.useCaches {
+            self.cachedDatas.removeAll()
+        }
     }
 }

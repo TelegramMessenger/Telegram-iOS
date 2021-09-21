@@ -227,7 +227,7 @@ final class WidgetDataContext {
                             name = peer.debugDisplayTitle
                         }
                         
-                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: name, lastName: lastName, letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(accountPeerId: account.peerId, message: message)))
+                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: name, lastName: lastName, letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(accountPeerId: account.peerId, message: EngineMessage(message))))
                     }
                     result.sort(by: { lhs, rhs in
                         return lhs.id < rhs.id

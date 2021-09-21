@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import TextSelectionNode
-import ReactionSelectionNode
 import TelegramCore
 import SwiftSignalKit
 
@@ -119,7 +118,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private let source: ContextContentSource
     private var items: Signal<ContextController.Items, NoError>
     private let beginDismiss: (ContextMenuActionResult) -> Void
-    private let reactionSelected: (ReactionContextItem.Reaction) -> Void
     private let beganAnimatingOut: () -> Void
     private let attemptTransitionControllerIntoNavigation: () -> Void
     fileprivate var dismissedForCancel: (() -> Void)?
@@ -150,14 +148,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private var contentAreaInScreenSpace: CGRect?
     private let contentContainerNode: ContextContentContainerNode
     private var actionsContainerNode: ContextActionsContainerNode
-    private var reactionContextNode: ReactionContextNode?
-    private var reactionContextNodeIsAnimatingOut = false
     
     private var didCompleteAnimationIn = false
     private var initialContinueGesturePoint: CGPoint?
     private var didMoveFromInitialGesturePoint = false
     private var highlightedActionNode: ContextActionNodeProtocol?
-    private var highlightedReaction: ReactionContextItem.Reaction?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -168,12 +163,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let blurBackground: Bool
     
-    init(account: Account, controller: ContextController, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (ReactionContextItem.Reaction) -> Void, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void) {
+    init(account: Account, controller: ContextController, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, beganAnimatingOut: @escaping () -> Void, attemptTransitionControllerIntoNavigation: @escaping () -> Void) {
         self.presentationData = presentationData
         self.source = source
         self.items = items
         self.beginDismiss = beginDismiss
-        self.reactionSelected = reactionSelected
         self.beganAnimatingOut = beganAnimatingOut
         self.attemptTransitionControllerIntoNavigation = attemptTransitionControllerIntoNavigation
         self.gesture = gesture
@@ -237,13 +231,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             feedbackTap?()
         }, blurBackground: blurBackground)
         
-        if !reactionItems.isEmpty {
-            let reactionContextNode = ReactionContextNode(account: account, theme: presentationData.theme, items: reactionItems)
-            self.reactionContextNode = reactionContextNode
-        } else {
-            self.reactionContextNode = nil
-        }
-        
         super.init()
         
         feedbackTap = { [weak self] in
@@ -265,7 +252,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.scrollNode.addSubnode(self.dismissAccessibilityArea)
         
         self.scrollNode.addSubnode(self.actionsContainerNode)
-        self.reactionContextNode.flatMap(self.addSubnode)
         
         if let recognizer = recognizer {
             recognizer.externalUpdated = { [weak self, weak recognizer] view, point in
@@ -298,24 +284,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                                 strongSelf.hapticFeedback.tap()
                             }
                         }
-                        
-                        if let reactionContextNode = strongSelf.reactionContextNode {
-                            let highlightedReaction = reactionContextNode.reaction(at: strongSelf.view.convert(localPoint, to: reactionContextNode.view)).flatMap { value -> ReactionContextItem.Reaction? in
-                                switch value {
-                                case .like:
-                                    return .like
-                                case .unlike:
-                                    return .unlike
-                                }
-                            }
-                            if strongSelf.highlightedReaction != highlightedReaction {
-                                strongSelf.highlightedReaction = highlightedReaction
-                                reactionContextNode.setHighlightedReaction(highlightedReaction)
-                                if let _ = highlightedReaction {
-                                    strongSelf.hapticFeedback.tap()
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -330,19 +298,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             strongSelf.highlightedActionNode = nil
                             highlightedActionNode.performAction()
                         }
-                        if let _ = strongSelf.reactionContextNode {
-                            if let reaction = strongSelf.highlightedReaction {
-                                strongSelf.reactionSelected(reaction)
-                            }
-                        }
                     } else {
                         if let highlightedActionNode = strongSelf.highlightedActionNode {
                             strongSelf.highlightedActionNode = nil
                             highlightedActionNode.setIsHighlighted(false)
-                        }
-                        if let reactionContextNode = strongSelf.reactionContextNode, let _ = strongSelf.highlightedReaction {
-                            strongSelf.highlightedReaction = nil
-                            reactionContextNode.setHighlightedReaction(nil)
                         }
                     }
                 }
@@ -382,24 +341,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                                 strongSelf.hapticFeedback.tap()
                             }
                         }
-                        
-                        if let reactionContextNode = strongSelf.reactionContextNode {
-                            let highlightedReaction = reactionContextNode.reaction(at: strongSelf.view.convert(localPoint, to: reactionContextNode.view)).flatMap { value -> ReactionContextItem.Reaction? in
-                                switch value {
-                                case .like:
-                                    return .like
-                                case .unlike:
-                                    return .unlike
-                                }
-                            }
-                            if strongSelf.highlightedReaction != highlightedReaction {
-                                strongSelf.highlightedReaction = highlightedReaction
-                                reactionContextNode.setHighlightedReaction(highlightedReaction)
-                                if let _ = highlightedReaction {
-                                    strongSelf.hapticFeedback.tap()
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -414,35 +355,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             strongSelf.highlightedActionNode = nil
                             highlightedActionNode.performAction()
                         }
-                        if let _ = strongSelf.reactionContextNode {
-                            if let reaction = strongSelf.highlightedReaction {
-                                strongSelf.reactionSelected(reaction)
-                            }
-                        }
                     } else {
                         if let highlightedActionNode = strongSelf.highlightedActionNode {
                             strongSelf.highlightedActionNode = nil
                             highlightedActionNode.setIsHighlighted(false)
                         }
-                        if let reactionContextNode = strongSelf.reactionContextNode, let _ = strongSelf.highlightedReaction {
-                            strongSelf.highlightedReaction = nil
-                            reactionContextNode.setHighlightedReaction(nil)
-                        }
                     }
-                }
-            }
-        }
-        
-        if let reactionContextNode = self.reactionContextNode {
-            reactionContextNode.reactionSelected = { [weak self] reaction in
-                guard let _ = self else {
-                    return
-                }
-                switch reaction {
-                case .like:
-                    reactionSelected(.like)
-                case .unlike:
-                    reactionSelected(.unlike)
                 }
             }
         }
@@ -525,26 +443,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     strongSelf.originalProjectedContentViewFrame = (convertFrame(contentParentNode.frame, from: parentSupernode.view, to: strongSelf.view), convertFrame(contentParentNode.contentRect, from: contentParentNode.view, to: strongSelf.view))
                     if let validLayout = strongSelf.validLayout {
                         strongSelf.updateLayout(layout: validLayout, transition: .animated(duration: 0.2 * animationDurationFactor, curve: .easeInOut), previousActionsContainerNode: nil)
-                    }
-                }
-                takenViewInfo.contentContainingNode.updateDistractionFreeMode = { [weak self] value in
-                    guard let strongSelf = self, let reactionContextNode = strongSelf.reactionContextNode else {
-                        return
-                    }
-                    if value {
-                        if !reactionContextNode.alpha.isZero {
-                            reactionContextNode.alpha = 0.0
-                            reactionContextNode.allowsGroupOpacity = true
-                            reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3 * animationDurationFactor, completion: { [weak reactionContextNode] _ in
-                                reactionContextNode?.allowsGroupOpacity = false
-                            })
-                        }
-                    } else if reactionContextNode.alpha != 1.0 {
-                        reactionContextNode.alpha = 1.0
-                        reactionContextNode.allowsGroupOpacity = true
-                        reactionContextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3 * animationDurationFactor, completion: { [weak reactionContextNode] _ in
-                            reactionContextNode?.allowsGroupOpacity = false
-                        })
                     }
                 }
                 
@@ -693,10 +591,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         localContentSourceFrame = self.view.convert(originalProjectedContentViewFrame.1, to: self.contentContainerNode.view.superview)
                     } else {
                         localContentSourceFrame = localSourceFrame
-                    }
-                    
-                    if let reactionContextNode = self.reactionContextNode {
-                        reactionContextNode.animateIn(from: CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: contentParentNode.contentRect.size))
                     }
                     
                     self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y + actionsOffset)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: actionsDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
@@ -968,10 +862,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 contentParentNode.updateAbsoluteRect?(self.contentContainerNode.frame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y + contentContainerOffset.y), self.bounds.size)
                 contentParentNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: -contentContainerOffset.y), transitionCurve, transitionDuration)
                 
-                if let reactionContextNode = self.reactionContextNode {
-                    reactionContextNode.animateOut(to: CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: contentParentNode.contentRect.size), animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)
-                }
-                
                 contentParentNode.willUpdateIsExtractedToContextPreview?(false, .animated(duration: 0.2, curve: .easeInOut))
             } else {
                 if let snapshotView = contentParentNode.contentNode.view.snapshotContentTree(keepTransform: true) {
@@ -990,10 +880,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 
                 contentParentNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 contentParentNode.willUpdateIsExtractedToContextPreview?(false, .animated(duration: 0.2, curve: .easeInOut))
-                
-                if let reactionContextNode = self.reactionContextNode {
-                    reactionContextNode.animateOut(to: nil, animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)
-                }
             }
         case let .controller(source):
             guard let maybeContentNode = self.contentContainerNode.contentNode, case let .controller(controller) = maybeContentNode else {
@@ -1132,41 +1018,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     completedContentNode = true
                     intermediateCompletion()
                 })
-                
-                if let reactionContextNode = self.reactionContextNode {
-                    reactionContextNode.animateOut(to: nil, animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)
-                }
             }
         }
-    }
-    
-    func animateOutToReaction(value: String, targetEmptyNode: ASDisplayNode, targetFilledNode: ASDisplayNode, hideNode: Bool, completion: @escaping () -> Void) {
-        guard let reactionContextNode = self.reactionContextNode else {
-            self.animateOut(result: .default, completion: completion)
-            return
-        }
-        var contentCompleted = false
-        var reactionCompleted = false
-        let intermediateCompletion: () -> Void = {
-            if contentCompleted && reactionCompleted {
-                completion()
-            }
-        }
-        
-        self.reactionContextNodeIsAnimatingOut = true
-        self.animateOut(result: .default, completion: {
-            contentCompleted = true
-            intermediateCompletion()
-        })
-        reactionContextNode.animateOutToReaction(value: value, targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: hideNode, completion: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.reactionContextNode?.removeFromSupernode()
-            strongSelf.reactionContextNode = nil
-            reactionCompleted = true
-            intermediateCompletion()
-        })
     }
 
     func getActionsMinHeight() -> ContextController.ActionsHeight? {
@@ -1281,10 +1134,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let actionsSideInset: CGFloat = layout.safeInsets.left + 11.0
-        var contentTopInset: CGFloat = max(11.0, layout.statusBarHeight ?? 0.0)
-        if let _ = self.reactionContextNode {
-            contentTopInset += 34.0
-        }
+        let contentTopInset: CGFloat = max(11.0, layout.statusBarHeight ?? 0.0)
+
         let actionsBottomInset: CGFloat = 11.0
         
         if let contentNode = self.contentContainerNode.contentNode {
@@ -1506,12 +1357,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let absoluteContentRect = contentContainerFrame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y)
                     
                     contentParentNode.updateAbsoluteRect?(absoluteContentRect, layout.size)
-                    
-                    if let reactionContextNode = self.reactionContextNode {
-                        let insets = layout.insets(options: [.statusBar])
-                        transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-                        reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX + contentParentNode.contentRect.minX, y: absoluteContentRect.minY + contentParentNode.contentRect.minY), size: contentParentNode.contentRect.size), transition: transition)
-                    }
                 }
             case let .controller(contentParentNode):
                 var projectedFrame: CGRect = convertFrame(contentParentNode.sourceNode.bounds, from: contentParentNode.sourceNode.view, to: self.view)
@@ -1642,14 +1487,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             transition.animateOffsetAdditive(node: self.scrollNode, offset: currentContainerFrame.minY - previousContainerFrame.minY)
                         }
                     }
-                    
-                    let absoluteContentRect = contentContainerFrame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y)
-                    
-                    if let reactionContextNode = self.reactionContextNode {
-                        let insets = layout.insets(options: [.statusBar])
-                        transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-                        reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX, y: absoluteContentRect.minY), size: contentSize), transition: transition)
-                    }
                 }
             }
         }
@@ -1733,11 +1570,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
             return nil
-        }
-        if let reactionContextNode = self.reactionContextNode {
-            if let result = reactionContextNode.hitTest(self.view.convert(point, to: reactionContextNode.view), with: event) {
-                return result
-            }
         }
         let mappedPoint = self.view.convert(point, to: self.scrollNode.view)
         if let maybeContentNode = self.contentContainerNode.contentNode {
@@ -1918,7 +1750,6 @@ public final class ContextController: ViewController, StandalonePresentableContr
     private var presentationData: PresentationData
     private let source: ContextContentSource
     private var items: Signal<ContextController.Items, NoError>
-    private var reactionItems: [ReactionContextItem]
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -1934,8 +1765,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     private var controllerNode: ContextControllerNode {
         return self.displayNode as! ContextControllerNode
     }
-    
-    public var reactionSelected: ((ReactionContextItem.Reaction) -> Void)?
+
     public var dismissed: (() -> Void)?
     public var dismissedForCancel: (() -> Void)? {
         didSet {
@@ -1948,12 +1778,11 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     private var shouldBeDismissedDisposable: Disposable?
     
-    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, reactionItems: [ReactionContextItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
+    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
         self.account = account
         self.presentationData = presentationData
         self.source = source
         self.items = items
-        self.reactionItems = reactionItems
         self.recognizer = recognizer
         self.gesture = gesture
         
@@ -2004,14 +1833,9 @@ public final class ContextController: ViewController, StandalonePresentableContr
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ContextControllerNode(account: self.account, controller: self, presentationData: self.presentationData, source: self.source, items: self.items, reactionItems: self.reactionItems, beginDismiss: { [weak self] result in
+        self.displayNode = ContextControllerNode(account: self.account, controller: self, presentationData: self.presentationData, source: self.source, items: self.items, beginDismiss: { [weak self] result in
             self?.dismiss(result: result, completion: nil)
-        }, recognizer: self.recognizer, gesture: self.gesture, reactionSelected: { [weak self] value in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.reactionSelected?(value)
-        }, beganAnimatingOut: { [weak self] in
+        }, recognizer: self.recognizer, gesture: self.gesture, beganAnimatingOut: { [weak self] in
             self?.statusBar.statusBarStyle = .Ignore
         }, attemptTransitionControllerIntoNavigation: { [weak self] in
             guard let strongSelf = self else {
@@ -2095,16 +1919,5 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     override public func dismiss(completion: (() -> Void)? = nil) {
         self.dismiss(result: .default, completion: completion)
-    }
-    
-    public func dismissWithReaction(value: String, targetEmptyNode: ASDisplayNode, targetFilledNode: ASDisplayNode, hideNode: Bool, completion: (() -> Void)?) {
-        if !self.wasDismissed {
-            self.wasDismissed = true
-            self.controllerNode.animateOutToReaction(value: value, targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: hideNode, completion: { [weak self] in
-                self?.presentingViewController?.dismiss(animated: false, completion: nil)
-                completion?()
-            })
-            self.dismissed?()
-        }
     }
 }

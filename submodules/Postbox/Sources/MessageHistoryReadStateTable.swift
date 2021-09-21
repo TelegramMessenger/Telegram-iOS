@@ -32,10 +32,10 @@ final class MessageHistoryReadStateTable: Table {
         return self.sharedKey
     }
     
-    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, seedConfiguration: SeedConfiguration) {
         self.seedConfiguration = seedConfiguration
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
 
     private func get(_ id: PeerId) -> InternalPeerReadStates? {
@@ -505,7 +505,7 @@ final class MessageHistoryReadStateTable: Table {
     override func beforeCommit() {
         if !self.updatedInitialPeerReadStates.isEmpty {
             let sharedBuffer = WriteBuffer()
-            for (id, initialNamespaces) in self.updatedInitialPeerReadStates {
+            for (id, _) in self.updatedInitialPeerReadStates {
                 if let wrappedStates = self.cachedPeerReadStates[id], let states = wrappedStates {
                     sharedBuffer.reset()
                     var count: Int32 = Int32(states.namespaces.count)
@@ -567,6 +567,10 @@ final class MessageHistoryReadStateTable: Table {
                 }
             }
             self.updatedInitialPeerReadStates.removeAll()
+
+            if !self.useCaches {
+                self.cachedPeerReadStates.removeAll()
+            }
         }
     }
 }

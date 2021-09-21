@@ -345,7 +345,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
             globallyUniqueIds.append(randomId)
             
             switch message {
-                case let .message(text, requestedAttributes, mediaReference, replyToMessageId, localGroupingKey, correlationId):
+                case let .message(text, requestedAttributes, mediaReference, replyToMessageId, localGroupingKey, _):
                     var peerAutoremoveTimeout: Int32?
                     if let peer = peer as? TelegramSecretChat {
                         var isAction = false
@@ -517,7 +517,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                     
                     storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, threadId: threadId, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
-                case let .forward(source, grouping, requestedAttributes, correlationId):
+                case let .forward(source, grouping, requestedAttributes, _):
                     let sourceMessage = transaction.getMessage(source)
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         var messageText = sourceMessage.text
@@ -648,7 +648,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                     if !hasHiddenForwardMedia {
                                         var sourceId: PeerId? = nil
                                         var sourceMessageId: MessageId? = nil
-                                        if let peer = messageMainPeer(sourceMessage) as? TelegramChannel, case .broadcast = peer.info {
+                                        if case let .channel(peer) = messageMainPeer(EngineMessage(sourceMessage)), case .broadcast = peer.info {
                                             sourceId = peer.id
                                             sourceMessageId = sourceMessage.id
                                         }

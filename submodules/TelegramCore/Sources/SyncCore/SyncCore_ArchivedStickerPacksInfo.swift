@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 
-
 public struct ArchivedStickerPacksInfoId {
     public let rawValue: MemoryBuffer
     public let id: Int32
@@ -22,18 +21,22 @@ public struct ArchivedStickerPacksInfoId {
     }
 }
 
-public final class ArchivedStickerPacksInfo: OrderedItemListEntryContents {
+public final class ArchivedStickerPacksInfo: Codable {
     public let count: Int32
     
     init(count: Int32) {
         self.count = count
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.count = decoder.decodeInt32ForKey("c", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.count = try container.decode(Int32.self, forKey: "c")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.count, forKey: "c")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.count, forKey: "c")
     }
 }

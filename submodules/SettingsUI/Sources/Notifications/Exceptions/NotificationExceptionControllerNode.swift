@@ -299,13 +299,13 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
     var index: Int = 0
     for (_, value) in state.mode.settings.filter({ (_, value) in
         if let query = query, !query.isEmpty {
-            return !value.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder).lowercased().components(separatedBy: " ").filter { $0.hasPrefix(query.lowercased())}.isEmpty
+            return !EnginePeer(value.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder).lowercased().components(separatedBy: " ").filter { $0.hasPrefix(query.lowercased())}.isEmpty
         } else {
             return true
         }
     }).sorted(by: { lhs, rhs in
-        let lhsName = lhs.value.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-        let rhsName = rhs.value.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        let lhsName = EnginePeer(lhs.value.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        let rhsName = EnginePeer(rhs.value.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         
         if let lhsDate = lhs.value.date, let rhsDate = rhs.value.date {
             return lhsDate > rhsDate
@@ -530,7 +530,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     arguments.selectPeer()
                 })
             case let .peer(_, peer, _, _, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing, isSearching):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(value, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(peer), presence: nil, text: .text(value, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     arguments.updateRevealedPeerId(peerId)
@@ -538,7 +538,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     arguments.deletePeer(peer)
                 }, hasTopStripe: false, hasTopGroupInset: false, noInsets: isSearching)
             case let .addPeer(_, peer, theme, strings, _, nameDisplayOrder):
-                return ContactsPeerItem(presentationData: presentationData, sortOrder: nameDisplayOrder, displayOrder: nameDisplayOrder, context: arguments.context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .add, index: nil, header: ChatListSearchItemHeader(type: .addToExceptions, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
+                return ContactsPeerItem(presentationData: presentationData, sortOrder: nameDisplayOrder, displayOrder: nameDisplayOrder, context: arguments.context, peerMode: .peer, peer: .peer(peer: EnginePeer(peer), chatPeer: EnginePeer(peer)), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .add, index: nil, header: ChatListSearchItemHeader(type: .addToExceptions, theme: theme, strings: strings, actionTitle: nil, action: nil), action: { _ in
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 })

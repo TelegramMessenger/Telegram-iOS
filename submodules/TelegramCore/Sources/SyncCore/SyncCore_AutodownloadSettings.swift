@@ -6,7 +6,7 @@ public enum AutodownloadPreset {
     case high
 }
 
-public struct AutodownloadPresetSettings: PostboxCoding, Equatable {
+public struct AutodownloadPresetSettings: Codable {
     public let disabled: Bool
     public let photoSizeMax: Int32
     public let videoSizeMax: Int32
@@ -25,28 +25,32 @@ public struct AutodownloadPresetSettings: PostboxCoding, Equatable {
         self.videoUploadMaxbitrate = videoUploadMaxbitrate
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.disabled = decoder.decodeInt32ForKey("disabled", orElse: 0) != 0
-        self.photoSizeMax = decoder.decodeInt32ForKey("photoSizeMax", orElse: 0)
-        self.videoSizeMax = decoder.decodeInt32ForKey("videoSizeMax", orElse: 0)
-        self.fileSizeMax = decoder.decodeInt32ForKey("fileSizeMax", orElse: 0)
-        self.preloadLargeVideo = decoder.decodeInt32ForKey("preloadLargeVideo", orElse: 0) != 0
-        self.lessDataForPhoneCalls = decoder.decodeInt32ForKey("lessDataForPhoneCalls", orElse: 0) != 0
-        self.videoUploadMaxbitrate = decoder.decodeInt32ForKey("videoUploadMaxbitrate", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.disabled = ((try? container.decode(Int32.self, forKey: "disabled")) ?? 0) != 0
+        self.photoSizeMax = (try? container.decode(Int32.self, forKey: "photoSizeMax")) ?? 0
+        self.videoSizeMax = (try? container.decode(Int32.self, forKey: "videoSizeMax")) ?? 0
+        self.fileSizeMax = (try? container.decode(Int32.self, forKey: "fileSizeMax")) ?? 0
+        self.preloadLargeVideo = ((try? container.decode(Int32.self, forKey: "preloadLargeVideo")) ?? 0) != 0
+        self.lessDataForPhoneCalls = ((try? container.decode(Int32.self, forKey: "lessDataForPhoneCalls")) ?? 0) != 0
+        self.videoUploadMaxbitrate = (try? container.decode(Int32.self, forKey: "videoUploadMaxbitrate")) ?? 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.disabled ? 1 : 0, forKey: "disabled")
-        encoder.encodeInt32(self.photoSizeMax, forKey: "photoSizeMax")
-        encoder.encodeInt32(self.videoSizeMax, forKey: "videoSizeMax")
-        encoder.encodeInt32(self.fileSizeMax, forKey: "fileSizeMax")
-        encoder.encodeInt32(self.preloadLargeVideo ? 1 : 0, forKey: "preloadLargeVideo")
-        encoder.encodeInt32(self.lessDataForPhoneCalls ? 1 : 0, forKey: "lessDataForPhoneCalls")
-        encoder.encodeInt32(self.videoUploadMaxbitrate, forKey: "videoUploadMaxbitrate")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.disabled ? 1 : 0) as Int32, forKey: "disabled")
+        try container.encode(self.photoSizeMax, forKey: "photoSizeMax")
+        try container.encode(self.videoSizeMax, forKey: "videoSizeMax")
+        try container.encode(self.fileSizeMax, forKey: "fileSizeMax")
+        try container.encode((self.preloadLargeVideo ? 1 : 0) as Int32, forKey: "preloadLargeVideo")
+        try container.encode((self.lessDataForPhoneCalls ? 1 : 0) as Int32, forKey: "lessDataForPhoneCalls")
+        try container.encode(self.videoUploadMaxbitrate, forKey: "videoUploadMaxbitrate")
     }
 }
 
-public struct AutodownloadSettings: PreferencesEntry, Equatable {
+public struct AutodownloadSettings: Codable {
     public let lowPreset: AutodownloadPresetSettings
     public let mediumPreset: AutodownloadPresetSettings
     public let highPreset: AutodownloadPresetSettings
@@ -64,27 +68,19 @@ public struct AutodownloadSettings: PreferencesEntry, Equatable {
         self.highPreset = highPreset
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.lowPreset = decoder.decodeObjectForKey("lowPreset", decoder: AutodownloadPresetSettings.init(decoder:)) as! AutodownloadPresetSettings
-        self.mediumPreset = decoder.decodeObjectForKey("mediumPreset", decoder: AutodownloadPresetSettings.init(decoder:)) as! AutodownloadPresetSettings
-        self.highPreset = decoder.decodeObjectForKey("highPreset", decoder: AutodownloadPresetSettings.init(decoder:)) as! AutodownloadPresetSettings
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.lowPreset = (try? container.decode(AutodownloadPresetSettings.self, forKey: "lowPreset")) ?? AutodownloadSettings.defaultSettings.lowPreset
+        self.mediumPreset = (try? container.decode(AutodownloadPresetSettings.self, forKey: "mediumPreset")) ?? AutodownloadSettings.defaultSettings.mediumPreset
+        self.highPreset = (try? container.decode(AutodownloadPresetSettings.self, forKey: "highPreset")) ?? AutodownloadSettings.defaultSettings.highPreset
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.lowPreset, forKey: "lowPreset")
-        encoder.encodeObject(self.mediumPreset, forKey: "mediumPreset")
-        encoder.encodeObject(self.highPreset, forKey: "highPreset")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? AutodownloadSettings {
-            return self == to
-        } else {
-            return false
-        }
-    }
-    
-    public static func ==(lhs: AutodownloadSettings, rhs: AutodownloadSettings) -> Bool {
-        return lhs.lowPreset == rhs.lowPreset && lhs.mediumPreset == rhs.mediumPreset && lhs.highPreset == rhs.highPreset
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.lowPreset, forKey: "lowPreset")
+        try container.encode(self.mediumPreset, forKey: "mediumPreset")
+        try container.encode(self.highPreset, forKey: "highPreset")
     }
 }

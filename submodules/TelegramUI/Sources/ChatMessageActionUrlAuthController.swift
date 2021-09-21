@@ -163,7 +163,7 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         
         self.textNode.attributedText = formattedText(strings.Conversation_OpenBotLinkText(self.defaultUrl).string, color: theme.primaryColor, textAlignment: .center)
         self.authorizeLabelNode.attributedText = formattedText(strings.Conversation_OpenBotLinkLogin(self.domain, self.displayName).string, color: theme.primaryColor)
-        self.allowWriteLabelNode.attributedText = formattedText(strings.Conversation_OpenBotLinkAllowMessages(self.bot.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)).string, color: theme.primaryColor)
+        self.allowWriteLabelNode.attributedText = formattedText(strings.Conversation_OpenBotLinkAllowMessages(EnginePeer(self.bot).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)).string, color: theme.primaryColor)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {

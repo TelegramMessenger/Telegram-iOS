@@ -1,6 +1,6 @@
 import Postbox
 
-public final class CachedStickerQueryResult: PostboxCoding {
+public final class CachedStickerQueryResult: Codable {
     public let items: [TelegramMediaFile]
     public let hash: Int64
     public let timestamp: Int32
@@ -11,16 +11,25 @@ public final class CachedStickerQueryResult: PostboxCoding {
         self.timestamp = timestamp
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.items = decoder.decodeObjectArrayForKey("it").map { $0 as! TelegramMediaFile }
-        self.hash = decoder.decodeInt64ForKey("h6", orElse: 0)
-        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.items = (try container.decode([AdaptedPostboxDecoder.RawObjectData].self, forKey: "it")).map { itemData in
+            return TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: itemData.data)))
+        }
+
+        self.hash = try container.decode(Int64.self, forKey: "h6")
+        self.timestamp = try container.decode(Int32.self, forKey: "t")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObjectArray(self.items, forKey: "it")
-        encoder.encodeInt64(self.hash, forKey: "h6")
-        encoder.encodeInt32(self.timestamp, forKey: "t")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.items.map { item in
+            return PostboxEncoder().encodeObjectToRawData(item)
+        }, forKey: "it")
+        try container.encode(self.hash, forKey: "h6")
+        try container.encode(self.timestamp, forKey: "t")
     }
     
     public static func cacheKey(_ query: String) -> ValueBoxKey {

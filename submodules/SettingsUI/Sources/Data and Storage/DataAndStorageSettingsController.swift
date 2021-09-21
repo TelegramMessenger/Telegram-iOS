@@ -11,7 +11,6 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import OpenInExternalAppUI
-import WidgetSetupScreen
 
 private final class DataAndStorageControllerArguments {
     let openStorageUsage: () -> Void
@@ -27,10 +26,9 @@ private final class DataAndStorageControllerArguments {
     let toggleDownloadInBackground: (Bool) -> Void
     let openBrowserSelection: () -> Void
     let openIntents: () -> Void
-    let openWidgetSettings: () -> Void
     let toggleEnableSensitiveContent: (Bool) -> Void
 
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, openWidgetSettings: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void, openIntents: @escaping () -> Void, toggleEnableSensitiveContent: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -44,7 +42,6 @@ private final class DataAndStorageControllerArguments {
         self.toggleDownloadInBackground = toggleDownloadInBackground
         self.openBrowserSelection = openBrowserSelection
         self.openIntents = openIntents
-        self.openWidgetSettings = openWidgetSettings
         self.toggleEnableSensitiveContent = toggleEnableSensitiveContent
     }
 }
@@ -89,7 +86,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case useLessVoiceData(PresentationTheme, String, String)
     case otherHeader(PresentationTheme, String)
     case shareSheet(PresentationTheme, String)
-    case widgetSettings(String)
     case saveIncomingPhotos(PresentationTheme, String)
     case saveEditedPhotos(PresentationTheme, String, Bool)
     case openLinksIn(PresentationTheme, String, String)
@@ -109,7 +105,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.autoPlay.rawValue
             case .voiceCallsHeader, .useLessVoiceData:
                 return DataAndStorageSection.voiceCalls.rawValue
-            case .otherHeader, .shareSheet, .widgetSettings, .saveIncomingPhotos, .saveEditedPhotos, .openLinksIn, .downloadInBackground, .downloadInBackgroundInfo:
+            case .otherHeader, .shareSheet, .saveIncomingPhotos, .saveEditedPhotos, .openLinksIn, .downloadInBackground, .downloadInBackgroundInfo:
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
@@ -146,8 +142,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 11
             case .shareSheet:
                 return 12
-            case .widgetSettings:
-                return 13
             case .saveIncomingPhotos:
                 return 14
             case .saveEditedPhotos:
@@ -243,12 +237,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 }
             case let .shareSheet(lhsTheme, lhsText):
                 if case let .shareSheet(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .widgetSettings(text):
-                if case .widgetSettings(text) = rhs {
                     return true
                 } else {
                     return false
@@ -356,10 +344,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
             case let .shareSheet(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openIntents()
-                })
-            case let .widgetSettings(text):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
-                    arguments.openWidgetSettings()
                 })
             case let .saveIncomingPhotos(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
@@ -504,9 +488,6 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     if #available(iOSApplicationExtension 13.2, iOS 13.2, *) {
         entries.append(.shareSheet(presentationData.theme, presentationData.strings.ChatSettings_IntentsSettings))
     }
-    /*if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
-        entries.append(.widgetSettings(presentationData.strings.ChatSettings_WidgetSettings))
-    }*/
     entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
     entries.append(.openLinksIn(presentationData.theme, presentationData.strings.ChatSettings_OpenLinksIn, defaultWebBrowser))
@@ -561,14 +542,14 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     dataAndStorageDataPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings, ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.proxySettings])
     |> map { sharedData -> DataAndStorageData in
         var automaticMediaDownloadSettings: MediaAutoDownloadSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = .defaultSettings
         }
         
         var autodownloadSettings: AutodownloadSettings
-        if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
+        if let value = sharedData.entries[SharedDataKeys.autodownloadSettings]?.get(AutodownloadSettings.self) {
             autodownloadSettings = value
             automaticMediaDownloadSettings = automaticMediaDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
         } else {
@@ -576,21 +557,21 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         }
         
         let generatedMediaStoreSettings: GeneratedMediaStoreSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings] as? GeneratedMediaStoreSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings]?.get(GeneratedMediaStoreSettings.self) {
             generatedMediaStoreSettings = value
         } else {
             generatedMediaStoreSettings = GeneratedMediaStoreSettings.defaultSettings
         }
         
         let voiceCallSettings: VoiceCallSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) {
             voiceCallSettings = value
         } else {
             voiceCallSettings = VoiceCallSettings.defaultSettings
         }
         
         var proxySettings: ProxySettings?
-        if let value = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+        if let value = sharedData.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) {
             proxySettings = value
         }
         
@@ -659,9 +640,6 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
     }, openIntents: {
         let controller = intentsSettingsController(context: context)
         pushControllerImpl?(controller)
-    }, openWidgetSettings: {
-        let controller = widgetSetupScreen(context: context)
-        pushControllerImpl?(controller)
     }, toggleEnableSensitiveContent: { value in
         let _ = (contentSettingsConfiguration.get()
         |> take(1)
@@ -682,7 +660,7 @@ public func dataAndStorageController(context: AccountContext, focusOnItemTag: Da
         contentSettingsConfiguration.get()
     )
     |> map { presentationData, state, dataAndStorageData, sharedData, contentSettingsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let webBrowserSettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings) ?? WebBrowserSettings.defaultSettings
+        let webBrowserSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) ?? WebBrowserSettings.defaultSettings
         let options = availableOpenInOptions(context: context, item: .url(url: "https://telegram.org"))
         let defaultWebBrowser: String
         if let option = options.first(where: { $0.identifier == webBrowserSettings.defaultWebBrowser }) {

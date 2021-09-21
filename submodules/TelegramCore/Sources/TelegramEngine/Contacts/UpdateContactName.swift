@@ -24,6 +24,6 @@ func _internal_updateContactName(account: Account, peerId: PeerId, firstName: St
             return .fail(.generic)
         }
     }
-    |> mapError { _ -> UpdateContactNameError in return .generic }
+    |> mapError { _ -> UpdateContactNameError in }
     |> switchToLatest
 }

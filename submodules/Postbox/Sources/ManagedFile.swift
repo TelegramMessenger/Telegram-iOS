@@ -73,7 +73,8 @@ public final class ManagedFile {
             assert(queue.isCurrent())
         }
         var result = Data(count: count)
-        result.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+        result.withUnsafeMutableBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
             let readCount = self.read(bytes, count)
             assert(readCount == count)
         }

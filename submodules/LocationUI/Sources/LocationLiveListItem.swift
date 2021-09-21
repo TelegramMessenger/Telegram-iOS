@@ -159,7 +159,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
             
             var title: String = ""
             if let author = item.message.author {
-                title = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.nameDisplayOrder)
+                title = EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.nameDisplayOrder)
             }
             let titleAttributedString = NSAttributedString(string: title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 54.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

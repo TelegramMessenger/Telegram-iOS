@@ -8,13 +8,14 @@ import MtProtoKit
 public func updateGlobalNotificationSettingsInteractively(postbox: Postbox, _ f: @escaping (GlobalNotificationSettingsSet) -> GlobalNotificationSettingsSet) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
-            if let current = current as? GlobalNotificationSettings {
-                return GlobalNotificationSettings(toBeSynchronized: f(current.effective), remote: current.remote)
+            if let current = current?.get(GlobalNotificationSettings.self) {
+                return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: f(current.effective), remote: current.remote))
             } else {
                 let settings = f(GlobalNotificationSettingsSet.defaultSettings)
-                return GlobalNotificationSettings(toBeSynchronized: settings, remote: settings)
+                return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: settings, remote: settings))
             }
         })
+        transaction.globalNotificationSettingsUpdated()
     }
 }
 
@@ -56,7 +57,7 @@ private enum SynchronizeGlobalSettingsData: Equatable {
 func managedGlobalNotificationSettings(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let data = postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
     |> map { view -> SynchronizeGlobalSettingsData in
-        if let preferences = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+        if let preferences = view.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
             if let settings = preferences.toBeSynchronized {
                 return .push(settings)
             } else {
@@ -77,24 +78,26 @@ func managedGlobalNotificationSettings(postbox: Postbox, network: Network) -> Si
                 |> mapToSignal { settings -> Signal<Void, NoError> in
                     return postbox.transaction { transaction -> Void in
                         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
-                            if let current = current as? GlobalNotificationSettings {
-                                return GlobalNotificationSettings(toBeSynchronized: current.toBeSynchronized, remote: settings)
+                            if let current = current?.get(GlobalNotificationSettings.self) {
+                                return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: current.toBeSynchronized, remote: settings))
                             } else {
-                                return GlobalNotificationSettings(toBeSynchronized: nil, remote: settings)
+                                return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: nil, remote: settings))
                             }
                         })
+                        transaction.globalNotificationSettingsUpdated()
                     }
                 }
             case let .push(settings):
                 return pushedNotificationSettings(network: network, settings: settings)
                     |> then(postbox.transaction { transaction -> Void in
                         transaction.updatePreferencesEntry(key: PreferencesKeys.globalNotifications, { current in
-                            if let current = current as? GlobalNotificationSettings, current.toBeSynchronized == settings {
-                                return GlobalNotificationSettings(toBeSynchronized: nil, remote: settings)
+                            if let current = current?.get(GlobalNotificationSettings.self), current.toBeSynchronized == settings {
+                                return PreferencesEntry(GlobalNotificationSettings(toBeSynchronized: nil, remote: settings))
                             } else {
                                 return current
                             }
                         })
+                        transaction.globalNotificationSettingsUpdated()
                     })
         }
     }

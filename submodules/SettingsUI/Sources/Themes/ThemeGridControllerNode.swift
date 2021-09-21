@@ -504,7 +504,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             self.context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.wallapersState])
         )
         |> map { remoteWallpapers, sharedData -> [Wallpaper] in
-            let localState = (sharedData.entries[SharedDataKeys.wallapersState] as? WallpapersState) ?? WallpapersState.default
+            let localState = sharedData.entries[SharedDataKeys.wallapersState]?.get(WallpapersState.self) ?? WallpapersState.default
 
             var wallpapers: [Wallpaper] = []
             for wallpaper in localState.wallpapers {

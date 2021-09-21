@@ -356,7 +356,7 @@ public final class ThemePreviewController: ViewController {
                 var previousDefaultTheme: (PresentationThemeReference, PresentationThemeAccentColor?, Bool, PresentationThemeReference, Bool)?
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                     let currentSettings: PresentationThemeSettings
-                    if let entry = entry as? PresentationThemeSettings {
+                    if let entry = entry?.get(PresentationThemeSettings.self) {
                         currentSettings = entry
                     } else {
                         currentSettings = PresentationThemeSettings.defaultSettings
@@ -387,7 +387,7 @@ public final class ThemePreviewController: ViewController {
                     
                     var themeSpecificChatWallpapers = updatedSettings.themeSpecificChatWallpapers
                     themeSpecificChatWallpapers[updatedTheme.index] = nil
-                    return updatedSettings.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers).withUpdatedThemeSpecificAccentColors(themeSpecificAccentColors)
+                    return PreferencesEntry(updatedSettings.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers).withUpdatedThemeSpecificAccentColors(themeSpecificAccentColors))
                 })
                 return previousDefaultTheme
             }

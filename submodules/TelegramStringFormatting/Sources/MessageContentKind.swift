@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -88,7 +87,7 @@ public enum MessageContentKind: Equatable {
     }
 }
 
-public func messageContentKind(contentSettings: ContentSettings, message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: PeerId) -> MessageContentKind {
+public func messageContentKind(contentSettings: ContentSettings, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: EnginePeer.Id) -> MessageContentKind {
     for attribute in message.attributes {
         if let attribute = attribute as? RestrictedContentMessageAttribute {
             if let text = attribute.platformText(platform: "ios", contentSettings: contentSettings) {
@@ -98,25 +97,25 @@ public func messageContentKind(contentSettings: ContentSettings, message: Messag
         }
     }
     for media in message.media {
-        if let kind = mediaContentKind(media, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId) {
+        if let kind = mediaContentKind(EngineMedia(media), message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId) {
             return kind
         }
     }
     return .text(message.text)
 }
 
-public func mediaContentKind(_ media: Media, message: Message? = nil, strings: PresentationStrings? = nil, nameDisplayOrder: PresentationPersonNameOrder? = nil, dateTimeFormat: PresentationDateTimeFormat? = nil, accountPeerId: PeerId? = nil) -> MessageContentKind? {
+public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil, strings: PresentationStrings? = nil, nameDisplayOrder: PresentationPersonNameOrder? = nil, dateTimeFormat: PresentationDateTimeFormat? = nil, accountPeerId: EnginePeer.Id? = nil) -> MessageContentKind? {
     switch media {
-    case let expiredMedia as TelegramMediaExpiredContent:
+    case let .expiredContent(expiredMedia):
         switch expiredMedia.data {
         case .image:
             return .expiredImage
         case .file:
             return .expiredVideo
         }
-    case _ as TelegramMediaImage:
+    case .image:
         return .image
-    case let file as TelegramMediaFile:
+    case let .file(file):
         var fileName: String = ""
         for attribute in file.attributes {
             switch attribute {
@@ -154,27 +153,27 @@ public func mediaContentKind(_ media: Media, message: Message? = nil, strings: P
             return .sticker("")
         }
         return .file(fileName)
-    case _ as TelegramMediaContact:
+    case .contact:
         return .contact
-    case let game as TelegramMediaGame:
+    case let .game(game):
         return .game(game.title)
-    case let location as TelegramMediaMap:
+    case let .geo(location):
         if location.liveBroadcastingTimeout != nil {
             return .liveLocation
         } else {
             return .location
         }
-    case _ as TelegramMediaAction:
+    case .action:
         if let message = message, let strings = strings, let nameDisplayOrder = nameDisplayOrder, let accountPeerId = accountPeerId {
             return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat ?? PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: ""), message: message, accountPeerId: accountPeerId, forChatList: false) ?? "")
         } else {
             return nil
         }
-    case let poll as TelegramMediaPoll:
+    case let .poll(poll):
         return .poll(poll.text)
-    case let dice as TelegramMediaDice:
+    case let .dice(dice):
         return .dice(dice.emoji)
-    case let invoice as TelegramMediaInvoice:
+    case let .invoice(invoice):
         return .invoice(invoice.title)
     default:
         return nil
@@ -230,7 +229,7 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
     }
 }
 
-public func descriptionStringForMessage(contentSettings: ContentSettings, message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: PeerId) -> (String, Bool) {
+public func descriptionStringForMessage(contentSettings: ContentSettings, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: EnginePeer.Id) -> (String, Bool) {
     let contentKind = messageContentKind(contentSettings: contentSettings, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
     if !message.text.isEmpty && ![.expiredImage, .expiredVideo].contains(contentKind.key) {
         return (foldLineBreaks(message.text), false)

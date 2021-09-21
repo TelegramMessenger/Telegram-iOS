@@ -616,8 +616,8 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         let callsSignal = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings]), context.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration]))
         |> take(1)
         |> map { sharedData, view -> (VoiceCallSettings, VoipConfiguration) in
-            let voiceCallSettings: VoiceCallSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings ?? .defaultSettings
-            let voipConfiguration = view.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
+            let voiceCallSettings: VoiceCallSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) ?? .defaultSettings
+            let voipConfiguration = view.values[PreferencesKeys.voipConfiguration]?.get(VoipConfiguration.self) ?? .defaultValue
             
             return (voiceCallSettings, voipConfiguration)
         }
@@ -850,7 +850,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.engine.peers.recentPeers(), blockedPeersState.get(), webSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()), context.account.postbox.combinedView(keys: [preferencesKey]))
     |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var canAutoarchive = false
-        if let view = preferences.views[preferencesKey] as? PreferencesView, let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration, let data = appConfiguration.data, let hasAutoarchive = data["autoarchive_setting_available"] as? Bool {
+        if let view = preferences.views[preferencesKey] as? PreferencesView, let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self), let data = appConfiguration.data, let hasAutoarchive = data["autoarchive_setting_available"] as? Bool {
             canAutoarchive = hasAutoarchive
         }
         

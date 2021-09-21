@@ -53,7 +53,7 @@ private final class CacheUsageStatsState {
 }
 
 func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {
-    var initialState = CacheUsageStatsState()
+    let initialState = CacheUsageStatsState()
     if let peerId = peerId {
         initialState.lowerBound = MessageIndex.lowerBound(peerId: peerId)
         initialState.upperBound = MessageIndex.upperBound(peerId: peerId)
@@ -75,7 +75,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
         let fetch = account.postbox.transaction { transaction -> ([PeerId : Set<MediaId>], [MediaId : Media], MessageIndex?) in
             return transaction.enumerateMedia(lowerBound: state.with { $0.lowerBound }, upperBound: state.with { $0.upperBound }, limit: 1000)
         }
-        |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
+        |> mapError { _ -> CollectCacheUsageStatsError in }
         
         let process: ([PeerId : Set<MediaId>], [MediaId : Media], MessageIndex?) -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> = { mediaByPeer, mediaRefs, updatedLowerBound in
             var mediaIdToPeerId: [MediaId: PeerId] = [:]
@@ -141,7 +141,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                 }
             }
             return account.postbox.mediaBox.collectResourceCacheUsage(resourceIds)
-            |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
+            |> mapError { _ -> CollectCacheUsageStatsError in }
             |> mapToSignal { result -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
                 state.with { state -> Void in
                     state.lowerBound = updatedLowerBound
@@ -171,7 +171,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                 }
                 if updatedLowerBound == nil {
                     if peerId != nil {
-                        let (finalMedia, finalMediaResourceIds, allResourceIds) = state.with { state -> ([PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], [MediaId: [MediaResourceId]], Set<WrappedMediaResourceId>) in
+                        let (finalMedia, finalMediaResourceIds, _) = state.with { state -> ([PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], [MediaId: [MediaResourceId]], Set<WrappedMediaResourceId>) in
                             return (state.media, state.mediaResourceIds, state.allResourceIds)
                         }
                          return account.postbox.transaction { transaction -> CacheUsageStats in
@@ -185,7 +185,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                                }
                            }
                            return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: 0, otherPaths: [], cacheSize: 0, tempPaths: [], tempSize: 0, immutableSize: 0)
-                       } |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
+                       } |> mapError { _ -> CollectCacheUsageStatsError in }
                        |> mapToSignal { stats -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
                            return .fail(.done(stats))
                        }
@@ -196,7 +196,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                     }
                     
                     return account.postbox.mediaBox.collectOtherResourceUsage(excludeIds: excludeResourceIds, combinedExcludeIds: allResourceIds.union(excludeResourceIds))
-                    |> mapError { _ in return CollectCacheUsageStatsError.generic }
+                    |> mapError { _ -> CollectCacheUsageStatsError in }
                     |> mapToSignal { otherSize, otherPaths, cacheSize in
                         var tempPaths: [String] = []
                         var tempSize: Int64 = 0
@@ -264,7 +264,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                                 }
                             }
                             return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: otherSize, otherPaths: otherPaths, cacheSize: cacheSize, tempPaths: tempPaths, tempSize: tempSize, immutableSize: immutableSize)
-                        } |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
+                        } |> mapError { _ -> CollectCacheUsageStatsError in }
                         |> mapToSignal { stats -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
                             return .fail(.done(stats))
                         }

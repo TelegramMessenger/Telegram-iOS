@@ -5,18 +5,25 @@ private enum SynchronizeAppLogEventsOperationContentType: Int32 {
     case sync
 }
 
-public enum SynchronizeAppLogEventsOperationContent: PostboxCoding {
+public enum SynchronizeAppLogEventsOperationContent: Codable {
     case add(time: Double, type: String, peerId: PeerId?, data: JSON)
     case sync
     
-    public init(decoder: PostboxDecoder) {
-        switch decoder.decodeInt32ForKey("r", orElse: 0) {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        switch try container.decode(Int32.self, forKey: "r") {
         case SynchronizeAppLogEventsOperationContentType.add.rawValue:
             var peerId: PeerId?
-            if let id = decoder.decodeOptionalInt64ForKey("p") {
+            if let id = try? container.decodeIfPresent(Int64.self, forKey: "p") {
                 peerId = PeerId(id)
             }
-            self = .add(time: decoder.decodeDoubleForKey("tm", orElse: 0.0), type: decoder.decodeStringForKey("t", orElse: ""), peerId: peerId, data: decoder.decodeObjectForKey("d", decoder: { JSON(decoder: $0) }) as! JSON)
+            self = .add(
+                time: try container.decode(Double.self, forKey: "tm"),
+                type: try container.decode(String.self, forKey: "t"),
+                peerId: peerId,
+                data: try container.decode(JSON.self, forKey: "d")
+            )
         case SynchronizeAppLogEventsOperationContentType.sync.rawValue:
             self = .sync
         default:
@@ -24,37 +31,47 @@ public enum SynchronizeAppLogEventsOperationContent: PostboxCoding {
             self = .sync
         }
     }
-    
-    public func encode(_ encoder: PostboxEncoder) {
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
         switch self {
         case let .add(time, type, peerId, data):
-            encoder.encodeInt32(SynchronizeAppLogEventsOperationContentType.add.rawValue, forKey: "r")
-            encoder.encodeDouble(time, forKey: "tm")
-            encoder.encodeString(type, forKey: "t")
-            if let peerId = peerId {
-                encoder.encodeInt64(peerId.toInt64(), forKey: "p")
-            } else {
-                encoder.encodeNil(forKey: "p")
-            }
-            encoder.encodeObject(data, forKey: "d")
+            try container.encode(SynchronizeAppLogEventsOperationContentType.add.rawValue, forKey: "r")
+            try container.encode(time, forKey: "tm")
+            try container.encode(type, forKey: "t")
+            try container.encodeIfPresent(peerId?.toInt64(), forKey: "p")
+            try container.encode(data, forKey: "d")
         case .sync:
-            encoder.encodeInt32(SynchronizeAppLogEventsOperationContentType.sync.rawValue, forKey: "r")
+            try container.encode(SynchronizeAppLogEventsOperationContentType.sync.rawValue, forKey: "r")
         }
     }
 }
 
-public final class SynchronizeAppLogEventsOperation: PostboxCoding {
+public final class SynchronizeAppLogEventsOperation: Codable, PostboxCoding {
     public let content: SynchronizeAppLogEventsOperationContent
     
     public init(content: SynchronizeAppLogEventsOperationContent) {
         self.content = content
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.content = decoder.decodeObjectForKey("c", decoder: { SynchronizeAppLogEventsOperationContent(decoder: $0) }) as! SynchronizeAppLogEventsOperationContent
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.content = try container.decode(SynchronizeAppLogEventsOperationContent.self, forKey: "c")
     }
     
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.content, forKey: "c")
+    }
+
+    public init(decoder: PostboxDecoder) {
+        self.content = decoder.decode(SynchronizeAppLogEventsOperationContent.self, forKey: "c")!
+    }
+
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.content, forKey: "c")
+        encoder.encode(self.content, forKey: "c")
     }
 }

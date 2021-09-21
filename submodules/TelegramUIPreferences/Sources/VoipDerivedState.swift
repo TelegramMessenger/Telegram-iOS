@@ -1,8 +1,9 @@
 import Foundation
 import Postbox
+import TelegramCore
 import SwiftSignalKit
 
-public struct VoipDerivedState: Equatable, PreferencesEntry {
+public struct VoipDerivedState: Codable, Equatable {
     public var data: Data
     
     public static var `default`: VoipDerivedState {
@@ -13,20 +14,16 @@ public struct VoipDerivedState: Equatable, PreferencesEntry {
         self.data = data
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.data = decoder.decodeDataForKey("data") ?? Data()
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.data = try container.decode(Data.self, forKey: "data")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeData(self.data, forKey: "data")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? VoipDerivedState {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.data, forKey: "data")
     }
 }
 
@@ -34,12 +31,12 @@ public func updateVoipDerivedStateInteractively(postbox: Postbox, _ f: @escaping
     return postbox.transaction { transaction -> Void in
         transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.voipDerivedState, { entry in
             let currentSettings: VoipDerivedState
-            if let entry = entry as? VoipDerivedState {
+            if let entry = entry?.get(VoipDerivedState.self) {
                 currentSettings = entry
             } else {
                 currentSettings = .default
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }
