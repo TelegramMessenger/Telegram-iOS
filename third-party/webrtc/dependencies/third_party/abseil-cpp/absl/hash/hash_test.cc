@@ -82,8 +82,8 @@ TYPED_TEST_P(HashValueIntTest, FastPath) {
 }
 
 REGISTER_TYPED_TEST_CASE_P(HashValueIntTest, BasicUsage, FastPath);
-using IntTypes = testing::Types<unsigned char, char, int, int32_t, int64_t, uint32_t,
-                                uint64_t, size_t>;
+using IntTypes = testing::Types<unsigned char, char, int, int32_t, int64_t,
+                                uint32_t, uint64_t, size_t>;
 INSTANTIATE_TYPED_TEST_CASE_P(My, HashValueIntTest, IntTypes);
 
 enum LegacyEnum { kValue1, kValue2, kValue3 };
@@ -407,7 +407,7 @@ using IntSequenceTypes =
 INSTANTIATE_TYPED_TEST_CASE_P(My, HashValueSequenceTest, IntSequenceTypes);
 
 // Private type that only supports AbslHashValue to make sure our chosen hash
-// implentation is recursive within absl::Hash.
+// implementation is recursive within absl::Hash.
 // It uses std::abs() on the value to provide different bitwise representations
 // of the same logical value.
 struct Private {
@@ -579,6 +579,24 @@ TEST(HashValueTest, Maps) {
       MM{{0, "foo"}, {0, "bar"}}, MM{{0, "bar"}, {0, "foo"}},
       MM{{0, "foo"}, {42, "bar"}}, MM{{1, "foo"}, {42, "bar"}},
       MM{{1, "foo"}, {1, "foo"}, {43, "bar"}}, MM{{1, "foo"}, {43, "baz"}})));
+}
+
+TEST(HashValueTest, ReferenceWrapper) {
+  EXPECT_TRUE(is_hashable<std::reference_wrapper<Private>>::value);
+
+  Private p1{1}, p10{10};
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly(std::make_tuple(
+      p1, p10, std::ref(p1), std::ref(p10), std::cref(p1), std::cref(p10))));
+
+  EXPECT_TRUE(is_hashable<std::reference_wrapper<int>>::value);
+  int one = 1, ten = 10;
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly(std::make_tuple(
+      one, ten, std::ref(one), std::ref(ten), std::cref(one), std::cref(ten))));
+
+  EXPECT_TRUE(absl::VerifyTypeImplementsAbslHashCorrectly(
+      std::make_tuple(std::tuple<std::reference_wrapper<int>>(std::ref(one)),
+                      std::tuple<std::reference_wrapper<int>>(std::ref(ten)),
+                      std::tuple<int>(one), std::tuple<int>(ten))));
 }
 
 template <typename T, typename = void>
@@ -801,8 +819,8 @@ TYPED_TEST_P(HashIntTest, BasicUsage) {
 }
 
 REGISTER_TYPED_TEST_CASE_P(HashIntTest, BasicUsage);
-using IntTypes = testing::Types<unsigned char, char, int, int32_t, int64_t, uint32_t,
-                                uint64_t, size_t>;
+using IntTypes = testing::Types<unsigned char, char, int, int32_t, int64_t,
+                                uint32_t, uint64_t, size_t>;
 INSTANTIATE_TYPED_TEST_CASE_P(My, HashIntTest, IntTypes);
 
 struct StructWithPadding {
@@ -953,6 +971,41 @@ namespace {
 TEST(HashTest, DoesNotUseImplicitConversionsToBool) {
   EXPECT_NE(absl::Hash<ValueWithBoolConversion>()(ValueWithBoolConversion{0}),
             absl::Hash<ValueWithBoolConversion>()(ValueWithBoolConversion{1}));
+}
+
+TEST(HashOf, MatchesHashForSingleArgument) {
+  std::string s = "forty two";
+  int i = 42;
+  double d = 42.0;
+  std::tuple<int, int> t{4, 2};
+
+  EXPECT_EQ(absl::HashOf(s), absl::Hash<std::string>{}(s));
+  EXPECT_EQ(absl::HashOf(i), absl::Hash<int>{}(i));
+  EXPECT_EQ(absl::HashOf(d), absl::Hash<double>{}(d));
+  EXPECT_EQ(absl::HashOf(t), (absl::Hash<std::tuple<int, int>>{}(t)));
+}
+
+TEST(HashOf, MatchesHashOfTupleForMultipleArguments) {
+  std::string hello = "hello";
+  std::string world = "world";
+
+  EXPECT_EQ(absl::HashOf(), absl::HashOf(std::make_tuple()));
+  EXPECT_EQ(absl::HashOf(hello), absl::HashOf(std::make_tuple(hello)));
+  EXPECT_EQ(absl::HashOf(hello, world),
+            absl::HashOf(std::make_tuple(hello, world)));
+}
+
+template <typename T>
+std::true_type HashOfExplicitParameter(decltype(absl::HashOf<T>(0))) {
+  return {};
+}
+template <typename T>
+std::false_type HashOfExplicitParameter(size_t) {
+  return {};
+}
+
+TEST(HashOf, CantPassExplicitTemplateParameters) {
+  EXPECT_FALSE(HashOfExplicitParameter<int>(0));
 }
 
 }  // namespace

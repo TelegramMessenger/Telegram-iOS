@@ -227,7 +227,8 @@ class flat_hash_set
   //
   // size_type erase(const key_type& key):
   //
-  //   Erases the element with the matching key, if it exists.
+  //   Erases the element with the matching key, if it exists, returning the
+  //   number of elements erased (0 or 1).
   using Base::erase;
 
   // flat_hash_set::insert()
@@ -323,7 +324,7 @@ class flat_hash_set
 
   // flat_hash_set::merge()
   //
-  // Extracts elements from a given `source` flat hash map into this
+  // Extracts elements from a given `source` flat hash set into this
   // `flat_hash_set`. If the destination `flat_hash_set` already contains an
   // element with an equivalent key, that element is not extracted.
   using Base::merge;
