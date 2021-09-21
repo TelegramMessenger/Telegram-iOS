@@ -42,6 +42,8 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         self.micButton = ChatTextInputMediaRecordingButton(theme: theme, strings: strings, presentController: presentController)
         
         self.sendContainerNode = ASDisplayNode()
+        self.sendContainerNode.layer.allowsGroupOpacity = true
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
         self.backgroundNode.clipsToBounds = true
@@ -112,7 +114,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         
         self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
         
-        if [.day, .night].contains(theme.referenceTheme.baseTheme) && theme.chat.message.outgoing.bubble.withWallpaper.fill.count > 1 {
+        if [.day, .night].contains(theme.referenceTheme.baseTheme) && !theme.chat.message.outgoing.bubble.withWallpaper.hasSingleFillColor {
             self.backdropNode.isHidden = false
         } else {
             self.backdropNode.isHidden = true

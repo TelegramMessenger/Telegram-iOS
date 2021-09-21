@@ -433,7 +433,7 @@ public struct PresentationResourcesChat {
             return generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 let color: UIColor
-                if [.day, .night].contains(theme.referenceTheme.baseTheme) && theme.chat.message.outgoing.bubble.withWallpaper.fill.count > 1 {
+                if [.day, .night].contains(theme.referenceTheme.baseTheme) && !theme.chat.message.outgoing.bubble.withWallpaper.hasSingleFillColor {
                     color = .white
                 } else {
                     color = theme.chat.inputPanel.actionControlForegroundColor
@@ -470,7 +470,7 @@ public struct PresentationResourcesChat {
             return generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 let color: UIColor
-                if [.day, .night].contains(theme.referenceTheme.baseTheme) && theme.chat.message.outgoing.bubble.withWallpaper.fill.count > 1 {
+                if [.day, .night].contains(theme.referenceTheme.baseTheme) && !theme.chat.message.outgoing.bubble.withWallpaper.hasSingleFillColor {
                     color = .white
                 } else {
                     color = theme.chat.inputPanel.actionControlForegroundColor
@@ -515,7 +515,7 @@ public struct PresentationResourcesChat {
                 context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
                 
                 let color: UIColor
-                if [.day, .night].contains(theme.referenceTheme.baseTheme) && theme.chat.message.outgoing.bubble.withWallpaper.fill.count > 1 {
+                if [.day, .night].contains(theme.referenceTheme.baseTheme) && !theme.chat.message.outgoing.bubble.withWallpaper.hasSingleFillColor {
                     color = .white
                 } else {
                     color = theme.chat.inputPanel.actionControlForegroundColor
