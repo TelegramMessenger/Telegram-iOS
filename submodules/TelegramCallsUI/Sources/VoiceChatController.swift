@@ -1995,12 +1995,17 @@ public final class VoiceChatController: ViewController {
                     }
                     strongSelf.participantsNode.isHidden = !isLivestream
                     
+                    let hadPeer = strongSelf.peer != nil
                     strongSelf.peer = peer
                     strongSelf.currentTitleIsCustom = title != nil
                     strongSelf.currentTitle = title ?? peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
                     
                     strongSelf.updateTitle(transition: .immediate)
                     strongSelf.titleNode.isRecording = isRecording
+                    
+                    if strongSelf.isScheduling && !hadPeer {
+                        strongSelf.updateScheduleButtonTitle()
+                    }
                 }
                 if !strongSelf.didSetDataReady {
                     strongSelf.didSetDataReady = true
