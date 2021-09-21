@@ -3401,6 +3401,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if !cachedGroupData.botInfos.isEmpty {
                                     hasBots = true
                                 }
+                                let botCommands = cachedGroupData.botInfos.reduce(into: [], { result, info in
+                                    result.append(contentsOf: info.botInfo.commands)
+                                })
+                                if !botCommands.isEmpty {
+                                    hasBotCommands = true
+                                }
                                 if case let .known(value) = cachedGroupData.autoremoveTimeout {
                                     autoremoveTimeout = value?.effectiveValue
                                 }
@@ -3408,6 +3414,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if let channel = peer as? TelegramChannel, case .group = channel.info {
                                     if !cachedChannelData.botInfos.isEmpty {
                                         hasBots = true
+                                    }
+                                    let botCommands = cachedChannelData.botInfos.reduce(into: [], { result, info in
+                                        result.append(contentsOf: info.botInfo.commands)
+                                    })
+                                    if !botCommands.isEmpty {
+                                        hasBotCommands = true
                                     }
                                 }
                                 if case let .known(value) = cachedChannelData.autoremoveTimeout {

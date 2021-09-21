@@ -587,8 +587,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             } else if let media = media as? TelegramMediaFile, !media.isAnimated {
                 for attribute in media.attributes {
                     switch attribute {
-                    case .Video:
-                        canFullscreen = true
+                    case let .Video(_, dimensions, _):
+                        if dimensions.height > 0 {
+                            if CGFloat(dimensions.width) / CGFloat(dimensions.height) > 1.33 {
+                                canFullscreen = true
+                            }
+                        }
                     default:
                         break
                     }
@@ -1114,7 +1118,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     }
                     
                     var preferredAction = ShareControllerPreferredAction.default
-                    var actionCompletionText: String = ""
+                    var actionCompletionText: String?
                     if let generalMessageContentKind = generalMessageContentKind {
                         switch generalMessageContentKind {
                             case .image:
@@ -1164,6 +1168,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                     } else if let image = content.image {
                                         subject = .media(.webPage(webPage: WebpageReference(webpage), media: image))
                                         preferredAction = .saveToCameraRoll
+                                        actionCompletionText = strongSelf.presentationData.strings.Gallery_ImageSaved
                                     }
                                 }
                             } else if let file = m as? TelegramMediaFile {
@@ -1185,7 +1190,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             self?.interacting?(false)
                         }
                         shareController.actionCompleted = { [weak self] in
-                            if let strongSelf = self {
+                            if let strongSelf = self, let actionCompletionText = actionCompletionText {
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: actionCompletionText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                             }
