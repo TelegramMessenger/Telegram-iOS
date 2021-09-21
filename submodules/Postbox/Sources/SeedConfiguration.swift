@@ -45,7 +45,7 @@ func resolveChatListMessageTagSummaryResultCalculation(addSummary: MessageHistor
     return count > 0
 }
 
-func resolveChatListMessageTagSummaryResultCalculation(postbox: Postbox, peerId: PeerId, calculation: ChatListMessageTagSummaryResultCalculation?) -> Bool? {
+func resolveChatListMessageTagSummaryResultCalculation(postbox: PostboxImpl, peerId: PeerId, calculation: ChatListMessageTagSummaryResultCalculation?) -> Bool? {
     guard let calculation = calculation else {
         return nil
     }

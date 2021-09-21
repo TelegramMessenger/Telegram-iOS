@@ -195,7 +195,7 @@ final class PeerNotificationSettingsTable: Table {
         self.updatedInitialSettings.removeAll()
     }
     
-    func transactionParticipationInTotalUnreadCountUpdates(postbox: Postbox) -> (added: Set<PeerId>, removed: Set<PeerId>) {
+    func transactionParticipationInTotalUnreadCountUpdates(postbox: PostboxImpl) -> (added: Set<PeerId>, removed: Set<PeerId>) {
         var added = Set<PeerId>()
         var removed = Set<PeerId>()
         

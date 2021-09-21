@@ -38,7 +38,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
     fileprivate var closestHole: MessageOfInterestHole?
     fileprivate var closestLaterMedia: [HolesViewMedia] = []
     
-    init(postbox: Postbox, location: MessageOfInterestViewLocation, namespace: MessageId.Namespace, count: Int) {
+    init(postbox: PostboxImpl, location: MessageOfInterestViewLocation, namespace: MessageId.Namespace, count: Int) {
         self.location = location
         self.count = count
         
@@ -105,7 +105,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var peerId: PeerId
         switch self.location {
             case let .peer(id):

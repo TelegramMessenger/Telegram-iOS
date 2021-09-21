@@ -4,12 +4,12 @@ final class MutablePeerChatStateView: MutablePostboxView {
     let peerId: PeerId
     var chatState: PostboxCoding?
     
-    init(postbox: Postbox, peerId: PeerId) {
+    init(postbox: PostboxImpl, peerId: PeerId) {
         self.peerId = peerId
         self.chatState = postbox.peerChatStateTable.get(peerId)
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         if transaction.currentUpdatedPeerChatStates.contains(self.peerId) {
             self.chatState = postbox.peerChatStateTable.get(self.peerId)
             return true

@@ -624,7 +624,7 @@ final class MessageHistoryTable: Table {
         return messageIds
     }
     
-    func applyInteractiveMaxReadIndex(postbox: Postbox, messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
+    func applyInteractiveMaxReadIndex(postbox: PostboxImpl, messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
         var topMessageId: (MessageId.Id, Bool)?
         if let index = self.topIndexEntry(peerId: messageIndex.id.peerId, namespace: messageIndex.id.namespace) {
             if let message = self.getMessage(index) {

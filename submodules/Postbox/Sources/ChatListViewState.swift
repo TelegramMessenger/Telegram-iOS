@@ -53,7 +53,7 @@ enum ChatListViewSpace: Hashable {
     }
 }
 
-private func mappedChatListFilterPredicate(postbox: Postbox, groupId: PeerGroupId, predicate: ChatListFilterPredicate) -> (ChatListIntermediateEntry) -> Bool {
+private func mappedChatListFilterPredicate(postbox: PostboxImpl, groupId: PeerGroupId, predicate: ChatListFilterPredicate) -> (ChatListIntermediateEntry) -> Bool {
     let globalNotificationSettings = postbox.getGlobalNotificationSettings()
     return { entry in
         switch entry {
@@ -131,7 +131,7 @@ private final class ChatListViewSpaceState {
     
     var orderedEntries: OrderedChatListViewEntries
     
-    init(postbox: Postbox, space: ChatListViewSpace, anchorIndex: MutableChatListEntryIndex, summaryComponents: ChatListEntrySummaryComponents, halfLimit: Int) {
+    init(postbox: PostboxImpl, space: ChatListViewSpace, anchorIndex: MutableChatListEntryIndex, summaryComponents: ChatListEntrySummaryComponents, halfLimit: Int) {
         self.space = space
         self.anchorIndex = anchorIndex
         self.summaryComponents = summaryComponents
@@ -142,7 +142,7 @@ private final class ChatListViewSpaceState {
         self.checkEntries(postbox: postbox)
     }
     
-    private func fillSpace(postbox: Postbox) {
+    private func fillSpace(postbox: PostboxImpl) {
         switch self.space {
         case let .group(groupId, pinned, filterPredicate):
             let lowerBound: MutableChatListEntryIndex
@@ -370,7 +370,7 @@ private final class ChatListViewSpaceState {
         assert(self.orderedEntries.higherThanAnchor.count <= self.halfLimit)
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var hasUpdates = false
         var hadRemovals = false
         var globalNotificationSettings: PostboxGlobalNotificationSettings?
@@ -850,7 +850,7 @@ private final class ChatListViewSpaceState {
         return hasUpdates
     }
     
-    private func checkEntries(postbox: Postbox) {
+    private func checkEntries(postbox: PostboxImpl) {
         #if DEBUG
         if case .group(.root, .notPinned, nil) = self.space {
             let allEntries = self.orderedEntries.lowerOrAtAnchor + self.orderedEntries.higherThanAnchor
@@ -874,7 +874,7 @@ private final class ChatListViewSpaceState {
         #endif
     }
     
-    private func checkReplayEntries(postbox: Postbox) {
+    private func checkReplayEntries(postbox: PostboxImpl) {
         #if DEBUG
         let cleanState = ChatListViewSpaceState(postbox: postbox, space: self.space, anchorIndex: self.anchorIndex, summaryComponents: self.summaryComponents, halfLimit: self.halfLimit)
         //assert(self.orderedEntries.lowerOrAtAnchor.map { $0.index } == cleanState.orderedEntries.lowerOrAtAnchor.map { $0.index })
@@ -1218,7 +1218,7 @@ struct ChatListViewState {
     private let halfLimit: Int
     private var stateBySpace: [ChatListViewSpace: ChatListViewSpaceState] = [:]
     
-    init(postbox: Postbox, spaces: [ChatListViewSpace], anchorIndex: ChatListIndex, summaryComponents: ChatListEntrySummaryComponents, halfLimit: Int) {
+    init(postbox: PostboxImpl, spaces: [ChatListViewSpace], anchorIndex: ChatListIndex, summaryComponents: ChatListEntrySummaryComponents, halfLimit: Int) {
         self.anchorIndex = MutableChatListEntryIndex(index: anchorIndex, isMessage: true)
         self.summaryComponents = summaryComponents
         self.halfLimit = halfLimit
@@ -1228,7 +1228,7 @@ struct ChatListViewState {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         for (_, state) in self.stateBySpace {
             if state.replay(postbox: postbox, transaction: transaction) {
@@ -1314,7 +1314,7 @@ struct ChatListViewState {
         return (backwardsResult.reversed(), result)
     }
     
-    func sample(postbox: Postbox) -> ChatListViewSample {
+    func sample(postbox: PostboxImpl) -> ChatListViewSample {
         let combinedSpacesAndIndicesByDirection = self.sampleIndices()
         
         var result: [(ChatListViewSpace, MutableChatListEntry)] = []

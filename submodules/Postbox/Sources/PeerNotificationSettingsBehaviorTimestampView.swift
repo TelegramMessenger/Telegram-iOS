@@ -3,11 +3,11 @@ import Foundation
 final class MutablePeerNotificationSettingsBehaviorTimestampView: MutablePostboxView {
     fileprivate var earliestTimestamp: Int32?
     
-    init(postbox: Postbox) {
+    init(postbox: PostboxImpl) {
         self.earliestTimestamp = postbox.peerNotificationSettingsBehaviorTable.getEarliest()?.1
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         if !transaction.currentUpdatedPeerNotificationBehaviorTimestamps.isEmpty {
             let earliestTimestamp = postbox.peerNotificationSettingsBehaviorTable.getEarliest()?.1

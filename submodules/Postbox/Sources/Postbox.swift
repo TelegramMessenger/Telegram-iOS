@@ -12,14 +12,20 @@ public enum PostboxUpdateMessage {
 }
 
 public final class Transaction {
-    private weak var postbox: Postbox?
+    private let queue: Queue
+    private weak var postbox: PostboxImpl?
     var disposed = false
     
-    fileprivate init(postbox: Postbox) {
+    fileprivate init(queue: Queue, postbox: PostboxImpl) {
+        assert(queue.isCurrent())
+
+        self.queue = queue
         self.postbox = postbox
     }
     
     public func keychainEntryForKey(_ key: String) -> Data? {
+        assert(self.queue.isCurrent())
+
         assert(!self.disposed)
         return self.postbox?.keychainTable.get(key)
     }
@@ -1301,7 +1307,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
     }
 }
 
-public final class Postbox {
+final class PostboxImpl {
     public let queue: Queue
     public let seedConfiguration: SeedConfiguration
     private let basePath: String
@@ -1367,8 +1373,6 @@ public final class Postbox {
         arc4random_buf(&value, 8)
         return value
     }()
-    
-    public let mediaBox: MediaBox
     
     private var nextUniqueId: UInt32 = 1
     func takeNextUniqueId() -> UInt32 {
@@ -1454,10 +1458,7 @@ public final class Postbox {
         self.basePath = basePath
         self.seedConfiguration = seedConfiguration
         self.tempDir = tempDir
-        
-        postboxLog("MediaBox path: \(basePath + "/media")")
-        
-        self.mediaBox = MediaBox(basePath: self.basePath + "/media")
+
         self.valueBox = valueBox
         
         self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0))
@@ -1677,26 +1678,9 @@ public final class Postbox {
     }
     
     public func keychainEntryForKey(_ key: String) -> Data? {
-        let metaDisposable = MetaDisposable()
-        self.keychainOperationsDisposable.add(metaDisposable)
+        precondition(self.queue.isCurrent())
         
-        let semaphore = DispatchSemaphore(value: 0)
-        
-        var entry: Data? = nil
-        let disposable = (self.transaction({ transaction -> Data? in
-            return self.keychainTable.get(key)
-        }) |> afterDisposed { [weak self, weak metaDisposable] in
-            if let strongSelf = self, let metaDisposable = metaDisposable {
-                strongSelf.keychainOperationsDisposable.remove(metaDisposable)
-            }
-        }).start(next: { data in
-            entry = data
-            semaphore.signal()
-        })
-        metaDisposable.set(disposable)
-        
-        semaphore.wait()
-        return entry
+        return self.keychainTable.get(key)
     }
     
     private var keychainOperationsDisposable = DisposableSet()
@@ -2471,7 +2455,7 @@ public final class Postbox {
     private func internalTransaction<T>(_ f: (Transaction) -> T) -> (result: T, updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
         self.valueBox.begin()
         self.afterBegin()
-        let transaction = Transaction(postbox: self)
+        let transaction = Transaction(queue: self.queue, postbox: self)
         let result = f(transaction)
         transaction.disposed = true
         let (updatedTransactionState, updatedMasterClientId) = self.beforeCommit()
@@ -3652,4 +3636,586 @@ public final class Postbox {
         }
     }
     
+}
+
+public class Postbox {
+    let queue: Queue
+    private let impl: QueueLocalObject<PostboxImpl>
+
+    public let seedConfiguration: SeedConfiguration
+    public let mediaBox: MediaBox
+
+    init(
+        queue: Queue,
+        basePath: String,
+        seedConfiguration: SeedConfiguration,
+        valueBox: SqliteValueBox,
+        timestampForAbsoluteTimeBasedOperations: Int32,
+        isTemporary: Bool,
+        tempDir: TempBoxDirectory?
+    ) {
+        self.queue = queue
+
+        self.seedConfiguration = seedConfiguration
+
+        postboxLog("MediaBox path: \(basePath + "/media")")
+        self.mediaBox = MediaBox(basePath: basePath + "/media")
+
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return PostboxImpl(
+                queue: queue,
+                basePath: basePath,
+                seedConfiguration: seedConfiguration,
+                valueBox: valueBox,
+                timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations,
+                isTemporary: isTemporary,
+                tempDir: tempDir
+            )
+        })
+    }
+
+    public func keychainEntryForKey(_ key: String) -> Data? {
+        return self.impl.syncWith { impl -> Data? in
+            return impl.keychainEntryForKey(key)
+        }
+    }
+
+    public func setKeychainEntryForKey(_ key: String, value: Data) {
+        self.impl.with { impl in
+            impl.setKeychainEntryForKey(key, value: value)
+        }
+    }
+    public func removeKeychainEntryForKey(_ key: String) {
+        self.impl.with { impl in
+            impl.removeKeychainEntryForKey(key)
+        }
+    }
+
+    public func setCanBeginTransactions(_ value: Bool) {
+        self.impl.with { impl in
+            impl.setCanBeginTransactions(value)
+        }
+    }
+
+    public func transactionSignal<T, E>(userInteractive: Bool = false, _ f: @escaping(Subscriber<T, E>, Transaction) -> Disposable) -> Signal<T, E> {
+        return Signal<T, E> { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.transactionSignal(userInteractive: userInteractive, f).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func transaction<T>(userInteractive: Bool = false, ignoreDisabled: Bool = false, _ f: @escaping(Transaction) -> T) -> Signal<T, NoError> {
+        return Signal<T, NoError> { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.transaction(userInteractive: userInteractive, ignoreDisabled: ignoreDisabled, f).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func aroundMessageOfInterestHistoryViewForChatLocation(
+        _ chatLocation: ChatLocationInput,
+        count: Int,
+        clipHoles: Bool = true,
+        topTaggedMessageIdNamespaces: Set<MessageId.Namespace>,
+        tagMask: MessageTags?,
+        appendMessagesFromTheSameGroup: Bool,
+        namespaces: MessageIdNamespaces,
+        orderStatistics: MessageHistoryViewOrderStatistics,
+        additionalData: [AdditionalMessageHistoryViewData]
+    ) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.aroundMessageOfInterestHistoryViewForChatLocation(
+                    chatLocation,
+                    count: count,
+                    clipHoles: clipHoles,
+                    topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces,
+                    tagMask: tagMask,
+                    appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup,
+                    namespaces: namespaces,
+                    orderStatistics: orderStatistics,
+                    additionalData: additionalData
+                ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func aroundIdMessageHistoryViewForLocation(
+        _ chatLocation: ChatLocationInput,
+        count: Int,
+        clipHoles: Bool = true,
+        ignoreRelatedChats: Bool = false,
+        messageId: MessageId,
+        topTaggedMessageIdNamespaces: Set<MessageId.Namespace>,
+        tagMask: MessageTags?,
+        appendMessagesFromTheSameGroup: Bool,
+        namespaces: MessageIdNamespaces,
+        orderStatistics: MessageHistoryViewOrderStatistics,
+        additionalData: [AdditionalMessageHistoryViewData] = []
+    ) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.aroundIdMessageHistoryViewForLocation(
+                    chatLocation,
+                    count: count,
+                    clipHoles: clipHoles,
+                    ignoreRelatedChats: ignoreRelatedChats,
+                    messageId: messageId,
+                    topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces,
+                    tagMask: tagMask,
+                    appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup,
+                    namespaces: namespaces,
+                    orderStatistics: orderStatistics,
+                    additionalData: additionalData
+                ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func aroundMessageHistoryViewForLocation(
+        _ chatLocation: ChatLocationInput,
+        anchor: HistoryViewInputAnchor,
+        count: Int,
+        clipHoles: Bool = true,
+        ignoreRelatedChats: Bool = false,
+        fixedCombinedReadStates: MessageHistoryViewReadState?,
+        topTaggedMessageIdNamespaces: Set<MessageId.Namespace>,
+        tagMask: MessageTags?,
+        appendMessagesFromTheSameGroup: Bool,
+        namespaces: MessageIdNamespaces,
+        orderStatistics: MessageHistoryViewOrderStatistics,
+        additionalData: [AdditionalMessageHistoryViewData] = []
+    ) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.aroundMessageHistoryViewForLocation(
+                    chatLocation,
+                    anchor: anchor,
+                    count: count,
+                    clipHoles: clipHoles,
+                    ignoreRelatedChats: ignoreRelatedChats,
+                    fixedCombinedReadStates: fixedCombinedReadStates,
+                    topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces,
+                    tagMask: tagMask,
+                    appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup,
+                    namespaces: namespaces,
+                    orderStatistics: orderStatistics,
+                    additionalData: additionalData
+                ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func messageIndexAtId(_ id: MessageId) -> Signal<MessageIndex?, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.messageIndexAtId(id).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func messageAtId(_ id: MessageId) -> Signal<Message?, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.messageAtId(id).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func messagesAtIds(_ ids: [MessageId]) -> Signal<[Message], NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.messagesAtIds(ids).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func tailChatListView(
+        groupId: PeerGroupId,
+        filterPredicate: ChatListFilterPredicate? = nil,
+        count: Int,
+        summaryComponents: ChatListEntrySummaryComponents
+    ) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.tailChatListView(
+                    groupId: groupId,
+                    filterPredicate: filterPredicate,
+                    count: count,
+                    summaryComponents: summaryComponents
+                ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func aroundChatListView(
+        groupId: PeerGroupId,
+        filterPredicate: ChatListFilterPredicate? = nil,
+        index: ChatListIndex,
+        count: Int,
+        summaryComponents: ChatListEntrySummaryComponents,
+        userInteractive: Bool = false
+    ) -> Signal<(ChatListView, ViewUpdateType), NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.aroundChatListView(
+                    groupId: groupId,
+                    filterPredicate: filterPredicate,
+                    index: index,
+                    count: count,
+                    summaryComponents: summaryComponents,
+                    userInteractive: userInteractive
+                ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func contactPeerIdsView() -> Signal<ContactPeerIdsView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.contactPeerIdsView().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func contactPeersView(accountPeerId: PeerId?, includePresences: Bool) -> Signal<ContactPeersView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.contactPeersView(accountPeerId: accountPeerId, includePresences: includePresences).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func searchContacts(query: String) -> Signal<([Peer], [PeerId: PeerPresence]), NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.searchContacts(query: query).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func searchPeers(query: String) -> Signal<[RenderedPeer], NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.searchPeers(query: query).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func peerView(id: PeerId) -> Signal<PeerView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.peerView(id: id).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func multiplePeersView(_ ids: [PeerId]) -> Signal<MultiplePeersView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.multiplePeersView(ids).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func loadedPeerWithId(_ id: PeerId) -> Signal<Peer, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.loadedPeerWithId(id).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func unreadMessageCountsView(items: [UnreadMessageCountsItem]) -> Signal<UnreadMessageCountsView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.unreadMessageCountsView(items: items).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func recentPeers() -> Signal<[Peer], NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.recentPeers().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func stateView() -> Signal<PostboxStateView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.stateView().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func messageHistoryHolesView() -> Signal<MessageHistoryHolesView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.messageHistoryHolesView().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func chatListHolesView() -> Signal<ChatListHolesView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.chatListHolesView().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func unsentMessageIdsView() -> Signal<UnsentMessageIdsView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.unsentMessageIdsView().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func synchronizePeerReadStatesView() -> Signal<SynchronizePeerReadStatesView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.synchronizePeerReadStatesView().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func itemCollectionsView(
+        orderedItemListCollectionIds: [Int32],
+        namespaces: [ItemCollectionId.Namespace],
+        aroundIndex: ItemCollectionViewEntryIndex?,
+        count: Int
+    ) -> Signal<ItemCollectionsView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.itemCollectionsView(
+                    orderedItemListCollectionIds: orderedItemListCollectionIds,
+                    namespaces: namespaces,
+                    aroundIndex: aroundIndex,
+                    count: count
+                ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func mergedOperationLogView(tag: PeerOperationLogTag, limit: Int) -> Signal<PeerMergedOperationLogView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.mergedOperationLogView(tag: tag, limit: limit).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func timestampBasedMessageAttributesView(tag: UInt16) -> Signal<TimestampBasedMessageAttributesView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.timestampBasedMessageAttributesView(tag: tag).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func messageView(_ messageId: MessageId) -> Signal<MessageView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.messageView(messageId).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func preferencesView(keys: [ValueBoxKey]) -> Signal<PreferencesView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.preferencesView(keys: keys).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func combinedView(keys: [PostboxViewKey]) -> Signal<CombinedView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.combinedView(keys: keys).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func installStoreMessageAction(peerId: PeerId, _ f: @escaping ([StoreMessage], Transaction) -> Void) -> Disposable {
+        let disposable = MetaDisposable()
+
+        self.impl.with { impl in
+            disposable.set(impl.installStoreMessageAction(peerId: peerId, f))
+        }
+
+        return disposable
+    }
+
+    public func isMasterClient() -> Signal<Bool, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.isMasterClient().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func becomeMasterClient() {
+        self.impl.with { impl in
+            impl.becomeMasterClient()
+        }
+    }
+
+    public func clearCaches() {
+        self.impl.with { impl in
+            impl.clearCaches()
+        }
+    }
+
+    public func optimizeStorage() -> Signal<Never, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.optimizeStorage().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+
+    public func failedMessageIdsView(peerId: PeerId) -> Signal<FailedMessageIdsView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.failedMessageIdsView(peerId: peerId).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
 }

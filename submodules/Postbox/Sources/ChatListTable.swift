@@ -245,7 +245,7 @@ final class ChatListTable: Table {
         }
     }
     
-    func getUnreadChatListPeerIds(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
+    func getUnreadChatListPeerIds(postbox: PostboxImpl, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
         let globalNotificationSettings = postbox.getGlobalNotificationSettings()
         
         var result: [PeerId] = []
@@ -797,7 +797,7 @@ final class ChatListTable: Table {
         return entries
     }
     
-    func getRelativeUnreadChatListIndex(postbox: Postbox, filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
+    func getRelativeUnreadChatListIndex(postbox: PostboxImpl, filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
         var result: ChatListIndex?
         
         let lower: ValueBoxKey

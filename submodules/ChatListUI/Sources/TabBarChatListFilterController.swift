@@ -39,11 +39,8 @@ func chatListFilterItems(context: AccountContext) -> Signal<(Int, [(ChatListFilt
             keys.append(.basicPeer(peerId))
         }
         
-        return combineLatest(queue: context.account.postbox.queue,
-            context.account.postbox.combinedView(keys: keys),
-            Signal<Bool, NoError>.single(true)
-        )
-        |> map { view, _ -> (Int, [(ChatListFilter, Int, Bool)]) in
+        return context.account.postbox.combinedView(keys: keys)
+        |> map { view -> (Int, [(ChatListFilter, Int, Bool)]) in
             guard let unreadCounts = view.views[unreadKey] as? UnreadMessageCountsView else {
                 return (0, [])
             }

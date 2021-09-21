@@ -4,12 +4,12 @@ final class MutableCachedItemView: MutablePostboxView {
     private let id: ItemCacheEntryId
     fileprivate var value: PostboxCoding?
     
-    init(postbox: Postbox, id: ItemCacheEntryId) {
+    init(postbox: PostboxImpl, id: ItemCacheEntryId) {
         self.id = id
         self.value = postbox.itemCacheTable.retrieve(id: id, metaTable: postbox.itemCacheMetaTable)
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         if transaction.updatedCacheEntryKeys.contains(self.id) {
             self.value = postbox.itemCacheTable.retrieve(id: id, metaTable: postbox.itemCacheMetaTable)
             return true

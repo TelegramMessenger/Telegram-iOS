@@ -15,7 +15,7 @@ final class MutableContactPeersView {
         self.includePresences = includePresences
     }
     
-    func replay(postbox: Postbox, replacePeerIds: Set<PeerId>?, updatedPeerPresences: [PeerId: PeerPresence]) -> Bool {
+    func replay(postbox: PostboxImpl, replacePeerIds: Set<PeerId>?, updatedPeerPresences: [PeerId: PeerPresence]) -> Bool {
         var updated = false
         if let replacePeerIds = replacePeerIds {
             let removedPeerIds = self.peerIds.subtracting(replacePeerIds)

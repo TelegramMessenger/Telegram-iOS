@@ -222,7 +222,7 @@ final class ViewTracker {
         self.combinedViews.remove(index)
     }
     
-    func refreshViewsDueToExternalTransaction(postbox: Postbox, fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
+    func refreshViewsDueToExternalTransaction(postbox: PostboxImpl, fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
         var updateTrackedHoles = false
         
         for (mutableView, pipe) in self.messageHistoryViews.copyItems() {
@@ -259,7 +259,7 @@ final class ViewTracker {
         }
     }
     
-    func updateViews(postbox: Postbox, transaction: PostboxTransaction) {
+    func updateViews(postbox: PostboxImpl, transaction: PostboxTransaction) {
         var updateTrackedHoles = false
         
         if let currentUpdatedState = transaction.currentUpdatedState {

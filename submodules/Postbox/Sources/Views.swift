@@ -283,7 +283,7 @@ public enum PostboxViewKey: Hashable {
     }
 }
 
-func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxView {
+func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePostboxView {
     switch key {
     case let .itemCollectionInfos(namespaces):
         return MutableItemCollectionInfosView(postbox: postbox, namespaces: namespaces)
