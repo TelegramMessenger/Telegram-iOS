@@ -1256,12 +1256,12 @@ final class SharedApplicationContext {
                     
                     return activeAccountsAndPeers(context: context.context)
                     |> take(1)
-                    |> map { primaryAndAccounts -> (AccountContext, Peer, Int32)? in
+                    |> map { primaryAndAccounts -> (AccountContext, EnginePeer, Int32)? in
                         return primaryAndAccounts.1.first
                     }
                     |> map { accountAndPeer -> String? in
                         if let (_, peer, _) = accountAndPeer {
-                            return EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            return peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                         } else {
                             return nil
                         }

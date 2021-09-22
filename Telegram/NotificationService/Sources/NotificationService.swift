@@ -662,7 +662,7 @@ private final class NotificationServiceHandler {
                                                 return
                                             }
 
-                                            let _ = (renderedTotalUnreadCount(
+                                            let _ = (getCurrentRenderedTotalUnreadCount(
                                                 accountManager: strongSelf.accountManager,
                                                 postbox: stateManager.postbox
                                             )
@@ -792,7 +792,7 @@ private final class NotificationServiceHandler {
                                         guard let strongSelf = self else {
                                             return
                                         }
-                                        let _ = (renderedTotalUnreadCount(
+                                        let _ = (getCurrentRenderedTotalUnreadCount(
                                             accountManager: strongSelf.accountManager,
                                             postbox: stateManager.postbox
                                         )
@@ -835,7 +835,7 @@ private final class NotificationServiceHandler {
                                         guard let strongSelf = self else {
                                             return
                                         }
-                                        let _ = (renderedTotalUnreadCount(
+                                        let _ = (getCurrentRenderedTotalUnreadCount(
                                             accountManager: strongSelf.accountManager,
                                             postbox: stateManager.postbox
                                         )

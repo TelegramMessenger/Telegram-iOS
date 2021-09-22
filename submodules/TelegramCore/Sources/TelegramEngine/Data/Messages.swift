@@ -1,6 +1,18 @@
 import SwiftSignalKit
 import Postbox
 
+public final class EngineTotalReadCounters {
+    private let state: ChatListTotalUnreadState
+
+    public init(state: ChatListTotalUnreadState) {
+        self.state = state
+    }
+
+    public func count(for category: ChatListTotalUnreadStateCategory, in statsType: ChatListTotalUnreadStateStats, with tags: PeerSummaryCounterTags) -> Int32 {
+        return self.state.count(for: category, in: statsType, with: tags)
+    }
+}
+
 public extension TelegramEngine.EngineData.Item {
     enum Messages {
         public struct Message: TelegramEngineDataItem, PostboxViewDataItem {
@@ -49,6 +61,27 @@ public extension TelegramEngine.EngineData.Item {
                     result[id] = EngineMessage(message)
                 }
                 return result
+            }
+        }
+
+        public struct TotalReadCounters: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EngineTotalReadCounters
+
+            public init() {
+            }
+
+            var key: PostboxViewKey {
+                return .unreadCounts(items: [.total(nil)])
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? UnreadMessageCountsView else {
+                    preconditionFailure()
+                }
+                guard let (_, total) = view.total() else {
+                    return EngineTotalReadCounters(state: ChatListTotalUnreadState(absoluteCounters: [:], filteredCounters: [:]))
+                }
+                return EngineTotalReadCounters(state: total)
             }
         }
     }

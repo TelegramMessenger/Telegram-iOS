@@ -1312,7 +1312,7 @@ public final class ChatListNode: ListView {
         }
         
         self.scrollToTopOptionPromise.set(combineLatest(
-            renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, postbox: self.context.account.postbox) |> deliverOnMainQueue,
+            renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, engine: self.context.engine) |> deliverOnMainQueue,
             self.scrolledAtTop.get()
         ) |> map { badge, scrolledAtTop -> ChatListGlobalScrollOption in
             if scrolledAtTop {

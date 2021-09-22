@@ -130,7 +130,7 @@ final class AuthorizedApplicationContext {
     }
     
     var applicationBadge: Signal<Int32, NoError> {
-        return renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, postbox: self.context.account.postbox)
+        return renderedTotalUnreadCount(accountManager: self.context.sharedContext.accountManager, engine: self.context.engine)
         |> map {
             $0.0
         }
@@ -870,7 +870,7 @@ final class AuthorizedApplicationContext {
     func switchAccount() {
         let _ = (activeAccountsAndPeers(context: self.context)
         |> take(1)
-        |> map { primaryAndAccounts -> (AccountContext, Peer, Int32)? in
+        |> map { primaryAndAccounts -> (AccountContext, EnginePeer, Int32)? in
             return primaryAndAccounts.1.first
         }
         |> map { accountAndPeer -> AccountContext? in

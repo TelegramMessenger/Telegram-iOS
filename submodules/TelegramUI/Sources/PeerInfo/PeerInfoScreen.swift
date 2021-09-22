@@ -723,7 +723,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         
         if !settings.accountsAndPeers.isEmpty {
             for (peerAccountContext, peer, badgeCount) in settings.accountsAndPeers {
-                let member: PeerInfoMember = .account(peer: RenderedPeer(peer: peer))
+                let member: PeerInfoMember = .account(peer: RenderedPeer(peer: peer._asPeer()))
                 items[.accounts]!.append(PeerInfoScreenMemberItem(id: member.id, context: context.sharedContext.makeTempAccountContext(account: peerAccountContext.account), enclosingPeer: nil, member: member, badge: badgeCount > 0 ? "\(compactNumericCountString(Int(badgeCount), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))" : nil, action: { action in
                     switch action {
                         case .open:
@@ -1550,7 +1550,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private let displayAsPeersPromise = Promise<[FoundPeer]>([])
     
-    fileprivate let accountsAndPeers = Promise<[(AccountContext, Peer, Int32)]>()
+    fileprivate let accountsAndPeers = Promise<[(AccountContext, EnginePeer, Int32)]>()
     fileprivate let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)?>()
     private let notificationExceptions = Promise<NotificationExceptionsList?>()
     private let privacySettings = Promise<AccountPrivacySettings?>()
@@ -6500,8 +6500,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     private var presentationDataDisposable: Disposable?
     private let cachedDataPromise = Promise<CachedPeerData?>()
     
-    private let accountsAndPeers = Promise<((AccountContext, Peer)?, [(AccountContext, Peer, Int32)])>()
-    private var accountsAndPeersValue: ((AccountContext, Peer)?, [(AccountContext, Peer, Int32)])?
+    private let accountsAndPeers = Promise<((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)])>()
+    private var accountsAndPeersValue: ((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)])?
     private var accountsAndPeersDisposable: Disposable?
     
     private let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)?>(nil)
@@ -6594,19 +6594,19 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
             |> distinctUntilChanged
             
             let accountTabBarAvatar: Signal<(UIImage, UIImage)?, NoError> = combineLatest(self.accountsAndPeers.get(), context.sharedContext.presentationData)
-            |> map { primaryAndOther, presentationData -> (Account, Peer, PresentationTheme)? in
+            |> map { primaryAndOther, presentationData -> (Account, EnginePeer, PresentationTheme)? in
                 if let primary = primaryAndOther.0, !primaryAndOther.1.isEmpty {
                     return (primary.0.account, primary.1, presentationData.theme)
                 } else {
                     return nil
                 }
             }
-            |> distinctUntilChanged(isEqual: { $0?.0 === $1?.0 && arePeersEqual($0?.1, $1?.1) && $0?.2 === $1?.2 })
+            |> distinctUntilChanged(isEqual: { $0?.0 === $1?.0 && $0?.1 == $1?.1 && $0?.2 === $1?.2 })
             |> mapToSignal { primary -> Signal<(UIImage, UIImage)?, NoError> in
                 if let primary = primary {
                     let size = CGSize(width: 31.0, height: 31.0)
                     let inset: CGFloat = 3.0
-                    if let signal = peerAvatarImage(account: primary.0, peerReference: PeerReference(primary.1), authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: size, inset: 3.0, emptyColor: nil, synchronousLoad: false) {
+                    if let signal = peerAvatarImage(account: primary.0, peerReference: PeerReference(primary.1._asPeer()), authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: size, inset: 3.0, emptyColor: nil, synchronousLoad: false) {
                         return signal
                         |> map { imageVersions -> (UIImage, UIImage)? in
                             let image = imageVersions?.0
@@ -6885,7 +6885,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         
         let avatarSize = CGSize(width: 28.0, height: 28.0)
         
-        items.append(.action(ContextMenuActionItem(text: EnginePeer(primary.1).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: primary.0.account, peer: primary.1, size: avatarSize)), action: { _, f in
+        items.append(.action(ContextMenuActionItem(text: primary.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: primary.0.account, peer: primary.1._asPeer(), size: avatarSize)), action: { _, f in
             f(.default)
         })))
         
@@ -6895,7 +6895,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         
         for account in other {
             let id = account.0.account.id
-            items.append(.action(ContextMenuActionItem(text: EnginePeer(account.1).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? ContextMenuActionBadge(value: "\(account.2)", color: .accent) : nil, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: account.0.account, peer: account.1, size: avatarSize)), action: { [weak self] _, f in
+            items.append(.action(ContextMenuActionItem(text: account.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? ContextMenuActionBadge(value: "\(account.2)", color: .accent) : nil, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: account.0.account, peer: account.1._asPeer(), size: avatarSize)), action: { [weak self] _, f in
                 guard let strongSelf = self else {
                     return
                 }

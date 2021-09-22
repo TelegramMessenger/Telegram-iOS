@@ -33,7 +33,7 @@ private enum IntentsSettingsSection: Int32 {
 
 private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
     case accountHeader(PresentationTheme, String)
-    case account(PresentationTheme, Peer, Bool, Int32)
+    case account(PresentationTheme, EnginePeer, Bool, Int32)
     case accountInfo(PresentationTheme, String)
     
     case chatsHeader(PresentationTheme, String)
@@ -102,7 +102,7 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
                     return false
                 }
             case let .account(lhsTheme, lhsPeer, lhsSelected, lhsIndex):
-                if case let .account(rhsTheme, rhsPeer, rhsSelected, rhsIndex) = rhs, lhsTheme === rhsTheme, arePeersEqual(lhsPeer, rhsPeer), lhsSelected == rhsSelected, lhsIndex == rhsIndex {
+                if case let .account(rhsTheme, rhsPeer, rhsSelected, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsPeer == rhsPeer, lhsSelected == rhsSelected, lhsIndex == rhsIndex {
                     return true
                 } else {
                     return false
@@ -187,7 +187,7 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
             case let .accountHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .account(_, peer, selected, _):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context.sharedContext.makeTempAccountContext(account: arguments.context.account), peer: EnginePeer(peer), height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: false), revealOptions: nil, switchValue: ItemListPeerItemSwitch(value: selected, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context.sharedContext.makeTempAccountContext(account: arguments.context.account), peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: false), revealOptions: nil, switchValue: ItemListPeerItemSwitch(value: selected, style: .check), enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.updateSettings { $0.withUpdatedAccount(peer.id) }
                 }, setPeerIdWithRevealedOptions: { _, _ in}, removePeer: { _ in })
             case let .accountInfo(_, text):
@@ -231,7 +231,7 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func intentsSettingsControllerEntries(context: AccountContext, presentationData: PresentationData, settings: IntentsSettings, accounts: [(Account, Peer)]) -> [IntentsSettingsControllerEntry] {
+private func intentsSettingsControllerEntries(context: AccountContext, presentationData: PresentationData, settings: IntentsSettings, accounts: [(Account, EnginePeer)]) -> [IntentsSettingsControllerEntry] {
     var entries: [IntentsSettingsControllerEntry] = []
     
     if accounts.count > 1 {
