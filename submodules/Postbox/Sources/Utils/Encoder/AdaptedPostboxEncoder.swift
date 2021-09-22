@@ -42,7 +42,28 @@ final class _AdaptedPostboxEncoder {
     }
 
     func makeData(addHeader: Bool, isDictionary: Bool) -> (Data, ValueType) {
-        return self.container!.makeData(addHeader: addHeader, isDictionary: isDictionary)
+        if let container = self.container {
+            return container.makeData(addHeader: addHeader, isDictionary: isDictionary)
+        } else {
+            let buffer = WriteBuffer()
+
+            if addHeader {
+                var typeHash: Int32 = self.typeHash
+                buffer.write(&typeHash, offset: 0, length: 4)
+            }
+
+            let innerEncoder = PostboxEncoder()
+            let data = innerEncoder.makeData()
+
+            if addHeader {
+                var length: Int32 = Int32(data.count)
+                buffer.write(&length, offset: 0, length: 4)
+            }
+
+            buffer.write(data)
+
+            return (buffer.makeData(), .Object)
+        }
     }
 }
 
