@@ -28,6 +28,8 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(ApplicationSpecificVariantNotice.self, f: { ApplicationSpecificVariantNotice(decoder: $0) })
     declareEncodable(ApplicationSpecificCounterNotice.self, f: { ApplicationSpecificCounterNotice(decoder: $0) })
     declareEncodable(ApplicationSpecificTimestampNotice.self, f: { ApplicationSpecificTimestampNotice(decoder: $0) })
+    declareEncodable(ApplicationSpecificTimestampAndCounterNotice.self, f: { ApplicationSpecificTimestampAndCounterNotice(decoder: $0) })
+    declareEncodable(ApplicationSpecificInt64ArrayNotice.self, f: { ApplicationSpecificInt64ArrayNotice(decoder: $0) })
     declareEncodable(CallListSettings.self, f: { CallListSettings(decoder: $0) })
     declareEncodable(VoiceCallSettings.self, f: { VoiceCallSettings(decoder: $0) })
     declareEncodable(ExperimentalSettings.self, f: { ExperimentalSettings(decoder: $0) })

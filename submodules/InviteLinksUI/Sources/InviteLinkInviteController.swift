@@ -161,13 +161,16 @@ public final class InviteLinkInviteController: ViewController {
     private let peerId: PeerId
     private weak var parentNavigationController: NavigationController?
     
+    private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
             
-    public init(context: AccountContext, peerId: PeerId, parentNavigationController: NavigationController?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, parentNavigationController: NavigationController?) {
         self.context = context
         self.peerId = peerId
         self.parentNavigationController = parentNavigationController
-                
+                        
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        
         super.init(navigationBarPresentationData: nil)
         
         self.navigationPresentation = .flatModal
@@ -175,9 +178,10 @@ public final class InviteLinkInviteController: ViewController {
         
         self.blocksBackgroundWhenInOverlay = true
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
+                strongSelf.presentationData = presentationData
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
@@ -194,7 +198,7 @@ public final class InviteLinkInviteController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, peerId: self.peerId, controller: self)
+        self.displayNode = Node(context: self.context, presentationData: self.presentationData, peerId: self.peerId, controller: self)
     }
 
     private var didAppearOnce: Bool = false
@@ -272,14 +276,12 @@ public final class InviteLinkInviteController: ViewController {
         
         private var validLayout: ContainerViewLayout?
         
-        private var presentationDataDisposable: Disposable?
         private var revokeDisposable = MetaDisposable()
         
-        init(context: AccountContext, peerId: PeerId, controller: InviteLinkInviteController) {
+        init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, controller: InviteLinkInviteController) {
             self.context = context
             self.peerId = peerId
             
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             self.presentationData = presentationData
             self.presentationDataPromise = Promise(self.presentationData)
             self.controller = controller
@@ -359,14 +361,18 @@ public final class InviteLinkInviteController: ViewController {
                     if let invite = invite {
                         let _ = (context.account.postbox.loadedPeerWithId(peerId)
                         |> deliverOnMainQueue).start(next: { [weak self] peer in
+                            guard let strongSelf = self else {
+                                return
+                            }
                             let isGroup: Bool
                             if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                                 isGroup = false
                             } else {
                                 isGroup = true
                             }
-                            let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
-                            self?.controller?.present(controller, in: .window(.root))
+                            let updatedPresentationData = (strongSelf.presentationData, strongSelf.presentationDataPromise.get())
+                            let controller = InviteLinkQRCodeController(context: context, updatedPresentationData: updatedPresentationData, invite: invite, isGroup: isGroup)
+                            strongSelf.controller?.present(controller, in: .window(.root))
                         })
                     }
                 })))
@@ -412,7 +418,7 @@ public final class InviteLinkInviteController: ViewController {
                     })
                 })))
 
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link
@@ -422,18 +428,26 @@ public final class InviteLinkInviteController: ViewController {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }, shareLink: { [weak self] invite in
-                let shareController = ShareController(context: context, subject: .url(invite.link))
+                guard let strongSelf = self else {
+                    return
+                }
+                let updatedPresentationData = (strongSelf.presentationData, strongSelf.presentationDataPromise.get())
+                let shareController = ShareController(context: context, subject: .url(invite.link), updatedPresentationData: updatedPresentationData)
                 shareController.actionCompleted = { [weak self] in
                     if let strongSelf = self {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     }
                 }
-                self?.controller?.present(shareController, in: .window(.root))
+                strongSelf.controller?.present(shareController, in: .window(.root))
             }, manageLinks: { [weak self] in
-                let controller = inviteLinkListController(context: context, peerId: peerId, admin: nil)
-                self?.controller?.parentNavigationController?.pushViewController(controller)
-                self?.controller?.dismiss()
+                guard let strongSelf = self else {
+                    return
+                }
+                let updatedPresentationData = (strongSelf.presentationData, strongSelf.presentationDataPromise.get())
+                let controller = inviteLinkListController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, admin: nil)
+                strongSelf.controller?.parentNavigationController?.pushViewController(controller)
+                strongSelf.controller?.dismiss()
             })
             
             let previousEntries = Atomic<[InviteLinkInviteEntry]?>(value: nil)
@@ -492,19 +506,10 @@ public final class InviteLinkInviteController: ViewController {
             self.headerNode.addSubnode(self.doneButton)
             
             self.doneButton.addTarget(self, action: #selector(self.doneButtonPressed), forControlEvents: .touchUpInside)
-            
-            self.presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    if strongSelf.presentationData.theme !== presentationData.theme || strongSelf.presentationData.strings !== presentationData.strings {
-                        strongSelf.updatePresentationData(presentationData)
-                    }
-                }
-            })
         }
         
         deinit {
             self.disposable?.dispose()
-            self.presentationDataDisposable?.dispose()
             self.revokeDisposable.dispose()
         }
         

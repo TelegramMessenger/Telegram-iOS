@@ -151,7 +151,7 @@ private func cancelContextGestures(view: UIView) {
 
 open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGestureRecognizerDelegate {
     public final let scroller: ListViewScroller
-    private final var visibleSize: CGSize = CGSize()
+    public private(set) final var visibleSize: CGSize = CGSize()
     public private(set) final var insets = UIEdgeInsets()
     public final var visualInsets: UIEdgeInsets?
     public private(set) final var headerInsets = UIEdgeInsets()
@@ -310,6 +310,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private final var actionsForVSync: [() -> ()] = []
     private final var inVSync = false
     
+    private var tapGestureRecognizer: UITapGestureRecognizer?
+    public final var tapped: (() -> Void)? {
+        didSet {
+            self.tapGestureRecognizer?.isEnabled = self.tapped != nil
+        }
+    }
+    
     private let frictionSlider = UISlider()
     private let springSlider = UISlider()
     private let freeResistanceSlider = UISlider()
@@ -387,7 +394,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.view.addSubview(self.scroller)
         self.scroller.panGestureRecognizer.cancelsTouchesInView = true
         self.view.addGestureRecognizer(self.scroller.panGestureRecognizer)
-        
+                
         let trackingRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.trackingGesture(_:)))
         trackingRecognizer.delegate = self
         trackingRecognizer.cancelsTouchesInView = false
@@ -421,6 +428,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self?.updateReordering(offset: offset)
         }))
         
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        tapGestureRecognizer.isEnabled = false
+        tapGestureRecognizer.delegate = self
+        self.view.addGestureRecognizer(tapGestureRecognizer)
+        self.tapGestureRecognizer = tapGestureRecognizer
+        
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         self.displayLink.add(to: RunLoop.main, forMode: RunLoop.Mode.common)
         
@@ -448,6 +461,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         self.waitingForNodesDisposable.dispose()
         self.reorderFeedbackDisposable?.dispose()
+    }
+    
+    @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
+        self.tapped?()
     }
     
     private func displayLinkEvent() {
@@ -4244,6 +4261,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     public func itemIndexAtPoint(_ point: CGPoint) -> Int? {
+        var point = point
+        if self.useSingleDimensionTouchPoint {
+            point.x = 0.0
+        }
         for itemNode in self.itemNodes {
             if itemNode.apparentContentFrame.contains(point) {
                 return itemNode.index

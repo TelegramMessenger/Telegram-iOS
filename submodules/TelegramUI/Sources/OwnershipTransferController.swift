@@ -15,8 +15,8 @@ import PasswordSetupUI
 import Markdown
 import PeerInfoUI
 
-private func commitOwnershipTransferController(context: AccountContext, present: @escaping (ViewController, Any?) -> Void, commit: @escaping (String) -> Signal<MessageActionCallbackResult, MessageActionCallbackError>, completion: @escaping (MessageActionCallbackResult) -> Void) -> ViewController {
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+private func commitOwnershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, present: @escaping (ViewController, Any?) -> Void, commit: @escaping (String) -> Signal<MessageActionCallbackResult, MessageActionCallbackError>, completion: @escaping (MessageActionCallbackResult) -> Void) -> ViewController {
+    let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: (() -> Void)?
     var proceedImpl: (() -> Void)?
@@ -34,7 +34,7 @@ private func commitOwnershipTransferController(context: AccountContext, present:
     }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
-    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
+    let presentationDataDisposable = (updatedPresentationData?.signal ?? context.sharedContext.presentationData).start(next: { [weak controller, weak contentNode] presentationData in
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
         contentNode?.theme = presentationData.theme
     })
@@ -80,8 +80,8 @@ private func commitOwnershipTransferController(context: AccountContext, present:
 }
 
 
-func ownershipTransferController(context: AccountContext, initialError: MessageActionCallbackError, present: @escaping (ViewController, Any?) -> Void, commit: @escaping (String) -> Signal<MessageActionCallbackResult, MessageActionCallbackError>, completion: @escaping (MessageActionCallbackResult) -> Void) -> ViewController {
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+func ownershipTransferController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, initialError: MessageActionCallbackError, present: @escaping (ViewController, Any?) -> Void, commit: @escaping (String) -> Signal<MessageActionCallbackResult, MessageActionCallbackError>, completion: @escaping (MessageActionCallbackResult) -> Void) -> ViewController {
+    let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationData: presentationData)
     
     var title: NSAttributedString? = NSAttributedString(string: presentationData.strings.OwnershipTransfer_SecurityCheck, font: Font.medium(presentationData.listsFontSize.itemListBaseFontSize), textColor: theme.primaryColor, paragraphAlignment: .center)
@@ -91,7 +91,7 @@ func ownershipTransferController(context: AccountContext, initialError: MessageA
     
     switch initialError {
         case .requestPassword:
-            return commitOwnershipTransferController(context: context, present: present, commit: commit, completion: completion)
+            return commitOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, present: present, commit: commit, completion: completion)
         case .twoStepAuthTooFresh, .authSessionTooFresh:
             text = text + presentationData.strings.OwnershipTransfer_ComeBackLater
             actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]

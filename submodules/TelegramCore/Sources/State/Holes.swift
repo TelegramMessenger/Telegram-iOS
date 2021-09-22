@@ -173,7 +173,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
     }
     |> take(1)
     |> mapToSignal { _ -> Signal<FetchMessageHistoryHoleResult?, NoError> in
-        return postbox.transaction { transaction -> (Api.InputPeer?, Int32) in
+        return postbox.transaction { transaction -> (Api.InputPeer?, Int64) in
             switch peerInput {
             case let .direct(peerId, _):
                 return (transaction.getPeer(peerId).flatMap(forceApiInputPeer), 0)
@@ -572,13 +572,13 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
 func groupBoundaryPeer(_ peerId: PeerId, accountPeerId: PeerId) -> Api.Peer {
     switch peerId.namespace {
         case Namespaces.Peer.CloudUser:
-            return Api.Peer.peerUser(userId: peerId.id._internalGetInt32Value())
+            return Api.Peer.peerUser(userId: peerId.id._internalGetInt64Value())
         case Namespaces.Peer.CloudGroup:
-            return Api.Peer.peerChat(chatId: peerId.id._internalGetInt32Value())
+            return Api.Peer.peerChat(chatId: peerId.id._internalGetInt64Value())
         case Namespaces.Peer.CloudChannel:
-            return Api.Peer.peerChannel(channelId: peerId.id._internalGetInt32Value())
+            return Api.Peer.peerChannel(channelId: peerId.id._internalGetInt64Value())
         default:
-            return Api.Peer.peerUser(userId: accountPeerId.id._internalGetInt32Value())
+            return Api.Peer.peerUser(userId: accountPeerId.id._internalGetInt64Value())
     }
 }
 
@@ -726,9 +726,4 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
         }
         return searchResult
     }
-}
-
-public func fetchAccountPeer(account: Account) {
-    let messageId = MessageId(peerId: PeerId(namespace: PeerId.Namespace.max, id: PeerId.Id._internalFromInt32Value(0)), namespace: 0, id: 1)
-    fetchChatListHole(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, groupId: .root, hole: ChatListHole(index: MessageIndex(id: messageId, timestamp: Int32.max - 1))).start()
 }

@@ -318,6 +318,7 @@ struct WallpaperColorPanelNodeState: Equatable {
     var rotation: Int32
     var preview: Bool
     var simpleGradientGeneration: Bool
+    var suggestedNewColor: HSBColor?
 }
 
 private final class ColorSampleItemNode: ASImageNode {
@@ -583,31 +584,6 @@ final class WallpaperColorPanelNode: ASDisplayNode {
         transition.updateAlpha(node: self.addButton, alpha: canAddColors ? 1.0 : 0.0)
         transition.updateSublayerTransformScale(node: self.addButton, scale: canAddColors ? 1.0 : 0.1)
         
-        /*let rotateButtonAlpha: CGFloat
-        let swapButtonAlpha: CGFloat
-        let addButtonAlpha: CGFloat
-        if let _ = self.state.secondColor {
-            if self.state.rotateAvailable {
-                rotateButtonAlpha = 1.0
-                swapButtonAlpha = 0.0
-            } else {
-                rotateButtonAlpha = 0.0
-                swapButtonAlpha = 1.0
-            }
-            addButtonAlpha = 0.0
-        } else {
-            swapButtonAlpha = 0.0
-            rotateButtonAlpha = 0.0
-            if self.state.secondColorAvailable {
-                addButtonAlpha = 1.0
-            } else {
-                addButtonAlpha = 0.0
-            }
-        }
-        transition.updateAlpha(node: self.rotateButton, alpha: rotateButtonAlpha)
-        transition.updateAlpha(node: self.swapButton, alpha: swapButtonAlpha)
-        transition.updateAlpha(node: self.addButton, alpha: addButtonAlpha)*/
-        
         func degreesToRadians(_ degrees: CGFloat) -> CGFloat {
             var degrees = degrees
             if degrees >= 270.0 {
@@ -732,6 +708,8 @@ final class WallpaperColorPanelNode: ASDisplayNode {
                         hsb.0 += 0.05
                     }
                     current.colors.append(HSBColor(values: hsb))
+                } else if let suggestedNewColor = current.suggestedNewColor {
+                    current.colors.append(suggestedNewColor)
                 } else {
                     current.colors.append(current.colors[current.colors.count - 1])
                 }

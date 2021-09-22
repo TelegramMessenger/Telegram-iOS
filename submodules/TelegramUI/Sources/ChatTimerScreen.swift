@@ -29,9 +29,10 @@ final class ChatTimerScreen: ViewController {
     private let dismissByTapOutside: Bool
     private let completion: (Int32) -> Void
     
+    private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, peerId: PeerId, style: ChatTimerScreenStyle, currentTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, style: ChatTimerScreenStyle, currentTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         self.context = context
         self.peerId = peerId
         self.style = style
@@ -39,15 +40,18 @@ final class ChatTimerScreen: ViewController {
         self.dismissByTapOutside = dismissByTapOutside
         self.completion = completion
         
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
         
         self.blocksBackgroundWhenInOverlay = true
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
+                strongSelf.presentationData = presentationData
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
@@ -64,7 +68,7 @@ final class ChatTimerScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatTimerScreenNode(context: self.context, style: self.style, currentTime: self.currentTime, dismissByTapOutside: self.dismissByTapOutside)
+        self.displayNode = ChatTimerScreenNode(context: self.context, presentationData: presentationData, style: self.style, currentTime: self.currentTime, dismissByTapOutside: self.dismissByTapOutside)
         self.controllerNode.completion = { [weak self] time in
             guard let strongSelf = self else {
                 return
@@ -229,10 +233,10 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, style: ChatTimerScreenStyle, currentTime: Int32?, dismissByTapOutside: Bool) {
+    init(context: AccountContext, presentationData: PresentationData, style: ChatTimerScreenStyle, currentTime: Int32?, dismissByTapOutside: Bool) {
         self.context = context
         self.controllerStyle = style
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.dismissByTapOutside = dismissByTapOutside
         
         self.wrappingScrollNode = ASScrollNode()

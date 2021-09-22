@@ -354,7 +354,7 @@ struct AccountMutableState {
         
         for chat in chats {
             switch chat {
-                case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount):
+                case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount):
                     if let participantsCount = participantsCount {
                         self.addOperation(.UpdateCachedPeerData(chat.peerId, { current in
                             var previous: CachedChannelData
@@ -416,7 +416,7 @@ struct AccountMutableState {
             switch user {
                 case let .user(_, id, _, _, _, _, _, _, status, _, _, _, _):
                     if let status = status {
-                        presences[PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id))] = status
+                        presences[PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))] = status
                     }
                     break
                 case .userEmpty:

@@ -72,13 +72,13 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         var feedbackTapImpl: (() -> Void)?
         var activatedActionImpl: (() -> Void)?
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: content.menuItems(), getController: { [weak controller] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(items: content.menuItems()), getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             activatedActionImpl?()
         }, feedbackTap: {
             feedbackTapImpl?()
-        }, displayTextSelectionTip: false, blurBackground: true)
+        }, blurBackground: true)
         self.actionsContainerNode.alpha = 0.0
 
         super.init()
@@ -328,13 +328,13 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.contentNodeHasValidLayout = false
         
         let previousActionsContainerNode = self.actionsContainerNode
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: content.menuItems(), getController: { [weak self] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: ContextController.Items(items: content.menuItems()), getController: { [weak self] in
             return self?.controller
         }, actionSelected: { [weak self] result in
             self?.requestDismiss()
         }, feedbackTap: { [weak self] in
             self?.hapticFeedback.tap()
-        }, displayTextSelectionTip: false, blurBackground: true)
+        }, blurBackground: true)
         self.actionsContainerNode.alpha = 0.0
         self.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
         previousActionsContainerNode.removeFromSupernode()

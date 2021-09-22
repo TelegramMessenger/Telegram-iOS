@@ -86,7 +86,7 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
             case let .inputSecretFile(file, _, key):
                 return account.postbox.transaction { transaction -> Api.InputEncryptedChat? in
                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                        return Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: peer.accessHash)
+                        return Api.InputEncryptedChat.inputEncryptedChat(chatId: Int32(peer.id.id._internalGetInt64Value()), accessHash: peer.accessHash)
                     }
                     return nil
                 }
@@ -180,7 +180,7 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
                             case let .inputSecretFile(file, _, key):
                                 return account.postbox.transaction { transaction -> Api.InputEncryptedChat? in
                                     if let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
-                                        return Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: peer.accessHash)
+                                        return Api.InputEncryptedChat.inputEncryptedChat(chatId: Int32(peer.id.id._internalGetInt64Value()), accessHash: peer.accessHash)
                                     }
                                     return nil
                                 }

@@ -39,20 +39,24 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var requestMultipleAction: (() -> Void)?
     var dismiss: (() -> Void)?
     
-    var presentationData: PresentationData
-    var presentationDataDisposable: Disposable?
+    var presentationData: PresentationData {
+        didSet {
+            self.presentationDataPromise.set(.single(self.presentationData))
+        }
+    }
+    private var presentationDataPromise = Promise<PresentationData>()
     
     private let countPanelNode: ContactSelectionCountPanelNode
     
     private var selectionState: ContactListNodeGroupSelectionState?
     
-    init(context: AccountContext, options: [ContactListAdditionalOption], displayDeviceContacts: Bool, displayCallIcons: Bool, multipleSelection: Bool) {
+    init(context: AccountContext, presentationData: PresentationData, options: [ContactListAdditionalOption], displayDeviceContacts: Bool, displayCallIcons: Bool, multipleSelection: Bool) {
         self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.displayDeviceContacts = displayDeviceContacts
         self.displayCallIcons = displayCallIcons
         
-        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, multipleSelection: multipleSelection)
+        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, multipleSelection: multipleSelection)
         
         self.dimNode = ASDisplayNode()
         
@@ -70,18 +74,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.contactListNode)
-        
-        self.presentationDataDisposable = (context.sharedContext.presentationData
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-            if let strongSelf = self {
-                let previousTheme = strongSelf.presentationData.theme
-                strongSelf.presentationData = presentationData
-                if previousTheme !== presentationData.theme {
-                    strongSelf.updateTheme()
-                }
-            }
-        })
-        
+                
         self.dimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
         self.dimNode.alpha = 0.0
         self.dimNode.isUserInteractionEnabled = false
@@ -107,17 +100,14 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
     }
     
-    deinit {
-        self.presentationDataDisposable?.dispose()
-    }
-    
     func beginSelection() {
         self.contactListNode.updateSelectionState({ _ in
             return ContactListNodeGroupSelectionState()
         })
     }
     
-    private func updateTheme() {
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         self.searchDisplayController?.updatePresentationData(presentationData)
         self.dimNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor.withAlphaComponent(0.5)
@@ -166,7 +156,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         } else {
             categories.insert(.global)
         }
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: categories, addContact: nil, openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), onlyWriteable: false, categories: categories, addContact: nil, openPeer: { [weak self] peer in
             if let strongSelf = self {
                 var updated = false
                 strongSelf.contactListNode.updateSelectionState { state -> ContactListNodeGroupSelectionState? in

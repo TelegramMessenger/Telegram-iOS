@@ -98,10 +98,10 @@ typedef enum
         _permittedArrowDirections = UIPopoverArrowDirectionDown;
         _requiuresDimView = true;
         
-        if (dark && [[LegacyComponentsGlobals provider] respondsToSelector:@selector(darkMenuSheetPallete)])
-            self.pallete = [[LegacyComponentsGlobals provider] darkMenuSheetPallete];
-        else if (!dark && [[LegacyComponentsGlobals provider] respondsToSelector:@selector(menuSheetPallete)])
-            self.pallete = [[LegacyComponentsGlobals provider] menuSheetPallete];
+        if (dark && [context respondsToSelector:@selector(darkMenuSheetPallete)])
+            self.pallete = [context darkMenuSheetPallete];
+        else if (!dark && [context respondsToSelector:@selector(menuSheetPallete)])
+            self.pallete = [context menuSheetPallete];
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

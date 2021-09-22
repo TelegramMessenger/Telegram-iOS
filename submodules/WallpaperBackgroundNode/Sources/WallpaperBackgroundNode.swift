@@ -65,6 +65,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             self.bubbleType = bubbleType
 
             self.contentNode = ASImageNode()
+            self.contentNode.displaysAsynchronously = false
             self.contentNode.isUserInteractionEnabled = false
 
             super.init()
@@ -165,6 +166,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 if needsWallpaperBackground {
                     if self.cleanWallpaperNode == nil {
                         let cleanWallpaperNode = ASImageNode()
+                        cleanWallpaperNode.displaysAsynchronously = false
                         self.cleanWallpaperNode = cleanWallpaperNode
                         cleanWallpaperNode.frame = self.bounds
                         self.insertSubnode(cleanWallpaperNode, at: 0)
@@ -215,14 +217,20 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
 
             transition.updateFrame(layer: self.contentNode.layer, frame: self.bounds)
-            self.contentNode.layer.contentsRect = shiftedContentsRect
+            transition.animateView {
+                self.contentNode.layer.contentsRect = shiftedContentsRect
+            }
             if let cleanWallpaperNode = self.cleanWallpaperNode {
                 transition.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds)
-                cleanWallpaperNode.layer.contentsRect = shiftedContentsRect
+                transition.animateView {
+                    cleanWallpaperNode.layer.contentsRect = shiftedContentsRect
+                }
             }
             if let gradientWallpaperNode = self.gradientWallpaperNode {
                 transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds)
-                gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
+                transition.animateView {
+                    gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
+                }
             }
         }
 

@@ -25,7 +25,7 @@
         size_t height = 0;
         _animation->size(width, height);
         
-        if (width > 1024 || height > 1024) {
+        if (width > 1536 || height > 1536) {
             return nil;
         }
         

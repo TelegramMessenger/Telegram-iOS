@@ -872,7 +872,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                     var delayTransition = false
                     if previousPeer?.0 == peer?.0 && previousPeer?.1 == nil && self.appeared {
                         delayTransition = true
-                    }
+                    }                    
                     if !delayTransition {
                         self.setAvatarHidden(true)
                     }
@@ -1097,7 +1097,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
         
         let initialBottomInset = bottomInset
-        var bottomInset = bottomInset
+        var bottomInset = bottomInset        
         let layoutMode: VideoNodeLayoutMode
         if case .immediate = transition, self.animatingIn {
             layoutMode = .fillOrFitToSquare

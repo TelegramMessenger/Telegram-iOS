@@ -64,8 +64,10 @@ public final class PasscodeEntryController: ViewController {
     private var statusBarHost: StatusBarHost?
     private var previousStatusBarStyle: UIStatusBarStyle?
     
+    // MARK: Postufgram Code: {
     private let hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData]
     private var hasPublicAccounts: Bool = true
+    // MARK: Postufgram Code: }
     
     public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments, hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData], hasPublicAccountsSignal: Signal<Bool, NoError> = .single(true)) {
 

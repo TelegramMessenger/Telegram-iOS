@@ -22,12 +22,13 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
     let index: Int
     let theme: PresentationTheme
     let expanded: Bool
+    let reorderable: Bool
     
     var selectable: Bool {
         return true
     }
     
-    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo, stickerPackItem: StickerPackItem?, index: Int, theme: PresentationTheme, expanded: Bool, selected: @escaping () -> Void) {
+    init(account: Account, inputNodeInteraction: ChatMediaInputNodeInteraction, collectionId: ItemCollectionId, collectionInfo: StickerPackCollectionInfo, stickerPackItem: StickerPackItem?, index: Int, theme: PresentationTheme, expanded: Bool, reorderable: Bool, selected: @escaping () -> Void) {
         self.account = account
         self.inputNodeInteraction = inputNodeInteraction
         self.collectionId = collectionId
@@ -37,6 +38,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
         self.index = index
         self.theme = theme
         self.expanded = expanded
+        self.reorderable = reorderable
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -48,7 +50,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { _ in
-                        node.updateStickerPackItem(account: self.account, info: self.collectionInfo, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme, expanded: self.expanded)
+                        node.updateStickerPackItem(account: self.account, info: self.collectionInfo, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme, expanded: self.expanded, reorderable: self.reorderable)
                         node.updateAppearanceTransition(transition: .immediate)
                     })
                 })
@@ -59,7 +61,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             completion(ListViewItemNodeLayout(contentSize: self.expanded ? expandedBoundingSize : boundingSize, insets: ChatMediaInputNode.setupPanelIconInsets(item: self, previousItem: previousItem, nextItem: nextItem)), { _ in
-                (node() as? ChatMediaInputStickerPackItemNode)?.updateStickerPackItem(account: self.account, info: self.collectionInfo, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme, expanded: self.expanded)
+                (node() as? ChatMediaInputStickerPackItemNode)?.updateStickerPackItem(account: self.account, info: self.collectionInfo, item: self.stickerPackItem, collectionId: self.collectionId, theme: self.theme, expanded: self.expanded, reorderable: self.reorderable)
             })
         }
     }
@@ -91,6 +93,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     private var currentThumbnailItem: StickerPackThumbnailItem?
     private var currentExpanded = false
     private var theme: PresentationTheme?
+    private var reorderable = false
     
     private let stickerFetchedDisposable = MetaDisposable()
     
@@ -171,9 +174,10 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         }
     }
     
-    func updateStickerPackItem(account: Account, info: StickerPackCollectionInfo, item: StickerPackItem?, collectionId: ItemCollectionId, theme: PresentationTheme, expanded: Bool) {
+    func updateStickerPackItem(account: Account, info: StickerPackCollectionInfo, item: StickerPackItem?, collectionId: ItemCollectionId, theme: PresentationTheme, expanded: Bool, reorderable: Bool) {
         self.currentCollectionId = collectionId
         self.account = account
+        self.reorderable = reorderable
         var themeUpdated = false
         if self.theme !== theme {
             self.theme = theme
@@ -319,6 +323,9 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     }
     
     override func isReorderable(at point: CGPoint) -> Bool {
+        guard self.reorderable else {
+            return false
+        }
         if self.bounds.inset(by: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -28.0)).contains(point) {
             return true
         }

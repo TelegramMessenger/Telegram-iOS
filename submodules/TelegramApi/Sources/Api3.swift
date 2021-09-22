@@ -301,19 +301,19 @@ public struct payments {
     
     }
     public enum PaymentForm: TypeConstructorDescription {
-        case paymentForm(flags: Int32, formId: Int64, botId: Int32, invoice: Api.Invoice, providerId: Int32, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: Api.PaymentSavedCredentials?, users: [Api.User])
+        case paymentForm(flags: Int32, formId: Int64, botId: Int64, invoice: Api.Invoice, providerId: Int64, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: Api.PaymentSavedCredentials?, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentForm(let flags, let formId, let botId, let invoice, let providerId, let url, let nativeProvider, let nativeParams, let savedInfo, let savedCredentials, let users):
                     if boxed {
-                        buffer.appendInt32(-1928649707)
+                        buffer.appendInt32(378828315)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(formId, buffer: buffer, boxed: false)
-                    serializeInt32(botId, buffer: buffer, boxed: false)
+                    serializeInt64(botId, buffer: buffer, boxed: false)
                     invoice.serialize(buffer, true)
-                    serializeInt32(providerId, buffer: buffer, boxed: false)
+                    serializeInt64(providerId, buffer: buffer, boxed: false)
                     serializeString(url, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 4) != 0 {serializeString(nativeProvider!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 4) != 0 {nativeParams!.serialize(buffer, true)}
@@ -340,14 +340,14 @@ public struct payments {
             _1 = reader.readInt32()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
             var _4: Api.Invoice?
             if let signature = reader.readInt32() {
                 _4 = Api.parse(reader, signature: signature) as? Api.Invoice
             }
-            var _5: Int32?
-            _5 = reader.readInt32()
+            var _5: Int64?
+            _5 = reader.readInt64()
             var _6: String?
             _6 = parseString(reader)
             var _7: String?
@@ -389,18 +389,18 @@ public struct payments {
     
     }
     public enum PaymentReceipt: TypeConstructorDescription {
-        case paymentReceipt(flags: Int32, date: Int32, botId: Int32, providerId: Int32, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, info: Api.PaymentRequestedInfo?, shipping: Api.ShippingOption?, tipAmount: Int64?, currency: String, totalAmount: Int64, credentialsTitle: String, users: [Api.User])
+        case paymentReceipt(flags: Int32, date: Int32, botId: Int64, providerId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, info: Api.PaymentRequestedInfo?, shipping: Api.ShippingOption?, tipAmount: Int64?, currency: String, totalAmount: Int64, credentialsTitle: String, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .paymentReceipt(let flags, let date, let botId, let providerId, let title, let description, let photo, let invoice, let info, let shipping, let tipAmount, let currency, let totalAmount, let credentialsTitle, let users):
                     if boxed {
-                        buffer.appendInt32(280319440)
+                        buffer.appendInt32(1891958275)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeInt32(botId, buffer: buffer, boxed: false)
-                    serializeInt32(providerId, buffer: buffer, boxed: false)
+                    serializeInt64(botId, buffer: buffer, boxed: false)
+                    serializeInt64(providerId, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     serializeString(description, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {photo!.serialize(buffer, true)}
@@ -432,10 +432,10 @@ public struct payments {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int64?
+            _4 = reader.readInt64()
             var _5: String?
             _5 = parseString(reader)
             var _6: String?
@@ -1081,15 +1081,15 @@ public struct auth {
     
     }
     public enum ExportedAuthorization: TypeConstructorDescription {
-        case exportedAuthorization(id: Int32, bytes: Buffer)
+        case exportedAuthorization(id: Int64, bytes: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .exportedAuthorization(let id, let bytes):
                     if boxed {
-                        buffer.appendInt32(-543777747)
+                        buffer.appendInt32(-1271602504)
                     }
-                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt64(id, buffer: buffer, boxed: false)
                     serializeBytes(bytes, buffer: buffer, boxed: false)
                     break
     }
@@ -1103,8 +1103,8 @@ public struct auth {
     }
     
         public static func parse_exportedAuthorization(_ reader: BufferReader) -> ExportedAuthorization? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: Buffer?
             _2 = parseBytes(reader)
             let _c1 = _1 != nil

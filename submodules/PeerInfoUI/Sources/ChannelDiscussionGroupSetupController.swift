@@ -142,7 +142,7 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 } else {
                     text = presentationData.strings.Channel_CommentsGroup_Header
                 }
-                return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: text, animation: .discussionGroupSetup, sectionId: self.section)
+                return ChatListFilterSettingsHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animation: .discussionGroupSetup, sectionId: self.section)
             case let .create(theme, text):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.createGroup()
@@ -219,7 +219,7 @@ private struct ChannelDiscussionGroupSetupControllerState: Equatable {
     var searching: Bool = false
 }
 
-public func channelDiscussionGroupSetupController(context: AccountContext, peerId: PeerId) -> ViewController {
+public func channelDiscussionGroupSetupController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId) -> ViewController {
     let statePromise = ValuePromise(ChannelDiscussionGroupSetupControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelDiscussionGroupSetupControllerState())
     let updateState: ((ChannelDiscussionGroupSetupControllerState) -> ChannelDiscussionGroupSetupControllerState) -> Void = { f in
@@ -290,7 +290,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                 applyGroupDisposable.set((applySignal
                 |> deliverOnMainQueue).start(error: { _ in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     dismiss()
                 }, completed: {
                     dismiss()
@@ -399,7 +399,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                                 pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))
                             case .generic, .hasNotPermissions:
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 
                                 updateState { state in
                                     var state = state
@@ -408,7 +408,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                                 }
                             case .groupHistoryIsCurrentlyPrivate:
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_DiscussionGroup_MakeHistoryPublic, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_DiscussionGroup_MakeHistoryPublicProceed, action: {
+                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_DiscussionGroup_MakeHistoryPublic, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_DiscussionGroup_MakeHistoryPublicProceed, action: {
                                     var applySignal: Signal<Bool, ChannelDiscussionGroupError> = context.engine.peers.updateChannelHistoryAvailabilitySettingsInteractively(peerId: updatedPeerId ?? groupId, historyAvailableForNewMembers: true)
                                     |> mapError { _ -> ChannelDiscussionGroupError in
                                         return .generic
@@ -449,7 +449,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                                     applyGroupDisposable.set((applySignal
                                     |> deliverOnMainQueue).start(error: { _ in
                                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                         
                                         updateState { state in
                                             var state = state
@@ -529,7 +529,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             applyGroupDisposable.set((applySignal
             |> deliverOnMainQueue).start(error: { _ in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }, completed: {
                 if case .group = peer.info {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -544,7 +544,8 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
     
     var wasEmpty: Bool?
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView, groupPeers.get())
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(queue: .mainQueue(), presentationData, statePromise.get(), peerView, groupPeers.get())
     |> deliverOnMainQueue
     |> map { presentationData, state, view, groups -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let title: String

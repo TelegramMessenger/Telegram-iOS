@@ -18,15 +18,15 @@ final class PeerBanTimeoutController: ActionSheetController {
         return self._ready
     }
     
-    init(context: AccountContext, currentValue: Int32, applyValue: @escaping (Int32?) -> Void) {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, currentValue: Int32, applyValue: @escaping (Int32?) -> Void) {
+        let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         let strings = presentationData.strings
         
         super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))
         
         self._ready.set(.single(true))
         
-        self.presentationDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
+        self.presentationDisposable = (updatedPresentationData?.signal ?? context.sharedContext.presentationData).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
             }

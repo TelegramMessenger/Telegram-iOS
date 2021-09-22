@@ -1787,7 +1787,7 @@ public final class VoiceChatController: ViewController {
                     dismissPromise.set(true)
                 }
                 
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(source), items: items, reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(source), items: items |> map { ContextController.Items(items: $0) }, reactionItems: [], gesture: gesture)
                 contextController.useComplexItemsTransitionAnimation = true
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }, getPeerVideo: { [weak self] endpointId, position in
@@ -2264,7 +2264,7 @@ public final class VoiceChatController: ViewController {
                             } else {
                                 text = presentationData.strings.VoiceChat_RecordingInProgress
                             }
-                            strongSelf.controller?.present(TooltipScreen(text: text, icon: nil, location: .point(location.offsetBy(dx: 1.0, dy: 0.0), .top), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+                            strongSelf.controller?.present(TooltipScreen(account: strongSelf.context.account, text: text, icon: nil, location: .point(location.offsetBy(dx: 1.0, dy: 0.0), .top), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
                                 return .dismiss(consume: true)
                             }), in: .window(.root))
                         }
@@ -2444,7 +2444,7 @@ public final class VoiceChatController: ViewController {
         private func openSettingsMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
             let items: Signal<[ContextMenuItem], NoError> = self.contextMenuMainItems()
             if let controller = self.controller {
-                let contextController = ContextController(account: self.context.account, presentationData: self.presentationData.withUpdated(theme: self.darkTheme), source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceNode: self.optionsButton.referenceNode)), items: items, reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: self.context.account, presentationData: self.presentationData.withUpdated(theme: self.darkTheme), source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceNode: self.optionsButton.referenceNode)), items: items |> map { ContextController.Items(items: $0) }, reactionItems: [], gesture: gesture)
                 controller.presentInGlobalOverlay(contextController)
             }
         }
@@ -2473,7 +2473,7 @@ public final class VoiceChatController: ViewController {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                c.setItems(strongSelf.contextMenuDisplayAsItems())
+                                c.setItems(strongSelf.contextMenuDisplayAsItems() |> map { ContextController.Items(items: $0) }, minHeight: nil)
                             })))
                             items.append(.separator)
                             break
@@ -2506,7 +2506,7 @@ public final class VoiceChatController: ViewController {
                         guard let strongSelf = self else {
                             return
                         }
-                        c.setItems(strongSelf.contextMenuAudioItems())
+                        c.setItems(strongSelf.contextMenuAudioItems() |> map { ContextController.Items(items: $0) }, minHeight: nil)
                     })))
                 }
 
@@ -2543,7 +2543,7 @@ public final class VoiceChatController: ViewController {
                             guard let strongSelf = self else {
                                 return
                             }
-                            c.setItems(strongSelf.contextMenuPermissionItems())
+                            c.setItems(strongSelf.contextMenuPermissionItems() |> map { ContextController.Items(items: $0) }, minHeight: nil)
                         })))
                     }
                 }
@@ -2612,8 +2612,15 @@ public final class VoiceChatController: ViewController {
                             let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_StopRecordingTitle, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StopRecordingStop, action: {
                                 if let strongSelf = self {
                                     strongSelf.call.setShouldBeRecording(false, title: nil, videoOrientation: nil)
-
-                                    strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: strongSelf.presentationData.strings.VoiceChat_RecordingSaved), action: { [weak self] value in
+                                    
+                                    let text: String
+                                    if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
+                                        text = strongSelf.presentationData.strings.LiveStream_RecordingSaved
+                                    } else {
+                                        text = strongSelf.presentationData.strings.VideoChat_RecordingSaved
+                                    }
+                                    
+                                    strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: text), action: { [weak self] value in
                                         if case .info = value, let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                                             let context = strongSelf.context
                                             strongSelf.controller?.dismiss(completion: {
@@ -2642,43 +2649,52 @@ public final class VoiceChatController: ViewController {
                                 return generateStartRecordingIcon(color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
                                 f(.dismissWithoutContent)
-
                                 guard let strongSelf = self else {
                                     return
                                 }
 
-//                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
-//                                    if let strongSelf = self {
-//                                        strongSelf.call.setShouldBeRecording(true, title: "", videoOrientation: videoOrientation)
-//
-//                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: text), action: { _ in return false })
-//                                        strongSelf.call.playTone(.recordingStarted)
-//                                    }
-//                                })
-
-                                let title: String
-                                let text: String
-                                if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-                                    title = strongSelf.presentationData.strings.LiveStream_StartRecordingTitle
-                                    text = strongSelf.presentationData.strings.LiveStream_StartRecordingText
-                                } else {
-                                    title = strongSelf.presentationData.strings.VoiceChat_StartRecordingTitle
-                                    text = strongSelf.presentationData.strings.VoiceChat_StartRecordingText
-                                }
-
-                                let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: title, text: text, placeholder: strongSelf.presentationData.strings.VoiceChat_RecordingTitlePlaceholder, value: nil, maxLength: 40, apply: { title in
-                                    if let strongSelf = self, let title = title {
-                                        strongSelf.call.setShouldBeRecording(true, title: title, videoOrientation: nil)
-
+                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
+                                    if let strongSelf = self {
+                                        let title: String
                                         let text: String
-                                        if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-                                            text = strongSelf.presentationData.strings.LiveStream_RecordingStarted
+                                        let placeholder: String
+                                        if let _ = videoOrientation {
+                                            placeholder = strongSelf.presentationData.strings.VoiceChat_RecordingTitlePlaceholderVideo
                                         } else {
-                                            text = strongSelf.presentationData.strings.VoiceChat_RecordingStarted
+                                            placeholder = strongSelf.presentationData.strings.VoiceChat_RecordingTitlePlaceholder
+                                        }
+                                        if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
+                                            title = strongSelf.presentationData.strings.LiveStream_StartRecordingTitle
+                                            if let _ = videoOrientation {
+                                                text = strongSelf.presentationData.strings.LiveStream_StartRecordingTextVideo
+                                            } else {
+                                                text = strongSelf.presentationData.strings.LiveStream_StartRecordingText
+                                            }
+                                        } else {
+                                            title = strongSelf.presentationData.strings.VoiceChat_StartRecordingTitle
+                                            if let _ = videoOrientation {
+                                                text = strongSelf.presentationData.strings.VoiceChat_StartRecordingTextVideo
+                                            } else {
+                                                text = strongSelf.presentationData.strings.VoiceChat_StartRecordingText
+                                            }
                                         }
 
-                                        strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: text), action: { _ in return false })
-                                        strongSelf.call.playTone(.recordingStarted)
+                                        let controller = voiceChatTitleEditController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, forceTheme: strongSelf.darkTheme, title: title, text: text, placeholder: placeholder, value: nil, maxLength: 40, apply: { title in
+                                            if let strongSelf = self, let title = title {
+                                                strongSelf.call.setShouldBeRecording(true, title: title, videoOrientation: videoOrientation)
+
+                                                let text: String
+                                                if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
+                                                    text = strongSelf.presentationData.strings.LiveStream_RecordingStarted
+                                                } else {
+                                                    text = strongSelf.presentationData.strings.VoiceChat_RecordingStarted
+                                                }
+
+                                                strongSelf.presentUndoOverlay(content: .voiceChatRecording(text: text), action: { _ in return false })
+                                                strongSelf.call.playTone(.recordingStarted)
+                                            }
+                                        })
+                                        strongSelf.controller?.present(controller, in: .window(.root))
                                     }
                                 })
                                 self?.controller?.present(controller, in: .window(.root))
@@ -2795,7 +2811,7 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                c.setItems(strongSelf.contextMenuMainItems())
+                c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(items: $0) }, minHeight: nil)
             })))
             return .single(items)
         }
@@ -2890,7 +2906,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    c.setItems(strongSelf.contextMenuMainItems())
+                    c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(items: $0) }, minHeight: nil)
                 })))
                 return items
             }
@@ -2936,7 +2952,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    c.setItems(strongSelf.contextMenuMainItems())
+                    c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(items: $0) }, minHeight: nil)
                 })))
             }
             return .single(items)
@@ -3437,7 +3453,7 @@ public final class VoiceChatController: ViewController {
                                 if !callState.subscribedToScheduled {
                                     let location = self.actionButton.view.convert(self.actionButton.bounds, to: self.view).center
                                     let point = CGRect(origin: CGPoint(x: location.x - 5.0, y: location.y - 5.0 - 68.0), size: CGSize(width: 10.0, height: 10.0))
-                                    self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_ReminderNotify, style: .gradient(UIColor(rgb: 0x262c5a), UIColor(rgb: 0x5d2835)), icon: nil, location: .point(point, .bottom), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+                                    self.controller?.present(TooltipScreen(account: self.context.account, text: self.presentationData.strings.VoiceChat_ReminderNotify, style: .gradient(UIColor(rgb: 0x262c5a), UIColor(rgb: 0x5d2835)), icon: nil, location: .point(point, .bottom), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
                                         return .dismiss(consume: false)
                                     }), in: .window(.root))
                                 }
@@ -6323,7 +6339,7 @@ public final class VoiceChatController: ViewController {
                     point.origin.y += 32.0
                 }
             }
-            self.controller?.present(TooltipScreen(text: self.presentationData.strings.VoiceChat_UnmuteSuggestion, style: .gradient(UIColor(rgb: 0x1d446c), UIColor(rgb: 0x193e63)), icon: nil, location: .point(point, position), displayDuration: .custom(8.0), shouldDismissOnTouch: { _ in
+            self.controller?.present(TooltipScreen(account: self.context.account, text: self.presentationData.strings.VoiceChat_UnmuteSuggestion, style: .gradient(UIColor(rgb: 0x1d446c), UIColor(rgb: 0x193e63)), icon: nil, location: .point(point, position), displayDuration: .custom(8.0), shouldDismissOnTouch: { _ in
                 return .dismiss(consume: false)
             }), in: .window(.root))
         }

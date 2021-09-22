@@ -80,9 +80,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let presetText: String?
     
-    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, segmentedValues: [ShareControllerSegmentedValue]?) {
+    init(sharedContext: SharedAccountContext, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, segmentedValues: [ShareControllerSegmentedValue]?) {
         self.sharedContext = sharedContext
-        self.presentationData = sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.forceTheme = forceTheme
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare

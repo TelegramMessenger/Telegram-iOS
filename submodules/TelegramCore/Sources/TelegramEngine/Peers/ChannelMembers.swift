@@ -20,7 +20,7 @@ public enum ChannelMembersCategory {
     case mentions(threadId: MessageId?, filter: ChannelMembersCategoryFilter)
 }
 
-func _internal_channelMembers(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int32 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
+func _internal_channelMembers(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int64 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
     return postbox.transaction { transaction -> Signal<[RenderedChannelParticipant]?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
             let apiFilter: Api.ChannelParticipantsFilter

@@ -188,13 +188,13 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
         }
     }
     
-    func update(rect: CGRect, within containerSize: CGSize) {
+    func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
         self.absolutePosition = (rect, containerSize)
         if let backgroundContent = self.backgroundContent {
             var backgroundFrame = backgroundContent.frame
             backgroundFrame.origin.x += rect.minX
             backgroundFrame.origin.y += rect.minY
-            backgroundContent.update(rect: backgroundFrame, within: containerSize)
+            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
         }
     }
     

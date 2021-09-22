@@ -819,7 +819,7 @@ private final class CallSessionManagerContext {
                 versions = libraryVersions
             }
             if self.contextIdByStableId[id] == nil {
-                let internalId = self.addIncoming(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(adminId)), stableId: id, accessHash: accessHash, timestamp: date, gAHash: gAHash.makeData(), versions: versions, isVideo: isVideo)
+                let internalId = self.addIncoming(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(adminId)), stableId: id, accessHash: accessHash, timestamp: date, gAHash: gAHash.makeData(), versions: versions, isVideo: isVideo)
                 if let internalId = internalId {
                     var resultRingingStateValue: CallSessionRingingState?
                     for ringingState in self.ringingStatesValue() {

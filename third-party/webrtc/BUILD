@@ -3246,7 +3246,6 @@ arm64_specific_flags = [
     "-DWEBRTC_ARCH_ARM64",
     "-DWEBRTC_HAS_NEON",
     "-DLIBYUV_NEON",
-    "-mfpu=neon",
 ]
 
 x86_64_specific_flags = [

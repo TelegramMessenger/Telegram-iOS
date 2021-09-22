@@ -11,9 +11,11 @@ import AccountContext
 import ChatListFilterSettingsHeaderItem
 
 private final class PeerAutoremoveSetupArguments {
+    let context: AccountContext
     let updateValue: (Int32) -> Void
     
-    init(updateValue: @escaping (Int32) -> Void) {
+    init(context: AccountContext, updateValue: @escaping (Int32) -> Void) {
+        self.context = context
         self.updateValue = updateValue
     }
 }
@@ -86,7 +88,7 @@ private enum PeerAutoremoveSetupEntry: ItemListNodeEntry {
         let arguments = arguments as! PeerAutoremoveSetupArguments
         switch self {
         case .header:
-            return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: "", animation: .autoRemove, sectionId: self.section)
+            return ChatListFilterSettingsHeaderItem(context: arguments.context, theme: presentationData.theme, text: "", animation: .autoRemove, sectionId: self.section)
         case let .timeHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .timeValue(value, availableValues):
@@ -143,7 +145,7 @@ public enum PeerAutoremoveSetupScreenResult {
     case updated(Updated)
 }
 
-public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, completion: @escaping (PeerAutoremoveSetupScreenResult) -> Void = { _ in }) -> ViewController {
+public func peerAutoremoveSetupScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, completion: @escaping (PeerAutoremoveSetupScreenResult) -> Void = { _ in }) -> ViewController {
     let statePromise = ValuePromise(PeerAutoremoveSetupState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PeerAutoremoveSetupState())
     let updateState: ((PeerAutoremoveSetupState) -> PeerAutoremoveSetupState) -> Void = { f in
@@ -157,7 +159,7 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
     let applyDisposable = MetaDisposable()
     actionsDisposable.add(applyDisposable)
     
-    let arguments = PeerAutoremoveSetupArguments(updateValue: { value in
+    let arguments = PeerAutoremoveSetupArguments(context: context, updateValue: { value in
         updateState { state in
             var state = state
             state.changedValue = value
@@ -165,7 +167,8 @@ public func peerAutoremoveSetupScreen(context: AccountContext, peerId: PeerId, c
         }
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
     |> deliverOnMainQueue
     |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var defaultValue: Int32 = Int32.max

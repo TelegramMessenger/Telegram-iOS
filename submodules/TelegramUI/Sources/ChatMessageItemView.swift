@@ -610,8 +610,8 @@ final class ChatMessageAccessibilityData {
                     replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyToYourMessage
                 }
                 
-                let (replyMessageLabel, replyMessageValue) = dataForMessage(replyMessage, true)
-                replyLabel += "\(replyLabel): \(replyMessageLabel), \(replyMessageValue)"
+//                let (replyMessageLabel, replyMessageValue) = dataForMessage(replyMessage, true)
+//                replyLabel += "\(replyLabel): \(replyMessageLabel), \(replyMessageValue)"
                 
                 label = "\(replyLabel) . \(label)"
             }
@@ -891,14 +891,6 @@ public class ChatMessageItemView: ListViewItemNode {
             if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
                 transition.updateSublayerTransformOffset(layer: headerNode.layer, offset: CGPoint(x: offset, y: 0.0))
             }
-        }
-    }
-
-    override public var preferredAnimationCurve: (CGFloat) -> CGFloat {
-        if false, let item = self.item, let subject = item.associatedData.subject, case .forwardedMessages = subject {
-            return listViewAnimationCurveEaseInOut
-        } else {
-            return listViewAnimationCurveSystem
         }
     }
 }

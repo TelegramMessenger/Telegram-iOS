@@ -1270,10 +1270,16 @@ public final class PresentationTheme: Equatable {
     public let inAppNotification: PresentationThemeInAppNotification
     public let chart: PresentationThemeChart
     public let preview: Bool
+    public var forceSync: Bool = false
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
     public init(name: PresentationThemeName, index: Int64, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, chart: PresentationThemeChart, preview: Bool = false) {
+        var overallDarkAppearance = overallDarkAppearance
+        if [.night, .tinted].contains(referenceTheme.baseTheme) {
+            overallDarkAppearance = true
+        }
+        
         self.name = name
         self.index = index
         self.referenceTheme = referenceTheme
@@ -1322,6 +1328,10 @@ public final class PresentationTheme: Equatable {
             }
         }
         return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdated(defaultWallpaper: defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
+    }
+    
+    public func withUpdated(referenceTheme: PresentationBuiltinThemeReference) -> PresentationTheme {
+        return PresentationTheme(name: self.name, index: self.index, referenceTheme: referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
     }
     
     public func withUpdated(preview: Bool) -> PresentationTheme {

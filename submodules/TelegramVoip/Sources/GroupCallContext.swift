@@ -774,16 +774,6 @@ public final class OngoingGroupCallContext {
             })
         }
 
-        func getStats(completion: @escaping (Stats) -> Void) {
-            self.context.getStats({ stats in
-                var incomingVideoStats: [String: Stats.IncomingVideoStats] = [:]
-                for (key, value) in stats.incomingVideoStats {
-                    incomingVideoStats[key] = Stats.IncomingVideoStats(receivingQuality: Int(value.receivingQuality), availableQuality: Int(value.availableQuality))
-                }
-                completion(Stats(incomingVideoStats: incomingVideoStats))
-            })
-        }
-        
         func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
             let queue = self.queue
             return Signal { [weak self] subscriber in
@@ -807,6 +797,16 @@ public final class OngoingGroupCallContext {
 
         func addExternalAudioData(data: Data) {
             self.context.addExternalAudioData(data)
+        }
+
+        func getStats(completion: @escaping (Stats) -> Void) {
+            self.context.getStats({ stats in
+                var incomingVideoStats: [String: Stats.IncomingVideoStats] = [:]
+                for (key, value) in stats.incomingVideoStats {
+                    incomingVideoStats[key] = Stats.IncomingVideoStats(receivingQuality: Int(value.receivingQuality), availableQuality: Int(value.availableQuality))
+                }
+                completion(Stats(incomingVideoStats: incomingVideoStats))
+            })
         }
     }
     

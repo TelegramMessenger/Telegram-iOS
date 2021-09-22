@@ -101,25 +101,25 @@ public struct PresentationResourcesChat {
     
     public static func chatBubbleVerticalLineIncomingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleVerticalLineIncomingImage.rawValue, { theme in
-            return generateLineImage(color: theme.chat.message.incoming.accentControlColor)
+            return generateLineImage(color: theme.chat.message.incoming.accentTextColor)
         })
     }
     
     public static func chatBubbleVerticalLineOutgoingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleVerticalLineOutgoingImage.rawValue, { theme in
-            return generateLineImage(color: theme.chat.message.outgoing.accentControlColor)
+            return generateLineImage(color: theme.chat.message.outgoing.accentTextColor)
         })
     }
     
     public static func chatBubbleConsumableContentIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleConsumableContentIncomingIcon.rawValue, { theme in
-            return generateFilledCircleImage(diameter: 4.0, color: theme.chat.message.incoming.accentControlColor)
+            return generateFilledCircleImage(diameter: 4.0, color: theme.chat.message.incoming.accentTextColor)
         })
     }
     
     public static func chatBubbleConsumableContentOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleConsumableContentOutgoingIcon.rawValue, { theme in
-            return generateFilledCircleImage(diameter: 4.0, color: theme.chat.message.outgoing.accentControlColor)
+            return generateFilledCircleImage(diameter: 4.0, color: theme.chat.message.outgoing.accentTextColor)
         })
     }
     
@@ -428,6 +428,27 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatInputPanelSendIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelSendIconImage.rawValue, { theme in
+            return generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                let color: UIColor
+                if [.day, .night].contains(theme.referenceTheme.baseTheme) && theme.chat.message.outgoing.bubble.withWallpaper.fill.count > 1 {
+                    color = .white
+                } else {
+                    color = theme.chat.inputPanel.actionControlForegroundColor
+                }
+                context.setStrokeColor(color.cgColor)
+                context.setFillColor(color.cgColor)
+                context.setLineWidth(2.0)
+                context.setLineCap(.round)
+                context.setLineJoin(.round)
+                let _ = try? drawSvgPath(context, path: "M11,14.6666667 L16.4310816,9.40016333 L16.4310816,9.40016333 C16.4694824,9.36292619 16.5305176,9.36292619 16.5689184,9.40016333 L22,14.6666667 S ")
+                let _ = try? drawSvgPath(context, path: "M16.5,9.33333333 C17.0522847,9.33333333 17.5,9.78104858 17.5,10.3333333 L17.5,24 C17.5,24.5522847 17.0522847,25 16.5,25 C15.9477153,25 15.5,24.5522847 15.5,24 L15.5,10.3333333 C15.5,9.78104858 15.9477153,9.33333333 16.5,9.33333333 Z ")
+            })
+        })
+    }
+    
     public static func chatInputPanelApplyButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelApplyButtonImage.rawValue, { theme in
             return generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
@@ -436,6 +457,26 @@ public struct PresentationResourcesChat {
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
                 context.setStrokeColor(theme.chat.inputPanel.actionControlForegroundColor.cgColor)
                 context.setFillColor(theme.chat.inputPanel.actionControlForegroundColor.cgColor)
+                context.setLineWidth(2.0)
+                context.setLineCap(.round)
+                context.setLineJoin(.round)
+                let _ = try? drawSvgPath(context, path: "M9.33333333,17.2686567 L14.1849216,22.120245 L14.1849216,22.120245 C14.2235835,22.1589069 14.2862668,22.1589069 14.3249287,22.120245 C14.3261558,22.1190179 14.3273504,22.1177588 14.3285113,22.1164689 L24.3333333,11 S ")
+            })
+        })
+    }
+    
+    public static func chatInputPanelApplyIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelApplyIconImage.rawValue, { theme in
+            return generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                let color: UIColor
+                if [.day, .night].contains(theme.referenceTheme.baseTheme) && theme.chat.message.outgoing.bubble.withWallpaper.fill.count > 1 {
+                    color = .white
+                } else {
+                    color = theme.chat.inputPanel.actionControlForegroundColor
+                }
+                context.setStrokeColor(color.cgColor)
+                context.setFillColor(color.cgColor)
                 context.setLineWidth(2.0)
                 context.setLineCap(.round)
                 context.setLineJoin(.round)
@@ -457,6 +498,30 @@ public struct PresentationResourcesChat {
                 context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
                 
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/ScheduleIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels((size.height - image.size.height) / 2.0)), size: image.size))
+                }
+            })
+        })
+    }
+    
+    public static func chatInputPanelScheduleIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelScheduleIconImage.rawValue, { theme in
+            return generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                let imageRect = CGRect(origin: CGPoint(), size: size)
+                context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                
+                let color: UIColor
+                if [.day, .night].contains(theme.referenceTheme.baseTheme) && theme.chat.message.outgoing.bubble.withWallpaper.fill.count > 1 {
+                    color = .white
+                } else {
+                    color = theme.chat.inputPanel.actionControlForegroundColor
+                }
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/ScheduleIcon"), color: color) {
                     context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels((size.height - image.size.height) / 2.0)), size: image.size))
                 }
             })

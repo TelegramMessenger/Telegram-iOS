@@ -169,7 +169,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     func startCall(context: AccountContext, peerId: PeerId, isVideo: Bool, displayTitle: String) {
         let uuid = UUID()
         self.currentStartCallAccount = (uuid, context)
-        let handle = CXHandle(type: .generic, value: "\(peerId.id._internalGetInt32Value())")
+        let handle = CXHandle(type: .generic, value: "\(peerId.id._internalGetInt64Value())")
         let startCallAction = CXStartCallAction(call: uuid, handle: handle)
         startCallAction.contactIdentifier = displayTitle
 

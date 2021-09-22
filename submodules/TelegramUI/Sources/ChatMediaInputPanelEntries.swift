@@ -37,7 +37,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
     case trending(Bool, PresentationTheme, PresentationStrings, Bool)
     case settings(PresentationTheme, PresentationStrings, Bool)
     case peerSpecific(theme: PresentationTheme, peer: Peer, expanded: Bool)
-    case stickerPack(index: Int, info: StickerPackCollectionInfo, topItem: StickerPackItem?, theme: PresentationTheme, expanded: Bool)
+    case stickerPack(index: Int, info: StickerPackCollectionInfo, topItem: StickerPackItem?, theme: PresentationTheme, expanded: Bool, reorderable: Bool)
     
     case stickersMode(PresentationTheme, PresentationStrings, Bool)
     case savedGifs(PresentationTheme, PresentationStrings, Bool)
@@ -58,7 +58,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
             return .settings
         case .peerSpecific:
             return .peerSpecific
-        case let .stickerPack(_, info, _, _, _):
+        case let .stickerPack(_, info, _, _, _, _):
             return .stickerPack(info.id.id)
         case .stickersMode:
             return .stickersMode
@@ -109,8 +109,8 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .stickerPack(index, info, topItem, lhsTheme, lhsExpanded):
-                if case let .stickerPack(rhsIndex, rhsInfo, rhsTopItem, rhsTheme, rhsExpanded) = rhs, index == rhsIndex, info == rhsInfo, topItem == rhsTopItem, lhsTheme === rhsTheme, lhsExpanded == rhsExpanded {
+            case let .stickerPack(index, info, topItem, lhsTheme, lhsExpanded, lhsReorderable):
+                if case let .stickerPack(rhsIndex, rhsInfo, rhsTopItem, rhsTheme, rhsExpanded, rhsReorderable) = rhs, index == rhsIndex, info == rhsInfo, topItem == rhsTopItem, lhsTheme === rhsTheme, lhsExpanded == rhsExpanded, lhsReorderable == rhsReorderable {
                     return true
                 } else {
                     return false
@@ -134,7 +134,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                     return false
                 }
             case let .gifEmotion(lhsIndex, lhsTheme, lhsStrings, lhsEmoji, lhsFile, lhsExpanded):
-                if case let .gifEmotion(rhsIndex, rhsTheme, rhsStrings, rhsEmoji, rhsFile, rhsExpanded) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsEmoji == rhsEmoji, lhsExpanded == rhsExpanded {
+                if case let .gifEmotion(rhsIndex, rhsTheme, rhsStrings, rhsEmoji, rhsFile, rhsExpanded) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsEmoji == rhsEmoji, lhsExpanded == rhsExpanded {
                     if let lhsFile = lhsFile, let rhsFile = rhsFile {
                         if !lhsFile.isEqual(to: rhsFile) {
                             return false
@@ -185,7 +185,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                     default:
                         return true
                 }
-            case let .stickerPack(lhsIndex, lhsInfo, _, _, _):
+            case let .stickerPack(lhsIndex, lhsInfo, _, _, _, _):
                 switch rhs {
                     case .recentGifs, .savedStickers, .recentPacks, .peerSpecific:
                         return false
@@ -197,7 +197,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                         }
                     case .settings:
                         return true
-                    case let .stickerPack(rhsIndex, rhsInfo, _, _, _):
+                    case let .stickerPack(rhsIndex, rhsInfo, _, _, _, _):
                         if lhsIndex == rhsIndex {
                             return lhsInfo.id.id < rhsInfo.id.id
                         } else {
@@ -286,8 +286,8 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 return ChatMediaInputPeerSpecificItem(context: context, inputNodeInteraction: inputNodeInteraction, collectionId: collectionId, peer: peer, theme: theme, expanded: expanded, selected: {
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })
-            case let .stickerPack(index, info, topItem, theme, expanded):
-                return ChatMediaInputStickerPackItem(account: context.account, inputNodeInteraction: inputNodeInteraction, collectionId: info.id, collectionInfo: info, stickerPackItem: topItem, index: index, theme: theme, expanded: expanded, selected: {
+            case let .stickerPack(index, info, topItem, theme, expanded, reorderable):
+                return ChatMediaInputStickerPackItem(account: context.account, inputNodeInteraction: inputNodeInteraction, collectionId: info.id, collectionInfo: info, stickerPackItem: topItem, index: index, theme: theme, expanded: expanded, reorderable: reorderable, selected: {
                     inputNodeInteraction.navigateToCollectionId(info.id)
                 })
             case let .stickersMode(theme, strings, expanded):

@@ -1813,20 +1813,6 @@ private:
     }
 }
 
-- (void)getStats:(void (^ _Nonnull)(OngoingGroupCallStats * _Nonnull))completion {
-    if (_instance) {
-        _instance->getStats([completion](tgcalls::GroupInstanceStats stats) {
-            NSMutableDictionary<NSString *,OngoingGroupCallIncomingVideoStats *> *incomingVideoStats = [[NSMutableDictionary alloc] init];
-
-            for (const auto &it : stats.incomingVideoStats) {
-                incomingVideoStats[[NSString stringWithUTF8String:it.first.c_str()]] = [[OngoingGroupCallIncomingVideoStats alloc] initWithReceivingQuality:it.second.receivingQuality availableQuality:it.second.availableQuality];
-            }
-
-            completion([[OngoingGroupCallStats alloc] initWithIncomingVideoStats:incomingVideoStats]);
-        });
-    }
-}
-
 - (GroupCallDisposable * _Nonnull)addVideoOutputWithEndpointId:(NSString * _Nonnull)endpointId sink:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink {
     int sinkId = _nextSinkId;
     _nextSinkId += 1;
@@ -1858,6 +1844,20 @@ private:
         samples.resize(data.length);
         [data getBytes:samples.data() length:data.length];
         _instance->addExternalAudioSamples(std::move(samples));
+    }
+}
+
+- (void)getStats:(void (^ _Nonnull)(OngoingGroupCallStats * _Nonnull))completion {
+    if (_instance) {
+        _instance->getStats([completion](tgcalls::GroupInstanceStats stats) {
+            NSMutableDictionary<NSString *,OngoingGroupCallIncomingVideoStats *> *incomingVideoStats = [[NSMutableDictionary alloc] init];
+
+            for (const auto &it : stats.incomingVideoStats) {
+                incomingVideoStats[[NSString stringWithUTF8String:it.first.c_str()]] = [[OngoingGroupCallIncomingVideoStats alloc] initWithReceivingQuality:it.second.receivingQuality availableQuality:it.second.availableQuality];
+            }
+
+            completion([[OngoingGroupCallStats alloc] initWithIncomingVideoStats:incomingVideoStats]);
+        });
     }
 }
 

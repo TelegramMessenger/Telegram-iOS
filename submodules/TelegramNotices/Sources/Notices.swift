@@ -104,6 +104,38 @@ public final class ApplicationSpecificTimestampNotice: NoticeEntry {
     }
 }
 
+
+public final class ApplicationSpecificTimestampAndCounterNotice: NoticeEntry {
+    public let counter: Int32
+    public let timestamp: Int32
+    
+    public init(counter: Int32, timestamp: Int32) {
+        self.counter = counter
+        self.timestamp = timestamp
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.counter = decoder.decodeInt32ForKey("v", orElse: 0)
+        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.counter, forKey: "v")
+        encoder.encodeInt32(self.timestamp, forKey: "t")
+    }
+    
+    public func isEqual(to: NoticeEntry) -> Bool {
+        if let to = to as? ApplicationSpecificTimestampAndCounterNotice {
+            if self.counter != to.counter || self.timestamp != to.timestamp {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 public final class ApplicationSpecificInt64ArrayNotice: NoticeEntry {
     public let values: [Int64]
     
@@ -167,8 +199,10 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case locationProximityAlertTip = 20
     case nextChatSuggestionTip = 21
     case dismissedTrendingStickerPacks = 22
-    case chatSpecificThemesDarkPreviewTip = 23
     case chatForwardOptionsTip = 24
+    case messageViewsPrivacyTips = 25
+    case chatSpecificThemeLightPreviewTip = 26
+    case chatSpecificThemeDarkPreviewTip = 27
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -292,6 +326,10 @@ private struct ApplicationSpecificNoticeKeys {
     static func chatTextSelectionTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatTextSelectionTip.key)
     }
+
+    static func messageViewsPrivacyTips() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.messageViewsPrivacyTips.key)
+    }
     
     static func themeChangeTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.themeChangeTip.key)
@@ -309,8 +347,12 @@ private struct ApplicationSpecificNoticeKeys {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedTrendingStickerPacks.key)
     }
     
-    static func chatSpecificThemesDarkPreviewTip() -> NoticeEntryKey {
-        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatSpecificThemesDarkPreviewTip.key)
+    static func chatSpecificThemeLightPreviewTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatSpecificThemeLightPreviewTip.key)
+    }
+    
+    static func chatSpecificThemeDarkPreviewTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatSpecificThemeDarkPreviewTip.key)
     }
     
     static func chatForwardOptionsTip() -> NoticeEntryKey {
@@ -745,6 +787,28 @@ public struct ApplicationSpecificNotice {
             transaction.setNotice(ApplicationSpecificNoticeKeys.chatTextSelectionTip(), ApplicationSpecificCounterNotice(value: currentValue))
         }
     }
+
+    public static func getMessageViewsPrivacyTips(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.messageViewsPrivacyTips()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+
+    public static func incrementMessageViewsPrivacyTips(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.messageViewsPrivacyTips()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            currentValue += count
+
+            transaction.setNotice(ApplicationSpecificNoticeKeys.messageViewsPrivacyTips(), ApplicationSpecificCounterNotice(value: currentValue))
+        }
+    }
     
     public static func getThemeChangeTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
         return accountManager.transaction { transaction -> Bool in
@@ -823,26 +887,51 @@ public struct ApplicationSpecificNotice {
         }
     }
     
-    public static func getChatSpecificThemesDarkPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
-        return accountManager.transaction { transaction -> Int32 in
-            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatSpecificThemesDarkPreviewTip()) as? ApplicationSpecificCounterNotice {
-                return value.value
+    public static func getChatSpecificThemeLightPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<(Int32, Int32), NoError> {
+        return accountManager.transaction { transaction -> (Int32, Int32) in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatSpecificThemeLightPreviewTip()) as? ApplicationSpecificTimestampAndCounterNotice {
+                return (value.counter, value.timestamp)
             } else {
-                return 0
+                return (0, 0)
             }
         }
     }
     
-    public static func incrementChatSpecificThemesDarkPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+    public static func incrementChatSpecificThemeLightPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1, timestamp: Int32) -> Signal<Int, NoError> {
         return accountManager.transaction { transaction -> Int in
             var currentValue: Int32 = 0
-            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatSpecificThemesDarkPreviewTip()) as? ApplicationSpecificCounterNotice {
-                currentValue = value.value
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatSpecificThemeLightPreviewTip()) as? ApplicationSpecificTimestampAndCounterNotice {
+                currentValue = value.counter
             }
             let previousValue = currentValue
             currentValue += Int32(count)
             
-            transaction.setNotice(ApplicationSpecificNoticeKeys.chatSpecificThemesDarkPreviewTip(), ApplicationSpecificCounterNotice(value: currentValue))
+            transaction.setNotice(ApplicationSpecificNoticeKeys.chatSpecificThemeLightPreviewTip(), ApplicationSpecificTimestampAndCounterNotice(counter: currentValue, timestamp: timestamp))
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func getChatSpecificThemeDarkPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<(Int32, Int32), NoError> {
+        return accountManager.transaction { transaction -> (Int32, Int32) in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatSpecificThemeDarkPreviewTip()) as? ApplicationSpecificTimestampAndCounterNotice {
+                return (value.counter, value.timestamp)
+            } else {
+                return (0, 0)
+            }
+        }
+    }
+    
+    public static func incrementChatSpecificThemeDarkPreviewTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1, timestamp: Int32) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatSpecificThemeDarkPreviewTip()) as? ApplicationSpecificTimestampAndCounterNotice {
+                currentValue = value.counter
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.chatSpecificThemeDarkPreviewTip(), ApplicationSpecificTimestampAndCounterNotice(counter: currentValue, timestamp: timestamp))
             
             return Int(previousValue)
         }

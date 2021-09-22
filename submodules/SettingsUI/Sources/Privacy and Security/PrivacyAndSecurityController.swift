@@ -868,6 +868,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     
     let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
     
+    // MARK: Postufgram Code: {
     let accountIsHiddenSignal = context.sharedContext.accountManager.accountRecords()
     |> map { view -> Bool in
         view.currentRecord?.attributes.contains(where: { $0.isHiddenAccountAttribute }) ?? false
@@ -916,11 +917,10 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             return disposable
         }
     }
+    // MARK: Postufgram Code: }
 
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.engine.peers.recentPeers(), blockedPeersState.get(), webSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()), context.account.postbox.combinedView(keys: [preferencesKey]),
-        doubleBottomDisplayTimeSignal)
-    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth, preferences,
-        doubleBottomDisplayTime -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), context.engine.peers.recentPeers(), blockedPeersState.get(), webSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()), context.account.postbox.combinedView(keys: [preferencesKey]), doubleBottomDisplayTimeSignal)
+    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth, preferences, doubleBottomDisplayTime -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var canAutoarchive = false
         if let view = preferences.views[preferencesKey] as? PreferencesView, let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration, let data = appConfiguration.data, let hasAutoarchive = data["autoarchive_setting_available"] as? Bool {
             canAutoarchive = hasAutoarchive

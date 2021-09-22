@@ -41,7 +41,10 @@ func switchToAuthorizedAccount(transaction: AccountManagerModifier<TelegramAccou
         }
     }
     transaction.updateRecord(account.id, { _ in
-        return AccountRecord(id: account.id, attributes: attributes, temporarySessionId: nil)
+        return AccountRecord(id: account.id, attributes: [
+            .environment(AccountEnvironmentAttribute(environment: account.testingEnvironment ? .test : .production)),
+            .sortOrder(AccountSortOrderAttribute(order: nextSortOrder))
+        ], temporarySessionId: nil)
     })
     if shouldSwitchToAccount {
         transaction.setCurrentId(account.id)

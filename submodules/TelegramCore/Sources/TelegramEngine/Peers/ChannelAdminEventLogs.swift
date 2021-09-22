@@ -220,7 +220,7 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                             action = .pollStopped(rendered)
                                         }
                                     case let .channelAdminLogEventActionChangeLinkedChat(prevValue, newValue):
-                                        action = .linkedPeerUpdated(previous: prevValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(prevValue))], updated: newValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(newValue))])
+                                        action = .linkedPeerUpdated(previous: prevValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(prevValue))], updated: newValue == 0 ? nil : peers[PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(newValue))])
                                     case let .channelAdminLogEventActionChangeLocation(prevValue, newValue):
                                         action = .changeGeoLocation(previous: PeerGeoLocation(apiLocation: prevValue), updated: PeerGeoLocation(apiLocation: newValue))
                                     case let .channelAdminLogEventActionToggleSlowMode(prevValue, newValue):
@@ -253,7 +253,7 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                     case let .channelAdminLogEventActionChangeTheme(prevValue, newValue):
                                         action = .changeTheme(previous: prevValue, updated: newValue)
                                 }
-                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
+                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {
                                     events.append(AdminLogEvent(id: id, peerId: peerId, date: date, action: action))
                                 }

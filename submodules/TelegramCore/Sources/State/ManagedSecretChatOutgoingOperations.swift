@@ -226,7 +226,7 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
             memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
         }
         
-        let result = network.request(Api.functions.messages.acceptEncryption(peer: .inputEncryptedChat(chatId: peerId.id._internalGetInt32Value(), accessHash: accessHash), gB: Buffer(data: gb), keyFingerprint: keyFingerprint))
+        let result = network.request(Api.functions.messages.acceptEncryption(peer: .inputEncryptedChat(chatId: Int32(peerId.id._internalGetInt64Value()), accessHash: accessHash), gB: Buffer(data: gb), keyFingerprint: keyFingerprint))
         
         let response = result
         |> map { result -> Api.EncryptedChat? in
@@ -1635,7 +1635,7 @@ private func sendBoxedDecryptedMessage(postbox: Postbox, network: Network, peer:
     decryptedMessage.serialize(payload, role: state.role, sequenceInfo: sequenceInfo)
     let encryptedPayload = encryptedMessageContents(parameters: parameters, data: MemoryBuffer(payload))
     let sendMessage: Signal<Api.messages.SentEncryptedMessage, MTRpcError>
-    let inputPeer = Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: peer.accessHash)
+    let inputPeer = Api.InputEncryptedChat.inputEncryptedChat(chatId: Int32(peer.id.id._internalGetInt64Value()), accessHash: peer.accessHash)
     
     var flags: Int32 = 0
     if silent {
@@ -1675,7 +1675,7 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
     if requestRemoteHistoryRemoval {
         flags |= 1 << 0
     }
-    return network.request(Api.functions.messages.discardEncryption(flags: flags, chatId: peerId.id._internalGetInt32Value()))
+    return network.request(Api.functions.messages.discardEncryption(flags: flags, chatId: Int32(peerId.id._internalGetInt64Value())))
     |> map(Optional.init)
     |> `catch` { _ in
         return .single(nil)
@@ -1691,7 +1691,7 @@ private func requestTerminateSecretChat(postbox: Postbox, network: Network, peer
             }
             |> mapToSignal { peer -> Signal<Void, NoError> in
                 if let peer = peer {
-                    return network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: peer.id.id._internalGetInt32Value(), accessHash: peer.accessHash)))
+                    return network.request(Api.functions.messages.reportEncryptedSpam(peer: Api.InputEncryptedChat.inputEncryptedChat(chatId: Int32(peer.id.id._internalGetInt64Value()), accessHash: peer.accessHash)))
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.Bool?, NoError> in
                         return .single(nil)

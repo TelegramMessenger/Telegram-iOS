@@ -33,6 +33,14 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(fetchResour
         return fetchEmojiSpriteResource(account: account, resource: resource)
     } else if let resource = resource as? VenueIconResource {
         return fetchVenueIconResource(account: account, resource: resource)
+    } else if let resource = resource as? BundleResource {
+        return Signal { subscriber in
+            subscriber.putNext(.reset)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: resource.path), options: .mappedRead) {
+                subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+            }
+            return EmptyDisposable
+        }
     } else if let wallpaperResource = resource as? WallpaperDataResource {
         let builtinWallpapers: [String] = [
             "fqv01SQemVIBAAAApND8LDRUhRU"

@@ -239,15 +239,19 @@ public final class InviteLinkViewController: ViewController {
     private let revokedInvitationsContext: PeerExportedInvitationsContext?
     private let importersContext: PeerInvitationImportersContext?
 
+    private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
-            
-    public init(context: AccountContext, peerId: PeerId, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, revokedInvitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?) {
+    fileprivate var presentationDataPromise = Promise<PresentationData>()
+    
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, revokedInvitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?) {
         self.context = context
         self.peerId = peerId
         self.invite = invite
         self.invitationsContext = invitationsContext
         self.revokedInvitationsContext = revokedInvitationsContext
         self.importersContext = importersContext
+        
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                 
         super.init(navigationBarPresentationData: nil)
         
@@ -256,9 +260,11 @@ public final class InviteLinkViewController: ViewController {
         
         self.blocksBackgroundWhenInOverlay = true
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
+                strongSelf.presentationData = presentationData
+                strongSelf.presentationDataPromise.set(.single(presentationData))
                 strongSelf.controllerNode.updatePresentationData(presentationData)
             }
         })
@@ -275,7 +281,7 @@ public final class InviteLinkViewController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, peerId: self.peerId, invite: self.invite, importersContext: self.importersContext, controller: self)
+        self.displayNode = Node(context: self.context, presentationData: self.presentationData, peerId: self.peerId, invite: self.invite, importersContext: self.importersContext, controller: self)
     }
     
     override public func loadView() {
@@ -341,7 +347,6 @@ public final class InviteLinkViewController: ViewController {
         
         private var presentationData: PresentationData
         private let presentationDataPromise: Promise<PresentationData>
-        private var presentationDataDisposable: Disposable?
         
         private var disposable: Disposable?
         
@@ -364,11 +369,10 @@ public final class InviteLinkViewController: ViewController {
         
         private var validLayout: ContainerViewLayout?
         
-        init(context: AccountContext, peerId: PeerId, invite: ExportedInvitation, importersContext: PeerInvitationImportersContext?, controller: InviteLinkViewController) {
+        init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, invite: ExportedInvitation, importersContext: PeerInvitationImportersContext?, controller: InviteLinkViewController) {
             self.context = context
             self.peerId = peerId
             self.invite = invite
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             self.presentationData = presentationData
             self.presentationDataPromise = Promise(self.presentationData)
             self.controller = controller
@@ -501,14 +505,18 @@ public final class InviteLinkViewController: ViewController {
                             
                             let _ = (context.account.postbox.loadedPeerWithId(peerId)
                             |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                guard let strongSelf = self, let parentController = strongSelf.controller else {
+                                    return
+                                }
                                 let isGroup: Bool
                                 if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                                     isGroup = false
                                 } else {
                                     isGroup = true
                                 }
-                                let controller = InviteLinkQRCodeController(context: context, invite: invite, isGroup: isGroup)
-                                self?.controller?.present(controller, in: .window(.root))
+                                let updatedPresentationData = (strongSelf.presentationData, parentController.presentationDataPromise.get())
+                                let controller = InviteLinkQRCodeController(context: context, updatedPresentationData: updatedPresentationData, invite: invite, isGroup: isGroup)
+                                strongSelf.controller?.present(controller, in: .window(.root))
                             })
                         })))
                     }
@@ -557,7 +565,7 @@ public final class InviteLinkViewController: ViewController {
                     })))
                 }
                            
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             })
             
@@ -597,7 +605,7 @@ public final class InviteLinkViewController: ViewController {
                     if state.importers.isEmpty && state.isLoadingMore {
                         count = min(4, state.count)
                         loading = true
-                        let fakeUser = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                        let fakeUser = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
                         for i in 0 ..< count {
                             entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, fakeUser, 0, true))
                         }
@@ -658,15 +666,7 @@ public final class InviteLinkViewController: ViewController {
             
             self.editButton.addTarget(self, action: #selector(self.editButtonPressed), forControlEvents: .touchUpInside)
             self.doneButton.addTarget(self, action: #selector(self.doneButtonPressed), forControlEvents: .touchUpInside)
-            
-            self.presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
-                if let strongSelf = self {
-                    if strongSelf.presentationData.theme !== presentationData.theme || strongSelf.presentationData.strings !== presentationData.strings {
-                        strongSelf.updatePresentationData(presentationData)
-                    }
-                }
-            })
-            
+                        
             if invite.isPermanent || invite.isRevoked {
                 self.editButton.isHidden = true
             }
@@ -674,7 +674,6 @@ public final class InviteLinkViewController: ViewController {
         
         deinit {
             self.disposable?.dispose()
-            self.presentationDataDisposable?.dispose()
         }
         
         override func didLoad() {
@@ -693,13 +692,18 @@ public final class InviteLinkViewController: ViewController {
         }
         
         @objc private func editButtonPressed() {
-            let navigationController = self.controller?.navigationController as? NavigationController
+            guard let parentController = self.controller else {
+                return
+            }
+            
+            let navigationController = parentController.navigationController as? NavigationController
             self.controller?.dismiss()
             
-            let invitationsContext = self.controller?.invitationsContext
-            let revokedInvitationsContext = self.controller?.revokedInvitationsContext
+            let invitationsContext = parentController.invitationsContext
+            let revokedInvitationsContext = parentController.revokedInvitationsContext
             if let navigationController = navigationController {
-                let controller = inviteLinkEditController(context: self.context, peerId: self.peerId, invite: self.invite, completion: { invite in
+                let updatedPresentationData = (self.presentationData, parentController.presentationDataPromise.get())
+                let controller = inviteLinkEditController(context: self.context, updatedPresentationData: updatedPresentationData, peerId: self.peerId, invite: self.invite, completion: { invite in
                     if let invite = invite {
                         if invite.isRevoked {
                             invitationsContext?.remove(invite)

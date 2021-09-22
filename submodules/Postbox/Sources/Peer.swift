@@ -60,7 +60,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             return Id(rawValue: 0x000000007fffffff)
         }
 
-        fileprivate var rawValue: Int32
+        fileprivate var rawValue: Int64
 
         var predecessor: Id {
             if self.rawValue != 0 {
@@ -82,17 +82,21 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             return "\(self.rawValue)"
         }
 
-        fileprivate init(rawValue: Int32) {
-            //precondition((rawValue | 0x000FFFFFFFFFFFFF) == 0x000FFFFFFFFFFFFF)
+        fileprivate init(rawValue: Int64) {
+            if rawValue < 0 {
+                assert(abs(rawValue) == (abs(rawValue) & 0x007fffffffffffff))
+            } else {
+                assert(abs(rawValue) == (abs(rawValue) & 0x00ffffffffffffff))
+            }
 
             self.rawValue = rawValue
         }
 
-        public static func _internalFromInt32Value(_ value: Int32) -> Id {
+        public static func _internalFromInt64Value(_ value: Int64) -> Id {
             return Id(rawValue: value)
         }
 
-        public func _internalGetInt32Value() -> Int32 {
+        public func _internalGetInt64Value() -> Int64 {
             return self.rawValue
         }
 
@@ -144,21 +148,37 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     public init(_ n: Int64) {
         let data = UInt64(bitPattern: n)
 
+        // Bits: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        //       |___________________________|__| |______________________________|
+        //               id high bits (29)    ns           id low bits (32)
+
         let legacyNamespaceBits = ((data >> 32) & 0xffffffff)
         let idLowBits = data & 0xffffffff
 
         if legacyNamespaceBits == 0x7fffffff && idLowBits == 0 {
             self.namespace = .max
-            self.id = Id(rawValue: Int32(bitPattern: UInt32(clamping: idLowBits)))
+            self.id = Id(rawValue: Int64(bitPattern: UInt64(clamping: idLowBits)))
         } else {
+            // 0x7 == 0b111
             let namespaceBits = ((data >> 32) & 0x7)
             self.namespace = Namespace(rawValue: UInt32(namespaceBits))
 
-            let idHighBits = (data >> (32 + 3)) & 0xffffffff
-            //assert(idHighBits == 0)
+            let offsetIdHighBits = (data >> (32 + 3)) & 0xffffffff
+            let idHighBits = offsetIdHighBits << 32
 
-            self.id = Id(rawValue: Int32(bitPattern: UInt32(clamping: idLowBits)))
+            if idHighBits == 0 {
+                if let uint32Value = UInt32(exactly: idLowBits) {
+                    self.id = Id(rawValue: Int64(Int32(bitPattern: uint32Value)))
+                } else {
+                    preconditionFailure()
+                }
+            } else {
+                let idAbs: UInt64 = idHighBits | idLowBits
+                self.id = Id(rawValue: Int64(bitPattern: idAbs))
+            }
         }
+
+        assert(self._toInt64() == n)
     }
 
     public init(from decoder: Decoder) throws {
@@ -173,7 +193,26 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     }
     
     public func toInt64() -> Int64 {
-        let idLowBits = UInt32(bitPattern: self.id.rawValue)
+        let result = self._toInt64()
+        assert(PeerId(result) == self)
+        return result
+    }
+
+    private func _toInt64() -> Int64 {
+        let data: UInt64
+
+        if self.id.rawValue < 0 {
+            if let int32Value = Int32(exactly: self.id.rawValue) {
+                data = UInt64(UInt32(bitPattern: int32Value))
+            } else {
+                preconditionFailure()
+            }
+        } else {
+            data = UInt64(bitPattern: self.id.rawValue)
+        }
+
+        let idLowBits = data & 0xffffffff
+        let idHighBits = (data >> 32) & 0xffffffff
 
         let result: Int64
         if self.namespace == .max && self.id.rawValue == 0 {
@@ -181,24 +220,19 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
 
             let namespaceBits: UInt64 = 0x7fffffff
             data |= namespaceBits << 32
-
-            data |= UInt64(idLowBits)
+            data |= idLowBits
 
             result = Int64(bitPattern: data)
         } else {
             var data: UInt64 = 0
-            data |= UInt64(self.namespace.rawValue) << 32
-
-            let idValue = UInt32(bitPattern: self.id.rawValue)
-            let idHighBits = (idValue >> 32) & 0x3FFFFFFF
-            assert(idHighBits == 0)
-
-            data |= UInt64(idLowBits)
+            assert(self.namespace.rawValue & 0x7 == self.namespace.rawValue)
+            let offsetIdHighBits = idHighBits << (32 + 3)
+            data |= UInt64(self.namespace.rawValue & 0x7) << 32
+            data |= offsetIdHighBits
+            data |= idLowBits
 
             result = Int64(bitPattern: data)
         }
-
-        assert(PeerId(result) == self)
 
         return result
     }

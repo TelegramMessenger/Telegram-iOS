@@ -91,15 +91,14 @@ public final class AppLockContextImpl: AppLockContext {
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
+    // MARK: Postufgram Code: {
     private var hiddenAccountsAccessChallengeDataDisposable: Disposable?
     public private(set) var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
 
     private var applicationInForegroundDisposable: Disposable?
     
     public var lockingIsCompletePromise = Promise<Bool>()
-    // MARK: Postufgram Code: {
     public var onUnlockedDismiss = ValuePipe<Void>()
-    // MARK: Postufgram Code: }
     public var isUnlockedAndReady: Signal<Void, NoError> {
         return self.isCurrentlyLockedPromise.get()
             |> filter { !$0 }
@@ -117,6 +116,7 @@ public final class AppLockContextImpl: AppLockContext {
                 }
         }
     }
+    // MARK: Postufgram Code: }
     
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         
@@ -222,7 +222,7 @@ public final class AppLockContextImpl: AppLockContext {
                         passcodeController.ensureInputFocused()
                     } else {
                         strongSelf.lockingIsCompletePromise.set(.single(false))
-                        
+
                         let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: {
                             if let lockViewFrame = lockIconInitialFrame() {
                                 return lockViewFrame

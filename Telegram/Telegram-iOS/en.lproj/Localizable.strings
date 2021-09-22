@@ -104,7 +104,8 @@
 "PUSH_ALBUM" = "%1$@|sent you an album";
 "PUSH_MESSAGE_FILES_TEXT_1" = "sent you a file";
 "PUSH_MESSAGE_FILES_TEXT_any" = "sent you %d files";
-"PUSH_MESSAGE_THEME" = "%1$@|changed theme to %2$@";
+"PUSH_MESSAGE_THEME" = "%1$@|changed chat theme to %2$@";
+"PUSH_MESSAGE_NOTHEME" = "%1$@|disabled chat theme";
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -178,6 +179,7 @@
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_1" = "{author} sent a file";
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_any" = "{author} sent %d files";
 "PUSH_CHAT_MESSAGE_THEME" = "%1$@|set theme to %3$@ in the group %2$@";
+"PUSH_CHAT_MESSAGE_NOTHEME" = "%1$@|disabled theme in the group %2$@";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -5836,8 +5838,11 @@ Sorry for the inconvenience.";
 "VoiceChat.StartRecordingText" = "Do you want to start recording this chat and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "LiveStream.StartRecordingText" = "Do you want to start recording this live stream and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "VoiceChat.StartRecordingStart" = "Start";
+"VoiceChat.StartRecordingTextVideo" = "Do you want to start recording this chat and save the result into a video file?\n\nOther members will see that the chat is being recorded.";
+"LiveStream.StartRecordingTextVideo" = "Do you want to start recording this live stream and save the result into a video file?\n\nOther members will see that the chat is being recorded.";
 
 "VoiceChat.RecordingTitlePlaceholder" = "Audio Title (Optional)";
+"VoiceChat.RecordingTitlePlaceholderVideo" = "Video Title (Optional)";
 "VoiceChat.RecordingStarted" = "Voice chat recording started";
 "LiveStream.RecordingStarted" = "Live stream recording started";
 "VoiceChat.RecordingInProgress" = "Voice chat is being recorded";
@@ -6714,11 +6719,17 @@ Sorry for the inconvenience.";
 "UserInfo.ChangeColors" = "Change Colors";
 
 "Conversation.Theme.Title" = "Select Theme";
+"Conversation.Theme.Subtitle" = "Theme will be also applied for %@";
 "Conversation.Theme.Apply" = "Apply Theme";
 "Conversation.Theme.NoTheme" = "No\nTheme";
 "Conversation.Theme.Reset" = "Reset Theme for This Chat";
+"Conversation.Theme.DontSetTheme" = "Do Not Set Theme";
 "Conversation.Theme.SwitchToDark" = "Switch to dark appearance";
 "Conversation.Theme.SwitchToLight" = "Switch to light appearance";
+"Conversation.Theme.PreviewDark" = "Tap to see how chat will appear to\n%@ when using night mode.";
+"Conversation.Theme.PreviewLight" = "Tap to see how chat will appear to\n%@ when using day mode.";
+"Conversation.Theme.DismissAlert" = "Do you want to apply the selected theme to the chat?";
+"Conversation.Theme.DismissAlertApply" = "Apply";
 
 "Notification.ChangedTheme" = "%1$@ changed chat theme to %2$@";
 "Notification.DisabledTheme" = "%@ disabled chat theme";
@@ -6767,9 +6778,16 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageChangedThemeRemove" = "%1$@ disabled chat theme";
 
 "SponsoredMessageMenu.Info" = "What are sponsored\nmessages?";
-"SponsoredMessageInfo.Text" = "See https://telegram.org";
+"SponsoredMessageInfoScreen.Title" = "What are sponsored messages?";
+"SponsoredMessageInfoScreen.Text" = "Unlike other apps, Telegram never uses your private data to target ads. You are seeing this message only because someone chose this public one-to many channel as a space to promote their messages. This means that no user data is mined or analyzed to display ads, and every user viewing a channel on Telegram sees the same sponsored message.
+
+Unline other apps, Telegram doesn't track whether you tapped on a sponsored message and doesn't profile you based on your activity. We also prevent external links in sponsored messages to ensure that third parties can't spy on our users. We believe that everyone has the right to privacy, and technological platforms should respect that.
+
+Telegram offers free and unlimited service to hundreds of millions of users, which involves significant server and traffic costs. In order to remain independent and stay true to its values, Telegram developed a paid tool to promote messages with user privacy in mind. We welcome responsible adverticers at:
+[url]
+Ads should no longer be synonymous with abuse of user privacy. Let us redefine how a tech compony should operate — together.";
 "SponsoredMessageInfo.Action" = "Learn More";
-"SponsoredMessageInfo.ActionUrl" = "https://telegram.org";
+"SponsoredMessageInfo.Url" = "https://telegram.org/ads";
 
 "Chat.NavigationNoChannels" = "You have no unread channels";
 
@@ -6794,6 +6812,26 @@ Sorry for the inconvenience.";
 "Gif.Emotion.Party" = "Party";
 
 "Conversation.ForwardFrom" = "From: %@";
+"Conversation.ContextMenuSeen_1" = "1 Seen";
+"Conversation.ContextMenuSeen_any" = "%@ Seen";
+"Conversation.ContextMenuListened_1" = "1 Listened";
+"Conversation.ContextMenuListened_any" = "%@ Listened";
+"Conversation.ContextMenuWatched_1" = "1 Watched";
+"Conversation.ContextMenuWatched_any" = "%@ Watched";
+
+"Conversation.ContextMenuNoViews" = "Nobody Viewed";
+"Conversation.ContextMenuNobodyListened" = "Nobody Listened";
+"Conversation.ContextMenuNobodyWatched" = "Nobody Watched";
+
+"VideoChat.RecordingSaved" = "Video chat recording saved to **Saved Messages**.";
+"LiveStream.RecordingSaved" = "Live stream recording saved to **Saved Messages**.";
+
+"ChatContextMenu.MessageViewsPrivacyTip" = "To protect privacy, views are only stored for 7 days.";
+
+"MESSAGE_NOTHEME" = "%1$@ changed theme to default one";
+"CHAT_MESSAGE_NOTHEME" = "%1$@ set theme to default one in the group %2$@";
+
+"Activity.EnjoyingAnimations" = "enjoying %@ animations";
 
 "DoubleBottom.Settings.Text" = "Double Bottom";
 "DoubleBottom.HideAccount.Title" = "Double Bottom";

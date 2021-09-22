@@ -25,6 +25,7 @@ public struct AccountManagerModifier<Types: AccountManagerTypes> {
     public let clearNotices: () -> Void
 }
 
+// MARK: Postufgram Code: {
 public protocol HiddenAccountManager {
     var unlockedHiddenAccountRecordIdPromise: ValuePromise<AccountRecordId?> { get }
     var unlockedHiddenAccountRecordId: AccountRecordId? { get }
@@ -37,6 +38,7 @@ public protocol HiddenAccountManager {
     func hiddenAccounts<Types: AccountManagerTypes>(accountManager: AccountManager<Types>) -> Signal<[AccountRecordId], NoError>
     func isAccountHidden<Types: AccountManagerTypes>(accountRecordId: AccountRecordId,accountManager: AccountManager<Types>) -> Signal<Bool, NoError>
 }
+// MARK: Postufgram Code: {
 
 final class AccountManagerImpl<Types: AccountManagerTypes> {
     private let queue: Queue

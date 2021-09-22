@@ -144,17 +144,20 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             var secretVideoPlaceholderBackgroundImage: UIImage?
             var updatedInfoBackgroundImage: UIImage?
             var updatedMuteIconImage: UIImage?
-            if item.presentationData.theme != currentItem?.presentationData.theme {
-                updatedInfoBackgroundImage = PresentationResourcesChat.chatInstantMessageInfoBackgroundImage(item.presentationData.theme.theme)
-                updatedMuteIconImage = PresentationResourcesChat.chatInstantMessageMuteIconImage(item.presentationData.theme.theme)
-            }
             
+            var updatedInstantVideoBackgroundImage: UIImage?
             let instantVideoBackgroundImage: UIImage?
             switch statusDisplayType {
                 case .free:
                     instantVideoBackgroundImage = PresentationResourcesChat.chatInstantVideoBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
                 case .bubble:
                     instantVideoBackgroundImage = nil
+            }
+            
+            if item.presentationData.theme != currentItem?.presentationData.theme {
+                updatedInstantVideoBackgroundImage = instantVideoBackgroundImage
+                updatedInfoBackgroundImage = PresentationResourcesChat.chatInstantMessageInfoBackgroundImage(item.presentationData.theme.theme)
+                updatedMuteIconImage = PresentationResourcesChat.chatInstantMessageMuteIconImage(item.presentationData.theme.theme)
             }
             
             let theme = item.presentationData.theme
@@ -331,6 +334,10 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let secretVideoPlaceholderBackgroundImage = secretVideoPlaceholderBackgroundImage {
                         strongSelf.secretVideoPlaceholderBackground.image = secretVideoPlaceholderBackgroundImage
+                    }
+                    
+                    if let updatedInstantVideoBackgroundImage = updatedInstantVideoBackgroundImage, let decoration = strongSelf.videoNode?.decoration as? ChatBubbleInstantVideoDecoration, let decorationBackgroundNode = decoration.backgroundNode as? ASImageNode {
+                        decorationBackgroundNode.image = updatedInstantVideoBackgroundImage
                     }
                     
                     strongSelf.media = updatedFile

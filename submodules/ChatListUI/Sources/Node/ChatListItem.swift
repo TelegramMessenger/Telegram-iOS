@@ -196,7 +196,7 @@ private enum RevealOptionKey: Int32 {
 }
 
 private func canArchivePeer(id: PeerId, accountPeerId: PeerId) -> Bool {
-    if id.namespace == Namespaces.Peer.CloudUser && id.id._internalGetInt32Value() == 777000 {
+    if id.namespace == Namespaces.Peer.CloudUser && id.id._internalGetInt64Value() == 777000 {
         return false
     }
     if id == accountPeerId {
@@ -1724,6 +1724,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.textNode.frame = textNodeFrame
                     
                     var animateInputActivitiesFrame = false
+                    let inputActivities = inputActivities?.filter({
+                        switch $0.1 {
+                            case .speakingInGroupCall, .interactingWithEmoji, .seeingEmojiInteraction:
+                                return false
+                            default:
+                                return true
+                        }
+                    })
+                    
                     if let inputActivities = inputActivities, !inputActivities.isEmpty {
                         if strongSelf.inputActivitiesNode.supernode == nil {
                             strongSelf.contextContainer.addSubnode(strongSelf.inputActivitiesNode)

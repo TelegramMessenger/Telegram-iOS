@@ -210,7 +210,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             let high = UInt32((UInt64(bitPattern: id) >> 32) & (0xffffffff as UInt64))
             acc = (acc &* 20261) &+ high
             acc = (acc &* 20261) &+ low
-            
+
             return Int32(bitPattern: acc & UInt32(0x7fffffff))
         }
         

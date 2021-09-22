@@ -7,14 +7,17 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import AnimatedStickerNode
-import AppBundle
+import TelegramAnimatedStickerNode
+import AccountContext
 
 class InviteLinkHeaderItem: ListViewItem, ItemListItem {
+    let context: AccountContext
     let theme: PresentationTheme
     let text: String
     let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, text: String, sectionId: ItemListSectionId) {
+    init(context: AccountContext, theme: PresentationTheme, text: String, sectionId: ItemListSectionId) {
+        self.context = context
         self.theme = theme
         self.text = text
         self.sectionId = sectionId
@@ -72,10 +75,6 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.animationNode = AnimatedStickerNode()
-        if let path = getAppBundle().path(forResource: "Invite", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-            self.animationNode.visibility = true
-        }
         
         super.init(layerBacked: false, dynamicBounce: false)
         
@@ -100,6 +99,10 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    if strongSelf.item == nil {
+                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Invite"), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                        strongSelf.animationNode.visibility = true
+                    }
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
                                         
