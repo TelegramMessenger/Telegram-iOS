@@ -1851,7 +1851,7 @@ public final class VoiceChatController: ViewController {
             self.listContainer.addSubnode(self.topCornersNode)
             self.contentContainer.addSubnode(self.bottomGradientNode)
             self.contentContainer.addSubnode(self.bottomPanelBackgroundNode)
-            self.contentContainer.addSubnode(self.participantsNode)
+//            self.contentContainer.addSubnode(self.participantsNode)
             self.contentContainer.addSubnode(self.tileGridNode)
             self.contentContainer.addSubnode(self.mainStageContainerNode)
             self.contentContainer.addSubnode(self.transitionContainerNode)
@@ -1975,7 +1975,6 @@ public final class VoiceChatController: ViewController {
                 }
             })
             
-            
             let titleAndRecording: Signal<(String?, Bool), NoError> = self.call.state
             |> map { state -> (String?, Bool) in
                 return (state.title, state.recordingStartTimestamp != nil)
@@ -1993,7 +1992,7 @@ public final class VoiceChatController: ViewController {
                     } else {
                         isLivestream = false
                     }
-                    strongSelf.participantsNode.isHidden = !isLivestream
+                    strongSelf.participantsNode.isHidden = !isLivestream || strongSelf.isScheduled
                     
                     let hadPeer = strongSelf.peer != nil
                     strongSelf.peer = peer
@@ -5047,9 +5046,9 @@ public final class VoiceChatController: ViewController {
                 let memberState: VoiceChatPeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
                 if member.hasRaiseHand && !(member.muteState?.canUnmute ?? true) {
-                    if isLivestream && !canManageCall {
-                        continue
-                    }
+//                    if isLivestream && !canManageCall {
+//                        continue
+//                    }
                     memberState = .raisedHand
                     memberMuteState = member.muteState
                     
@@ -5086,9 +5085,9 @@ public final class VoiceChatController: ViewController {
                         self.raisedHandDisplayDisposables[member.peer.id] = nil
                     }
                     
-                    if isLivestream && !(memberMuteState?.canUnmute ?? true) {
-                        continue
-                    }
+//                    if isLivestream && !(memberMuteState?.canUnmute ?? true) {
+//                        continue
+//                    }
                 }
                 
                 var memberPeer = member.peer
