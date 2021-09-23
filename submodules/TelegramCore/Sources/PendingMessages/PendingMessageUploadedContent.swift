@@ -539,7 +539,7 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 attributes.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
         }

@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 
 final class MutableAccountSharedDataView<Types: AccountManagerTypes> {
     private let keys: Set<ValueBoxKey>

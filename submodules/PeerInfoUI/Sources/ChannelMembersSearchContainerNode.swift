@@ -681,7 +681,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                             foundRemotePeers = .single(([], []))
                         } else {
                             foundContacts = context.account.postbox.searchContacts(query: query.lowercased())
-                            foundRemotePeers = .single(([], [])) |> then(context.engine.peers.searchPeers(query: query)
+                            foundRemotePeers = .single(([], [])) |> then(context.engine.contacts.searchRemotePeers(query: query)
                             |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                         }
                     case .searchMembers, .searchBanned, .searchKicked, .searchAdmins:
@@ -995,7 +995,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                 }
                 
                 if mode == .banAndPromoteActions || mode == .inviteActions {
-                    foundRemotePeers = .single(([], [])) |> then(context.engine.peers.searchPeers(query: query)
+                    foundRemotePeers = .single(([], [])) |> then(context.engine.contacts.searchRemotePeers(query: query)
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                 } else {
                     foundRemotePeers = .single(([], []))

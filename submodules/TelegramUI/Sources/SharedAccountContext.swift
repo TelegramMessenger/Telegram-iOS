@@ -1118,12 +1118,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         openExternalUrlImpl(context: context, urlContext: urlContext, url: url, forceExternal: forceExternal, presentationData: presentationData, navigationController: navigationController, dismissInput: dismissInput)
     }
     
-    public func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
+    public func chatAvailableMessageActions(postbox: Postbox, accountPeerId: EnginePeer.Id, messageIds: Set<EngineMessage.Id>) -> Signal<ChatAvailableMessageActions, NoError> {
         return chatAvailableMessageActionsImpl(postbox: postbox, accountPeerId: accountPeerId, messageIds: messageIds)
     }
     
-    public func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message] = [:], peers: [PeerId: Peer] = [:]) -> Signal<ChatAvailableMessageActions, NoError> {
-        return chatAvailableMessageActionsImpl(postbox: postbox, accountPeerId: accountPeerId, messageIds: messageIds, messages: messages, peers: peers)
+    public func chatAvailableMessageActions(postbox: Postbox, accountPeerId: EnginePeer.Id, messageIds: Set<EngineMessage.Id>, messages: [EngineMessage.Id: EngineMessage] = [:], peers: [EnginePeer.Id: EnginePeer] = [:]) -> Signal<ChatAvailableMessageActions, NoError> {
+        return chatAvailableMessageActionsImpl(postbox: postbox, accountPeerId: accountPeerId, messageIds: messageIds, messages: messages.mapValues({ $0._asMessage() }), peers: peers.mapValues({ $0._asPeer() }))
     }
     
     public func navigateToChatController(_ params: NavigateToChatControllerParams) {

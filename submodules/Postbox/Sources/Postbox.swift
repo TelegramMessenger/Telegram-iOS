@@ -886,15 +886,6 @@ public final class Transaction {
         return count
     }
     
-    public func legacyGetAccessChallengeData() -> PostboxAccessChallengeData {
-        assert(!self.disposed)
-        if let postbox = self.postbox {
-            return postbox.metadataTable.accessChallengeData()
-        } else {
-            return .none
-        }
-    }
-    
     public func enumerateMedia(lowerBound: MessageIndex?, upperBound: MessageIndex?, limit: Int) -> ([PeerId: Set<MediaId>], [MediaId: Media], MessageIndex?) {
         assert(!self.disposed)
         if let postbox = self.postbox {

@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import MergeLists
@@ -10,13 +9,13 @@ enum ChatListNodeEntryId: Hashable {
     case Header
     case Hole(Int64)
     case PeerId(Int64)
-    case GroupId(PeerGroupId)
+    case GroupId(EngineChatList.Group)
     case ArchiveIntro
     case additionalCategory(Int)
 }
 
 enum ChatListNodeEntrySortIndex: Comparable {
-    case index(ChatListIndex)
+    case index(EngineChatList.Item.Index)
     case additionalCategory(Int)
     
     static func <(lhs: ChatListNodeEntrySortIndex, rhs: ChatListNodeEntrySortIndex) -> Bool {
@@ -46,24 +45,24 @@ public enum ChatListNodeEntryPromoInfo: Equatable {
 
 enum ChatListNodeEntry: Comparable, Identifiable {
     case HeaderEntry
-    case PeerEntry(index: ChatListIndex, presentationData: ChatListPresentationData, messages: [Message], readState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, peer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(Peer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, hasFailedMessages: Bool, isContact: Bool)
-    case HoleEntry(ChatListHole, theme: PresentationTheme)
-    case GroupReferenceEntry(index: ChatListIndex, presentationData: ChatListPresentationData, groupId: PeerGroupId, peers: [ChatListGroupReferencePeer], message: Message?, editing: Bool, unreadState: PeerGroupUnreadCountersCombinedSummary, revealed: Bool, hiddenByDefault: Bool)
+    case PeerEntry(index: EngineChatList.Item.Index, presentationData: ChatListPresentationData, messages: [EngineMessage], readState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, draftState: ChatListItemContent.DraftState?, peer: EngineRenderedPeer, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, hasFailedMessages: Bool, isContact: Bool)
+    case HoleEntry(EngineMessage.Index, theme: PresentationTheme)
+    case GroupReferenceEntry(index: EngineChatList.Item.Index, presentationData: ChatListPresentationData, groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, editing: Bool, unreadCount: Int, revealed: Bool, hiddenByDefault: Bool)
     case ArchiveIntro(presentationData: ChatListPresentationData)
     case AdditionalCategory(index: Int, id: Int, title: String, image: UIImage?, appearance: ChatListNodeAdditionalCategory.Appearance, selected: Bool, presentationData: ChatListPresentationData)
     
     var sortIndex: ChatListNodeEntrySortIndex {
         switch self {
         case .HeaderEntry:
-            return .index(ChatListIndex.absoluteUpperBound)
+            return .index(EngineChatList.Item.Index.absoluteUpperBound)
         case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             return .index(index)
-        case let .HoleEntry(hole, _):
-            return .index(ChatListIndex(pinningIndex: nil, messageIndex: hole.index))
+        case let .HoleEntry(holeIndex, _):
+            return .index(EngineChatList.Item.Index(pinningIndex: nil, messageIndex: holeIndex))
         case let .GroupReferenceEntry(index, _, _, _, _, _, _, _, _):
             return .index(index)
         case .ArchiveIntro:
-            return .index(ChatListIndex.absoluteUpperBound.successor)
+            return .index(EngineChatList.Item.Index.absoluteUpperBound.successor)
         case let .AdditionalCategory(index, _, _, _, _, _, _):
             return .additionalCategory(index)
         }
@@ -75,8 +74,8 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             return .Header
         case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             return .PeerId(index.messageIndex.id.peerId.toInt64())
-        case let .HoleEntry(hole, _):
-            return .Hole(Int64(hole.index.id.id))
+        case let .HoleEntry(holeIndex, _):
+            return .Hole(Int64(holeIndex.id.id))
         case let .GroupReferenceEntry(_, _, groupId, _, _, _, _, _, _):
             return .GroupId(groupId)
         case .ArchiveIntro:
@@ -137,7 +136,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                             return false
                         }
                         if let lhsPeerPresence = lhsPresence, let rhsPeerPresence = rhsPresence {
-                            if !lhsPeerPresence.isEqual(to: rhsPeerPresence) {
+                            if lhsPeerPresence != rhsPeerPresence {
                                 return false
                             }
                         } else if (lhsPresence != nil) != (rhsPresence != nil) {
@@ -170,7 +169,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                                 return false
                             }
                             for i in 0 ..< lhsInputActivities.count {
-                                if !arePeersEqual(lhsInputActivities[i].0, rhsInputActivities[i].0) {
+                                if lhsInputActivities[i].0 != rhsInputActivities[i].0 {
                                     return false
                                 }
                                 if lhsInputActivities[i].1 != rhsInputActivities[i].1 {
@@ -273,115 +272,149 @@ enum ChatListNodeEntry: Comparable, Identifiable {
     }
 }
 
-private func offsetPinnedIndex(_ index: ChatListIndex, offset: UInt16) -> ChatListIndex {
+private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt16) -> EngineChatList.Item.Index {
     if let pinningIndex = index.pinningIndex {
-        return ChatListIndex(pinningIndex: pinningIndex + offset, messageIndex: index.messageIndex)
+        return EngineChatList.Item.Index(pinningIndex: pinningIndex + offset, messageIndex: index.messageIndex)
     } else {
         return index
     }
 }
 
-func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, savedMessagesPeer: Peer?, foundPeers: [(Peer, Peer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     var pinnedIndexOffset: UInt16 = 0
     
-    if view.laterIndex == nil, case .chatList = mode {
+    if !view.hasLater, case .chatList = mode {
         var groupEntryCount = 0
-        for _ in view.groupEntries {
+        for _ in view.groupItems {
             groupEntryCount += 1
         }
         pinnedIndexOffset += UInt16(groupEntryCount)
     }
     
-    let filteredAdditionalItemEntries = view.additionalItemEntries.filter { item -> Bool in
-        return item.info.peerId != state.hiddenPsaPeerId
+    let filteredAdditionalItemEntries = view.additionalItems.filter { item -> Bool in
+        return item.item.renderedPeer.peerId != state.hiddenPsaPeerId
     }
     
-    var foundPeerIds = Set<PeerId>()
+    var foundPeerIds = Set<EnginePeer.Id>()
     for peer in foundPeers {
         foundPeerIds.insert(peer.0.id)
     }
     
-    if view.laterIndex == nil && savedMessagesPeer == nil {
+    if !view.hasLater && savedMessagesPeer == nil {
         pinnedIndexOffset += UInt16(filteredAdditionalItemEntries.count)
     }
-    var filterAfterHole = false
-    loop: for entry in view.entries {
-        switch entry {
-            case let .MessageEntry(index, messages, combinedReadState, isRemovedFromTotalUnreadCount, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
-                if let savedMessagesPeer = savedMessagesPeer, savedMessagesPeer.id == index.messageIndex.id.peerId || foundPeerIds.contains(index.messageIndex.id.peerId) {
-                    continue loop
-                }
-                if state.pendingRemovalPeerIds.contains(index.messageIndex.id.peerId) {
-                    continue loop
-                }
-                var updatedMessages = messages
-                var updatedCombinedReadState = combinedReadState
-                if state.pendingClearHistoryPeerIds.contains(index.messageIndex.id.peerId) {
-                    updatedMessages = []
-                    updatedCombinedReadState = nil
-                }
-                result.append(.PeerEntry(index: offsetPinnedIndex(index, offset: pinnedIndexOffset), presentationData: state.presentationData, messages: updatedMessages, readState: updatedCombinedReadState, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: embeddedState, peer: peer, presence: peerPresence, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], promoInfo: nil, hasFailedMessages: hasFailed, isContact: isContact))
-            case let .HoleEntry(hole):
-                if hole.index.timestamp == Int32.max - 1 {
-                    //return ([.HeaderEntry], true)
-                }
-                filterAfterHole = true
-                result.append(.HoleEntry(hole, theme: state.presentationData.theme))
+    loop: for entry in view.items {
+        //case let .MessageEntry(index, messages, combinedReadState, isRemovedFromTotalUnreadCount, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
+        if let savedMessagesPeer = savedMessagesPeer, savedMessagesPeer.id == entry.index.messageIndex.id.peerId || foundPeerIds.contains(entry.index.messageIndex.id.peerId) {
+            continue loop
         }
+        if state.pendingRemovalPeerIds.contains(entry.index.messageIndex.id.peerId) {
+            continue loop
+        }
+        var updatedMessages = entry.messages
+        var updatedCombinedReadState = entry.readCounters
+        if state.pendingClearHistoryPeerIds.contains(entry.index.messageIndex.id.peerId) {
+            updatedMessages = []
+            updatedCombinedReadState = nil
+        }
+
+        var draftState: ChatListItemContent.DraftState?
+        if let draftText = entry.draftText {
+            draftState = ChatListItemContent.DraftState(text: draftText)
+        }
+
+        result.append(.PeerEntry(index: offsetPinnedIndex(entry.index, offset: pinnedIndexOffset), presentationData: state.presentationData, messages: updatedMessages, readState: updatedCombinedReadState, isRemovedFromTotalUnreadCount: entry.isMuted, draftState: draftState, peer: entry.renderedPeer, presence: entry.presence, hasUnseenMentions: entry.hasUnseenMentions, editing: state.editing, hasActiveRevealControls: entry.index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(entry.index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[entry.index.messageIndex.id.peerId], promoInfo: nil, hasFailedMessages: entry.hasFailed, isContact: entry.isContact))
     }
-    if view.laterIndex == nil {
+    if !view.hasLater {
         var pinningIndex: UInt16 = UInt16(pinnedIndexOffset == 0 ? 0 : (pinnedIndexOffset - 1))
         
         if let savedMessagesPeer = savedMessagesPeer {
             if !foundPeers.isEmpty {
                 var foundPinningIndex: UInt16 = UInt16(foundPeers.count)
                 for peer in foundPeers.reversed() {
-                    var peers: [PeerId: Peer] = [peer.0.id: peer.0]
+                    var peers: [EnginePeer.Id: EnginePeer] = [peer.0.id: peer.0]
                     if let chatPeer = peer.1 {
                         peers[chatPeer.id] = chatPeer
                     }
                     
-                    let messageIndex = MessageIndex(id: MessageId(peerId: peer.0.id, namespace: 0, id: 0), timestamp: 1)
-                    result.append(.PeerEntry(index: ChatListIndex(pinningIndex: foundPinningIndex, messageIndex: messageIndex), presentationData: state.presentationData, messages: [], readState: nil, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: nil, peer: RenderedPeer(peerId: peer.0.id, peers: SimpleDictionary(peers)), presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), editing: state.editing, hasActiveRevealControls: false, selected: state.selectedPeerIds.contains(peer.0.id), inputActivities: nil, promoInfo: nil, hasFailedMessages: false, isContact: false))
+                    let messageIndex = EngineMessage.Index(id: EngineMessage.Id(peerId: peer.0.id, namespace: 0, id: 0), timestamp: 1)
+                    result.append(.PeerEntry(
+                        index: EngineChatList.Item.Index(pinningIndex: foundPinningIndex, messageIndex: messageIndex),
+                        presentationData: state.presentationData,
+                        messages: [],
+                        readState: nil,
+                        isRemovedFromTotalUnreadCount: false,
+                        draftState: nil,
+                        peer: EngineRenderedPeer(peerId: peer.0.id, peers: peers),
+                        presence: nil,
+                        hasUnseenMentions: false,
+                        editing: state.editing,
+                        hasActiveRevealControls: false,
+                        selected: state.selectedPeerIds.contains(peer.0.id),
+                        inputActivities: nil,
+                        promoInfo: nil,
+                        hasFailedMessages: false,
+                        isContact: false
+                    ))
                     if foundPinningIndex != 0 {
                         foundPinningIndex -= 1
                     }
                 }
             }
             
-            result.append(.PeerEntry(index: ChatListIndex.absoluteUpperBound.predecessor, presentationData: state.presentationData, messages: [], readState: nil, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: nil, peer: RenderedPeer(peerId: savedMessagesPeer.id, peers: SimpleDictionary([savedMessagesPeer.id: savedMessagesPeer])), presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), editing: state.editing, hasActiveRevealControls: false, selected: state.selectedPeerIds.contains(savedMessagesPeer.id), inputActivities: nil, promoInfo: nil, hasFailedMessages: false, isContact: false))
+            result.append(.PeerEntry(index: EngineChatList.Item.Index.absoluteUpperBound.predecessor, presentationData: state.presentationData, messages: [], readState: nil, isRemovedFromTotalUnreadCount: false, draftState: nil, peer: EngineRenderedPeer(peerId: savedMessagesPeer.id, peers: [savedMessagesPeer.id: savedMessagesPeer]), presence: nil, hasUnseenMentions: false, editing: state.editing, hasActiveRevealControls: false, selected: state.selectedPeerIds.contains(savedMessagesPeer.id), inputActivities: nil, promoInfo: nil, hasFailedMessages: false, isContact: false))
         } else {
             if !filteredAdditionalItemEntries.isEmpty {
                 for item in filteredAdditionalItemEntries.reversed() {
-                    guard let info = item.info as? PromoChatListItem else {
-                        continue
-                    }
                     let promoInfo: ChatListNodeEntryPromoInfo
-                    switch info.kind {
+                    switch item.promoInfo.content {
                     case .proxy:
                         promoInfo = .proxy
                     case let .psa(type, message):
                         promoInfo = .psa(type: type, message: message)
                     }
-                    switch item.entry {
-                        case let .MessageEntry(index, messages, combinedReadState, isRemovedFromTotalUnreadCount, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
-                            result.append(.PeerEntry(index: ChatListIndex(pinningIndex: pinningIndex, messageIndex: index.messageIndex), presentationData: state.presentationData, messages: messages, readState: combinedReadState, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: embeddedState, peer: peer, presence: peerPresence, summaryInfo: summaryInfo, editing: state.editing, hasActiveRevealControls: index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[index.messageIndex.id.peerId], promoInfo: promoInfo, hasFailedMessages: hasFailed, isContact: isContact))
-                            if pinningIndex != 0 {
-                                pinningIndex -= 1
-                            }
-                        default:
-                            break
+                    let draftState = item.item.draftText.flatMap(ChatListItemContent.DraftState.init(text:))
+                    result.append(.PeerEntry(
+                        index: EngineChatList.Item.Index(pinningIndex: pinningIndex, messageIndex: item.item.index.messageIndex),
+                        presentationData: state.presentationData,
+                        messages: item.item.messages,
+                        readState: item.item.readCounters,
+                        isRemovedFromTotalUnreadCount: item.item.isMuted,
+                        draftState: draftState,
+                        peer: item.item.renderedPeer,
+                        presence: item.item.presence,
+                        hasUnseenMentions: item.item.hasUnseenMentions,
+                        editing: state.editing,
+                        hasActiveRevealControls: item.item.index.messageIndex.id.peerId == state.peerIdWithRevealedOptions,
+                        selected: state.selectedPeerIds.contains(item.item.index.messageIndex.id.peerId),
+                        inputActivities: state.peerInputActivities?.activities[item.item.index.messageIndex.id.peerId],
+                        promoInfo: promoInfo,
+                        hasFailedMessages: item.item.hasFailed,
+                        isContact: item.item.isContact
+                    ))
+                    if pinningIndex != 0 {
+                        pinningIndex -= 1
                     }
                 }
             }
         }
         
-        if view.laterIndex == nil, case .chatList = mode {
-            for groupReference in view.groupEntries {
-                let messageIndex = MessageIndex(id: MessageId(peerId: PeerId(0), namespace: 0, id: 0), timestamp: 1)
-                result.append(.GroupReferenceEntry(index: ChatListIndex(pinningIndex: pinningIndex, messageIndex: messageIndex), presentationData: state.presentationData, groupId: groupReference.groupId, peers: groupReference.renderedPeers, message: groupReference.message, editing: state.editing, unreadState: groupReference.unreadState, revealed: state.archiveShouldBeTemporaryRevealed, hiddenByDefault: hideArchivedFolderByDefault))
+        if !view.hasLater, case .chatList = mode {
+            for groupReference in view.groupItems {
+                let messageIndex = EngineMessage.Index(id: EngineMessage.Id(peerId: EnginePeer.Id(0), namespace: 0, id: 0), timestamp: 1)
+                result.append(.GroupReferenceEntry(
+                    index: EngineChatList.Item.Index(pinningIndex: pinningIndex, messageIndex: messageIndex),
+                    presentationData: state.presentationData,
+                    groupId: groupReference.id,
+                    peers: groupReference.items,
+                    message: groupReference.topMessage,
+                    editing: state.editing,
+                    unreadCount: groupReference.unreadCount,
+                    revealed: state.archiveShouldBeTemporaryRevealed,
+                    hiddenByDefault: hideArchivedFolderByDefault
+                ))
                 if pinningIndex != 0 {
                     pinningIndex -= 1
                 }
@@ -394,36 +427,12 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
             result.append(.HeaderEntry)
         }
         
-        if view.laterIndex == nil, case let .peers(_, _, additionalCategories,
+        if !view.hasLater, case let .peers(_, _, additionalCategories,
             _) = mode {
             var index = 0
             for category in additionalCategories.reversed(){
                 result.append(.AdditionalCategory(index: index, id: category.id, title: category.title, image: category.icon, appearance: category.appearance, selected: state.selectedAdditionalCategoryIds.contains(category.id), presentationData: state.presentationData))
                 index += 1
-            }
-        }
-    }
-    
-    var isLoading: Bool = false
-    
-    if filterAfterHole {
-        var seenHole = false
-        for i in (0 ..< result.count).reversed() {
-            if seenHole {
-                result.remove(at: i)
-            } else {
-                switch result[i] {
-                case .HeaderEntry:
-                    break
-                case .ArchiveIntro, .AdditionalCategory, .GroupReferenceEntry:
-                    break
-                case .PeerEntry:
-                    break
-                case .HoleEntry:
-                    isLoading = true
-                    seenHole = true
-                    result.remove(at: i)
-                }
             }
         }
     }
@@ -433,5 +442,5 @@ func chatListNodeEntriesForView(_ view: ChatListView, state: ChatListNodeState, 
     } else if result.count == 1, case .HoleEntry = result[0] {
         return ([.HeaderEntry], true)
     }
-    return (result, isLoading)
+    return (result, view.isLoading)
 }

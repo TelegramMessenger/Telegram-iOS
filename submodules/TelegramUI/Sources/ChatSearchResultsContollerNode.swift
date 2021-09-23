@@ -77,7 +77,34 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
     public func item(context: AccountContext, interaction: ChatListNodeInteraction) -> ListViewItem {
         switch self {
             case let .message(message, peer, readState, presentationData):
-                return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, filterData: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(messages: [message], peer: peer, combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: true, displayAsMessage: true, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                return ChatListItem(
+                    presentationData: presentationData,
+                    context: context,
+                    peerGroupId: .root,
+                    filterData: nil,
+                    index: EngineChatList.Item.Index(pinningIndex: nil, messageIndex: message.index),
+                    content: .peer(
+                        messages: [EngineMessage(message)],
+                        peer: EngineRenderedPeer(peer),
+                        combinedReadState: readState.flatMap(EnginePeerReadCounters.init),
+                        isRemovedFromTotalUnreadCount: false,
+                        presence: nil,
+                        hasUnseenMentions: false,
+                        draftState: nil,
+                        inputActivities: nil,
+                        promoInfo: nil,
+                        ignoreUnreadBadge: true,
+                        displayAsMessage: true,
+                        hasFailedMessages: false
+                    ),
+                    editing: false,
+                    hasActiveRevealControls: false,
+                    selected: false,
+                    header: nil,
+                    enableContextActions: false,
+                    hiddenOffset: false,
+                    interaction: interaction
+                )
         }
     }
 }

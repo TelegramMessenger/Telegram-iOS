@@ -559,7 +559,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatListControllerNode(context: self.context, groupId: self.groupId, filter: self.filter, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
+        self.displayNode = ChatListControllerNode(context: self.context, groupId: EngineChatList.Group(self.groupId), filter: self.filter, previewing: self.previewing, controlsHistoryPreload: self.controlsHistoryPreload, presentationData: self.presentationData, controller: self)
         
         self.chatListDisplayNode.navigationBar = self.navigationBar
         
@@ -656,7 +656,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.chatListDisplayNode.containerNode.groupSelected = { [weak self] groupId in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                    let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                    let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupId._asGroup(), controlsHistoryPreload: false, enableDebugActions: false)
                     chatListController.navigationPresentation = .master
                     navigationController.pushViewController(chatListController)
                     strongSelf.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
@@ -683,7 +683,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId, deactivateOnAction in
             if let strongSelf = self {
-                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.context.account, peer: peer)
+                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.context.account, peer: peer._asPeer())
                 |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeerId in
                     if let strongSelf = strongSelf {
                         if let navigationController = strongSelf.navigationController as? NavigationController {
@@ -707,7 +707,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if let strongSelf = self {
                 let storedPeer = strongSelf.context.account.postbox.transaction { transaction -> Void in
                     if transaction.getPeer(peer.id) == nil {
-                        updatePeers(transaction: transaction, peers: [peer], update: { previousPeer, updatedPeer in
+                        updatePeers(transaction: transaction, peers: [peer._asPeer()], update: { previousPeer, updatedPeer in
                             return updatedPeer
                         })
                     }
@@ -837,9 +837,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             switch item.content {
             case let .groupReference(groupId, _, _, _, _):
-                let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupId, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: false)
+                let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupId._asGroup(), controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: false)
                 chatListController.navigationPresentation = .master
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId, chatListController: strongSelf) |> map { ContextController.Items(items: $0) }, gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId._asGroup(), chatListController: strongSelf) |> map { ContextController.Items(items: $0) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             case let .peer(_, peer, _, _, _, _, _, _, promoInfo, _, _, _):
                 let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))

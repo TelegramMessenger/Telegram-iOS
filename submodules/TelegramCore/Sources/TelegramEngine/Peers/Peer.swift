@@ -21,6 +21,41 @@ public enum EnginePeer: Equatable {
         }
     }
 
+    public struct NotificationSettings: Equatable {
+        public enum MuteState: Equatable {
+            case `default`
+            case unmuted
+            case muted(until: Int32)
+        }
+
+        public enum MessageSound: Equatable {
+            case none
+            case `default`
+            case bundledModern(id: Int32)
+            case bundledClassic(id: Int32)
+        }
+
+        public enum DisplayPreviews {
+            case `default`
+            case show
+            case hide
+        }
+
+        public var muteState: MuteState
+        public var messageSound: MessageSound
+        public var displayPreviews: DisplayPreviews
+
+        public init(
+            muteState: MuteState,
+            messageSound: MessageSound,
+            displayPreviews: DisplayPreviews
+        ) {
+            self.muteState = muteState
+            self.messageSound = messageSound
+            self.displayPreviews = displayPreviews
+        }
+    }
+
     case user(TelegramUser)
     case legacyGroup(TelegramGroup)
     case channel(TelegramChannel)
@@ -53,6 +88,100 @@ public enum EnginePeer: Equatable {
                 return false
             }
         }
+    }
+}
+
+public extension EnginePeer.NotificationSettings.MuteState {
+    init(_ muteState: PeerMuteState) {
+        switch muteState {
+        case .default:
+            self = .default
+        case .unmuted:
+            self = .unmuted
+        case let .muted(until):
+            self = .muted(until: until)
+        }
+    }
+
+    func _asMuteState() -> PeerMuteState {
+        switch self {
+        case .default:
+            return .default
+        case .unmuted:
+            return .unmuted
+        case let .muted(until):
+            return .muted(until: until)
+        }
+    }
+}
+
+public extension EnginePeer.NotificationSettings.MessageSound {
+    init(_ messageSound: PeerMessageSound) {
+        switch messageSound {
+        case .none:
+            self = .none
+        case .default:
+            self = .default
+        case let .bundledClassic(id):
+            self = .bundledClassic(id: id)
+        case let .bundledModern(id):
+            self = .bundledModern(id: id)
+        }
+    }
+
+    func _asMessageSound() -> PeerMessageSound {
+        switch self {
+        case .none:
+            return .none
+        case .default:
+            return .default
+        case let .bundledClassic(id):
+            return .bundledClassic(id: id)
+        case let .bundledModern(id):
+            return .bundledModern(id: id)
+        }
+    }
+}
+
+public extension EnginePeer.NotificationSettings.DisplayPreviews {
+    init(_ displayPreviews: PeerNotificationDisplayPreviews) {
+        switch displayPreviews {
+        case .default:
+            self = .default
+        case .show:
+            self = .show
+        case .hide:
+            self = .hide
+        }
+    }
+
+    func _asDisplayPreviews() -> PeerNotificationDisplayPreviews {
+        switch self {
+        case .default:
+            return .default
+        case .show:
+            return .show
+        case .hide:
+            return .hide
+        }
+    }
+}
+
+public extension EnginePeer.NotificationSettings {
+    init(_ notificationSettings: TelegramPeerNotificationSettings) {
+        self.init(
+            muteState: MuteState(notificationSettings.muteState),
+            messageSound: MessageSound(notificationSettings.messageSound),
+            displayPreviews: DisplayPreviews(notificationSettings.displayPreviews)
+        )
+    }
+
+    func _asNotificationSettings() -> TelegramPeerNotificationSettings {
+        return TelegramPeerNotificationSettings(
+            muteState: self.muteState._asMuteState(),
+            messageSound: self.messageSound._asMessageSound(),
+            displayPreviews: self.displayPreviews._asDisplayPreviews()
+        )
     }
 }
 
@@ -174,7 +303,7 @@ public extension EnginePeer {
     }
 }
 
-public final class EngineRenderedPeer {
+public final class EngineRenderedPeer: Equatable {
     public let peerId: EnginePeer.Id
     public let peers: [EnginePeer.Id: EnginePeer]
 
@@ -222,5 +351,9 @@ public extension EngineRenderedPeer {
             mappedPeers[id] = EnginePeer(peer)
         }
         self.init(peerId: renderedPeer.peerId, peers: mappedPeers)
+    }
+
+    convenience init(message: EngineMessage) {
+        self.init(RenderedPeer(message: message._asMessage()))
     }
 }

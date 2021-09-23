@@ -2488,7 +2488,7 @@ public final class VoiceChatController: ViewController {
                 if peers.count > 1 {
                     for peer in peers {
                         if peer.peer.id == myPeerId {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(EnginePeer(peer.peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)), action: { c, _ in
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(EnginePeer(peer.peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: EnginePeer(peer.peer), size: avatarSize)), action: { c, _ in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -2883,7 +2883,7 @@ public final class VoiceChatController: ViewController {
 
                     let isSelected = peer.peer.id == myPeerId
                     let extendedAvatarSize = CGSize(width: 35.0, height: 35.0)
-                    let avatarSignal = peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer.peer, size: avatarSize)
+                    let avatarSignal = peerAvatarCompleteImage(account: strongSelf.context.account, peer: EnginePeer(peer.peer), size: avatarSize)
                     |> map { image -> UIImage? in
                         if isSelected, let image = image {
                             return generateImage(extendedAvatarSize, rotatedContext: { size, context in

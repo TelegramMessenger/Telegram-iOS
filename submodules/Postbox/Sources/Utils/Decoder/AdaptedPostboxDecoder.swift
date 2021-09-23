@@ -1,6 +1,6 @@
 import Foundation
 
-final public class AdaptedPostboxDecoder {
+public final class AdaptedPostboxDecoder {
     enum ContentType {
         case object
         case int32Array

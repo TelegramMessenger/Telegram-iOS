@@ -1,7 +1,6 @@
 import Display
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
@@ -25,7 +24,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
     private var hasValidLayout = false
     
-    init(context: AccountContext, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings, navigationBar: NavigationBar?, navigationController: NavigationController?) {
+    init(context: AccountContext, peer: EnginePeer?, query: String, theme: PresentationTheme, strings: PresentationStrings, navigationBar: NavigationBar?, navigationController: NavigationController?) {
         self.navigationBar = navigationBar
 
         self.context = context
@@ -48,7 +47,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         } else if let id = peer?.id, id.isReplies {
             items.append(presentationData.strings.DialogList_Replies)
         } else {
-            items.append(peer.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? "")
+            items.append(peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? "")
         }
         items.append(strings.HashtagSearch_AllChats)
         self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)

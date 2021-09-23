@@ -98,10 +98,6 @@ public extension TelegramEngine {
             }
         }
 
-        public func searchPeers(query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
-            return _internal_searchPeers(account: self.account, query: query)
-        }
-
         public func updatedRemotePeer(peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
             return _internal_updatedRemotePeer(postbox: self.account.postbox, network: self.account.network, peer: peer)
         }

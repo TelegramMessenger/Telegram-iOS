@@ -1199,7 +1199,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         subActions.append(.separator)
 
                         for peer in stats.peers {
-                            let avatarSignal = peerAvatarCompleteImage(account: context.account, peer: peer._asPeer(), size: CGSize(width: 30.0, height: 30.0))
+                            let avatarSignal = peerAvatarCompleteImage(account: context.account, peer: peer, size: CGSize(width: 30.0, height: 30.0))
 
                             subActions.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 30.0, height: 30.0), signal: avatarSignal), action: { _, f in
                                 c.dismiss(completion: {

@@ -517,7 +517,7 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], t
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:
@@ -576,7 +576,7 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:
@@ -635,7 +635,7 @@ private func decryptedAttributes101(_ attributes: [TelegramMediaFileAttribute], 
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:

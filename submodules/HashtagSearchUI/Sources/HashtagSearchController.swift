@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramBaseController
@@ -14,7 +13,7 @@ public final class HashtagSearchController: TelegramBaseController {
     private let queue = Queue()
     
     private let context: AccountContext
-    private let peer: Peer?
+    private let peer: EnginePeer?
     private let query: String
     private var transitionDisposable: Disposable?
     private let openMessageFromSearchDisposable = MetaDisposable()
@@ -25,7 +24,7 @@ public final class HashtagSearchController: TelegramBaseController {
         return self.displayNode as! HashtagSearchControllerNode
     }
     
-    public init(context: AccountContext, peer: Peer?, query: String) {
+    public init(context: AccountContext, peer: EnginePeer?, query: String) {
         self.context = context
         self.peer = peer
         self.query = query
@@ -45,7 +44,7 @@ public final class HashtagSearchController: TelegramBaseController {
         let search = context.engine.messages.searchMessages(location: location, query: query, state: nil)
         let foundMessages: Signal<[ChatListSearchEntry], NoError> = search
         |> map { result, _ in
-            return result.messages.map({ .message($0, RenderedPeer(message: $0), result.readStates[$0.id.peerId], chatListPresentationData, result.totalCount, nil, false) })
+            return result.messages.map({ .message(EngineMessage($0), EngineRenderedPeer(message: EngineMessage($0)), result.readStates[$0.id.peerId].flatMap(EnginePeerReadCounters.init), chatListPresentationData, result.totalCount, nil, false) })
         }
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { _, _, _ in
@@ -55,7 +54,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }, additionalCategorySelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
             if let strongSelf = self {
-                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.context.account, peer: peer) |> deliverOnMainQueue).start(next: { actualPeerId in
+                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.context.account, peer: peer._asPeer()) |> deliverOnMainQueue).start(next: { actualPeerId in
                     if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: message.id.peerId == actualPeerId ? .message(id: message.id, highlight: true, timecode: nil) : nil, keepStack: .always))
                     }

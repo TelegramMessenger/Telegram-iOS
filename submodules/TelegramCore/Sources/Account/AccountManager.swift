@@ -404,6 +404,8 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
     }
 }
 
+public typealias AccountManagerPreferencesEntry = PreferencesEntry
+
 private func cleanupAccount(networkArguments: NetworkInitializationArguments, accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, attributes: [TelegramAccountManagerTypes.Attribute], rootPath: String, auxiliaryMethods: AccountAuxiliaryMethods) -> Signal<Void, NoError> {
     let beginWithTestingEnvironment = attributes.contains(where: { attribute in
         if case let .environment(accountEnvironment) = attribute, case .test = accountEnvironment.environment {

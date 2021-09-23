@@ -231,7 +231,6 @@ swift_library(
         "//Telegram:GeneratedSources",
         "//third-party/ZipArchive:ZipArchive",
         "//submodules/ChatImportUI:ChatImportUI",
-        "//submodules/ChatHistoryImportTasks:ChatHistoryImportTasks",
         "//submodules/DatePickerNode:DatePickerNode",
         "//submodules/ConfettiEffect:ConfettiEffect",
         "//submodules/Speak:Speak",

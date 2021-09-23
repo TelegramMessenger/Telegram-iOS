@@ -31,6 +31,39 @@ public enum EngineMedia {
 }
 
 public extension EngineMedia {
+    var id: Id? {
+        switch self {
+        case let .image(image):
+            return image.id
+        case let .file(file):
+            return file.id
+        case let .geo(geo):
+            return geo.id
+        case let .contact(contact):
+            return contact.id
+        case let .action(action):
+            return action.id
+        case let .dice(dice):
+            return dice.id
+        case let .expiredContent(expiredContent):
+            return expiredContent.id
+        case let .game(game):
+            return game.id
+        case let .invoice(invoice):
+            return invoice.id
+        case let .poll(poll):
+            return poll.id
+        case let .unsupported(unsupported):
+            return unsupported.id
+        case let .webFile(webFile):
+            return webFile.id
+        case let .webpage(webpage):
+            return webpage.id
+        }
+    }
+}
+
+public extension EngineMedia {
     init(_ media: Media) {
         switch media {
         case let image as TelegramMediaImage:

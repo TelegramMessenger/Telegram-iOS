@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 
 final class AccountManagerSharedDataTable: Table {
     

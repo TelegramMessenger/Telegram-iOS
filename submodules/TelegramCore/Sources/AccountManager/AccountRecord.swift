@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 
 public protocol AccountRecordAttribute: Codable {
     func isEqual(to: AccountRecordAttribute) -> Bool

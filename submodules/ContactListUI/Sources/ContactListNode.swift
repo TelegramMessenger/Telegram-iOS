@@ -1097,7 +1097,7 @@ public final class ContactListNode: ASDisplayNode {
                     if globalSearch {
                         foundRemoteContacts = foundRemoteContacts
                         |> then(
-                            context.engine.peers.searchPeers(query: query)
+                            context.engine.contacts.searchRemotePeers(query: query)
                             |> map { ($0.0, $0.1) }
                             |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                         )

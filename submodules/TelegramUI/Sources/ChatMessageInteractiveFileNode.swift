@@ -365,9 +365,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             let durationString = stringForDuration(audioDuration)
                             candidateDescriptionString = NSAttributedString(string: durationString, font: durationFont, textColor: messageTheme.fileDurationColor)
                             if let waveform = waveform {
-                                waveform.withDataNoCopy { data in
-                                    audioWaveform = AudioWaveform(bitstream: data, bitsPerSample: 5)
-                                }
+                                audioWaveform = AudioWaveform(bitstream: waveform, bitsPerSample: 5)
                             }
                         } else {
                             candidateTitleString = NSAttributedString(string: title ?? (file.fileName ?? "Unknown Track"), font: titleFont, textColor: messageTheme.fileTitleColor)

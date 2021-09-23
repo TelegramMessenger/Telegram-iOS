@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 
 public struct AccessChallengeAttempts: Equatable {
     public let count: Int32

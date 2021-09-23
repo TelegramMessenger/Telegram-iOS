@@ -29,15 +29,19 @@ private struct CachedEntry {
     let entry: CodableEntry?
 }
 
-final class NoticeTable: Table {
+public final class NoticeTable: Table {
     private var cachedEntries: [NoticeEntryKey: CachedEntry] = [:]
     private var updatedEntryKeys = Set<NoticeEntryKey>()
     
-    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+    public static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
+
+    public override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
+    }
     
-    func getAll() -> [ValueBoxKey: CodableEntry] {
+    public func getAll() -> [ValueBoxKey: CodableEntry] {
         var result: [ValueBoxKey: CodableEntry] = [:]
         self.valueBox.scan(self.table, values: { key, value in
             let object = CodableEntry(data: value.makeData())
@@ -47,7 +51,7 @@ final class NoticeTable: Table {
         return result
     }
     
-    func get(key: NoticeEntryKey) -> CodableEntry? {
+    public func get(key: NoticeEntryKey) -> CodableEntry? {
         if let cached = self.cachedEntries[key] {
             return cached.entry
         } else {
@@ -62,12 +66,12 @@ final class NoticeTable: Table {
         }
     }
     
-    func set(key: NoticeEntryKey, value: CodableEntry?) {
+    public func set(key: NoticeEntryKey, value: CodableEntry?) {
         self.cachedEntries[key] = CachedEntry(entry: value)
         updatedEntryKeys.insert(key)
     }
     
-    func clear() {
+    public func clear() {
         var keys: [ValueBoxKey] = []
         self.valueBox.scan(self.table, keys: { key in
             keys.append(key)
@@ -80,11 +84,11 @@ final class NoticeTable: Table {
         self.cachedEntries.removeAll()
     }
     
-    override func clearMemoryCache() {
+    override public func clearMemoryCache() {
         assert(self.updatedEntryKeys.isEmpty)
     }
     
-    override func beforeCommit() {
+    override public func beforeCommit() {
         if !self.updatedEntryKeys.isEmpty {
             for key in self.updatedEntryKeys {
                 if let value = self.cachedEntries[key]?.entry {

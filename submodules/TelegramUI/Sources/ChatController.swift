@@ -57,7 +57,6 @@ import MediaResources
 import GalleryData
 import ChatInterfaceState
 import InviteLinksUI
-import ChatHistoryImportTasks
 import Markdown
 import TelegramPermissionsUI
 import Speak
@@ -1868,7 +1867,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     let _ = (peerSignal
                                     |> deliverOnMainQueue).start(next: { peer in
                                         if let strongSelf = self {
-                                            let searchController = HashtagSearchController(context: strongSelf.context, peer: peer, query: hashtag)
+                                            let searchController = HashtagSearchController(context: strongSelf.context, peer: peer.flatMap(EnginePeer.init), query: hashtag)
                                             strongSelf.effectiveNavigationController?.pushViewController(searchController)
                                         }
                                     })
@@ -4083,22 +4082,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.chatTitleView?.networkState = state
             }
         })
-        
-        /*if case let .peer(peerId) = self.chatLocation {
-            self.importStateDisposable = (ChatHistoryImportTasks.importState(peerId: peerId)
-            |> distinctUntilChanged
-            |> deliverOnMainQueue).start(next: { [weak self] state in
-                guard let strongSelf = self else {
-                    return
-                }
-                let mappedState = state.flatMap { state -> ChatPresentationImportState in
-                    ChatPresentationImportState(progress: state)
-                }
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                    $0.updatedImportState(mappedState)
-                })
-            })
-        }*/
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -10770,10 +10753,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 let resource = LocalFileMediaResource(fileId: randomId)
                                 strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
                                 
-                                var waveformBuffer: MemoryBuffer?
-                                if let waveform = data.waveform {
-                                    waveformBuffer = MemoryBuffer(data: waveform)
-                                }
+                                let waveformBuffer: Data? = data.waveform
 
                                 let correlationId = Int64.random(in: 0 ..< Int64.max)
                                 var usedCorrelationId = false
@@ -10882,7 +10862,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let waveformBuffer = MemoryBuffer(data: recordedMediaPreview.waveform.makeBitstream())
+            let waveformBuffer = recordedMediaPreview.waveform.makeBitstream()
             
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
@@ -12042,7 +12022,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.resolvePeerByNameDisposable?.set((resolveSignal
             |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self, !hashtag.isEmpty {
-                    let searchController = HashtagSearchController(context: strongSelf.context, peer: peer, query: hashtag)
+                    let searchController = HashtagSearchController(context: strongSelf.context, peer: peer.flatMap(EnginePeer.init), query: hashtag)
                     strongSelf.effectiveNavigationController?.pushViewController(searchController)
                 }
             }))

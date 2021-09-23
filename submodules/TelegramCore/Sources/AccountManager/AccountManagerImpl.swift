@@ -1,5 +1,6 @@
 import Foundation
 import SwiftSignalKit
+import Postbox
 
 public protocol AccountManagerTypes {
     associatedtype Attribute: AccountRecordAttribute

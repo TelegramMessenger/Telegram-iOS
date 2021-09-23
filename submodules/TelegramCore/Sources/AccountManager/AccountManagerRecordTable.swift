@@ -1,4 +1,5 @@
 import Foundation
+import Postbox
 
 enum AccountManagerRecordOperation<Attribute: AccountRecordAttribute> {
     case set(id: AccountRecordId, record: AccountRecord<Attribute>?)

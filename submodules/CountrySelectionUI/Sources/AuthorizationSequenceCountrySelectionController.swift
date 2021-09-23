@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import TelegramStringFormatting
 import SearchBarNode

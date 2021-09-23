@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import Display
 import SwiftSignalKit
@@ -20,7 +19,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
         self.addSubnode(self.activityNode)
     }
     
-    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, PeerId, [(Peer, PeerInputActivity)]) -> (CGSize, () -> Void) {
+    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, EnginePeer.Id, [(EnginePeer, PeerInputActivity)]) -> (CGSize, () -> Void) {
         return { [weak self] boundingSize, presentationData, color, peerId, activities in
             let strings = presentationData.strings
             
@@ -87,7 +86,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                     } else {
                         let text: String
                         if let _ = commonKey {
-                            let peerTitle = EnginePeer(activities[0].0).compactDisplayTitle
+                            let peerTitle = activities[0].0.compactDisplayTitle
                             switch activities[0].1 {
                                 case .uploadingVideo:
                                     text = strings.DialogList_SingleUploadingVideoSuffix(peerTitle).string
@@ -111,7 +110,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                     text = ""
                             }
                         } else {
-                            text = EnginePeer(activities[0].0).compactDisplayTitle
+                            text = activities[0].0.compactDisplayTitle
                         }
                         let string = NSAttributedString(string: text, font: textFont, textColor: color)
                         
@@ -137,9 +136,9 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                 } else {
                     let string: NSAttributedString
                     if activities.count > 1 {
-                        let peerTitle = EnginePeer(activities[0].0).compactDisplayTitle
+                        let peerTitle = activities[0].0.compactDisplayTitle
                         if activities.count == 2 {
-                            let secondPeerTitle = EnginePeer(activities[1].0).compactDisplayTitle
+                            let secondPeerTitle = activities[1].0.compactDisplayTitle
                             string = NSAttributedString(string: strings.DialogList_MultipleTypingPair(peerTitle, secondPeerTitle).string, font: textFont, textColor: color)
                         } else {
                             string = NSAttributedString(string: strings.DialogList_MultipleTyping(peerTitle, strings.DialogList_MultipleTypingSuffix(activities.count - 1).string).string, font: textFont, textColor: color)
