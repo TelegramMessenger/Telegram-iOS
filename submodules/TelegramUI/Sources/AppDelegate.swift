@@ -1394,7 +1394,7 @@ final class SharedApplicationContext {
         self.maybeCheckForUpdates()
 
         #if canImport(AppCenter)
-        if !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
+        if let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
             AppCenter.start(withAppSecret: buildConfig.appCenterId, services: [
                 Crashes.self
             ])
