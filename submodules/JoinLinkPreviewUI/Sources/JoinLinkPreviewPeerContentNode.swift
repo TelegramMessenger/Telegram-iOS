@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AvatarNode
@@ -38,7 +37,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     private let peerNodes: [SelectablePeerNode]
     private let moreNode: MoreNode?
     
-    init(context: AccountContext, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], isGroup: Bool, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [EnginePeer], isGroup: Bool, theme: PresentationTheme, strings: PresentationStrings) {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.titleNode = ASTextNode()
         self.countNode = ASTextNode()
@@ -49,7 +48,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         
         self.peerNodes = members.map { peer in
             let node = SelectablePeerNode()
-            node.setup(context: context, theme: theme, strings: strings, peer: EngineRenderedPeer(peer: EnginePeer(peer)), synchronousLoad: false)
+            node.setup(context: context, theme: theme, strings: strings, peer: EngineRenderedPeer(peer: peer), synchronousLoad: false)
             node.theme = itemTheme
             return node
         }
@@ -62,7 +61,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         
         super.init()
         
-        let peer = TelegramGroup(id: PeerId(0), title: title, photo: image.flatMap { [$0] } ?? [], participantCount: Int(memberCount), role: .member, membership: .Left, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
+        let peer = TelegramGroup(id: EnginePeer.Id(0), title: title, photo: image.flatMap { [$0] } ?? [], participantCount: Int(memberCount), role: .member, membership: .Left, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
         
         self.addSubnode(self.avatarNode)
         self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), emptyColor: theme.list.mediaPlaceholderColor)
@@ -99,7 +98,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     func deactivate() {
     }
     
-    func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
+    func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
     }
     
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {

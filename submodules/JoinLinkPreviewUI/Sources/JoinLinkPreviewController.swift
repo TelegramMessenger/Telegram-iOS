@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -21,14 +20,14 @@ public final class JoinLinkPreviewController: ViewController {
     
     private let context: AccountContext
     private let link: String
-    private let navigateToPeer: (PeerId, ChatPeekTimeout?) -> Void
+    private let navigateToPeer: (EnginePeer.Id, ChatPeekTimeout?) -> Void
     private let parentNavigationController: NavigationController?
     private var resolvedState: ExternalJoiningChatState?
     private var presentationData: PresentationData
     
     private let disposable = MetaDisposable()
     
-    public init(context: AccountContext, link: String, navigateToPeer: @escaping (PeerId, ChatPeekTimeout?) -> Void, parentNavigationController: NavigationController?, resolvedState: ExternalJoiningChatState? = nil) {
+    public init(context: AccountContext, link: String, navigateToPeer: @escaping (EnginePeer.Id, ChatPeekTimeout?) -> Void, parentNavigationController: NavigationController?, resolvedState: ExternalJoiningChatState? = nil) {
         self.context = context
         self.link = link
         self.navigateToPeer = navigateToPeer
@@ -79,7 +78,7 @@ public final class JoinLinkPreviewController: ViewController {
                 switch result {
                     case let .invite(title, photoRepresentation, participantsCount, participants):
                         let data = JoinLinkPreviewData(isGroup: participants != nil, isJoined: false)
-                        strongSelf.controllerNode.setPeer(image: photoRepresentation, title: title, memberCount: participantsCount, members: participants ?? [], data: data)
+                        strongSelf.controllerNode.setPeer(image: photoRepresentation, title: title, memberCount: participantsCount, members: participants?.map({ EnginePeer($0) }) ?? [], data: data)
                     case let .alreadyJoined(peerId):
                         strongSelf.navigateToPeer(peerId, nil)
                         strongSelf.dismiss()
