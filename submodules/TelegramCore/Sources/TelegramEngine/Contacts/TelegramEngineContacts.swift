@@ -51,5 +51,12 @@ public extension TelegramEngine {
                 return peers.map(EngineRenderedPeer.init)
             }
         }
+
+        public func searchContacts(query: String) -> Signal<([EnginePeer], [EnginePeer.Id: EnginePeer.Presence]), NoError> {
+            return self.account.postbox.searchContacts(query: query)
+            |> map { peers, presences in
+                return (peers.map(EnginePeer.init), presences.mapValues(EnginePeer.Presence.init))
+            }
+        }
     }
 }

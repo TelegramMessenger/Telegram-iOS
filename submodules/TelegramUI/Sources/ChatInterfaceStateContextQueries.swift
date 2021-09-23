@@ -207,7 +207,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 }
                 var sortedPeers = filteredInlineBots
                 sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
-                    let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
+                    let result = lhs.indexName.stringRepresentation(lastNameFirst: true).compare(rhs.indexName.stringRepresentation(lastNameFirst: true))
                     return result == .orderedAscending
                 }))
                 sortedPeers = sortedPeers.filter { peer in
@@ -391,7 +391,7 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
                             let filteredPeers = peers
                             var sortedPeers: [EnginePeer] = []
                             sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
-                                let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
+                                let result = lhs.indexName.stringRepresentation(lastNameFirst: true).compare(rhs.indexName.stringRepresentation(lastNameFirst: true))
                                 return result == .orderedAscending
                             }))
                             return { _ in return .mentions(sortedPeers) }

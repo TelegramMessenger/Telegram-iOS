@@ -2,7 +2,6 @@ import Display
 import UIKit
 import AsyncDisplayKit
 import UIKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -87,7 +86,7 @@ final class ContactsControllerNode: ASDisplayNode {
             }
         }
         
-        var contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
+        var contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?
         
         self.contactListNode = ContactListNode(context: context, presentation: presentation, displaySortOptions: true, contextAction: { peer, node, gesture in
             contextAction?(peer, node, gesture)
@@ -169,7 +168,7 @@ final class ContactsControllerNode: ASDisplayNode {
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
     }
     
-    private func contextAction(peer: Peer, node: ASDisplayNode, gesture: ContextGesture?) {
+    private func contextAction(peer: EnginePeer, node: ASDisplayNode, gesture: ContextGesture?) {
         guard let contactsController = self.controller else {
             return
         }

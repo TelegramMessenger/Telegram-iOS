@@ -15,7 +15,6 @@ final class ViewTracker {
     private var chatListViews = Bag<(MutableChatListView, ValuePipe<(ChatListView, ViewUpdateType)>)>()
     private var messageHistoryViews = Bag<(MutableMessageHistoryView, ValuePipe<(MessageHistoryView, ViewUpdateType)>)>()
     private var contactPeerIdsViews = Bag<(MutableContactPeerIdsView, ValuePipe<ContactPeerIdsView>)>()
-    private var contactPeersViews = Bag<(MutableContactPeersView, ValuePipe<ContactPeersView>)>()
     
     private let messageHistoryHolesView = MutableMessageHistoryHolesView()
     private let messageHistoryHolesViewSubscribers = Bag<ValuePipe<MessageHistoryHolesView>>()
@@ -110,17 +109,6 @@ final class ViewTracker {
     
     func removeContactPeerIdsView(_ index: Bag<(MutableContactPeerIdsView, ValuePipe<ContactPeerIdsView>)>.Index) {
         self.contactPeerIdsViews.remove(index)
-    }
-    
-    func addContactPeersView(_ view: MutableContactPeersView) -> (Bag<(MutableContactPeersView, ValuePipe<ContactPeersView>)>.Index, Signal<ContactPeersView, NoError>) {
-        let record = (view, ValuePipe<ContactPeersView>())
-        let index = self.contactPeersViews.add(record)
-        
-        return (index, record.1.signal())
-    }
-    
-    func removeContactPeersView(_ index: Bag<(MutableContactPeersView, ValuePipe<ContactPeersView>)>.Index) {
-        self.contactPeersViews.remove(index)
     }
     
     func addPeerView(_ view: MutablePeerView) -> (Bag<(MutablePeerView, ValuePipe<PeerView>)>.Index, Signal<PeerView, NoError>) {
@@ -369,12 +357,6 @@ final class ViewTracker {
                 if mutableView.replay(updateRemoteTotalCount: transaction.replaceRemoteContactCount, replace: replaceContactPeerIds) {
                     pipe.putNext(ContactPeerIdsView(mutableView))
                 }
-            }
-        }
-        
-        for (mutableView, pipe) in self.contactPeersViews.copyItems() {
-            if mutableView.replay(postbox: postbox, replacePeerIds: transaction.replaceContactPeerIds, updatedPeerPresences: transaction.currentUpdatedPeerPresences) {
-                pipe.putNext(ContactPeersView(mutableView))
             }
         }
         

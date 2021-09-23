@@ -1361,15 +1361,16 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
                         guard let contactData = contactData else {
                             return
                         }
-                        let _ = (context.account.postbox.contactPeersView(accountPeerId: nil, includePresences: false)
-                        |> take(1)
+                        let _ = (context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Contacts.List(includePresences: false)
+                        )
                         |> deliverOnMainQueue).start(next: { view in
                             let phones = Set<String>(contactData.basicData.phoneNumbers.map {
                                 return formatPhoneNumber($0.value)
                             })
-                            var foundPeer: Peer?
+                            var foundPeer: EnginePeer?
                             for peer in view.peers {
-                                if let user = peer as? TelegramUser, let phone = user.phone {
+                                if case let .user(user) = peer, let phone = user.phone {
                                     let phone = formatPhoneNumber(phone)
                                     if phones.contains(phone) {
                                         foundPeer = peer
@@ -1377,7 +1378,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
                                     }
                                 }
                             }
-                            completion(foundPeer, stableId, contactData)
+                            completion(foundPeer?._asPeer(), stableId, contactData)
                         })
                     })
                 }

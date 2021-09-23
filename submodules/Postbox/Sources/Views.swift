@@ -31,6 +31,7 @@ public enum PostboxViewKey: Hashable {
     case allChatListHoles(PeerGroupId)
     case historyTagInfo(peerId: PeerId, tag: MessageTags)
     case topChatMessage(peerIds: [PeerId])
+    case contacts(accountPeerId: PeerId?, includePresences: Bool)
 
     public func hash(into hasher: inout Hasher) {
         switch self {
@@ -103,6 +104,8 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(tag)
         case let .topChatMessage(peerIds):
             hasher.combine(peerIds)
+        case .contacts:
+            hasher.combine(16)
         }
     }
     
@@ -288,6 +291,12 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case let .contacts(accountPeerId, includePresences):
+            if case .contacts(accountPeerId, includePresences) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -354,5 +363,7 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableHistoryTagInfoView(postbox: postbox, peerId: peerId, tag: tag)
     case let .topChatMessage(peerIds):
         return MutableTopChatMessageView(postbox: postbox, peerIds: Set(peerIds))
+    case let .contacts(accountPeerId, includePresences):
+        return MutableContactPeersView(postbox: postbox, accountPeerId: accountPeerId, includePresences: includePresences)
     }
 }

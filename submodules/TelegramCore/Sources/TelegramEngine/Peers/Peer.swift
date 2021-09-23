@@ -4,12 +4,54 @@ public enum EnginePeer: Equatable {
     public typealias Id = PeerId
 
     public struct Presence: Equatable {
-        public enum Status: Equatable {
+        public enum Status: Comparable {
             case present(until: Int32)
             case recently
             case lastWeek
             case lastMonth
             case longTimeAgo
+
+            public static func <(lhs: Status, rhs: Status) -> Bool {
+                switch lhs {
+                case .longTimeAgo:
+                    switch rhs {
+                    case .longTimeAgo:
+                        return false
+                    case .lastMonth, .lastWeek, .recently, .present:
+                        return true
+                    }
+                case let .present(until):
+                    switch rhs {
+                    case .longTimeAgo:
+                        return false
+                    case let .present(rhsUntil):
+                        return until < rhsUntil
+                    case .lastWeek, .lastMonth, .recently:
+                        return false
+                    }
+                case .recently:
+                    switch rhs {
+                    case .longTimeAgo, .lastWeek, .lastMonth, .recently:
+                        return false
+                    case .present:
+                        return true
+                    }
+                case .lastWeek:
+                    switch rhs {
+                    case .longTimeAgo, .lastMonth, .lastWeek:
+                        return false
+                    case .present, .recently:
+                        return true
+                    }
+                case .lastMonth:
+                    switch rhs {
+                    case .longTimeAgo, .lastMonth:
+                        return false
+                    case .present, .recently, lastWeek:
+                        return true
+                    }
+                }
+            }
         }
 
         public var status: Status
@@ -53,6 +95,38 @@ public enum EnginePeer: Equatable {
             self.muteState = muteState
             self.messageSound = messageSound
             self.displayPreviews = displayPreviews
+        }
+    }
+
+    public enum IndexName: Equatable {
+        case title(title: String, addressName: String?)
+        case personName(first: String, last: String, addressName: String?, phoneNumber: String?)
+
+        public var isEmpty: Bool {
+            switch self {
+            case let .title(title, addressName):
+                if !title.isEmpty {
+                    return false
+                }
+                if let addressName = addressName, !addressName.isEmpty {
+                    return false
+                }
+                return true
+            case let .personName(first, last, addressName, phoneNumber):
+                if !first.isEmpty {
+                    return false
+                }
+                if !last.isEmpty {
+                    return false
+                }
+                if let addressName = addressName, !addressName.isEmpty {
+                    return false
+                }
+                if let phoneNumber = phoneNumber, !phoneNumber.isEmpty {
+                    return false
+                }
+                return true
+            }
         }
     }
 
@@ -207,6 +281,60 @@ public extension EnginePeer.Presence {
             preconditionFailure()
         }
     }
+
+    func _asPresence() -> TelegramUserPresence {
+        let mappedStatus: UserPresenceStatus
+        switch self.status {
+        case .longTimeAgo:
+            mappedStatus = .none
+        case let .present(until):
+            mappedStatus = .present(until: until)
+        case .recently:
+            mappedStatus = .recently
+        case .lastWeek:
+            mappedStatus = .lastWeek
+        case .lastMonth:
+            mappedStatus = .lastMonth
+        }
+        return TelegramUserPresence(status: mappedStatus, lastActivity: self.lastActivity)
+    }
+}
+
+public extension EnginePeer.IndexName {
+    init(_ indexName: PeerIndexNameRepresentation) {
+        switch indexName {
+        case let .title(title, addressName):
+            self = .title(title: title, addressName: addressName)
+        case let .personName(first, last, addressName, phoneNumber):
+            self = .personName(first: first, last: last, addressName: addressName, phoneNumber: phoneNumber)
+        }
+    }
+
+    func _asIndexName() -> PeerIndexNameRepresentation {
+        switch self {
+        case let .title(title, addressName):
+            return .title(title: title, addressName: addressName)
+        case let .personName(first, last, addressName, phoneNumber):
+            return .personName(first: first, last: last, addressName: addressName, phoneNumber: phoneNumber)
+        }
+    }
+
+    func matchesByTokens(_ other: String) -> Bool {
+        return self._asIndexName().matchesByTokens(other)
+    }
+
+    func stringRepresentation(lastNameFirst: Bool) -> String {
+        switch self {
+        case let .title(title, _):
+            return title
+        case let .personName(first, last, _, _):
+            if lastNameFirst {
+                return last + first
+            } else {
+                return first + last
+            }
+        }
+    }
 }
 
 public extension EnginePeer {
@@ -218,8 +346,8 @@ public extension EnginePeer {
         return self._asPeer().addressName
     }
 
-    var indexName: PeerIndexNameRepresentation {
-        return self._asPeer().indexName
+    var indexName: EnginePeer.IndexName {
+        return EnginePeer.IndexName(self._asPeer().indexName)
     }
 
     var debugDisplayTitle: String {

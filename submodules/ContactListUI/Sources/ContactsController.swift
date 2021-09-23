@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
@@ -71,7 +70,7 @@ public class ContactsController: ViewController {
     }
     private var validLayout: ContainerViewLayout?
     
-    private let index: PeerNameIndex = .lastNameFirst
+    private let index: PresentationPersonNameOrder = .lastFirst
     
     private var _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {

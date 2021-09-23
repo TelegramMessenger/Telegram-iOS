@@ -2901,42 +2901,6 @@ final class PostboxImpl {
         }
     }
     
-    public func contactPeersView(accountPeerId: PeerId?, includePresences: Bool) -> Signal<ContactPeersView, NoError> {
-        return self.transactionSignal { subscriber, transaction in
-            var peers: [PeerId: Peer] = [:]
-            var peerPresences: [PeerId: PeerPresence] = [:]
-            
-            for peerId in self.contactsTable.get() {
-                if let peer = self.peerTable.get(peerId) {
-                    peers[peerId] = peer
-                }
-                if includePresences {
-                    if let presence = self.peerPresenceTable.get(peerId) {
-                        peerPresences[peerId] = presence
-                    }
-                }
-            }
-            
-            let view = MutableContactPeersView(peers: peers, peerPresences: peerPresences, accountPeer: accountPeerId.flatMap(self.peerTable.get), includePresences: includePresences)
-            let (index, signal) = self.viewTracker.addContactPeersView(view)
-            
-            subscriber.putNext(ContactPeersView(view))
-            let disposable = signal.start(next: { next in
-                subscriber.putNext(next)
-            })
-            
-            return ActionDisposable {
-                [weak self] in
-                disposable.dispose()
-                if let strongSelf = self {
-                    strongSelf.queue.async {
-                        strongSelf.viewTracker.removeContactPeersView(index)
-                    }
-                }
-            }
-        }
-    }
-    
     public func searchContacts(query: String) -> Signal<([Peer], [PeerId: PeerPresence]), NoError> {
         return self.transaction { transaction -> Signal<([Peer], [PeerId: PeerPresence]), NoError> in
             let (_, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable)
@@ -3896,18 +3860,6 @@ public class Postbox {
 
             self.impl.with { impl in
                 disposable.set(impl.contactPeerIdsView().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
-            }
-
-            return disposable
-        }
-    }
-
-    public func contactPeersView(accountPeerId: PeerId?, includePresences: Bool) -> Signal<ContactPeersView, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-
-            self.impl.with { impl in
-                disposable.set(impl.contactPeersView(accountPeerId: accountPeerId, includePresences: includePresences).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
             return disposable
