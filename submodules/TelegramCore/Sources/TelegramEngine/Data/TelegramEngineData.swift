@@ -117,7 +117,10 @@ public extension TelegramEngine {
                 T1.Result
             ),
         NoError> {
-            return self._subscribe(items: [t0 as! AnyPostboxViewDataItem])
+            return self._subscribe(items: [
+                t0 as! AnyPostboxViewDataItem,
+                t1 as! AnyPostboxViewDataItem
+            ])
             |> map { results -> (T0.Result, T1.Result) in
                 return (
                     results[0] as! T0.Result,
