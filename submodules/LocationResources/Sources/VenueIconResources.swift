@@ -6,7 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import AppBundle
 
-public struct VenueIconResourceId: MediaResourceId {
+public struct VenueIconResourceId {
     public let type: String
     
     public init(type: String) {
@@ -19,14 +19,6 @@ public struct VenueIconResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.type.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? VenueIconResourceId {
-            return self.type == to.type
-        } else {
-            return false
-        }
     }
 }
 
@@ -46,7 +38,7 @@ public class VenueIconResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return VenueIconResourceId(type: self.type)
+        return MediaResourceId(VenueIconResourceId(type: self.type).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {

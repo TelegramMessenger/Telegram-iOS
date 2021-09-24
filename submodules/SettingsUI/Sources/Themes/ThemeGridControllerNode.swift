@@ -66,7 +66,7 @@ struct ThemeGridControllerEntry: Comparable, Identifiable {
             return .file(file.id, file.settings.colors, file.settings.intensity ?? 0)
         case let .image(representations, _):
             if let largest = largestImageRepresentation(representations) {
-                return .image(largest.resource.id.uniqueId)
+                return .image(largest.resource.id.stringRepresentation)
             } else {
                 return .image("")
             }

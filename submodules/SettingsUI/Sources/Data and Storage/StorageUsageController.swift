@@ -565,11 +565,11 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                 media[peerId] = categories
                             }
                             
-                            var clearResourceIds = Set<WrappedMediaResourceId>()
+                            var clearResourceIds = Set<MediaResourceId>()
                             for id in clearMediaIds {
                                 if let ids = stats.mediaResourceIds[id] {
                                     for resourceId in ids {
-                                        clearResourceIds.insert(WrappedMediaResourceId(resourceId))
+                                        clearResourceIds.insert(resourceId)
                                     }
                                 }
                             }
@@ -774,11 +774,11 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                     }
                                 }
                                 
-                                var clearResourceIds = Set<WrappedMediaResourceId>()
+                                var clearResourceIds = Set<MediaResourceId>()
                                 for id in clearMediaIds {
                                     if let ids = stats.mediaResourceIds[id] {
                                         for resourceId in ids {
-                                            clearResourceIds.insert(WrappedMediaResourceId(resourceId))
+                                            clearResourceIds.insert(resourceId)
                                         }
                                     }
                                 }
@@ -901,11 +901,11 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                             }
                         }
                         
-                        var clearResourceIds = Set<WrappedMediaResourceId>()
+                        var clearResourceIds = Set<MediaResourceId>()
                         for id in clearMediaIds {
                             if let ids = stats.mediaResourceIds[id] {
                                 for resourceId in ids {
-                                    clearResourceIds.insert(WrappedMediaResourceId(resourceId))
+                                    clearResourceIds.insert(resourceId)
                                 }
                             }
                         }

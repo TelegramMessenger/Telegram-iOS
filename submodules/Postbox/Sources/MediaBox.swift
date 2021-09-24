@@ -102,7 +102,7 @@ private struct CachedMediaResourceRepresentationKey: Hashable {
     let representation: CachedMediaResourceRepresentation
     
     static func ==(lhs: CachedMediaResourceRepresentationKey, rhs: CachedMediaResourceRepresentationKey) -> Bool {
-        return lhs.resourceId.isEqual(to: rhs.resourceId) && lhs.representation.isEqual(to: rhs.representation)
+        return lhs.resourceId ==  rhs.resourceId && lhs.representation.isEqual(to: rhs.representation)
     }
 
     func hash(into hasher: inout Hasher) {
@@ -150,11 +150,11 @@ public final class MediaBox {
     private let cacheQueue = Queue()
     private let timeBasedCleanup: TimeBasedCleanup
     
-    private var statusContexts: [WrappedMediaResourceId: ResourceStatusContext] = [:]
+    private var statusContexts: [MediaResourceId: ResourceStatusContext] = [:]
     private var cachedRepresentationContexts: [CachedMediaResourceRepresentationKey: CachedMediaResourceRepresentationContext] = [:]
     
-    private var fileContexts: [WrappedMediaResourceId: MediaBoxFileContext] = [:]
-    private var keepResourceContexts: [WrappedMediaResourceId: MediaBoxKeepResourceContext] = [:]
+    private var fileContexts: [MediaResourceId: MediaBoxFileContext] = [:]
+    private var keepResourceContexts: [MediaResourceId: MediaBoxKeepResourceContext] = [:]
     
     private var wrappedFetchResource = Promise<(MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>>()
     public var preFetchedResourcePath: (MediaResource) -> String? = { _ in return nil }
@@ -203,7 +203,7 @@ public final class MediaBox {
     }
     
     private func fileNameForId(_ id: MediaResourceId) -> String {
-        return "\(id.uniqueId)"
+        return "\(id.stringRepresentation)"
     }
     
     private func fileNameForId(_ id: String) -> String {
@@ -287,7 +287,7 @@ public final class MediaBox {
     }
     
     public func moveResourceData(from: MediaResourceId, to: MediaResourceId) {
-        if from.isEqual(to: to) {
+        if from == to {
             return
         }
         self.dataQueue.async {
@@ -301,7 +301,7 @@ public final class MediaBox {
     }
     
     public func copyResourceData(from: MediaResourceId, to: MediaResourceId, synchronous: Bool = false) {
-        if from.isEqual(to: to) {
+        if from == to {
             return
         }
         let begin = {
@@ -348,7 +348,7 @@ public final class MediaBox {
                     }
                     
                     self.statusQueue.async {
-                        let resourceId = WrappedMediaResourceId(resource.id)
+                        let resourceId = resource.id
                         let statusContext: ResourceStatusContext
                         var statusUpdateDisposable: MetaDisposable?
                         if let current = self.statusContexts[resourceId] {
@@ -402,10 +402,10 @@ public final class MediaBox {
                         
                         disposable.set(ActionDisposable { [weak statusContext] in
                             self.statusQueue.async {
-                                if let current = self.statusContexts[WrappedMediaResourceId(resource.id)], current ===  statusContext {
+                                if let current = self.statusContexts[resource.id], current ===  statusContext {
                                     current.subscribers.remove(index)
                                     if current.subscribers.isEmpty {
-                                        self.statusContexts.removeValue(forKey: WrappedMediaResourceId(resource.id))
+                                        self.statusContexts.removeValue(forKey: resource.id)
                                         current.disposable.dispose()
                                     }
                                 }
@@ -538,7 +538,7 @@ public final class MediaBox {
     private func fileContext(for resource: MediaResource) -> (MediaBoxFileContext, () -> Void)? {
         assert(self.dataQueue.isCurrent())
         
-        let resourceId = WrappedMediaResourceId(resource.id)
+        let resourceId = resource.id
         
         var context: MediaBoxFileContext?
         if let current = self.fileContexts[resourceId] {
@@ -769,22 +769,22 @@ public final class MediaBox {
             let dataQueue = self.dataQueue
             self.dataQueue.async {
                 let context: MediaBoxKeepResourceContext
-                if let current = self.keepResourceContexts[WrappedMediaResourceId(id)] {
+                if let current = self.keepResourceContexts[id] {
                     context = current
                 } else {
                     context = MediaBoxKeepResourceContext()
-                    self.keepResourceContexts[WrappedMediaResourceId(id)] = context
+                    self.keepResourceContexts[id] = context
                 }
                 let index = context.subscribers.add(Void())
                 
                 disposable.set(ActionDisposable { [weak self, weak context] in
                     dataQueue.async {
-                        guard let strongSelf = self, let context = context, let currentContext = strongSelf.keepResourceContexts[WrappedMediaResourceId(id)], currentContext === context else {
+                        guard let strongSelf = self, let context = context, let currentContext = strongSelf.keepResourceContexts[id], currentContext === context else {
                             return
                         }
                         currentContext.subscribers.remove(index)
                         if currentContext.isEmpty {
-                            strongSelf.keepResourceContexts.removeValue(forKey: WrappedMediaResourceId(id))
+                            strongSelf.keepResourceContexts.removeValue(forKey: id)
                         }
                     }
                 })
@@ -977,12 +977,12 @@ public final class MediaBox {
         }
     }
     
-    public func collectResourceCacheUsage(_ ids: [MediaResourceId]) -> Signal<[WrappedMediaResourceId: Int64], NoError> {
+    public func collectResourceCacheUsage(_ ids: [MediaResourceId]) -> Signal<[MediaResourceId: Int64], NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
-                var result: [WrappedMediaResourceId: Int64] = [:]
+                var result: [MediaResourceId: Int64] = [:]
                 for id in ids {
-                    let wrappedId = WrappedMediaResourceId(id)
+                    let wrappedId = id
                     let paths = self.storePathsForId(id)
                     if let size = fileSize(paths.complete) {
                         result[wrappedId] = Int64(size)
@@ -997,16 +997,16 @@ public final class MediaBox {
         }
     }
     
-    public func collectOtherResourceUsage(excludeIds: Set<WrappedMediaResourceId>, combinedExcludeIds: Set<WrappedMediaResourceId>) -> Signal<(Int64, [String], Int64), NoError> {
+    public func collectOtherResourceUsage(excludeIds: Set<MediaResourceId>, combinedExcludeIds: Set<MediaResourceId>) -> Signal<(Int64, [String], Int64), NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
                 var result: Int64 = 0
                 
                 var excludeNames = Set<String>()
                 for id in combinedExcludeIds {
-                    let partial = "\(self.fileNameForId(id.id))_partial"
-                    let meta = "\(self.fileNameForId(id.id))_meta"
-                    let complete = self.fileNameForId(id.id)
+                    let partial = "\(self.fileNameForId(id))_partial"
+                    let meta = "\(self.fileNameForId(id))_meta"
+                    let complete = self.fileNameForId(id)
                     
                     excludeNames.insert(meta)
                     excludeNames.insert(partial)
@@ -1044,7 +1044,7 @@ public final class MediaBox {
                 
                 var excludePrefixes = Set<String>()
                 for id in excludeIds {
-                    let cachedRepresentationPrefix = self.fileNameForId(id.id)
+                    let cachedRepresentationPrefix = self.fileNameForId(id)
                     
                     excludePrefixes.insert(cachedRepresentationPrefix)
                 }
@@ -1091,7 +1091,7 @@ public final class MediaBox {
             self.dataQueue.async {
                 var keepPrefixes: [String] = []
                 for id in self.keepResourceContexts.keys {
-                    let resourcePaths = self.fileNamesForId(id.id)
+                    let resourcePaths = self.fileNamesForId(id)
                     keepPrefixes.append(resourcePaths.partial)
                     keepPrefixes.append(resourcePaths.complete)
                 }
@@ -1111,7 +1111,7 @@ public final class MediaBox {
         }
     }
     
-    public func removeCachedResources(_ ids: Set<WrappedMediaResourceId>, force: Bool = false) -> Signal<Void, NoError> {
+    public func removeCachedResources(_ ids: Set<MediaResourceId>, force: Bool = false) -> Signal<Void, NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
                 for id in ids {
@@ -1123,14 +1123,14 @@ public final class MediaBox {
                             continue
                         }
                     }
-                    let paths = self.storePathsForId(id.id)
+                    let paths = self.storePathsForId(id)
                     unlink(paths.complete)
                     unlink(paths.partial)
                     unlink(paths.partial + ".meta")
                     self.fileContexts.removeValue(forKey: id)
                 }
                 
-                let uniqueIds = Set(ids.map { $0.id.uniqueId })
+                let uniqueIds = Set(ids.map { $0.stringRepresentation })
                 
                 var pathsToDelete: [String] = []
                 
@@ -1161,14 +1161,12 @@ public final class MediaBox {
         }
     }
     
-
-    
     public func allFileContexts() -> Signal<[(partial: String, complete: String)], NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
                 var result: [(partial: String, complete: String)] = []
                 for (id, _) in self.fileContexts {
-                    let paths = self.storePathsForId(id.id)
+                    let paths = self.storePathsForId(id)
                     result.append((partial: paths.partial, complete: paths.complete))
                 }
                 subscriber.putNext(result)

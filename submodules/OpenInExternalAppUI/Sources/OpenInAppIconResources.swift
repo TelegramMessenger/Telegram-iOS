@@ -4,7 +4,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 
-public struct OpenInAppIconResourceId: MediaResourceId {
+public struct OpenInAppIconResourceId {
     public let appStoreId: Int64
     
     public var uniqueId: String {
@@ -13,14 +13,6 @@ public struct OpenInAppIconResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.appStoreId.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? OpenInAppIconResourceId {
-            return self.appStoreId == to.appStoreId
-        } else {
-            return false
-        }
     }
 }
 
@@ -48,7 +40,7 @@ public class OpenInAppIconResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return OpenInAppIconResourceId(appStoreId: self.appStoreId)
+        return MediaResourceId(OpenInAppIconResourceId(appStoreId: self.appStoreId).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {

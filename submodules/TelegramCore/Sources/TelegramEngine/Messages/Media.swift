@@ -1,17 +1,5 @@
 import Postbox
 
-public final class EngineMediaResource {
-    private let resource: MediaResource
-
-    public init(_ resource: MediaResource) {
-        self.resource = resource
-    }
-
-    public func _asResource() -> MediaResource {
-        return self.resource
-    }
-}
-
 public enum EngineMedia {
     public typealias Id = MediaId
 

@@ -10,7 +10,7 @@ import Emoji
 import AppBundle
 import AccountContext
 
-public struct EmojiThumbnailResourceId: MediaResourceId {
+public struct EmojiThumbnailResourceId {
     public let emoji: String
     
     public var uniqueId: String {
@@ -19,14 +19,6 @@ public struct EmojiThumbnailResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.emoji.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? EmojiThumbnailResourceId {
-            return self.emoji == to.emoji
-        } else {
-            return false
-        }
     }
 }
 
@@ -46,7 +38,7 @@ public class EmojiThumbnailResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return EmojiThumbnailResourceId(emoji: self.emoji)
+        return MediaResourceId(EmojiThumbnailResourceId(emoji: self.emoji).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -58,7 +50,7 @@ public class EmojiThumbnailResource: TelegramMediaResource {
     }
 }
 
-public struct EmojiSpriteResourceId: MediaResourceId {
+public struct EmojiSpriteResourceId {
     public let packId: UInt8
     public let stickerId: UInt8
     
@@ -68,14 +60,6 @@ public struct EmojiSpriteResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.packId.hashValue &* 31 &+ self.stickerId.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? EmojiSpriteResourceId {
-            return self.packId == to.packId && self.stickerId == to.stickerId
-        } else {
-            return false
-        }
     }
 }
 
@@ -99,7 +83,7 @@ public class EmojiSpriteResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return EmojiSpriteResourceId(packId: self.packId, stickerId: self.stickerId)
+        return MediaResourceId(EmojiSpriteResourceId(packId: self.packId, stickerId: self.stickerId).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {

@@ -554,7 +554,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             return false
         }
         
-        if !self.resource.id.isEqual(to: other.resource.id) {
+        if self.resource.id != other.resource.id {
             return false
         }
         

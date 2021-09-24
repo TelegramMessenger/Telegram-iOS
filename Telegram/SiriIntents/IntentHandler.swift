@@ -1317,7 +1317,7 @@ private func mapPeersToFriends(accountId: AccountRecordId, accountPeerId: PeerId
                     }
                 }
             } else if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
-                let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.uniqueId, representationId: "intents.png", keepDuration: .shortLived)
+                let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "intents.png", keepDuration: .shortLived)
                 if let _ = fileSize(cachedPath) {
                     do {
                         let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)

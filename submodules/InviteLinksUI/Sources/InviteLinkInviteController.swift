@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AppBundle
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import Display
 import AccountContext
@@ -158,13 +157,13 @@ public final class InviteLinkInviteController: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
-    private let peerId: PeerId
+    private let peerId: EnginePeer.Id
     private weak var parentNavigationController: NavigationController?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
             
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, parentNavigationController: NavigationController?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, parentNavigationController: NavigationController?) {
         self.context = context
         self.peerId = peerId
         self.parentNavigationController = parentNavigationController
@@ -251,7 +250,7 @@ public final class InviteLinkInviteController: ViewController {
         private weak var controller: InviteLinkInviteController?
         
         private let context: AccountContext
-        private let peerId: PeerId
+        private let peerId: EnginePeer.Id
         private let invitesContext: PeerExportedInvitationsContext
         
         private var interaction: InviteLinkInviteInteraction?
@@ -278,7 +277,7 @@ public final class InviteLinkInviteController: ViewController {
         
         private var revokeDisposable = MetaDisposable()
         
-        init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, controller: InviteLinkInviteController) {
+        init(context: AccountContext, presentationData: PresentationData, peerId: EnginePeer.Id, controller: InviteLinkInviteController) {
             self.context = context
             self.peerId = peerId
             

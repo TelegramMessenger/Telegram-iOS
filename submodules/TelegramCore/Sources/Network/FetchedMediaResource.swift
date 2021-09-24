@@ -78,7 +78,7 @@ private func areResourcesEqual(_ lhs: MediaResource, _ rhs: MediaResource) -> Bo
             return true
         }
     }
-    return lhs.id.isEqual(to: rhs.id)
+    return lhs.id == rhs.id
 }
 
 private func findMediaResource(media: Media, previousMedia: Media?, resource: MediaResource) -> TelegramMediaResource? {
@@ -89,12 +89,12 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
                     return representation.resource
                 }
             }
-            if representation.resource.id.isEqual(to: resource.id) {
+            if representation.resource.id == resource.id {
                 return representation.resource
             }
         }
         for representation in image.videoRepresentations {
-            if representation.resource.id.isEqual(to: resource.id) {
+            if representation.resource.id == resource.id {
                 return representation.resource
             }
         }
@@ -622,7 +622,7 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                             return .single(RevalidatedMediaResource(updatedResource: representation.resource, updatedReference: nil))
                         }
                     }
-                    if representation.resource.id.isEqual(to: resource.id) {
+                    if representation.resource.id == resource.id {
                         return .single(RevalidatedMediaResource(updatedResource: representation.resource, updatedReference: nil))
                     }
                 }
@@ -645,7 +645,7 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                     return .fail(.generic)
                 }
                 for representation in author.profileImageRepresentations {
-                    if representation.resource.id.isEqual(to: resource.id) {
+                    if representation.resource.id == resource.id {
                         return .single(RevalidatedMediaResource(updatedResource: representation.resource, updatedReference: .avatar(peer: authorReference, resource: representation.resource)))
                     }
                 }
@@ -667,7 +667,7 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                     switch wallpaper {
                         case let .image(representations, _):
                             for representation in representations {
-                                if representation.resource.id.isEqual(to: resource.id) {
+                                if representation.resource.id == resource.id {
                                     return .single(RevalidatedMediaResource(updatedResource: representation.resource, updatedReference: nil))
                                 }
                             }
@@ -685,7 +685,7 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
             return revalidationContext.stickerPack(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, stickerPack: packReference)
             |> mapToSignal { result -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                 if let thumbnail = result.0.thumbnail {
-                    if thumbnail.resource.id.isEqual(to: resource.id) {
+                    if thumbnail.resource.id == resource.id {
                         return .single(RevalidatedMediaResource(updatedResource: thumbnail.resource, updatedReference: nil))
                     }
                     if let _ = thumbnail.resource as? CloudStickerPackThumbnailMediaResource, let _ = resource as? CloudStickerPackThumbnailMediaResource {
@@ -698,7 +698,7 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
             return revalidationContext.themes(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
             |> mapToSignal { themes -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                 for theme in themes {
-                    if let file = theme.file, file.resource.id.isEqual(to: resource.id)  {
+                    if let file = theme.file, file.resource.id == resource.id  {
                         return .single(RevalidatedMediaResource(updatedResource: file.resource, updatedReference: nil))
                     }
                 }

@@ -1,6 +1,8 @@
 import SwiftSignalKit
 import Postbox
 
+public typealias EngineExportedPeerInvitation = ExportedInvitation
+
 public extension TelegramEngine.EngineData.Item {
     enum Peer {
         public struct Peer: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
@@ -187,6 +189,40 @@ public extension TelegramEngine.EngineData.Item {
                     return channel.activeCall.flatMap(EngineGroupCallDescription.init)
                 case let group as CachedGroupData:
                     return group.activeCall.flatMap(EngineGroupCallDescription.init)
+                default:
+                    return nil
+                }
+            }
+        }
+
+        public struct ExportedInvitation: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<EngineExportedPeerInvitation>
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                guard let cachedPeerData = view.cachedPeerData else {
+                    return nil
+                }
+                switch cachedPeerData {
+                case let channel as CachedChannelData:
+                    return channel.exportedInvitation
+                case let group as CachedGroupData:
+                    return group.exportedInvitation
                 default:
                     return nil
                 }

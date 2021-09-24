@@ -6,7 +6,7 @@ import TelegramCore
 import MapKit
 import SwiftSignalKit
 
-public struct MapSnapshotMediaResourceId: MediaResourceId {
+public struct MapSnapshotMediaResourceId {
     public let latitude: Double
     public let longitude: Double
     public let width: Int32
@@ -18,14 +18,6 @@ public struct MapSnapshotMediaResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.uniqueId.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? MapSnapshotMediaResourceId {
-            return self.latitude == to.latitude && self.longitude == to.longitude && self.width == to.width && self.height == to.height
-        } else {
-            return false
-        }
     }
 }
 
@@ -57,7 +49,7 @@ public class MapSnapshotMediaResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return MapSnapshotMediaResourceId(latitude: self.latitude, longitude: self.longitude, width: self.width, height: self.height)
+        return MediaResourceId(MapSnapshotMediaResourceId(latitude: self.latitude, longitude: self.longitude, width: self.width, height: self.height).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {

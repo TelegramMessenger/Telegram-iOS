@@ -375,11 +375,11 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 overrideImage = .deletedIcon
             } else if let previousItem = previousItem, item == nil {
                 if case let .image(_, representations, _, _) = previousItem, let rep = representations.last {
-                    self.removedPhotoResourceIds.insert(rep.representation.resource.id.uniqueId)
+                    self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
                 }
                 overrideImage = AvatarNodeImageOverride.none
                 item = nil
-            } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.uniqueId) {
+            } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.stringRepresentation) {
                 overrideImage = AvatarNodeImageOverride.none
                 item = nil
             }
@@ -680,11 +680,11 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             overrideImage = .editAvatarIcon
         } else if let previousItem = previousItem, item == nil {
             if case let .image(_, representations, _, _) = previousItem, let rep = representations.last {
-                self.removedPhotoResourceIds.insert(rep.representation.resource.id.uniqueId)
+                self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
             }
             overrideImage = AvatarNodeImageOverride.none
             item = nil
-        } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.uniqueId) {
+        } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.stringRepresentation) {
             overrideImage = AvatarNodeImageOverride.none
             item = nil
         } else {

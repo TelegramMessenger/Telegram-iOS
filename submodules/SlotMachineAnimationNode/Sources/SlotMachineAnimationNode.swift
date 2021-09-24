@@ -312,7 +312,7 @@ class DiceAnimatedStickerNode: ASDisplayNode {
             case let .local(animationName):
                 source = AnimatedStickerNodeLocalFileSource(name: animationName)
             case let .resource(account, resource):
-                source = AnimatedStickerResourceSource(account: account, resource: resource)
+                source = AnimatedStickerResourceSource(account: account, resource: resource._asResource())
         }
         
         let playbackMode: AnimatedStickerPlaybackMode

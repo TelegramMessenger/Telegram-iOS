@@ -47,7 +47,7 @@ private enum CollectCacheUsageStatsError {
 private final class CacheUsageStatsState {
     var media: [PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]] = [:]
     var mediaResourceIds: [MediaId: [MediaResourceId]] = [:]
-    var allResourceIds = Set<WrappedMediaResourceId>()
+    var allResourceIds = Set<MediaResourceId>()
     var lowerBound: MessageIndex?
     var upperBound: MessageIndex?
 }
@@ -61,10 +61,10 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
     
     let state = Atomic<CacheUsageStatsState>(value: initialState)
     
-    let excludeResourceIds = account.postbox.transaction { transaction -> Set<WrappedMediaResourceId> in
-        var result = Set<WrappedMediaResourceId>()
+    let excludeResourceIds = account.postbox.transaction { transaction -> Set<MediaResourceId> in
+        var result = Set<MediaResourceId>()
         transaction.enumeratePreferencesEntries({ entry in
-            result.formUnion(entry.relatedResources.map(WrappedMediaResourceId.init))
+            result.formUnion(entry.relatedResources)
             return true
         })
         return result
@@ -85,7 +85,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                 }
             }
             
-            var resourceIdToMediaId: [WrappedMediaResourceId: (MediaId, PeerCacheUsageCategory)] = [:]
+            var resourceIdToMediaId: [MediaResourceId: (MediaId, PeerCacheUsageCategory)] = [:]
             var mediaResourceIds: [MediaId: [MediaResourceId]] = [:]
             var resourceIds: [MediaResourceId] = []
             for (id, media) in mediaRefs {
@@ -112,7 +112,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                     if let image = media as? TelegramMediaImage {
                         for representation in image.representations {
                             resourceIds.append(representation.resource.id)
-                            resourceIdToMediaId[WrappedMediaResourceId(representation.resource.id)] = (id, .image)
+                            resourceIdToMediaId[representation.resource.id] = (id, .image)
                             mediaResourceIds[id]!.append(representation.resource.id)
                         }
                     } else if let file = media as? TelegramMediaFile {
@@ -131,11 +131,11 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                         }
                         for representation in file.previewRepresentations {
                             resourceIds.append(representation.resource.id)
-                            resourceIdToMediaId[WrappedMediaResourceId(representation.resource.id)] = (id, category)
+                            resourceIdToMediaId[representation.resource.id] = (id, category)
                             mediaResourceIds[id]!.append(representation.resource.id)
                         }
                         resourceIds.append(file.resource.id)
-                        resourceIdToMediaId[WrappedMediaResourceId(file.resource.id)] = (id, category)
+                        resourceIdToMediaId[file.resource.id] = (id, category)
                         mediaResourceIds[id]!.append(file.resource.id)
                     }
                 }
@@ -165,13 +165,13 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                     for (id, ids) in mediaResourceIds {
                         state.mediaResourceIds[id] = ids
                         for resourceId in ids {
-                            state.allResourceIds.insert(WrappedMediaResourceId(resourceId))
+                            state.allResourceIds.insert(resourceId)
                         }
                     }
                 }
                 if updatedLowerBound == nil {
                     if peerId != nil {
-                        let (finalMedia, finalMediaResourceIds, _) = state.with { state -> ([PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], [MediaId: [MediaResourceId]], Set<WrappedMediaResourceId>) in
+                        let (finalMedia, finalMediaResourceIds, _) = state.with { state -> ([PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], [MediaId: [MediaResourceId]], Set<MediaResourceId>) in
                             return (state.media, state.mediaResourceIds, state.allResourceIds)
                         }
                          return account.postbox.transaction { transaction -> CacheUsageStats in
@@ -191,7 +191,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                        }
                     }
                     
-                    let (finalMedia, finalMediaResourceIds, allResourceIds) = state.with { state -> ([PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], [MediaId: [MediaResourceId]], Set<WrappedMediaResourceId>) in
+                    let (finalMedia, finalMediaResourceIds, allResourceIds) = state.with { state -> ([PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], [MediaId: [MediaResourceId]], Set<MediaResourceId>) in
                         return (state.media, state.mediaResourceIds, state.allResourceIds)
                     }
                     
@@ -290,6 +290,6 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
     }
 }
 
-func _internal_clearCachedMediaResources(account: Account, mediaResourceIds: Set<WrappedMediaResourceId>) -> Signal<Void, NoError> {
+func _internal_clearCachedMediaResources(account: Account, mediaResourceIds: Set<MediaResourceId>) -> Signal<Void, NoError> {
     return account.postbox.mediaBox.removeCachedResources(mediaResourceIds)
 }

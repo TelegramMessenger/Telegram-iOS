@@ -16,7 +16,7 @@ private struct FetchManagerLocationEntryId: Hashable {
         if lhs.location != rhs.location {
             return false
         }
-        if !lhs.resourceId.isEqual(to: rhs.resourceId) {
+        if lhs.resourceId != rhs.resourceId {
             return false
         }
         if lhs.locationKey != rhs.locationKey {
@@ -388,7 +388,7 @@ private final class FetchManagerCategoryContext {
         var id: FetchManagerLocationEntryId = entryId
         if self.entries[id] == nil {
             for (key, _) in self.entries {
-                if key.resourceId.isEqual(to: entryId.resourceId) {
+                if key.resourceId == entryId.resourceId {
                     id = key
                     break
                 }
