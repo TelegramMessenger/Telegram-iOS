@@ -1041,7 +1041,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         if let location = (data.cachedData as? CachedChannelData)?.peerGeoLocation {
             items[.groupLocation]!.append(PeerInfoScreenHeaderItem(id: ItemLocationHeader, text: presentationData.strings.GroupInfo_Location.uppercased()))
             
-            let imageSignal = chatMapSnapshotImage(account: context.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
+            let imageSignal = chatMapSnapshotImage(engine: context.engine, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
             items[.groupLocation]!.append(PeerInfoScreenAddressItem(
                 id: ItemLocation,
                 label: "",
@@ -1271,7 +1271,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     if isCreator, let location = cachedData.peerGeoLocation {
                         items[.groupLocation]!.append(PeerInfoScreenHeaderItem(id: ItemLocationHeader, text: presentationData.strings.GroupInfo_Location.uppercased()))
                         
-                        let imageSignal = chatMapSnapshotImage(account: context.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
+                        let imageSignal = chatMapSnapshotImage(engine: context.engine, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
                         items[.groupLocation]!.append(PeerInfoScreenAddressItem(
                             id: ItemLocation,
                             label: "",

@@ -247,7 +247,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .locationHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .location(theme, location):
-                let imageSignal = chatMapSnapshotImage(account: arguments.context.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
+                let imageSignal = chatMapSnapshotImage(engine: arguments.context.engine, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
                 return ItemListAddressItem(theme: theme, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: nil)
             case let .changeLocation(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -258,7 +258,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .venueHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .venue(_, _, venue):
-                return ItemListVenueItem(presentationData: presentationData, account: arguments.context.account, venue: venue, sectionId: self.section, style: .blocks, action: {
+                return ItemListVenueItem(presentationData: presentationData, engine: arguments.context.engine, venue: venue, sectionId: self.section, style: .blocks, action: {
                     arguments.updateWithVenue(venue)
                 })
         }

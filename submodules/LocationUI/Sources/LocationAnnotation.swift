@@ -307,8 +307,8 @@ class LocationPinAnnotationView: MKAnnotationView {
                     let venueType = location.venue?.type ?? ""
                     let color = venueType.isEmpty ? annotation.theme.list.itemAccentColor : venueIconColor(type: venueType)
                     self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/PinBackground"), color: color)
-                    self.iconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: venueType, background: false))
-                    self.smallIconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: venueType, background: false))
+                    self.iconNode.setSignal(venueIcon(engine: annotation.context.engine, type: venueType, background: false))
+                    self.smallIconNode.setSignal(venueIcon(engine: annotation.context.engine, type: venueType, background: false))
                     self.smallNode.image = generateSmallBackgroundImage(color: color)
                     self.dotNode.image = generateFilledCircleImage(diameter: 6.0, color: color)
                     
@@ -619,7 +619,7 @@ class LocationPinAnnotationView: MKAnnotationView {
     
     func setCustom(_ custom: Bool, animated: Bool) {
         if let annotation = self.annotation as? LocationPinAnnotation {
-            self.iconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: "", background: false))
+            self.iconNode.setSignal(venueIcon(engine: annotation.context.engine, type: "", background: false))
         }
         
         if let avatarNode = self.avatarNode {

@@ -11,7 +11,7 @@ import ShimmerEffect
 
 public final class ItemListVenueItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
-    let account: Account
+    let engine: TelegramEngine
     let venue: TelegramMediaMap?
     let title: String?
     let subtitle: String?
@@ -22,9 +22,9 @@ public final class ItemListVenueItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, account: Account, venue: TelegramMediaMap?, title: String? = nil, subtitle: String? = nil, sectionId: ItemListSectionId = 0, style: ItemListStyle, action: (() -> Void)?, infoAction: (() -> Void)? = nil, header: ListViewItemHeader? = nil) {
+    public init(presentationData: ItemListPresentationData, engine: TelegramEngine, venue: TelegramMediaMap?, title: String? = nil, subtitle: String? = nil, sectionId: ItemListSectionId = 0, style: ItemListStyle, action: (() -> Void)?, infoAction: (() -> Void)? = nil, header: ListViewItemHeader? = nil) {
         self.presentationData = presentationData
-        self.account = account
+        self.engine = engine
         self.venue = venue
         self.title = title
         self.subtitle = subtitle
@@ -281,7 +281,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                     let _ = addressApply()
                     
                     if let updatedVenueType = updatedVenueType {
-                        strongSelf.iconNode.setSignal(venueIcon(postbox: item.account.postbox, type: updatedVenueType, background: true))
+                        strongSelf.iconNode.setSignal(venueIcon(engine: item.engine, type: updatedVenueType, background: true))
                     }
                     
                     let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: iconSize, height: iconSize), boundingSize: CGSize(width: iconSize, height: iconSize), intrinsicInsets: UIEdgeInsets()))

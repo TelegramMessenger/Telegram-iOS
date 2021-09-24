@@ -119,8 +119,6 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             }
             return fetchAnimatedStickerFirstFrameRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
         }
-    } else if let resource = resource as? MapSnapshotMediaResource, let _ = representation as? MapSnapshotMediaResourceRepresentation {
-        return fetchMapSnapshotResource(resource: resource)
     } else if let resource = resource as? YoutubeEmbedStoryboardMediaResource, let _ = representation as? YoutubeEmbedStoryboardMediaResourceRepresentation {
         return fetchYoutubeEmbedStoryboardResource(resource: resource)
     } else if let representation = representation as? CachedPreparedPatternWallpaperRepresentation {

@@ -135,7 +135,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 if updated {
-                    updateImageSignal = chatMapSnapshotImage(account: item.context.account, resource: MapSnapshotMediaResource(latitude: selectedMedia.latitude, longitude: selectedMedia.longitude, width: Int32(imageSize.width), height: Int32(imageSize.height)))
+                    updateImageSignal = chatMapSnapshotImage(engine: item.context.engine, resource: MapSnapshotMediaResource(latitude: selectedMedia.latitude, longitude: selectedMedia.longitude, width: Int32(imageSize.width), height: Int32(imageSize.height)))
                 }
             }
             

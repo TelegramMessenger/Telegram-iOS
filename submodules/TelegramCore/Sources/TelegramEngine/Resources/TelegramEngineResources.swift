@@ -2,7 +2,15 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 
+public typealias EngineTempBox = TempBox
+public typealias EngineTempBoxFile = TempBoxFile
+
 public final class EngineMediaResource: Equatable {
+    public enum CacheTimeout {
+        case `default`
+        case shortLived
+    }
+
     public struct ByteRange {
         public enum Priority {
             case `default`
@@ -21,27 +29,16 @@ public final class EngineMediaResource: Equatable {
 
     public final class Fetch {
         public enum Result {
-            case dataPart(resourceOffset: Int, data: Data, range: Range<Int>, complete: Bool)
-            case resourceSizeUpdated(Int)
-            case progressUpdated(Float)
-            case replaceHeader(data: Data, range: Range<Int>)
-            case moveLocalFile(path: String)
             case moveTempFile(file: TempBoxFile)
-            case copyLocalItem(MediaResourceDataFetchCopyLocalItem)
-            case reset
         }
 
         public enum Error {
             case generic
         }
 
-        public let signal: (
-            Signal<[EngineMediaResource.ByteRange], NoError>
-        ) -> Signal<Result, Error>
+        public let signal: () -> Signal<Result, Error>
 
-        public init(_ signal: @escaping (
-            Signal<[EngineMediaResource.ByteRange], NoError>
-        ) -> Signal<Result, Error>) {
+        public init(_ signal: @escaping () -> Signal<Result, Error>) {
             self.signal = signal
         }
     }
@@ -93,55 +90,9 @@ public final class EngineMediaResource: Equatable {
     }
 }
 
-public extension MediaResource {
-    func fetch(engine: TelegramEngine, parameters: MediaResourceFetchParameters?) -> EngineMediaResource.Fetch {
-        return EngineMediaResource.Fetch { ranges in
-            return Signal { subscriber in
-                return engine.account.postbox.mediaBox.fetchResource!(
-                    self,
-                    ranges |> map { ranges -> [(Range<Int>, MediaBoxFetchPriority)] in
-                        return ranges.map { range -> (Range<Int>, MediaBoxFetchPriority) in
-                            let mappedPriority: MediaBoxFetchPriority
-                            switch range.priority {
-                            case .default:
-                                mappedPriority = .default
-                            case .elevated:
-                                mappedPriority = .elevated
-                            case .maximum:
-                                mappedPriority = .maximum
-                            }
-                            return (range.range, mappedPriority)
-                        }
-                    },
-                    parameters
-                ).start(next: { result in
-                    let mappedResult: EngineMediaResource.Fetch.Result
-                    switch result {
-                    case let .dataPart(resourceOffset, data, range, complete):
-                        mappedResult = .dataPart(resourceOffset: resourceOffset, data: data, range: range, complete: complete)
-                    case let .resourceSizeUpdated(size):
-                        mappedResult = .resourceSizeUpdated(size)
-                    case let .progressUpdated(progress):
-                        mappedResult = .progressUpdated(progress)
-                    case let .replaceHeader(data, range):
-                        mappedResult = .replaceHeader(data: data, range: range)
-                    case let .moveLocalFile(path):
-                        mappedResult = .moveLocalFile(path: path)
-                    case let .moveTempFile(file):
-                        mappedResult = .moveTempFile(file: file)
-                    case let .copyLocalItem(item):
-                        mappedResult = .copyLocalItem(item)
-                    case .reset:
-                        mappedResult = .reset
-                    }
-                    subscriber.putNext(mappedResult)
-                }, error: { _ in
-                    subscriber.putError(.generic)
-                }, completed: {
-                    subscriber.putCompletion()
-                })
-            }
-        }
+public extension EngineMediaResource.ResourceData {
+    convenience init(_ data: MediaResourceData) {
+        self.init(path: data.path, availableSize: data.size, isComplete: data.complete)
     }
 }
 
@@ -165,12 +116,66 @@ public extension TelegramEngine {
             return _internal_clearCachedMediaResources(account: self.account, mediaResourceIds: mediaResourceIds)
         }
 
-        public func data(id: String) -> Signal<EngineMediaResource.ResourceData, NoError> {
-            preconditionFailure()
+        public func data(id: EngineMediaResource.Id, attemptSynchronously: Bool = false) -> Signal<EngineMediaResource.ResourceData, NoError> {
+            return self.account.postbox.mediaBox.resourceData(
+                id: MediaResourceId(id.stringRepresentation),
+                pathExtension: nil,
+                option: .complete(waitUntilFetchStatus: false),
+                attemptSynchronously: attemptSynchronously
+            )
+            |> map { data in
+                return EngineMediaResource.ResourceData(data)
+            }
         }
 
-        public func fetch(id: String, fetch: EngineMediaResource.Fetch) -> Signal<Never, NoError> {
-            preconditionFailure()
+        public func custom(id: String, fetch: EngineMediaResource.Fetch, cacheTimeout: EngineMediaResource.CacheTimeout = .default, attemptSynchronously: Bool = false) -> Signal<EngineMediaResource.ResourceData, NoError> {
+            let mappedKeepDuration: CachedMediaRepresentationKeepDuration
+            switch cacheTimeout {
+            case .default:
+                mappedKeepDuration = .general
+            case .shortLived:
+                mappedKeepDuration = .shortLived
+            }
+            return self.account.postbox.mediaBox.customResourceData(
+                id: id,
+                baseResourceId: nil,
+                pathExtension: nil,
+                complete: true,
+                fetch: {
+                    return Signal { subscriber in
+                        return fetch.signal().start(next: { result in
+                            let mappedResult: CachedMediaResourceRepresentationResult
+                            switch result {
+                            case let .moveTempFile(file):
+                                mappedResult = .tempFile(file)
+                            }
+                            subscriber.putNext(mappedResult)
+                        }, completed: {
+                            subscriber.putCompletion()
+                        })
+                    }
+                },
+                keepDuration: mappedKeepDuration,
+                attemptSynchronously: attemptSynchronously
+            )
+            |> map { data in
+                return EngineMediaResource.ResourceData(data)
+            }
+        }
+
+        public func httpData(url: String) -> Signal<Data, EngineMediaResource.Fetch.Error> {
+            return fetchHttpResource(url: url)
+            |> mapError { _ -> EngineMediaResource.Fetch.Error in
+                return .generic
+            }
+            |> mapToSignal { value -> Signal<Data, EngineMediaResource.Fetch.Error> in
+                switch value {
+                case let .dataPart(_, data, _, _):
+                    return .single(data)
+                default:
+                    return .complete()
+                }
+            }
         }
 
         public func cancelAllFetches(id: String) {

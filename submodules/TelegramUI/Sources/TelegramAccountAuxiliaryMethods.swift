@@ -31,8 +31,6 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(fetchResour
         return fetchOpenInAppIconResource(resource: resource)
     } else if let resource = resource as? EmojiSpriteResource {
         return fetchEmojiSpriteResource(account: account, resource: resource)
-    } else if let resource = resource as? VenueIconResource {
-        return fetchVenueIconResource(account: account, resource: resource)
     } else if let resource = resource as? BundleResource {
         return Signal { subscriber in
             subscriber.putNext(.reset)
