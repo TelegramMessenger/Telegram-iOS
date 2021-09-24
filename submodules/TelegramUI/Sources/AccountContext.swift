@@ -237,7 +237,7 @@ public final class AccountContextImpl: AccountContext {
             })
         }
         
-        account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: true, includeReference: sharedContext.immediateExperimentalUISettings.experimentalCompatibility).map { version, supportsVideo -> CallSessionManagerImplementationVersion in
+        account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: true, includeReference: true).map { version, supportsVideo -> CallSessionManagerImplementationVersion in
             CallSessionManagerImplementationVersion(version: version, supportsVideo: supportsVideo)
         })
     }
