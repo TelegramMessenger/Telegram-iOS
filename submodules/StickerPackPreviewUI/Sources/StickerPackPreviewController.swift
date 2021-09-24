@@ -67,9 +67,9 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
         }
     }
     
-    private let actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?
+    private let actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPack: StickerPackReference, mode: StickerPackPreviewControllerMode = .default, parentNavigationController: NavigationController?, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
         self.context = context
         self.mode = mode
         self.parentNavigationController = parentNavigationController
@@ -207,7 +207,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                     
                     let topItems = items.prefix(16)
                     for item in topItems {
-                        if let item = item as? StickerPackItem, item.file.isAnimatedSticker {
+                        if item.file.isAnimatedSticker {
                             let signal = Signal<Bool, NoError> { subscriber in
                                 let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: FileMediaReference.standalone(media: item.file).resourceReference(item.file.resource)).start()
                                 let data = account.postbox.mediaBox.resourceData(item.file.resource).start()

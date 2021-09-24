@@ -100,7 +100,7 @@ public func cachedChannelAdminRanksEntryId(peerId: PeerId) -> ItemCacheEntryId {
     return ItemCacheEntryId(collectionId: 100, key: CachedChannelAdminRanks.cacheKey(peerId: peerId))
 }
 
-public func updateCachedChannelAdminRanks(postbox: Postbox, peerId: PeerId, ranks: Dictionary<PeerId, CachedChannelAdminRank>) -> Signal<Void, NoError> {
+func updateCachedChannelAdminRanks(postbox: Postbox, peerId: PeerId, ranks: Dictionary<PeerId, CachedChannelAdminRank>) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         if let entry = CodableEntry(CachedChannelAdminRanks(ranks: ranks)) {
             transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: 100, key: CachedChannelAdminRanks.cacheKey(peerId: peerId)), entry: entry, collectionSpec: collectionSpec)

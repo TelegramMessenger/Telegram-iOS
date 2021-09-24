@@ -141,7 +141,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
             switch stickerPack {
                 case let .result(_, items, _):
                     var emojiStickers: [TelegramMediaFile] = []
-                    for case let item as StickerPackItem in items {
+                    for item in items {
                         emojiStickers.append(item.file)
                     }
                     return .single(emojiStickers)

@@ -321,7 +321,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
                 case .fetching:
                     return nil
                 case let .result(info, items, _):
-                    return InitialStickerPackData.data(StickerPackData(info: info, item: items.first as? StickerPackItem))
+                    return InitialStickerPackData.data(StickerPackData(info: info, item: items.first))
             }
         })
     } else {
@@ -361,7 +361,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
                         case .none:
                             return .single((searchText, .notFound))
                         case let .result(info, items, _):
-                            return .single((searchText, .found(StickerPackData(info: info, item: items.first as? StickerPackItem))))
+                            return .single((searchText, .found(StickerPackData(info: info, item: items.first))))
                     }
                 })
             }

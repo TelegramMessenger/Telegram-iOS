@@ -65,7 +65,7 @@ private final class PrefetchManagerInnerImpl {
             switch stickerPack {
                 case let .result(_, items, _):
                     var animatedEmojiStickers: [String: StickerPackItem] = [:]
-                    for case let item as StickerPackItem in items {
+                    for item in items {
                         if let emoji = item.getStringRepresentationsOfIndexKeys().first {
                             animatedEmojiStickers[emoji.basicEmoji.0] = item
                         }

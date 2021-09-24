@@ -1091,7 +1091,7 @@ final class ChatMediaInputNode: ChatInputNode {
             var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
             switch animatedEmoji {
                 case let .result(_, items, _):
-                    for case let item as StickerPackItem in items {
+                    for item in items {
                         if let emoji = item.getStringRepresentationsOfIndexKeys().first {
                             animatedEmojiStickers[emoji.basicEmoji.0] = [item]
                             let strippedEmoji = emoji.basicEmoji.0.strippedEmoji

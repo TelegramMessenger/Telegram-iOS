@@ -71,7 +71,7 @@ private enum WebBrowserSettingsControllerEntry: ItemListNodeEntry {
             case let .browserHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .browser(_, title, application, identifier, selected, _):
-                return WebBrowserItem(account: arguments.context.account, presentationData: presentationData, title: title, application: application, checked: selected, sectionId: self.section) {
+                return WebBrowserItem(engine: arguments.context.engine, presentationData: presentationData, title: title, application: application, checked: selected, sectionId: self.section) {
                     arguments.updateDefaultBrowser(identifier)
                 }
         }
