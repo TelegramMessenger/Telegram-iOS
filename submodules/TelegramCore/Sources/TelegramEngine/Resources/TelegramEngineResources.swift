@@ -59,6 +59,12 @@ public final class EngineMediaResource: Equatable {
         }
     }
 
+    public enum FetchStatus: Equatable {
+        case Remote
+        case Local
+        case Fetching(isActive: Bool, progress: Float)
+    }
+
     public struct Id: Equatable, Hashable {
         public var stringRepresentation: String
 
@@ -96,6 +102,30 @@ public extension EngineMediaResource.ResourceData {
     }
 }
 
+public extension EngineMediaResource.FetchStatus {
+    init(_ status: MediaResourceStatus) {
+        switch status {
+        case .Remote:
+            self = .Remote
+        case .Local:
+            self = .Local
+        case let .Fetching(isActive, progress):
+            self = .Fetching(isActive: isActive, progress: progress)
+        }
+    }
+
+    func _asStatus() -> MediaResourceStatus {
+        switch self {
+        case .Remote:
+            return .Remote
+        case .Local:
+            return .Local
+        case let .Fetching(isActive, progress):
+            return .Fetching(isActive: isActive, progress: progress)
+        }
+    }
+}
+
 public extension TelegramEngine {
     final class Resources {
         private let account: Account
@@ -128,7 +158,12 @@ public extension TelegramEngine {
             }
         }
 
-        public func custom(id: String, fetch: EngineMediaResource.Fetch, cacheTimeout: EngineMediaResource.CacheTimeout = .default, attemptSynchronously: Bool = false) -> Signal<EngineMediaResource.ResourceData, NoError> {
+        public func custom(
+            id: String,
+            fetch: EngineMediaResource.Fetch?,
+            cacheTimeout: EngineMediaResource.CacheTimeout = .default,
+            attemptSynchronously: Bool = false
+        ) -> Signal<EngineMediaResource.ResourceData, NoError> {
             let mappedKeepDuration: CachedMediaRepresentationKeepDuration
             switch cacheTimeout {
             case .default:
@@ -141,18 +176,20 @@ public extension TelegramEngine {
                 baseResourceId: nil,
                 pathExtension: nil,
                 complete: true,
-                fetch: {
-                    return Signal { subscriber in
-                        return fetch.signal().start(next: { result in
-                            let mappedResult: CachedMediaResourceRepresentationResult
-                            switch result {
-                            case let .moveTempFile(file):
-                                mappedResult = .tempFile(file)
-                            }
-                            subscriber.putNext(mappedResult)
-                        }, completed: {
-                            subscriber.putCompletion()
-                        })
+                fetch: fetch.flatMap { fetch in
+                    return {
+                        return Signal { subscriber in
+                            return fetch.signal().start(next: { result in
+                                let mappedResult: CachedMediaResourceRepresentationResult
+                                switch result {
+                                case let .moveTempFile(file):
+                                    mappedResult = .tempFile(file)
+                                }
+                                subscriber.putNext(mappedResult)
+                            }, completed: {
+                                subscriber.putCompletion()
+                            })
+                        }
                     }
                 },
                 keepDuration: mappedKeepDuration,

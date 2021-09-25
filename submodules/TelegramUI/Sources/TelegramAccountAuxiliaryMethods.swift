@@ -21,8 +21,6 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(fetchResour
         return fetchLocalFileGifMediaResource(resource: resource)
     } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {
         return fetchPhotoLibraryResource(localIdentifier: photoLibraryResource.localIdentifier)
-    } else if let resource = resource as? ExternalMusicAlbumArtResource {
-        return fetchExternalMusicAlbumArtResource(account: account, resource: resource)
     } else if let resource = resource as? ICloudFileResource {
         return fetchICloudFileResource(resource: resource)
     } else if let resource = resource as? SecureIdLocalImageResource {

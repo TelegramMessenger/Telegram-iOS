@@ -1338,7 +1338,7 @@ ios_extension(
     ],
     minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionWidgetExtension",
-    provides_main = True,
+    #provides_main = True,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
