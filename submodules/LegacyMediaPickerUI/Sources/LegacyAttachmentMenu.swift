@@ -82,7 +82,7 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
         }
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        let recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         
         let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
         legacyController.blocksBackgroundWhenInOverlay = true
@@ -182,7 +182,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
         carouselItemView = carouselItem
         carouselItem.stickersContext = paintStickersContext
         carouselItem.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
-        carouselItem.recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        carouselItem.recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         var openedCamera = false
         controller.willDismiss = { [weak carouselItem] _ in
             if let carouselItem = carouselItem, !openedCamera {
@@ -315,7 +315,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                 navigationController.setNavigationBarHidden(true, animated: false)
                 legacyController.bind(controller: navigationController)
                 
-                let recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                let recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
 
                 legacyController.enableSizeClassSignal = true
                 
@@ -439,7 +439,7 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLoca
         }
         hasSilentPosting = true
     }
-    let recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+    let recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     
     legacyController.enableSizeClassSignal = true
 

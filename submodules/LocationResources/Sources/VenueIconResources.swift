@@ -1,12 +1,12 @@
 import Foundation
 import UIKit
 import Display
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AppBundle
+import PersistentStringHash
 
-public struct VenueIconResourceId: MediaResourceId {
+public struct VenueIconResourceId {
     public let type: String
     
     public init(type: String) {
@@ -20,89 +20,53 @@ public struct VenueIconResourceId: MediaResourceId {
     public var hashValue: Int {
         return self.type.hashValue
     }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? VenueIconResourceId {
-            return self.type == to.type
-        } else {
-            return false
-        }
-    }
 }
 
-public class VenueIconResource: TelegramMediaResource {
+public class VenueIconResource {
     public let type: String
     
     public init(type: String) {
         self.type = type
     }
     
-    public required init(decoder: PostboxDecoder) {
-        self.type = decoder.decodeStringForKey("t", orElse: "")
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.type, forKey: "t")
-    }
-    
-    public var id: MediaResourceId {
-        return VenueIconResourceId(type: self.type)
-    }
-    
-    public func isEqual(to: MediaResource) -> Bool {
-        if let to = to as? VenueIconResource {
-            return self.type == to.type
-        } else {
-            return false
-        }
+    public var id: EngineMediaResource.Id {
+        return EngineMediaResource.Id(VenueIconResourceId(type: self.type).uniqueId)
     }
 }
 
-public func fetchVenueIconResource(account: Account, resource: VenueIconResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+private func fetchVenueIconResource(engine: TelegramEngine, resource: VenueIconResource) -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> {
     return Signal { subscriber in
-        subscriber.putNext(.reset)
-        
         let url = "https://ss3.4sqi.net/img/categories_v2/\(resource.type)_88.png"
         
-        let fetchDisposable = MetaDisposable()
-        fetchDisposable.set(fetchHttpResource(url: url).start(next: { next in
-            subscriber.putNext(next)
+        return engine.resources.httpData(url: url).start(next: { data in
+            let file = EngineTempBox.shared.tempFile(fileName: "file.png")
+            let _ = try? data.write(to: URL(fileURLWithPath: file.path))
+            subscriber.putNext(.moveTempFile(file: file))
         }, completed: {
             subscriber.putCompletion()
-        }))
-        
-        return ActionDisposable {
-            fetchDisposable.dispose()
-        }
+        })
     }
 }
 
-private func venueIconData(postbox: Postbox, resource: MediaResource) -> Signal<Data?, NoError> {
-    let resourceData = postbox.mediaBox.resourceData(resource)
+private func venueIconData(engine: TelegramEngine, resource: VenueIconResource) -> Signal<Data?, NoError> {
+    let resourceData = engine.resources.custom(
+        id: resource.id.stringRepresentation,
+        fetch: EngineMediaResource.Fetch {
+            return fetchVenueIconResource(engine: engine, resource: resource)
+        },
+        cacheTimeout: .shortLived
+    )
     
     let signal = resourceData
     |> take(1)
     |> mapToSignal { maybeData -> Signal<Data?, NoError> in
-        if maybeData.complete {
-            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-            return .single((loadedData))
+        if maybeData.isComplete {
+            return .single(try? Data(contentsOf: URL(fileURLWithPath: maybeData.path)))
         } else {
-            let fetched = postbox.mediaBox.fetchedResource(resource, parameters: nil)
-            let data = Signal<Data?, NoError> { subscriber in
-                let fetchedDisposable = fetched.start()
-                let resourceDisposable = resourceData.start(next: { next in
-                    subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
-                }, error: subscriber.putError, completed: subscriber.putCompletion)
-                
-                return ActionDisposable {
-                    fetchedDisposable.dispose()
-                    resourceDisposable.dispose()
-                }
-            }
-            
-            return data
+            return .single(nil)
         }
-    } |> distinctUntilChanged(isEqual: { lhs, rhs in
+    }
+    |> distinctUntilChanged(isEqual: { lhs, rhs in
         if lhs == nil && rhs == nil {
             return true
         } else {
@@ -149,7 +113,7 @@ public func venueIconColor(type: String) -> UIColor {
         return color
     }
     
-    let index = Int(abs(persistentHash32(type)) % Int32(randomColors.count))
+    let index = Int(abs(Int32(bitPattern: UInt32(clamping: type.persistentHashValue))) % Int32(randomColors.count))
     return randomColors[index]
 }
 
@@ -170,9 +134,9 @@ public struct VenueIconArguments: TransformImageCustomArguments {
     }
 }
 
-public func venueIcon(postbox: Postbox, type: String, background: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func venueIcon(engine: TelegramEngine, type: String, background: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let isBuiltinIcon = ["", "home", "work"].contains(type)
-    let data: Signal<Data?, NoError> = isBuiltinIcon ? .single(nil) : venueIconData(postbox: postbox, resource: VenueIconResource(type: type))
+    let data: Signal<Data?, NoError> = isBuiltinIcon ? .single(nil) : venueIconData(engine: engine, resource: VenueIconResource(type: type))
     return data |> map { data in
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, clear: true)

@@ -388,7 +388,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             if let voiceChatTitle = self.currentGroupCallState?.info?.title, !voiceChatTitle.isEmpty {
                 title = voiceChatTitle
             } else if let currentPeer = self.currentPeer {
-                title = currentPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                title = EnginePeer(currentPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             var membersCount: Int32?
             if let groupCallState = self.currentGroupCallState {
@@ -409,7 +409,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
             }
             
             if let speakingPeer = speakingPeer {
-                speakerSubtitle = speakingPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                speakerSubtitle = EnginePeer(speakingPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             displaySpeakerSubtitle = speakerSubtitle != title && !speakerSubtitle.isEmpty
             

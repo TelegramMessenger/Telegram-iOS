@@ -77,21 +77,13 @@ private class PeerInfoAvatarListLoadingStripNode: ASImageNode {
     }
 }
 
-private struct CustomListItemResourceId: MediaResourceId {
+private struct CustomListItemResourceId {
     public var uniqueId: String {
         return "customNode"
     }
     
     public var hashValue: Int {
         return 0
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if to is CustomListItemResourceId {
-            return true
-        } else {
-            return false
-        }
     }
 }
 
@@ -100,16 +92,16 @@ public enum PeerInfoAvatarListItem: Equatable {
     case topImage([ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
     case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
     
-    var id: WrappedMediaResourceId {
+    var id: MediaResourceId {
         switch self {
         case .custom:
-            return WrappedMediaResourceId(CustomListItemResourceId())
+            return MediaResourceId(CustomListItemResourceId().uniqueId)
         case let .topImage(representations, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
-            return WrappedMediaResourceId(representation.resource.id)
+            return representation.resource.id
         case let .image(_, representations, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
-            return WrappedMediaResourceId(representation.resource.id)
+            return representation.resource.id
         }
     }
     
@@ -465,7 +457,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public let highlightContainerNode: ASDisplayNode
     public private(set) var galleryEntries: [AvatarGalleryEntry] = []
     private var items: [PeerInfoAvatarListItem] = []
-    private var itemNodes: [WrappedMediaResourceId: PeerInfoAvatarListItemNode] = [:]
+    private var itemNodes: [MediaResourceId: PeerInfoAvatarListItemNode] = [:]
     private var stripNodes: [ASImageNode] = []
     private var activeStripNode: ASImageNode
     private var loadingStripNode: PeerInfoAvatarListLoadingStripNode
@@ -1131,7 +1123,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public var updateCustomItemsOnlySynchronously = false
     
     private func updateItems(size: CGSize, update: Bool = false, transition: ContainedViewLayoutTransition, stripTransition: ContainedViewLayoutTransition, synchronous: Bool = false) {
-        var validIds: [WrappedMediaResourceId] = []
+        var validIds: [MediaResourceId] = []
         var addedItemNodesForAdditiveTransition: [PeerInfoAvatarListItemNode] = []
         var additiveTransitionOffset: CGFloat = 0.0
         var itemsAdded = false
@@ -1185,7 +1177,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         for itemNode in addedItemNodesForAdditiveTransition {
             transition.animatePositionAdditive(node: itemNode, offset: CGPoint(x: additiveTransitionOffset, y: 0.0))
         }
-        var removeIds: [WrappedMediaResourceId] = []
+        var removeIds: [MediaResourceId] = []
         for (id, _) in self.itemNodes {
             if !validIds.contains(id) {
                 removeIds.append(id)

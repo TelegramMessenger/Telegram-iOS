@@ -5,7 +5,9 @@ import SwiftSignalKit
 import CryptoUtils
 
 private func md5(_ data: Data) -> Data {
-    return data.withUnsafeBytes { bytes -> Data in
+    return data.withUnsafeBytes { rawBytes -> Data in
+        let bytes = rawBytes.baseAddress!
+
         return CryptoMD5(bytes, Int32(data.count))
     }
 }

@@ -5,7 +5,7 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 
-public struct SecureIdLocalImageResourceId: MediaResourceId {
+public struct SecureIdLocalImageResourceId {
     public let id: Int64
     
     public var uniqueId: String {
@@ -14,14 +14,6 @@ public struct SecureIdLocalImageResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.id.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? SecureIdLocalImageResourceId {
-            return self.id == to.id
-        } else {
-            return false
-        }
     }
 }
 
@@ -45,7 +37,7 @@ public class SecureIdLocalImageResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return SecureIdLocalImageResourceId(id: self.localId)
+        return MediaResourceId(SecureIdLocalImageResourceId(id: self.localId).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {

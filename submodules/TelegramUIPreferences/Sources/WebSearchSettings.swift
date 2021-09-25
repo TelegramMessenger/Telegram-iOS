@@ -8,7 +8,7 @@ public enum WebSearchScope: Int32 {
     case gifs
 }
 
-public struct WebSearchSettings: Equatable, PreferencesEntry {
+public struct WebSearchSettings: Codable, Equatable {
     public var scope: WebSearchScope
     
     public static var defaultSettings: WebSearchSettings {
@@ -19,20 +19,16 @@ public struct WebSearchSettings: Equatable, PreferencesEntry {
         self.scope = scope
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.scope = WebSearchScope(rawValue: decoder.decodeInt32ForKey("scope", orElse: 0)) ?? .images
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.scope = WebSearchScope(rawValue: try container.decode(Int32.self, forKey: "scope")) ?? .images
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.scope.rawValue, forKey: "scope")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? WebSearchSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.scope.rawValue, forKey: "scope")
     }
 }
 
@@ -40,12 +36,12 @@ public func updateWebSearchSettingsInteractively(accountManager: AccountManager<
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.webSearchSettings, { entry in
             let currentSettings: WebSearchSettings
-            if let entry = entry as? WebSearchSettings {
+            if let entry = entry?.get(WebSearchSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = .defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

@@ -92,7 +92,7 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                             if let stickerStringRepresentations = stickerStringRepresentations {
                                 return postbox.transaction { transaction -> Void in
                                     addSavedSticker(transaction: transaction, file: file, stringRepresentations: stickerStringRepresentations)
-                                } |> mapError { _ in return AddSavedStickerError.generic }
+                                } |> mapError { _ -> AddSavedStickerError in }
                             } else {
                                 return .fail(.notFound)
                             }
@@ -102,18 +102,20 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
             }
         }
         return .complete()
-    } |> mapError { _ in return AddSavedStickerError.generic } |> switchToLatest
+    } |> mapError { _ -> AddSavedStickerError in } |> switchToLatest
 }
 
 public func addSavedSticker(transaction: Transaction, file: TelegramMediaFile, stringRepresentations: [String]) {
     if let resource = file.resource as? CloudDocumentMediaResource {
-        transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: SavedStickerItem(file: file, stringRepresentations: stringRepresentations)), removeTailIfCountExceeds: 5)
+        if let entry = CodableEntry(SavedStickerItem(file: file, stringRepresentations: stringRepresentations)) {
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry), removeTailIfCountExceeds: 5)
+        }
         addSynchronizeSavedStickersOperation(transaction: transaction, operation: .add(id: resource.fileId, accessHash: resource.accessHash, fileReference: .standalone(media: file)))
     }
 }
 
 public func removeSavedSticker(transaction: Transaction, mediaId: MediaId) {
-    if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents as? SavedStickerItem {
+    if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents.get(SavedStickerItem.self) {
         if let resource = item.file.resource as? CloudDocumentMediaResource {
             transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: entry.id)
             addSynchronizeSavedStickersOperation(transaction: transaction, operation: .remove(id: resource.fileId, accessHash: resource.accessHash))
@@ -123,7 +125,7 @@ public func removeSavedSticker(transaction: Transaction, mediaId: MediaId) {
 
 public func removeSavedSticker(postbox: Postbox, mediaId: MediaId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction in
-        if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents as? SavedStickerItem {
+        if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents.get(SavedStickerItem.self) {
             if let resource = item.file.resource as? CloudDocumentMediaResource {
                 transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: entry.id)
                 addSynchronizeSavedStickersOperation(transaction: transaction, operation: .remove(id: resource.fileId, accessHash: resource.accessHash))

@@ -300,14 +300,14 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
                         return []
                     case .Animated:
                         return []
-                    case let .Video(video):
-                        if video.flags.contains(.instantRoundVideo) {
+                    case let .Video(_, _, flags):
+                        if flags.contains(.instantRoundVideo) {
                             return []
                         } else {
                             options.formUnion([.imageOrVideo, .file])
                         }
-                    case let .Audio(audio):
-                        if audio.isVoice {
+                    case let .Audio(isVoice, _, _, _, _):
+                        if isVoice {
                             return []
                         } else {
                             if let _ = message.groupingKey {
@@ -525,8 +525,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     }
     
     let loadLimits = context.account.postbox.transaction { transaction -> (LimitsConfiguration, AppConfiguration) in
-        let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
-        let appConfig = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+        let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
+        let appConfig = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
         return (limitsConfiguration, appConfig)
     }
     
@@ -1199,7 +1199,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         subActions.append(.separator)
 
                         for peer in stats.peers {
-                            let avatarSignal = peerAvatarCompleteImage(account: context.account, peer: peer._asPeer(), size: CGSize(width: 30.0, height: 30.0))
+                            let avatarSignal = peerAvatarCompleteImage(account: context.account, peer: peer, size: CGSize(width: 30.0, height: 30.0))
 
                             subActions.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 30.0, height: 30.0), signal: avatarSignal), action: { _, f in
                                 c.dismiss(completion: {
@@ -1270,7 +1270,7 @@ private func canPerformDeleteActions(limits: LimitsConfiguration, accountPeerId:
 
 func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message] = [:], peers: [PeerId: Peer] = [:]) -> Signal<ChatAvailableMessageActions, NoError> {
     return postbox.transaction { transaction -> ChatAvailableMessageActions in
-        let limitsConfiguration: LimitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+        let limitsConfiguration: LimitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
         var banPeer: Peer?
         var hadPersonalIncoming = false
@@ -1305,8 +1305,8 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
             if let message = getMessage(id) {
                 for media in message.media {
                     if let file = media as? TelegramMediaFile, file.isSticker {
-                        for case let .Sticker(sticker) in file.attributes {
-                            if let _ = sticker.packReference {
+                        for case let .Sticker(_, packReference, _) in file.attributes {
+                            if let _ = packReference {
                                 optionsMap[id]!.insert(.viewStickerPack)
                             }
                             break

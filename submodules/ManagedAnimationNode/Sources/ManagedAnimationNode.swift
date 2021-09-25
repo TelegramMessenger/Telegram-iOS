@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import RLottieBinding
 import AppBundle
@@ -79,14 +78,14 @@ public enum ManagedAnimationFrameRange: Equatable {
 
 public enum ManagedAnimationSource: Equatable {
     case local(String)
-    case resource(Account, MediaResource)
+    case resource(Account, EngineMediaResource)
     
     var cacheKey: String {
         switch self {
             case let .local(name):
                 return name
             case let .resource(_, resource):
-                return resource.id.uniqueId
+                return resource.id.stringRepresentation
         }
     }
     
@@ -95,11 +94,11 @@ public enum ManagedAnimationSource: Equatable {
             case let .local(name):
                 return getAppBundle().path(forResource: name, ofType: "tgs")
             case let .resource(account, resource):
-                return account.postbox.mediaBox.completedResourcePath(resource)
+                return account.postbox.mediaBox.completedResourcePath(resource._asResource())
         }
     }
     
-    public static func == (lhs: ManagedAnimationSource, rhs: ManagedAnimationSource) -> Bool {
+    public static func ==(lhs: ManagedAnimationSource, rhs: ManagedAnimationSource) -> Bool {
         switch lhs {
             case let .local(lhsPath):
                 if case let .local(rhsPath) = rhs, lhsPath == rhsPath {
@@ -108,7 +107,7 @@ public enum ManagedAnimationSource: Equatable {
                     return false
                 }
             case let .resource(lhsAccount, lhsResource):
-                if case let .resource(rhsAccount, rhsResource) = rhs, lhsAccount === rhsAccount, lhsResource.isEqual(to: rhsResource) {
+                if case let .resource(rhsAccount, rhsResource) = rhs, lhsAccount === rhsAccount, lhsResource == rhsResource {
                     return true
                 } else {
                     return false

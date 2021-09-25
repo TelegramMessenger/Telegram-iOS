@@ -20,8 +20,8 @@ enum PeerInfoMember: Equatable {
         switch self {
         case let .channelMember(channelMember):
             return channelMember.peer.id
-        case let .legacyGroupMember(legacyGroupMember):
-            return legacyGroupMember.peer.peerId
+        case let .legacyGroupMember(peer, _, _, _):
+            return peer.peerId
         case let .account(peer):
             return peer.peerId
         }
@@ -31,8 +31,8 @@ enum PeerInfoMember: Equatable {
         switch self {
         case let .channelMember(channelMember):
             return channelMember.peer
-        case let .legacyGroupMember(legacyGroupMember):
-            return legacyGroupMember.peer.peers[legacyGroupMember.peer.peerId]!
+        case let .legacyGroupMember(peer, _, _, _):
+            return peer.peers[peer.peerId]!
         case let .account(peer):
             return peer.peers[peer.peerId]!
         }
@@ -42,8 +42,8 @@ enum PeerInfoMember: Equatable {
         switch self {
         case let .channelMember(channelMember):
             return channelMember.presences[channelMember.peer.id] as? TelegramUserPresence
-        case let .legacyGroupMember(legacyGroupMember):
-            return legacyGroupMember.presence
+        case let .legacyGroupMember(_, _, _, presence):
+            return presence
         case .account:
             return nil
         }
@@ -55,15 +55,15 @@ enum PeerInfoMember: Equatable {
             switch channelMember.participant {
             case .creator:
                 return .creator
-            case let .member(member):
-                if member.adminInfo != nil {
+            case let .member(_, _, adminInfo, _, _):
+                if adminInfo != nil {
                     return .admin
                 } else {
                     return .member
                 }
             }
-        case let .legacyGroupMember(legacyGroupMember):
-            return legacyGroupMember.role
+        case let .legacyGroupMember(_, role, _, _):
+            return role
         case .account:
             return .member
         }
@@ -73,10 +73,10 @@ enum PeerInfoMember: Equatable {
         switch self {
             case let .channelMember(channelMember):
                 switch channelMember.participant {
-                case let .creator(creator):
-                    return creator.rank
-                case let .member(member):
-                    return member.rank
+                case let .creator(_, _, rank):
+                    return rank
+                case let .member(_, _, _, _, rank):
+                    return rank
                 }
             case .legacyGroupMember:
                 return nil
@@ -185,12 +185,12 @@ private final class PeerInfoMembersContextImpl {
                         case .creator:
                             role = .creator
                             invitedBy = nil
-                        case let .admin(admin):
+                        case let .admin(_, invitedByValue, _):
                             role = .admin
-                            invitedBy = admin.invitedBy
-                        case let .member(member):
+                            invitedBy = invitedByValue
+                        case let .member(_, invitedByValue, _):
                             role = .member
-                            invitedBy = member.invitedBy
+                            invitedBy = invitedByValue
                         }
                         unsortedMembers.append(.legacyGroupMember(peer: RenderedPeer(peer: peer), role: role, invitedBy: invitedBy, presence: view.peerPresences[participant.peerId] as? TelegramUserPresence))
                     }
@@ -249,9 +249,7 @@ private final class PeerInfoMembersContextImpl {
             self.pushState()
             
             disposable.set((signal
-            |> deliverOn(self.queue)).start(error: { _ in
-                completed()
-            }, completed: {
+            |> deliverOn(self.queue)).start(completed: {
                 completed()
             }))
         }

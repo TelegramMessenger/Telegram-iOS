@@ -13,7 +13,7 @@ import SolidRoundedButtonNode
 
 final class LocationInfoListItem: ListViewItem {
     let presentationData: ItemListPresentationData
-    let account: Account
+    let engine: TelegramEngine
     let location: TelegramMediaMap
     let address: String?
     let distance: String?
@@ -21,9 +21,9 @@ final class LocationInfoListItem: ListViewItem {
     let action: () -> Void
     let getDirections: () -> Void
     
-    public init(presentationData: ItemListPresentationData, account: Account, location: TelegramMediaMap, address: String?, distance: String?, eta: String?, action: @escaping () -> Void, getDirections: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, engine: TelegramEngine, location: TelegramMediaMap, address: String?, distance: String?, eta: String?, action: @escaping () -> Void, getDirections: @escaping () -> Void) {
         self.presentationData = presentationData
-        self.account = account
+        self.engine = engine
         self.location = location
         self.address = address
         self.distance = distance
@@ -192,7 +192,7 @@ final class LocationInfoListItemNode: ListViewItemNode {
                         
                         let arguments = VenueIconArguments(defaultBackgroundColor: item.presentationData.theme.chat.inputPanel.actionControlFillColor, defaultForegroundColor: item.presentationData.theme.chat.inputPanel.actionControlForegroundColor)
                         if let updatedLocation = updatedLocation {
-                            strongSelf.venueIconNode.setSignal(venueIcon(postbox: item.account.postbox, type: updatedLocation.venue?.type ?? "", background: true))
+                            strongSelf.venueIconNode.setSignal(venueIcon(engine: item.engine, type: updatedLocation.venue?.type ?? "", background: true))
                         }
                         
                         let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: iconSize, height: iconSize), boundingSize: CGSize(width: iconSize, height: iconSize), intrinsicInsets: UIEdgeInsets(), custom: arguments))

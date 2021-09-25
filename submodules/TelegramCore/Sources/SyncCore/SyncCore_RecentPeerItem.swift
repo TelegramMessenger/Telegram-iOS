@@ -21,18 +21,22 @@ public struct RecentPeerItemId {
     }
 }
 
-public final class RecentPeerItem: OrderedItemListEntryContents {
+public final class RecentPeerItem: Codable {
     public let rating: Double
     
     public init(rating: Double) {
         self.rating = rating
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.rating = decoder.decodeDoubleForKey("r", orElse: 0.0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.rating = try container.decode(Double.self, forKey: "r")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeDouble(self.rating, forKey: "r")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.rating, forKey: "r")
     }
 }

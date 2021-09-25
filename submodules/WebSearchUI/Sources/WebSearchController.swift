@@ -183,7 +183,7 @@ public final class WebSearchController: ViewController {
         
         let settings = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webSearchSettings])
         |> map { sharedData -> WebSearchSettings in
-            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webSearchSettings] as? WebSearchSettings {
+            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webSearchSettings]?.get(WebSearchSettings.self) {
                 return current
             } else {
                 return WebSearchSettings.defaultSettings
@@ -192,7 +192,7 @@ public final class WebSearchController: ViewController {
         
         let gifProvider = self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { view -> String? in
-            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
                 return nil
             }
             let configuration = WebSearchConfiguration(appConfiguration: appConfiguration)

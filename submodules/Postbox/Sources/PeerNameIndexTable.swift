@@ -140,11 +140,11 @@ final class PeerNameIndexTable: Table {
     
     private var entryUpdates: [PeerId: PeerNameIndexCategoriesEntryUpdate] = [:]
     
-    init(valueBox: ValueBox, table: ValueBoxTable, peerTable: PeerTable, peerNameTokenIndexTable: ReverseIndexReferenceTable<PeerIdReverseIndexReference>) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, peerTable: PeerTable, peerNameTokenIndexTable: ReverseIndexReferenceTable<PeerIdReverseIndexReference>) {
         self.peerTable = peerTable
         self.peerNameTokenIndexTable = peerNameTokenIndexTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ peerId: PeerId) -> ValueBoxKey {

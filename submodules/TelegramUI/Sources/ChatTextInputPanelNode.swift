@@ -14,6 +14,7 @@ import ImageTransparency
 import ActivityIndicator
 import AnimationUI
 import Speak
+import ObjCRuntimeUtils
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -1982,7 +1983,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
-        if action == Selector(("_accessibilitySpeak:")) {
+        if action == makeSelectorFromString("_accessibilitySpeak:") {
             if case .format = self.inputMenu.state {
                 return ASEditableTextNodeTargetForAction(target: nil)
             } else if let textInputNode = self.textInputNode, textInputNode.selectedRange.length > 0 {
@@ -1990,7 +1991,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             } else {
                 return ASEditableTextNodeTargetForAction(target: nil)
             }
-        } else if action == Selector(("_accessibilitySpeakSpellOut:")) {
+        } else if action == makeSelectorFromString("_accessibilitySpeakSpellOut:") {
             if case .format = self.inputMenu.state {
                 return ASEditableTextNodeTargetForAction(target: nil)
             } else if let textInputNode = self.textInputNode, textInputNode.selectedRange.length > 0 {
@@ -1999,9 +2000,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 return ASEditableTextNodeTargetForAction(target: nil)
             }
         }
-        else if action == Selector("_accessibilitySpeakLanguageSelection:") || action == Selector("_accessibilityPauseSpeaking:") || action == Selector("_accessibilitySpeakSentence:") {
+        else if action == makeSelectorFromString("_accessibilitySpeakLanguageSelection:") || action == makeSelectorFromString("_accessibilityPauseSpeaking:") || action == makeSelectorFromString("_accessibilitySpeakSentence:") {
             return ASEditableTextNodeTargetForAction(target: nil)
-        } else if action == Selector(("_showTextStyleOptions:")) {
+        } else if action == makeSelectorFromString("_showTextStyleOptions:") {
             if case .general = self.inputMenu.state {
                 if let textInputNode = self.textInputNode, textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 || textInputNode.selectedRange.length == 0 {
                     return ASEditableTextNodeTargetForAction(target: nil)

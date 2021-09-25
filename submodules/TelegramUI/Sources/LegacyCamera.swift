@@ -79,7 +79,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     controller.allowGrouping = mediaGrouping
     controller.inhibitDocumentCaptions = false
     controller.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
-    controller.recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+    controller.recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     if peer.id != context.account.peerId {
         if peer is TelegramUser {
             controller.hasTimer = hasSchedule

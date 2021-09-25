@@ -3,7 +3,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-public struct CallListSettings: PreferencesEntry, Equatable {
+public struct CallListSettings: Codable, Equatable {
     public var _showTab: Bool?
     public var defaultShowTab: Bool?
     
@@ -34,33 +34,29 @@ public struct CallListSettings: PreferencesEntry, Equatable {
         self.defaultShowTab = defaultShowTab
     }
     
-    public init(decoder: PostboxDecoder) {
-        if let alternativeDefaultValue = decoder.decodeOptionalInt32ForKey("defaultShowTab") {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        if let alternativeDefaultValue = try container.decodeIfPresent(Int32.self, forKey: "defaultShowTab") {
             self.defaultShowTab = alternativeDefaultValue != 0
         }
-        if let value = decoder.decodeOptionalInt32ForKey("showTab") {
+        if let value = try container.decodeIfPresent(Int32.self, forKey: "showTab") {
             self._showTab = value != 0
         }
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
         if let defaultShowTab = self.defaultShowTab {
-            encoder.encodeInt32(defaultShowTab ? 1 : 0, forKey: "defaultShowTab")
+            try container.encode((defaultShowTab ? 1 : 0) as Int32, forKey: "defaultShowTab")
         } else {
-            encoder.encodeNil(forKey: "defaultShowTab")
+            try container.encodeNil(forKey: "defaultShowTab")
         }
         if let showTab = self._showTab {
-            encoder.encodeInt32(showTab ? 1 : 0, forKey: "showTab")
+            try container.encode((showTab ? 1 : 0) as Int32, forKey: "showTab")
         } else {
-            encoder.encodeNil(forKey: "showTab")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? CallListSettings {
-            return self == to
-        } else {
-            return false
+            try container.encodeNil(forKey: "showTab")
         }
     }
     
@@ -77,12 +73,12 @@ public func updateCallListSettingsInteractively(accountManager: AccountManager<T
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.callListSettings, { entry in
             let currentSettings: CallListSettings
-            if let entry = entry as? CallListSettings {
+            if let entry = entry?.get(CallListSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = CallListSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

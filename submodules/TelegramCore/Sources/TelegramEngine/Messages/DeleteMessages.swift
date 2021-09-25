@@ -3,27 +3,27 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-func addMessageMediaResourceIdsToRemove(media: Media, resourceIds: inout [WrappedMediaResourceId]) {
+func addMessageMediaResourceIdsToRemove(media: Media, resourceIds: inout [MediaResourceId]) {
     if let image = media as? TelegramMediaImage {
         for representation in image.representations {
-            resourceIds.append(WrappedMediaResourceId(representation.resource.id))
+            resourceIds.append(representation.resource.id)
         }
     } else if let file = media as? TelegramMediaFile {
         for representation in file.previewRepresentations {
-            resourceIds.append(WrappedMediaResourceId(representation.resource.id))
+            resourceIds.append(representation.resource.id)
         }
-        resourceIds.append(WrappedMediaResourceId(file.resource.id))
+        resourceIds.append(file.resource.id)
     }
 }
 
-func addMessageMediaResourceIdsToRemove(message: Message, resourceIds: inout [WrappedMediaResourceId]) {
+func addMessageMediaResourceIdsToRemove(message: Message, resourceIds: inout [MediaResourceId]) {
     for media in message.media {
         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
     }
 }
 
-func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true, manualAddMessageThreadStatsDifference: ((MessageId, Int, Int) -> Void)? = nil) {
-    var resourceIds: [WrappedMediaResourceId] = []
+public func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true, manualAddMessageThreadStatsDifference: ((MessageId, Int, Int) -> Void)? = nil) {
+    var resourceIds: [MediaResourceId] = []
     if deleteMedia {
         for id in ids {
             if id.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -57,7 +57,7 @@ func _internal_deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids:
 }
 
 func _internal_deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
-    var resourceIds: [WrappedMediaResourceId] = []
+    var resourceIds: [MediaResourceId] = []
     transaction.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace, forEachMedia: { media in
         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
     })
@@ -67,7 +67,7 @@ func _internal_deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: M
 }
 
 func _internal_deleteAllMessagesWithForwardAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace) {
-    var resourceIds: [WrappedMediaResourceId] = []
+    var resourceIds: [MediaResourceId] = []
     transaction.removeAllMessagesWithForwardAuthor(peerId, forwardAuthorId: forwardAuthorId, namespace: namespace, forEachMedia: { media in
         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
     })
@@ -78,7 +78,7 @@ func _internal_deleteAllMessagesWithForwardAuthor(transaction: Transaction, medi
 
 func _internal_clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, namespaces: MessageIdNamespaces) {
     if peerId.namespace == Namespaces.Peer.SecretChat {
-        var resourceIds: [WrappedMediaResourceId] = []
+        var resourceIds: [MediaResourceId] = []
         transaction.withAllMessages(peerId: peerId, { message in
             addMessageMediaResourceIdsToRemove(message: message, resourceIds: &resourceIds)
             return true

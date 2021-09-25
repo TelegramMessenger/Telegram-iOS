@@ -69,7 +69,6 @@ struct ChatMessageDateAndStatus {
     var edited: Bool
     var viewCount: Int?
     var dateReplies: Int
-    var dateReactions: [MessageReaction]
     var isPinned: Bool
     var dateText: String
 }
@@ -468,7 +467,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             var statusApply: ((Bool) -> Void)?
 
             if let dateAndStatus = dateAndStatus {
-                let (size, apply) = statusLayout(context, presentationData, dateAndStatus.edited, dateAndStatus.viewCount, dateAndStatus.dateText, dateAndStatus.type, CGSize(width: nativeSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateAndStatus.dateReactions, dateAndStatus.dateReplies, dateAndStatus.isPinned, message.isSelfExpiring)
+                let (size, apply) = statusLayout(context, presentationData, dateAndStatus.edited, dateAndStatus.viewCount, dateAndStatus.dateText, dateAndStatus.type, CGSize(width: nativeSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateAndStatus.dateReplies, dateAndStatus.isPinned, message.isSelfExpiring)
                 statusSize = size
                 statusApply = apply
             }
@@ -1103,12 +1102,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             return
         }
         
-        let automaticDownload: Bool
+        /*let automaticDownload: Bool
         if let autoDownload = self.automaticDownload, case .full = autoDownload {
             automaticDownload = true
         } else {
             automaticDownload = false
-        }
+        }*/
         
         var secretBeginTimeAndTimeout: (Double?, Double)?
         let isSecretMedia = message.containsSecretMedia
@@ -1391,10 +1390,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 case .Remote:
                     state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
                     if let file = self.media as? TelegramMediaFile {
-                        if false, file.isAnimated && (!automaticDownload || !automaticPlayback) {
-                            let string = "\(gifTitle) " + dataSizeString(file.size ?? 0, formatting: formatting)
-                            badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: string, size: nil, muted: false, active: false)
-                        } else {
+                        do {
                             let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration ?? 0), position: playerPosition)
                             if wideLayout {
                                 if isMediaStreamable(message: message, media: file) {

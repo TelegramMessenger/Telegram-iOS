@@ -288,7 +288,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             strongSelf.resolvePeerByNameDisposable.set((resolveSignal
             |> deliverOnMainQueue).start(next: { peer in
                 if let strongSelf = self, !hashtag.isEmpty {
-                    let searchController = HashtagSearchController(context: strongSelf.context, peer: peer, query: hashtag)
+                    let searchController = HashtagSearchController(context: strongSelf.context, peer: peer.flatMap(EnginePeer.init), query: hashtag)
                     strongSelf.pushController(searchController)
                 }
             }))
@@ -298,8 +298,6 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return self?.getNavigationController()
         }, chatControllerNode: { [weak self] in
             return self
-        }, reactionContainerNode: {
-            return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { [weak self] action, message in
             if let strongSelf = self {
                 switch action {
@@ -439,7 +437,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 if let strongSelf = self {
-                                    let searchController = HashtagSearchController(context: strongSelf.context, peer: strongSelf.peer, query: hashtag)
+                                    let searchController = HashtagSearchController(context: strongSelf.context, peer: EnginePeer(strongSelf.peer), query: hashtag)
                                     strongSelf.pushController(searchController)
                                 }
                             }),
@@ -507,8 +505,6 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
-        }, updateMessageLike: { _, _ in
-        }, openMessageReactions: { _ in
         }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in

@@ -1930,7 +1930,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                         if let voiceChatTitle = strongSelf.stateValue.title {
                                             title = voiceChatTitle
                                         } else if let peer = peerViewMainPeer(view) {
-                                            title = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                            title = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                         } else {
                                             title = nil
                                         }

@@ -5,7 +5,7 @@ final class MutableInvalidatedMessageHistoryTagSummariesView: MutablePostboxView
     
     var entries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
     
-    init(postbox: Postbox, tagMask: MessageTags, namespace: MessageId.Namespace) {
+    init(postbox: PostboxImpl, tagMask: MessageTags, namespace: MessageId.Namespace) {
         self.tagMask = tagMask
         self.namespace = namespace
         
@@ -14,7 +14,7 @@ final class MutableInvalidatedMessageHistoryTagSummariesView: MutablePostboxView
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         for operation in transaction.currentInvalidateMessageTagSummaries {
             switch operation {

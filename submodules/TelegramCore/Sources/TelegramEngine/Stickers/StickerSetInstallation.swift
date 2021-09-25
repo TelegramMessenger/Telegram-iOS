@@ -64,8 +64,8 @@ func _internal_requestStickerSet(postbox: Postbox, network: Network, reference: 
                     info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
                     
                     switch set {
-                        case let .stickerSet(data):
-                            installed = (data.flags & (1 << 0) != 0)
+                        case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _):
+                            installed = (flags & (1 << 0) != 0)
                     }
                     
                     var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
@@ -101,7 +101,7 @@ func _internal_requestStickerSet(postbox: Postbox, network: Network, reference: 
     }
     
     if let collectionId = collectionId {
-        return localSignal(collectionId) |> mapError {_ in return .generic} |> mapToSignal { result -> Signal<RequestStickerSetResult, RequestStickerSetError> in
+        return localSignal(collectionId) |> mapError { _ -> RequestStickerSetError in } |> mapToSignal { result -> Signal<RequestStickerSetResult, RequestStickerSetError> in
             if let result = result {
                 return .single(.local(info: result.0, items: result.1))
             } else {
@@ -195,7 +195,7 @@ func _internal_installStickerSetInteractively(account: Account, info: StickerPac
                 collections.insert((info.id, info, items), at: 0)
                 
                 transaction.replaceItemCollections(namespace: info.id.namespace, itemCollections: collections)
-                } |> map { _ in return addResult} |> mapError {_ in return .generic}
+                } |> map { _ in return addResult} |> mapError { _ -> InstallStickerSetError in }
     }
 }
 

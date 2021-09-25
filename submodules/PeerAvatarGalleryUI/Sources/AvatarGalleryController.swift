@@ -76,12 +76,12 @@ public enum AvatarGalleryEntry: Equatable {
         switch self {
         case let .topImage(representations, _, _, _, _, _):
             if let last = representations.last {
-                return .resource(last.representation.resource.id.uniqueId)
+                return .resource(last.representation.resource.id.stringRepresentation)
             }
             return .topImage
         case let .image(id, _, representations, _, _, _, _, _, _, _):
             if let last = representations.last {
-                return .resource(last.representation.resource.id.uniqueId)
+                return .resource(last.representation.resource.id.stringRepresentation)
             }
             return .image(id)
         }

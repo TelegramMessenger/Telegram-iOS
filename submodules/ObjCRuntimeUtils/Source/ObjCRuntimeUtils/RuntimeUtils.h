@@ -23,6 +23,8 @@ typedef enum {
 - (bool)checkObjectIsKindOfClass:(Class _Nonnull)targetClass;
 - (void)setClass:(Class _Nonnull)newClass;
 
+- (NSNumber * _Nullable)floatValueForKeyPath:(NSString * _Nonnull)keyPath;
+
 @end
 
 SEL _Nonnull makeSelectorFromString(NSString * _Nonnull string);

@@ -16,11 +16,11 @@
 
 
 @interface NSArray (NBAdditions)
-- (id)safeObjectAtIndex:(NSUInteger)index;
+- (id)customSafeObjectAtIndex:(NSUInteger)index;
 @end
 
 @implementation NSArray (NBAdditions)
-- (id)safeObjectAtIndex:(NSUInteger)index {
+- (id)customSafeObjectAtIndex:(NSUInteger)index {
     @synchronized(self) {
         if (index >= [self count]) return nil;
         id res = [self objectAtIndex:index];
@@ -376,7 +376,7 @@
     for (unsigned int i = 0; i < possibleFormatsLength; ++i)
     {
         /** @type {i18n.phonenumbers.NumberFormat} */
-        NBNumberFormat *numberFormat = [self.possibleFormats_ safeObjectAtIndex:i];
+        NBNumberFormat *numberFormat = [self.possibleFormats_ customSafeObjectAtIndex:i];
         /** @type {string} */
         NSString *pattern = numberFormat.pattern;
         
@@ -424,7 +424,7 @@
     for (unsigned int i = 0; i < formatListLength; ++i)
     {
         /** @type {i18n.phonenumbers.NumberFormat} */
-        NBNumberFormat *format = [formatList safeObjectAtIndex:i];
+        NBNumberFormat *format = [formatList customSafeObjectAtIndex:i];
         /** @type {BOOL} */
         BOOL nationalPrefixIsUsedByCountry = (self.currentMetaData_.nationalPrefix && self.currentMetaData_.nationalPrefix.length > 0);
         
@@ -473,7 +473,7 @@
     for (NSUInteger i = 0; i < possibleFormatsLength; ++i)
     {
         /** @type {i18n.phonenumbers.NumberFormat} */
-        NBNumberFormat *format = [self.possibleFormats_ safeObjectAtIndex:i];
+        NBNumberFormat *format = [self.possibleFormats_ customSafeObjectAtIndex:i];
         
         if (format.leadingDigitsPatterns.count == 0) {
             // Keep everything that isn't restricted by leading digits.
@@ -485,7 +485,7 @@
         NSInteger lastLeadingDigitsPattern = MIN(indexOfLeadingDigitsPattern, format.leadingDigitsPatterns.count - 1);
         
         /** @type {string} */
-        NSString *leadingDigitsPattern = [format.leadingDigitsPatterns safeObjectAtIndex:lastLeadingDigitsPattern];
+        NSString *leadingDigitsPattern = [format.leadingDigitsPatterns customSafeObjectAtIndex:lastLeadingDigitsPattern];
 
         if ([self.phoneUtil_ stringPositionByRegex:leadingDigits regex:leadingDigitsPattern] == 0) {
             [possibleFormats addObject:format];
@@ -554,7 +554,7 @@
     
     // this match will always succeed
     /** @type {string} */
-    NSString *aPhoneNumber = [m safeObjectAtIndex:0];
+    NSString *aPhoneNumber = [m customSafeObjectAtIndex:0];
     // No formatting template can be created if the number of digits entered so
     // far is longer than the maximum the current formatting rule can accommodate.
     if (aPhoneNumber.length < self.nationalNumber_.length) {
@@ -1101,7 +1101,7 @@
         NSString *nationalPrefixForParsing = [NSString stringWithFormat:@"^(?:%@)", self.currentMetaData_.nationalPrefixForParsing];
         /** @type {Array.<string>} */
         NSArray *m = [self.phoneUtil_ matchedStringByRegex:nationalNumber regex:nationalPrefixForParsing];
-        NSString *firstString = [m safeObjectAtIndex:0];
+        NSString *firstString = [m customSafeObjectAtIndex:0];
         if (m != nil && firstString != nil && firstString.length > 0) {
             // When the national prefix is detected, we use international formatting
             // rules instead of national ones, because national formatting rules could
@@ -1135,7 +1135,7 @@
     /** @type {Array.<string>} */
     NSArray *m = [self.phoneUtil_ matchedStringByRegex:accruedInputWithoutFormatting regex:internationalPrefix];
     
-    NSString *firstString = [m safeObjectAtIndex:0];
+    NSString *firstString = [m customSafeObjectAtIndex:0];
     
     if (m != nil && firstString != nil && firstString.length > 0) {
         self.isCompleteNumber_ = YES;

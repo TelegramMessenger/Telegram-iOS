@@ -66,7 +66,7 @@ struct ThemeGridControllerEntry: Comparable, Identifiable {
             return .file(file.id, file.settings.colors, file.settings.intensity ?? 0)
         case let .image(representations, _):
             if let largest = largestImageRepresentation(representations) {
-                return .image(largest.resource.id.uniqueId)
+                return .image(largest.resource.id.stringRepresentation)
             } else {
                 return .image("")
             }
@@ -504,7 +504,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             self.context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.wallapersState])
         )
         |> map { remoteWallpapers, sharedData -> [Wallpaper] in
-            let localState = (sharedData.entries[SharedDataKeys.wallapersState] as? WallpapersState) ?? WallpapersState.default
+            let localState = sharedData.entries[SharedDataKeys.wallapersState]?.get(WallpapersState.self) ?? WallpapersState.default
 
             var wallpapers: [Wallpaper] = []
             for wallpaper in localState.wallpapers {

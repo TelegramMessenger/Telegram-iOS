@@ -526,8 +526,4 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         let contentNodeFrame = self.contentNode.frame
         self.contentNode.updateTouchesAtPoint(point.flatMap { $0.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY) })
     }
-    
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        return self.contentNode.reactionTargetNode(value: value)
-    }
 }

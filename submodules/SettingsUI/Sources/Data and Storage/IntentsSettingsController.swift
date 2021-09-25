@@ -33,7 +33,7 @@ private enum IntentsSettingsSection: Int32 {
 
 private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
     case accountHeader(PresentationTheme, String)
-    case account(PresentationTheme, Peer, Bool, Int32)
+    case account(PresentationTheme, EnginePeer, Bool, Int32)
     case accountInfo(PresentationTheme, String)
     
     case chatsHeader(PresentationTheme, String)
@@ -102,7 +102,7 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
                     return false
                 }
             case let .account(lhsTheme, lhsPeer, lhsSelected, lhsIndex):
-                if case let .account(rhsTheme, rhsPeer, rhsSelected, rhsIndex) = rhs, lhsTheme === rhsTheme, arePeersEqual(lhsPeer, rhsPeer), lhsSelected == rhsSelected, lhsIndex == rhsIndex {
+                if case let .account(rhsTheme, rhsPeer, rhsSelected, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsPeer == rhsPeer, lhsSelected == rhsSelected, lhsIndex == rhsIndex {
                     return true
                 } else {
                     return false
@@ -231,7 +231,7 @@ private enum IntentsSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func intentsSettingsControllerEntries(context: AccountContext, presentationData: PresentationData, settings: IntentsSettings, accounts: [(Account, Peer)]) -> [IntentsSettingsControllerEntry] {
+private func intentsSettingsControllerEntries(context: AccountContext, presentationData: PresentationData, settings: IntentsSettings, accounts: [(Account, EnginePeer)]) -> [IntentsSettingsControllerEntry] {
     var entries: [IntentsSettingsControllerEntry] = []
     
     if accounts.count > 1 {
@@ -305,7 +305,7 @@ public func intentsSettingsController(context: AccountContext) -> ViewController
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings]), activeAccountsAndPeers(context: context, includePrimary: true))
     |> deliverOnMainQueue
     |> map { presentationData, sharedData, accounts -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings) ?? IntentsSettings.defaultSettings
+        let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings]?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.IntentsSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: intentsSettingsControllerEntries(context: context, presentationData: presentationData, settings: settings, accounts: accounts.1.map { ($0.0.account, $0.1) }), style: .blocks, animateChanges: false)

@@ -258,10 +258,6 @@ struct AccountMutableState {
         self.addOperation(.UpdateMessagePoll(id, poll, results))
     }
     
-    /*mutating func updateMessageReactions(_ messageId: MessageId, reactions: Api.MessageReactions) {
-        self.addOperation(.UpdateMessageReactions(messageId, reactions))
-    }*/
-    
     mutating func updateMedia(_ id: MediaId, media: Media?) {
         self.addOperation(.UpdateMedia(id, media))
     }
@@ -591,7 +587,7 @@ struct AccountMutableState {
                         self.readInboxMaxIds[peerId] = MessageId(peerId: peerId, namespace: namespace, id: maxIncomingReadId)
                     }
                 }
-            case let .ResetMessageTagSummary(peerId, namespace, count, range):
+            case .ResetMessageTagSummary:
                 break
         }
         

@@ -8,7 +8,7 @@ final class SharedAccountMediaManager {
     }
     
     private func fileNameForId(_ id: MediaResourceId) -> String {
-        return "\(id.uniqueId)"
+        return "\(id.stringRepresentation)"
     }
     
     private func pathForId(_ id: MediaResourceId) -> String {

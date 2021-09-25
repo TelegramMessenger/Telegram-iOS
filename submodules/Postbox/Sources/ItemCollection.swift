@@ -24,10 +24,6 @@ public struct ItemCollectionId: Comparable, Hashable {
         }
     }
     
-    public var hashValue: Int {
-        return self.id.hashValue
-    }
-    
     public static func encodeArrayToBuffer(_ array: [ItemCollectionId], buffer: WriteBuffer) {
         var length: Int32 = Int32(array.count)
         buffer.write(&length, offset: 0, length: 4)

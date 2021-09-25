@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
@@ -450,7 +449,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         }))
     }
     
-    func setPeer(image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], data: JoinLinkPreviewData) {
+    func setPeer(image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [EnginePeer], data: JoinLinkPreviewData) {
         let transition = ContainedViewLayoutTransition.animated(duration: 0.22, curve: .easeInOut)
         transition.updateAlpha(node: self.actionButtonNode, alpha: 1.0)
         transition.updateAlpha(node: self.actionSeparatorNode, alpha: 1.0)

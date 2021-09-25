@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AppBundle
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import Display
 import AccountContext
@@ -23,13 +22,13 @@ import UndoUI
 
 class InviteLinkViewInteraction {
     let context: AccountContext
-    let openPeer: (PeerId) -> Void
+    let openPeer: (EnginePeer.Id) -> Void
     let copyLink: (ExportedInvitation) -> Void
     let shareLink: (ExportedInvitation) -> Void
     let editLink: (ExportedInvitation) -> Void
     let contextAction: (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, openPeer: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, editLink: @escaping (ExportedInvitation) -> Void, contextAction: @escaping (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, openPeer: @escaping (EnginePeer.Id) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, editLink: @escaping (ExportedInvitation) -> Void, contextAction: @escaping (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.openPeer = openPeer
         self.copyLink = copyLink
@@ -53,15 +52,15 @@ private enum InviteLinkViewEntryId: Hashable {
     case creatorHeader
     case creator
     case importerHeader
-    case importer(PeerId)
+    case importer(EnginePeer.Id)
 }
 
 private enum InviteLinkViewEntry: Comparable, Identifiable {
     case link(PresentationTheme, ExportedInvitation)
     case creatorHeader(PresentationTheme, String)
-    case creator(PresentationTheme, PresentationDateTimeFormat, Peer, Int32)
+    case creator(PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32)
     case importerHeader(PresentationTheme, String, String, Bool)
-    case importer(Int32, PresentationTheme, PresentationDateTimeFormat, Peer, Int32, Bool)
+    case importer(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32, Bool)
     
     var stableId: InviteLinkViewEntryId {
         switch self {
@@ -93,7 +92,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     return false
                 }
             case let .creator(lhsTheme, lhsDateTimeFormat, lhsPeer, lhsDate):
-                if case let .creator(rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate {
+                if case let .creator(rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsDate == rhsDate {
                     return true
                 } else {
                     return false
@@ -105,7 +104,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     return false
                 }
             case let .importer(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsPeer, lhsDate, lhsLoading):
-                if case let .importer(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate, rhsLoading) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate, lhsLoading == rhsLoading {
+                if case let .importer(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate, rhsLoading) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsDate == rhsDate, lhsLoading == rhsLoading {
                     return true
                 } else {
                     return false
@@ -233,7 +232,7 @@ public final class InviteLinkViewController: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
-    private let peerId: PeerId
+    private let peerId: EnginePeer.Id
     private let invite: ExportedInvitation
     private let invitationsContext: PeerExportedInvitationsContext?
     private let revokedInvitationsContext: PeerExportedInvitationsContext?
@@ -243,7 +242,7 @@ public final class InviteLinkViewController: ViewController {
     private var presentationDataDisposable: Disposable?
     fileprivate var presentationDataPromise = Promise<PresentationData>()
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, revokedInvitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, revokedInvitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?) {
         self.context = context
         self.peerId = peerId
         self.invite = invite
@@ -338,7 +337,7 @@ public final class InviteLinkViewController: ViewController {
         private weak var controller: InviteLinkViewController?
         
         private let context: AccountContext
-        private let peerId: PeerId
+        private let peerId: EnginePeer.Id
         private let invite: ExportedInvitation
         
         private let importersContext: PeerInvitationImportersContext
@@ -369,7 +368,7 @@ public final class InviteLinkViewController: ViewController {
         
         private var validLayout: ContainerViewLayout?
         
-        init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, invite: ExportedInvitation, importersContext: PeerInvitationImportersContext?, controller: InviteLinkViewController) {
+        init(context: AccountContext, presentationData: PresentationData, peerId: EnginePeer.Id, invite: ExportedInvitation, importersContext: PeerInvitationImportersContext?, controller: InviteLinkViewController) {
             self.context = context
             self.peerId = peerId
             self.invite = invite
@@ -565,7 +564,7 @@ public final class InviteLinkViewController: ViewController {
                     })))
                 }
                            
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             })
             
@@ -581,7 +580,7 @@ public final class InviteLinkViewController: ViewController {
                     
                     entries.append(.link(presentationData.theme, invite))
                     entries.append(.creatorHeader(presentationData.theme, presentationData.strings.InviteLink_CreatedBy.uppercased()))
-                    entries.append(.creator(presentationData.theme, presentationData.dateTimeFormat, creatorPeer, invite.date))
+                    entries.append(.creator(presentationData.theme, presentationData.dateTimeFormat, EnginePeer(creatorPeer), invite.date))
                     
                     if !state.importers.isEmpty || (state.isLoadingMore && state.count > 0) {
                         let subtitle: String
@@ -605,16 +604,16 @@ public final class InviteLinkViewController: ViewController {
                     if state.importers.isEmpty && state.isLoadingMore {
                         count = min(4, state.count)
                         loading = true
-                        let fakeUser = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                        let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
                         for i in 0 ..< count {
-                            entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, fakeUser, 0, true))
+                            entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
                         }
                     } else {
                         count = min(4, Int32(state.importers.count))
                         loading = false
                         for importer in state.importers {
                             if let peer = importer.peer.peer {
-                                entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, peer, importer.date, false))
+                                entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
                             }
                             index += 1
                         }

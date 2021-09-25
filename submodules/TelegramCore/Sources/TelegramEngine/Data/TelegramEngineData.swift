@@ -5,19 +5,62 @@ public protocol TelegramEngineDataItem {
     associatedtype Result
 }
 
-protocol AnyPostboxViewDataItem {
-    var key: PostboxViewKey { get }
+public protocol TelegramEngineMapKeyDataItem {
+    associatedtype Key: Hashable
 
-    func _extract(view: PostboxView) -> Any
+    var mapKey: Key { get }
+}
+
+protocol AnyPostboxViewDataItem {
+    var keys: [PostboxViewKey] { get }
+
+    func _extract(views: [PostboxViewKey: PostboxView]) -> Any
 }
 
 protocol PostboxViewDataItem: TelegramEngineDataItem, AnyPostboxViewDataItem {
+    var key: PostboxViewKey { get }
+
     func extract(view: PostboxView) -> Result
 }
 
 extension PostboxViewDataItem {
-    func _extract(view: PostboxView) -> Any {
-        return self.extract(view: view)
+    var keys: [PostboxViewKey] {
+        return [self.key]
+    }
+
+    func _extract(views: [PostboxViewKey: PostboxView]) -> Any {
+        return self.extract(view: views[self.key]!)
+    }
+}
+
+public final class EngineDataMap<Item: TelegramEngineDataItem & TelegramEngineMapKeyDataItem>: TelegramEngineDataItem, AnyPostboxViewDataItem {
+    public typealias Result = [Item.Key: Item.Result]
+
+    private let items: [Item]
+
+    public init(_ items: [Item]) {
+        self.items = items
+    }
+
+    var keys: [PostboxViewKey] {
+        var keys = Set<PostboxViewKey>()
+        for item in self.items {
+            for key in (item as! AnyPostboxViewDataItem).keys {
+                keys.insert(key)
+            }
+        }
+        return Array(keys)
+    }
+
+    func _extract(views: [PostboxViewKey: PostboxView]) -> Any {
+        var result: [Item.Key: Item.Result] = [:]
+
+        for item in self.items {
+            let itemResult = (item as! AnyPostboxViewDataItem)._extract(views: views)
+            result[item.mapKey] = (itemResult as! Item.Result)
+        }
+
+        return result
     }
 }
 
@@ -33,15 +76,18 @@ public extension TelegramEngine {
         }
 
         private func _subscribe(items: [AnyPostboxViewDataItem]) -> Signal<[Any], NoError> {
-            return self.account.postbox.combinedView(keys: Array(Set(items.map(\.key))))
+            var keys = Set<PostboxViewKey>()
+            for item in items {
+                for key in item.keys {
+                    keys.insert(key)
+                }
+            }
+            return self.account.postbox.combinedView(keys: Array(keys))
             |> map { views -> [Any] in
                 var results: [Any] = []
 
                 for item in items {
-                    guard let view = views.views[item.key] else {
-                        preconditionFailure()
-                    }
-                    results.append(item._extract(view: view))
+                    results.append(item._extract(views: views.views))
                 }
 
                 return results
@@ -71,7 +117,10 @@ public extension TelegramEngine {
                 T1.Result
             ),
         NoError> {
-            return self._subscribe(items: [t0 as! AnyPostboxViewDataItem])
+            return self._subscribe(items: [
+                t0 as! AnyPostboxViewDataItem,
+                t1 as! AnyPostboxViewDataItem
+            ])
             |> map { results -> (T0.Result, T1.Result) in
                 return (
                     results[0] as! T0.Result,

@@ -171,7 +171,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
                 var mappedMessage: WidgetDataPeer.Message?
                 if let index = transaction.getTopPeerMessageIndex(peerId: peer.id) {
                     if let message = transaction.getMessage(index.id) {
-                        mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: message)
+                        mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: EngineMessage(message))
                     }
                 }
                 

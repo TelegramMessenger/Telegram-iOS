@@ -423,16 +423,6 @@ public struct NetworkInitializationArguments {
 private let cloudDataContext = Atomic<CloudDataContext?>(value: nil)
 #endif
 
-private final class SharedContextStore {
-    struct Key: Hashable {
-        var accountId: AccountRecordId
-    }
-    
-    var contexts: [Key: MTContext] = [:]
-}
-
-private let sharedContexts = Atomic<SharedContextStore>(value: SharedContextStore())
-
 func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         let queue = Queue()
@@ -473,33 +463,9 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 }
             }
             
-            let useTempAuthKeys: Bool
-            if let networkSettings = networkSettings {
-                if let userEnableTempKeys = networkSettings.userEnableTempKeys {
-                    useTempAuthKeys = userEnableTempKeys
-                } else {
-                    useTempAuthKeys = networkSettings.defaultEnableTempKeys
-                }
-            } else {
-                useTempAuthKeys = true
-            }
+            let useTempAuthKeys: Bool = true
             
-            var contextValue: MTContext?
-            sharedContexts.with { store in
-                let key = SharedContextStore.Key(accountId: accountId)
-                
-                let context: MTContext
-                if false, let current = store.contexts[key] {
-                    context = current
-                    context.updateApiEnvironment({ _ in return apiEnvironment})
-                } else {
-                    context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
-                    store.contexts[key] = context
-                }
-                contextValue = context
-            }
-            
-            let context = contextValue!
+            let context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)
             
             let seedAddressList: [Int: [String]]
             
@@ -550,10 +516,6 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
             }
             #endif
             context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber))
-            
-            #if DEBUG
-            //let _ = MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber).start(next: nil)
-            #endif
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil), requiredAuthToken: nil, authTokenMasterDatacenterId: 0)!
             mtProto.useTempAuthKeys = context.useTempAuthKeys
@@ -636,7 +598,7 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
         self.contextLoggedOutUpdated = contextLoggedOutUpdated
     }
     
-    func fetchContextDatacenterPublicKeys(_ context: MTContext!, datacenterId: Int) -> MTSignal! {
+    func fetchContextDatacenterPublicKeys(_ context: MTContext, datacenterId: Int) -> MTSignal {
         return MTSignal { subscriber in
             let disposable = self.requestPublicKeys(datacenterId).start(next: { next in
                 subscriber?.putNext(next)
@@ -649,7 +611,7 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
         }
     }
     
-    func isContextNetworkAccessAllowed(_ context: MTContext!) -> MTSignal! {
+    func isContextNetworkAccessAllowed(_ context: MTContext) -> MTSignal {
         return MTSignal { subscriber in
             let disposable = self.isContextNetworkAccessAllowedImpl().start(next: { next in
                 subscriber?.putNext(next as NSNumber)
@@ -662,12 +624,12 @@ private final class NetworkHelper: NSObject, MTContextChangeListener {
         }
     }
     
-    func contextApiEnvironmentUpdated(_ context: MTContext!, apiEnvironment: MTApiEnvironment!) {
+    func contextApiEnvironmentUpdated(_ context: MTContext, apiEnvironment: MTApiEnvironment) {
         let settings: MTSocksProxySettings? = apiEnvironment.socksProxySettings
         self.contextProxyIdUpdated(settings.flatMap(NetworkContextProxyId.init(settings:)))
     }
     
-    func contextLoggedOut(_ context: MTContext!) {
+    func contextLoggedOut(_ context: MTContext) {
         self.contextLoggedOutUpdated()
     }
 }

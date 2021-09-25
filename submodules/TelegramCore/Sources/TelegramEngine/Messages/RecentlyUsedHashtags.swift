@@ -25,7 +25,9 @@ private struct RecentHashtagItemId {
 
 func addRecentlyUsedHashtag(transaction: Transaction, string: String) {
     if let itemId = RecentHashtagItemId(string) {
-        transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlyUsedHashtags, item: OrderedItemListEntry(id: itemId.rawValue, contents: RecentHashtagItem()), removeTailIfCountExceeds: 100)
+        if let entry = CodableEntry(RecentHashtagItem()) {
+            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlyUsedHashtags, item: OrderedItemListEntry(id: itemId.rawValue, contents: entry), removeTailIfCountExceeds: 100)
+        }
     }
 }
 

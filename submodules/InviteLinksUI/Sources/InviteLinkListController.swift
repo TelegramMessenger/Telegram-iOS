@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -59,7 +58,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
     case header(PresentationTheme, String)
    
     case mainLinkHeader(PresentationTheme, String)
-    case mainLink(PresentationTheme, ExportedInvitation?, [Peer], Int32, Bool)
+    case mainLink(PresentationTheme, ExportedInvitation?, [EnginePeer], Int32, Bool)
     case mainLinkOtherInfo(PresentationTheme, String)
     
     case linksHeader(PresentationTheme, String)
@@ -135,7 +134,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
                     return false
                 }
             case let .mainLink(lhsTheme, lhsInvite, lhsPeers, lhsImportersCount, lhsIsPublic):
-                if case let .mainLink(rhsTheme, rhsInvite, rhsPeers, rhsImportersCount, rhsIsPublic) = rhs, lhsTheme === rhsTheme, lhsInvite == rhsInvite, arePeerArraysEqual(lhsPeers, rhsPeers), lhsImportersCount == rhsImportersCount, lhsIsPublic == rhsIsPublic {
+                if case let .mainLink(rhsTheme, rhsInvite, rhsPeers, rhsImportersCount, rhsIsPublic) = rhs, lhsTheme === rhsTheme, lhsInvite == rhsInvite, lhsPeers == rhsPeers, lhsImportersCount == rhsImportersCount, lhsIsPublic == rhsIsPublic {
                     return true
                 } else {
                     return false
@@ -261,19 +260,19 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
             case let .adminsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .admin(_, _, creator):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: creator.peer.peer!, height: .peerList, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .none, label: creator.count > 1 ? .disclosure("\(creator.count)") : .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(creator.peer.peer!), height: .peerList, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .none, label: creator.count > 1 ? .disclosure("\(creator.count)") : .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
                     arguments.openAdmin(creator)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil)
         }
     }
 }
 
-private func inviteLinkListControllerEntries(presentationData: PresentationData, view: PeerView, invites: [ExportedInvitation]?, revokedInvites: [ExportedInvitation]?, importers: PeerInvitationImportersState?, creators: [ExportedInvitationCreator], admin: ExportedInvitationCreator?, tick: Int32) -> [InviteLinksListEntry] {
+private func inviteLinkListControllerEntries(presentationData: PresentationData, exportedInvitation: EngineExportedPeerInvitation?, peer: EnginePeer?, invites: [ExportedInvitation]?, revokedInvites: [ExportedInvitation]?, importers: PeerInvitationImportersState?, creators: [ExportedInvitationCreator], admin: ExportedInvitationCreator?, tick: Int32) -> [InviteLinksListEntry] {
     var entries: [InviteLinksListEntry] = []
     
     if admin == nil {
         let helpText: String
-        if let peer = peerViewMainPeer(view) as? TelegramChannel, case .broadcast = peer.info {
+        if case let .channel(peer) = peer, case .broadcast = peer.info {
             helpText = presentationData.strings.InviteLink_CreatePrivateLinkHelpChannel
         } else {
             helpText = presentationData.strings.InviteLink_CreatePrivateLinkHelp
@@ -283,14 +282,12 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     
     let mainInvite: ExportedInvitation?
     var isPublic = false
-    if let peer = peerViewMainPeer(view), let address = peer.addressName, !address.isEmpty && admin == nil {
-        mainInvite = ExportedInvitation(link: "t.me/\(address)", isPermanent: true, isRevoked: false, adminId: PeerId(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil)
+    if let peer = peer, let address = peer.addressName, !address.isEmpty && admin == nil {
+        mainInvite = ExportedInvitation(link: "t.me/\(address)", isPermanent: true, isRevoked: false, adminId: EnginePeer.Id(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil)
         isPublic = true
     } else if let invites = invites, let invite = invites.first(where: { $0.isPermanent && !$0.isRevoked }) {
         mainInvite = invite
-    } else if let invite = (view.cachedData as? CachedChannelData)?.exportedInvitation, admin == nil {
-        mainInvite = invite
-    } else if let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation, admin == nil {
+    } else if let invite = exportedInvitation, admin == nil {
         mainInvite = invite
     } else {
         mainInvite = nil
@@ -307,9 +304,9 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
         importersCount = 0
     }
     
-    entries.append(.mainLink(presentationData.theme, mainInvite, importers?.importers.prefix(3).compactMap { $0.peer.peer } ?? [], importersCount, isPublic))
-    if let adminPeer = admin?.peer.peer, let peer = peerViewMainPeer(view) {
-        let string = presentationData.strings.InviteLink_OtherPermanentLinkInfo(adminPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))
+    entries.append(.mainLink(presentationData.theme, mainInvite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importersCount, isPublic))
+    if let adminPeer = admin?.peer.peer, let peer = peer {
+        let string = presentationData.strings.InviteLink_OtherPermanentLinkInfo(EnginePeer(adminPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))
         entries.append(.mainLinkOtherInfo(presentationData.theme, string.string))
     }
     
@@ -393,7 +390,7 @@ private struct InviteLinkListControllerState: Equatable {
     var revokingPrivateLink: Bool
 }
 
-public func inviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, admin: ExportedInvitationCreator?) -> ViewController {
+public func inviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, admin: ExportedInvitationCreator?) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
@@ -550,7 +547,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
             })))
         }
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, createLink: {
         let controller = inviteLinkEditController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, invite: nil, completion: { invite in
@@ -714,7 +711,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
             })))
         }
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground: true)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground: true)), items: .single(ContextController.Items(items: items)), gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, openAdmin: { admin in
         let controller = inviteLinkListController(context: context, peerId: peerId, admin: admin)
@@ -742,9 +739,6 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let peerView = context.account.viewTracker.peerView(peerId)
-    |> deliverOnMainQueue
-    
     let mainLink: Signal<ExportedInvitation?, NoError>
     if let _ = admin {
         mainLink = invitesContext.state
@@ -752,16 +746,9 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
             return .single(state.invitations.first(where: { $0.isPermanent && !$0.isRevoked }))
         }
     } else {
-        mainLink = peerView
-        |> mapToSignal { view -> Signal<ExportedInvitation?, NoError> in
-            if let cachedData = view.cachedData as? CachedGroupData, let exportedInvitation = cachedData.exportedInvitation {
-                return .single(exportedInvitation)
-            } else if let cachedData = view.cachedData as? CachedChannelData, let exportedInvitation = cachedData.exportedInvitation {
-                return .single(exportedInvitation)
-            } else {
-                return .single(nil)
-            }
-        }
+        mainLink = context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId)
+        )
     }
     
     let importersState = Promise<PeerInvitationImportersState?>(nil)
@@ -789,9 +776,22 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
     let previousCreators = Atomic<[ExportedInvitationCreator]?>(value: nil)
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
-    let signal = combineLatest(presentationData, peerView, importersContext, importersState.get(), invitesContext.state, revokedInvitesContext.state, creators, timerPromise.get())
-    |> deliverOnMainQueue
-    |> map { presentationData, view, importersContext, importers, invites, revokedInvites, creators, tick -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: .mainQueue(),
+        presentationData,
+        context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId)
+        ),
+        context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+        ),
+        importersContext,
+        importersState.get(),
+        invitesContext.state,
+        revokedInvitesContext.state,
+        creators,
+        timerPromise.get()
+    )
+    |> map { presentationData, exportedInvitation, peer, importersContext, importers, invites, revokedInvites, creators, tick -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previousInvites = previousInvites.swap(invites)
         let previousRevokedInvites = previousRevokedInvites.swap(revokedInvites)
         let previousCreators = previousCreators.swap(creators)
@@ -814,13 +814,13 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
         
         let title: ItemListControllerTitle
         if let admin = admin, let peer = admin.peer.peer {
-            title = .textWithSubtitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), presentationData.strings.InviteLink_InviteLinks(admin.count))
+            title = .textWithSubtitle(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), presentationData.strings.InviteLink_InviteLinks(admin.count))
         } else {
             title = .text(presentationData.strings.InviteLink_Title)
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, view: view, invites: invites.hasLoadedOnce ? invites.invitations : nil, revokedInvites: revokedInvites.hasLoadedOnce ? revokedInvites.invitations : nil, importers: importers, creators: creators, admin: admin, tick: tick), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkListControllerEntries(presentationData: presentationData, exportedInvitation: exportedInvitation, peer: peer, invites: invites.hasLoadedOnce ? invites.invitations : nil, revokedInvites: revokedInvites.hasLoadedOnce ? revokedInvites.invitations : nil, importers: importers, creators: creators, admin: admin, tick: tick), style: .blocks, emptyStateItem: nil, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }

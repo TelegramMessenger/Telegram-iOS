@@ -81,7 +81,7 @@ private func generateLiveLocationIcon(theme: PresentationTheme, stop: Bool) -> U
 
 final class LocationActionListItem: ListViewItem {
     let presentationData: ItemListPresentationData
-    let account: Account
+    let engine: TelegramEngine
     let title: String
     let subtitle: String
     let icon: LocationActionListItemIcon
@@ -89,9 +89,9 @@ final class LocationActionListItem: ListViewItem {
     let action: () -> Void
     let highlighted: (Bool) -> Void
     
-    public init(presentationData: ItemListPresentationData, account: Account, title: String, subtitle: String, icon: LocationActionListItemIcon, beginTimeAndTimeout: (Double, Double)?, action: @escaping () -> Void, highlighted: @escaping (Bool) -> Void = { _ in }) {
+    public init(presentationData: ItemListPresentationData, engine: TelegramEngine, title: String, subtitle: String, icon: LocationActionListItemIcon, beginTimeAndTimeout: (Double, Double)?, action: @escaping () -> Void, highlighted: @escaping (Bool) -> Void = { _ in }) {
         self.presentationData = presentationData
-        self.account = account
+        self.engine = engine
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
@@ -279,7 +279,7 @@ final class LocationActionListItemNode: ListViewItemNode {
                                 case let .venue(venue):
                                     strongSelf.iconNode.isHidden = true
                                     strongSelf.venueIconNode.isHidden = false
-                                    strongSelf.venueIconNode.setSignal(venueIcon(postbox: item.account.postbox, type: venue.venue?.type ?? "", background: true))
+                                    strongSelf.venueIconNode.setSignal(venueIcon(engine: item.engine, type: venue.venue?.type ?? "", background: true))
                             }
                             
                             if updatedIcon == .stopLiveLocation {

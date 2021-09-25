@@ -77,18 +77,6 @@ struct ReverseIndexNamespace: Hashable {
     init(_ value: Int32?) {
         self.value = value
     }
-    
-    var hashValue: Int {
-        if let value = self.value {
-            return value.hashValue
-        } else {
-            return 0
-        }
-    }
-    
-    static func ==(lhs: ReverseIndexNamespace, rhs: ReverseIndexNamespace) -> Bool {
-        return lhs.value == rhs.value
-    }
 }
 
 final class ReverseIndexReferenceTable<T: ReverseIndexReference>: Table {

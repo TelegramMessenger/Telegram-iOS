@@ -201,8 +201,8 @@ private class AdMessagesHistoryContextImpl {
             return postbox.transaction { transaction -> CachedState? in
                 let key = ValueBoxKey(length: 8)
                 key.setInt64(0, value: peerId.toInt64())
-                if let entry = transaction.retrieveItemCacheEntryData(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAdMessageStates, key: key)) {
-                    return try? AdaptedPostboxDecoder().decode(CachedState.self, from: entry)
+                if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAdMessageStates, key: key))?.get(CachedState.self) {
+                    return entry
                 } else {
                     return nil
                 }
@@ -213,8 +213,8 @@ private class AdMessagesHistoryContextImpl {
             let key = ValueBoxKey(length: 8)
             key.setInt64(0, value: peerId.toInt64())
             let id = ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAdMessageStates, key: key)
-            if let state = state, let stateData = try? AdaptedPostboxEncoder().encode(state) {
-                transaction.putItemCacheEntryData(id: id, entry: stateData, collectionSpec: collectionSpec)
+            if let state = state, let entry = CodableEntry(state) {
+                transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
             } else {
                 transaction.removeItemCacheEntry(id: id)
             }

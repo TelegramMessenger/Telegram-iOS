@@ -222,7 +222,8 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
         let keyHash = MTSha1(key)
         
         var keyFingerprint: Int64 = 0
-        keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        keyHash.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
         }
         
@@ -324,7 +325,8 @@ private func pfsAcceptKey(postbox: Postbox, network: Network, peerId: PeerId, la
         let keyHash = MTSha1(key)
         
         var keyFingerprint: Int64 = 0
-        keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        keyHash.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
         }
         
@@ -515,7 +517,7 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], t
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:
@@ -574,7 +576,7 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:
@@ -633,7 +635,7 @@ private func decryptedAttributes101(_ attributes: [TelegramMediaFileAttribute], 
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 result.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
             case .HasLinkedStickers:

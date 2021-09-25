@@ -276,7 +276,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
             return
         }
         let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-        |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
+        |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
             switch result {
             case let .result(info, items, installed):
                 if installed {
@@ -284,7 +284,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                 } else {
                     return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
                         |> ignoreValues
-                        |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
+                        |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
                         }
                         |> then(.single((info, items)))
                 }
@@ -378,7 +378,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
         |> deliverOnMainQueue
         |> map { presentationData, state, packs, installedView, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var stickerSettings = StickerSettings.defaultSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
                 stickerSettings = value
             }
             

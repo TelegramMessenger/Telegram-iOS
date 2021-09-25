@@ -22,12 +22,12 @@ func preloadedChatHistoryViewForLocation(_ location: ChatHistoryLocationInput, c
     |> castError(Bool.self)
     |> mapToSignal { update -> Signal<ChatHistoryViewUpdate, Bool> in
         switch update {
-            case let .Loading(value):
-                if case .Generic(.FillHole) = value.type {
+            case let .Loading(_, type):
+                if case .Generic(.FillHole) = type {
                     return .fail(true)
                 }
-            case let .HistoryView(value):
-                if case .Generic(.FillHole) = value.type {
+            case let .HistoryView(_, type, _, _, _, _, _):
+                if case .Generic(.FillHole) = type {
                     return .fail(true)
                 }
         }

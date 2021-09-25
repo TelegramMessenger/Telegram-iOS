@@ -374,12 +374,12 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             if peer.isDeleted {
                 overrideImage = .deletedIcon
             } else if let previousItem = previousItem, item == nil {
-                if case let .image(image) = previousItem, let rep = image.1.last {
-                    self.removedPhotoResourceIds.insert(rep.representation.resource.id.uniqueId)
+                if case let .image(_, representations, _, _) = previousItem, let rep = representations.last {
+                    self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
                 }
                 overrideImage = AvatarNodeImageOverride.none
                 item = nil
-            } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.uniqueId) {
+            } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.stringRepresentation) {
                 overrideImage = AvatarNodeImageOverride.none
                 item = nil
             }
@@ -596,9 +596,9 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                     }
                 }
                 
-                transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
+                transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: 1.0)
             } else {
-                let targetOverlayAlpha: CGFloat = overlayHidden ? 0.0 : 1.0
+                let targetOverlayAlpha: CGFloat = 0.0
                 if self.updatingAvatarOverlay.alpha != targetOverlayAlpha {
                     let update = {
                         self.statusNode.transitionToState(.none)
@@ -679,12 +679,12 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         if canEditPeerInfo(context: self.context, peer: peer), peer.profileImageRepresentations.isEmpty {
             overrideImage = .editAvatarIcon
         } else if let previousItem = previousItem, item == nil {
-            if case let .image(image) = previousItem, let rep = image.1.last {
-                self.removedPhotoResourceIds.insert(rep.representation.resource.id.uniqueId)
+            if case let .image(_, representations, _, _) = previousItem, let rep = representations.last {
+                self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
             }
             overrideImage = AvatarNodeImageOverride.none
             item = nil
-        } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.uniqueId) {
+        } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.stringRepresentation) {
             overrideImage = AvatarNodeImageOverride.none
             item = nil
         } else {
@@ -2015,7 +2015,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else if peer.id == self.context.account.peerId && !self.isSettings {
                 title = presentationData.strings.DialogList_Replies
             } else {
-                title = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                title = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             title = title.replacingOccurrences(of: "\u{1160}", with: "").replacingOccurrences(of: "\u{3164}", with: "")
             if title.isEmpty {

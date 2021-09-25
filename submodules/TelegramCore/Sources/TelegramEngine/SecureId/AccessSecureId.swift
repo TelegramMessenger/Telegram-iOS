@@ -17,7 +17,9 @@ func encryptSecureData(key: Data, iv: Data, data: Data, decrypt: Bool) -> Data? 
 }
 
 func verifySecureSecret(_ data: Data) -> Bool {
-    guard data.withUnsafeBytes({ (bytes: UnsafePointer<UInt8>) -> Bool in
+    guard data.withUnsafeBytes({ rawBytes -> Bool in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+        
         var checksum: UInt32 = 0
         for i in 0 ..< data.count {
             checksum += UInt32(bytes.advanced(by: i).pointee)
@@ -52,7 +54,9 @@ func decryptedSecureSecret(encryptedSecretData: Data, password: String, derivati
     
     let secretHashData = sha256Digest(decryptedSecret)
     var secretId: Int64 = 0
-    secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+    secretHashData.withUnsafeBytes { rawBytes -> Void in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
         memcpy(&secretId, bytes, 8)
     }
     
@@ -66,7 +70,9 @@ func decryptedSecureSecret(encryptedSecretData: Data, password: String, derivati
 func encryptedSecureSecret(secretData: Data, password: String, inputDerivation: TwoStepSecurePasswordDerivation) -> (data: Data, salt: TwoStepSecurePasswordDerivation, id: Int64)? {
     let secretHashData = sha256Digest(secretData)
     var secretId: Int64 = 0
-    secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+    secretHashData.withUnsafeBytes { rawBytes -> Void in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
         memcpy(&secretId, bytes, 8)
     }
     
@@ -92,14 +98,18 @@ func generateSecureSecretData() -> Data? {
     var secretData = Data(count: 32)
     let secretDataCount = secretData.count
     
-    guard secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
+    guard secretData.withUnsafeMutableBytes({ rawBytes -> Bool in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
         let copyResult = SecRandomCopyBytes(nil, 32, bytes)
         return copyResult == errSecSuccess
     }) else {
         return nil
     }
     
-    secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<UInt8>) in
+    secretData.withUnsafeMutableBytes({ rawBytes -> Void in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
         while true {
             var checksum: UInt32 = 0
             for i in 0 ..< secretDataCount {
@@ -173,7 +183,9 @@ func _internal_accessSecureId(network: Network, password: String) -> Signal<(con
             |> map { decryptedSecret in
                 let secretHashData = sha256Digest(decryptedSecret)
                 var secretId: Int64 = 0
-                secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+                secretHashData.withUnsafeBytes { rawBytes -> Void in
+                    let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
                     memcpy(&secretId, bytes, 8)
                 }
                 return (SecureIdAccessContext(secret: decryptedSecret, id: secretId), settings)

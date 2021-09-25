@@ -44,19 +44,50 @@ public enum PeerMessageSound: Equatable {
     case bundledModern(id: Int32)
     case bundledClassic(id: Int32)
     
-    static func decodeInline(_ decoder: PostboxDecoder) -> PeerMessageSound {
-        switch decoder.decodeInt32ForKey("s.v", orElse: 0) {
+    static func decodeInline(_ container: KeyedDecodingContainer<StringCodingKey>) throws -> PeerMessageSound {
+        switch try container.decode(Int32.self, forKey: "s.v") {
             case PeerMessageSoundValue.none.rawValue:
                 return .none
             case PeerMessageSoundValue.bundledModern.rawValue:
-                return .bundledModern(id: decoder.decodeInt32ForKey("s.i", orElse: 0))
+                return .bundledModern(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0)
             case PeerMessageSoundValue.bundledClassic.rawValue:
-                return .bundledClassic(id: decoder.decodeInt32ForKey("s.i", orElse: 0))
+                return .bundledClassic(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0)
             case PeerMessageSoundValue.default.rawValue:
                 return .default
             default:
                 assertionFailure()
                 return .bundledModern(id: 0)
+        }
+    }
+
+    static func decodeInline(_ container: PostboxDecoder) -> PeerMessageSound {
+        switch container.decodeInt32ForKey("s.v", orElse: 0) {
+            case PeerMessageSoundValue.none.rawValue:
+                return .none
+            case PeerMessageSoundValue.bundledModern.rawValue:
+                return .bundledModern(id: container.decodeInt32ForKey("s.i", orElse: 0))
+            case PeerMessageSoundValue.bundledClassic.rawValue:
+                return .bundledClassic(id: container.decodeInt32ForKey("s.i", orElse: 0))
+            case PeerMessageSoundValue.default.rawValue:
+                return .default
+            default:
+                assertionFailure()
+                return .bundledModern(id: 0)
+        }
+    }
+
+    func encodeInline(_ container: inout KeyedEncodingContainer<StringCodingKey>) throws {
+        switch self {
+            case .none:
+                try container.encode(PeerMessageSoundValue.none.rawValue, forKey: "s.v")
+            case let .bundledModern(id):
+                try container.encode(PeerMessageSoundValue.bundledModern.rawValue, forKey: "s.v")
+                try container.encode(id, forKey: "s.i")
+            case let .bundledClassic(id):
+                try container.encode(PeerMessageSoundValue.bundledClassic.rawValue, forKey: "s.v")
+                try container.encode(id, forKey: "s.i")
+            case .default:
+                try container.encode(PeerMessageSoundValue.default.rawValue, forKey: "s.v")
         }
     }
     

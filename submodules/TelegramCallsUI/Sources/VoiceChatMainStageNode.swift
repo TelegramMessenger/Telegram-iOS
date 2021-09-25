@@ -641,7 +641,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
                 
                 let bodyAttributes = MarkdownAttributeSet(font: Font.regular(15.0), textColor: .white, additionalAttributes: [:])
                 let boldAttributes = MarkdownAttributeSet(font: Font.semibold(15.0), textColor: .white, additionalAttributes: [:])
-                let attributedText = addAttributesToStringWithRanges(presentationData.strings.VoiceChat_ParticipantIsSpeaking(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                let attributedText = addAttributesToStringWithRanges(presentationData.strings.VoiceChat_ParticipantIsSpeaking(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 strongSelf.speakingTitleNode.attributedText = attributedText
 
                 strongSelf.speakingContainerNode.alpha = 0.0
@@ -732,8 +732,8 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         let peer = peerEntry.peer
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         if !arePeersEqual(previousPeerEntry?.peer, peerEntry.peer) {
-            self.backdropAvatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 240.0, height: 240.0), round: false, font: avatarPlaceholderFont(size: 78.0), drawLetters: false, blurred: true))
-            self.avatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: peer, size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true))
+            self.backdropAvatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: EnginePeer(peer), size: CGSize(width: 240.0, height: 240.0), round: false, font: avatarPlaceholderFont(size: 78.0), drawLetters: false, blurred: true))
+            self.avatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: EnginePeer(peer), size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true))
         }
                 
         var gradient: VoiceChatBlobNode.Gradient = .active
@@ -771,7 +771,7 @@ final class VoiceChatMainStageNode: ASDisplayNode {
         }
         
         var microphoneColor = UIColor.white
-        var titleAttributedString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: .white)
+        var titleAttributedString = NSAttributedString(string: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(15.0), textColor: .white)
         if mutedForYou {
             microphoneColor = destructiveColor
             

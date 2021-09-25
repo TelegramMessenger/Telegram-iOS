@@ -16,6 +16,7 @@
 
 #include <memory>
 
+#include "absl/base/internal/raw_logging.h"
 #include "absl/container/internal/hash_generator_testing.h"
 #include "absl/container/internal/unordered_map_constructor_test.h"
 #include "absl/container/internal/unordered_map_lookup_test.h"
@@ -33,6 +34,19 @@ using ::testing::_;
 using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
+
+// Check that absl::flat_hash_map works in a global constructor.
+struct BeforeMain {
+  BeforeMain() {
+    absl::flat_hash_map<int, int> x;
+    x.insert({1, 1});
+    ABSL_RAW_CHECK(x.find(0) == x.end(), "x should not contain 0");
+    auto it = x.find(1);
+    ABSL_RAW_CHECK(it != x.end(), "x should contain 1");
+    ABSL_RAW_CHECK(it->second, "1 should map to 1");
+  }
+};
+const BeforeMain before_main;
 
 template <class K, class V>
 using Map = flat_hash_map<K, V, StatefulTestingHash, StatefulTestingEqual,
@@ -250,6 +264,47 @@ TEST(FlatHashMap, EraseIf) {
     flat_hash_map<int, int> s = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}};
     erase_if(s, &FirstIsEven);
     EXPECT_THAT(s, UnorderedElementsAre(Pair(1, 1), Pair(3, 3), Pair(5, 5)));
+  }
+}
+
+// This test requires std::launder for mutable key access in node handles.
+#if defined(__cpp_lib_launder) && __cpp_lib_launder >= 201606
+TEST(FlatHashMap, NodeHandleMutableKeyAccess) {
+  flat_hash_map<std::string, std::string> map;
+
+  map["key1"] = "mapped";
+
+  auto nh = map.extract(map.begin());
+  nh.key().resize(3);
+  map.insert(std::move(nh));
+
+  EXPECT_THAT(map, testing::ElementsAre(Pair("key", "mapped")));
+}
+#endif
+
+TEST(FlatHashMap, Reserve) {
+  // Verify that if we reserve(size() + n) then we can perform n insertions
+  // without a rehash, i.e., without invalidating any references.
+  for (size_t trial = 0; trial < 20; ++trial) {
+    for (size_t initial = 3; initial < 100; ++initial) {
+      // Fill in `initial` entries, then erase 2 of them, then reserve space for
+      // two inserts and check for reference stability while doing the inserts.
+      flat_hash_map<size_t, size_t> map;
+      for (size_t i = 0; i < initial; ++i) {
+        map[i] = i;
+      }
+      map.erase(0);
+      map.erase(1);
+      map.reserve(map.size() + 2);
+      size_t& a2 = map[2];
+      // In the event of a failure, asan will complain in one of these two
+      // assignments.
+      map[initial] = a2;
+      map[initial + 1] = a2;
+      // Fail even when not under asan:
+      size_t& a2new = map[2];
+      EXPECT_EQ(&a2, &a2new);
+    }
   }
 }
 

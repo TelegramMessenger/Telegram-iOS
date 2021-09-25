@@ -118,7 +118,7 @@ private enum SynchronizeLocalizationUpdatesError {
 
 func getLocalization(_ transaction: AccountManagerModifier<TelegramAccountManagerTypes>) -> (primary: (code: String, version: Int32, entries: [LocalizationEntry]), secondary: (code: String, version: Int32, entries: [LocalizationEntry])?) {
     let localizationSettings: LocalizationSettings?
-    if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
+    if let current = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) {
         localizationSettings = current
     } else {
         localizationSettings = nil
@@ -170,7 +170,7 @@ private func synchronizeLocalizationUpdates(accountManager: AccountManager<Teleg
             return accountManager.transaction { transaction -> Signal<Void, SynchronizeLocalizationUpdatesError> in
                 let (primary, secondary) = getLocalization(transaction)
                 
-                var currentSettings = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localizedName: "English", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
+                var currentSettings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localizedName: "English", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
                 
                 for difference in parsedDifferences {
                     let current: (isPrimary: Bool, entries: [LocalizationEntry])
@@ -208,12 +208,11 @@ private func synchronizeLocalizationUpdates(accountManager: AccountManager<Teleg
                 }
                 
                 transaction.updateSharedData(SharedDataKeys.localizationSettings, { _ in
-                    return currentSettings
+                    return PreferencesEntry(currentSettings)
                 })
                 return .fail(.done)
             }
             |> mapError { _ -> SynchronizeLocalizationUpdatesError in
-                return .reset
             }
             |> switchToLatest
         }
@@ -282,7 +281,7 @@ func tryApplyingLanguageDifference(transaction: AccountManagerModifier<TelegramA
             }
             mergedEntries.append(contentsOf: updatedEntries)
             
-            let currentSettings = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localizedName: "English", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
+            let currentSettings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) ?? LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: "en", localizedName: "English", localization: Localization(version: 0, entries: []), customPluralizationCode: nil), secondaryComponent: nil)
             
             var updatedSettings: LocalizationSettings
             if isPrimary {
@@ -295,7 +294,7 @@ func tryApplyingLanguageDifference(transaction: AccountManagerModifier<TelegramA
             }
             
             transaction.updateSharedData(SharedDataKeys.localizationSettings, { _ in
-                return updatedSettings
+                return PreferencesEntry(updatedSettings)
             })
             
             return true

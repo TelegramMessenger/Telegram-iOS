@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public struct SearchBotsConfiguration: Equatable, PreferencesEntry {
+public struct SearchBotsConfiguration: Equatable, Codable {
     public let imageBotUsername: String?
     public let gifBotUsername: String?
     public let venueBotUsername: String?
@@ -16,40 +16,25 @@ public struct SearchBotsConfiguration: Equatable, PreferencesEntry {
         self.venueBotUsername = venueBotUsername
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.imageBotUsername = decoder.decodeOptionalStringForKey("img")
-        self.gifBotUsername = decoder.decodeOptionalStringForKey("gif")
-        self.venueBotUsername = decoder.decodeOptionalStringForKey("venue")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.imageBotUsername = try container.decodeIfPresent(String.self, forKey: "img")
+        self.gifBotUsername = try container.decodeIfPresent(String.self, forKey: "gif")
+        self.venueBotUsername = try container.decodeIfPresent(String.self, forKey: "venue")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        if let imageBotUsername = self.imageBotUsername {
-            encoder.encodeString(imageBotUsername, forKey: "img")
-        } else {
-            encoder.encodeNil(forKey: "img")
-        }
-        if let gifBotUsername = self.gifBotUsername {
-            encoder.encodeString(gifBotUsername, forKey: "gif")
-        } else {
-            encoder.encodeNil(forKey: "gif")
-        }
-        if let venueBotUsername = self.venueBotUsername {
-            encoder.encodeString(venueBotUsername, forKey: "venue")
-        } else {
-            encoder.encodeNil(forKey: "venue")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? SearchBotsConfiguration else {
-            return false
-        }
-        return self == to
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encodeIfPresent(self.imageBotUsername, forKey: "img")
+        try container.encodeIfPresent(self.gifBotUsername, forKey: "gif")
+        try container.encodeIfPresent(self.venueBotUsername, forKey: "venue")
     }
 }
 
 public func currentSearchBotsConfiguration(transaction: Transaction) -> SearchBotsConfiguration {
-    if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.searchBotsConfiguration) as? SearchBotsConfiguration {
+    if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.searchBotsConfiguration)?.get(SearchBotsConfiguration.self) {
         return entry
     } else {
         return SearchBotsConfiguration.defaultValue
@@ -57,7 +42,7 @@ public func currentSearchBotsConfiguration(transaction: Transaction) -> SearchBo
 }
 
 public func updateSearchBotsConfiguration(transaction: Transaction, configuration: SearchBotsConfiguration) {
-    if !currentSearchBotsConfiguration(transaction: transaction).isEqual(to: configuration) {
-        transaction.setPreferencesEntry(key: PreferencesKeys.searchBotsConfiguration, value: configuration)
+    if currentSearchBotsConfiguration(transaction: transaction) != configuration {
+        transaction.setPreferencesEntry(key: PreferencesKeys.searchBotsConfiguration, value: PreferencesEntry(configuration))
     }
 }

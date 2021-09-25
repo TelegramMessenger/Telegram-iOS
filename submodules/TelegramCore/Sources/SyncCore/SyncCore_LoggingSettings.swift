@@ -1,6 +1,6 @@
 import Postbox
 
-public final class LoggingSettings: PreferencesEntry, Equatable {
+public final class LoggingSettings: Codable {
     public let logToFile: Bool
     public let logToConsole: Bool
     public let redactSensitiveData: Bool
@@ -17,16 +17,20 @@ public final class LoggingSettings: PreferencesEntry, Equatable {
         self.redactSensitiveData = redactSensitiveData
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.logToFile = decoder.decodeInt32ForKey("logToFile", orElse: 0) != 0
-        self.logToConsole = decoder.decodeInt32ForKey("logToConsole", orElse: 0) != 0
-        self.redactSensitiveData = decoder.decodeInt32ForKey("redactSensitiveData", orElse: 1) != 0
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.logToFile = ((try? container.decode(Int32.self, forKey: "logToFile")) ?? 0) != 0
+        self.logToConsole = ((try? container.decode(Int32.self, forKey: "logToConsole")) ?? 0) != 0
+        self.redactSensitiveData = ((try? container.decode(Int32.self, forKey: "redactSensitiveData")) ?? 1) != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.logToFile ? 1 : 0, forKey: "logToFile")
-        encoder.encodeInt32(self.logToConsole ? 1 : 0, forKey: "logToConsole")
-        encoder.encodeInt32(self.redactSensitiveData ? 1 : 0, forKey: "redactSensitiveData")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.logToFile ? 1 : 0) as Int32, forKey: "logToFile")
+        try container.encode((self.logToConsole ? 1 : 0) as Int32, forKey: "logToConsole")
+        try container.encode((self.redactSensitiveData ? 1 : 0) as Int32, forKey: "redactSensitiveData")
     }
     
     public func withUpdatedLogToFile(_ logToFile: Bool) -> LoggingSettings {
@@ -52,13 +56,5 @@ public final class LoggingSettings: PreferencesEntry, Equatable {
             return false
         }
         return true
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? LoggingSettings else {
-            return false
-        }
-        
-        return self == to
     }
 }

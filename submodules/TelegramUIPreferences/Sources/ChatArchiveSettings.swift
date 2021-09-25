@@ -1,8 +1,9 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import TelegramCore
 
-public struct ChatArchiveSettings: Equatable, PreferencesEntry {
+public struct ChatArchiveSettings: Equatable, Codable {
     public var isHiddenByDefault: Bool
     public var hiddenPsaPeerId: PeerId?
     
@@ -15,25 +16,21 @@ public struct ChatArchiveSettings: Equatable, PreferencesEntry {
         self.hiddenPsaPeerId = hiddenPsaPeerId
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.isHiddenByDefault = decoder.decodeInt32ForKey("isHiddenByDefault", orElse: 1) != 0
-        self.hiddenPsaPeerId = decoder.decodeOptionalInt64ForKey("hiddenPsaPeerId").flatMap(PeerId.init)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.isHiddenByDefault = (try container.decode(Int32.self, forKey: "isHiddenByDefault")) != 0
+        self.hiddenPsaPeerId = (try container.decodeIfPresent(Int64.self, forKey: "hiddenPsaPeerId")).flatMap(PeerId.init)
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.isHiddenByDefault ? 1 : 0, forKey: "isHiddenByDefault")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.isHiddenByDefault ? 1 : 0) as Int32, forKey: "isHiddenByDefault")
         if let hiddenPsaPeerId = self.hiddenPsaPeerId {
-            encoder.encodeInt64(hiddenPsaPeerId.toInt64(), forKey: "hiddenPsaPeerId")
+            try container.encode(hiddenPsaPeerId.toInt64(), forKey: "hiddenPsaPeerId")
         } else {
-            encoder.encodeNil(forKey: "hiddenPsaPeerId")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? ChatArchiveSettings {
-            return self == to
-        } else {
-            return false
+            try container.encodeNil(forKey: "hiddenPsaPeerId")
         }
     }
 }
@@ -41,11 +38,11 @@ public struct ChatArchiveSettings: Equatable, PreferencesEntry {
 public func updateChatArchiveSettings(transaction: Transaction, _ f: @escaping (ChatArchiveSettings) -> ChatArchiveSettings) {
     transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.chatArchiveSettings, { entry in
         let currentSettings: ChatArchiveSettings
-        if let entry = entry as? ChatArchiveSettings {
+        if let entry = entry?.get(ChatArchiveSettings.self) {
             currentSettings = entry
         } else {
             currentSettings = .default
         }
-        return f(currentSettings)
+        return PreferencesEntry(f(currentSettings))
     })
 }

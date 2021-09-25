@@ -470,7 +470,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
     private let adSeenProcessingManager = ChatMessageThrottledProcessingManager()
-    private let messageReactionsProcessingManager = ChatMessageThrottledProcessingManager()
     private let seenLiveLocationProcessingManager = ChatMessageThrottledProcessingManager()
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
     private let refreshMediaProcessingManager = ChatMessageThrottledProcessingManager()
@@ -631,9 +630,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             }
         }
-        self.messageReactionsProcessingManager.process = { [weak context] messageIds in
-            context?.account.viewTracker.updateReactionsForMessageIds(messageIds: messageIds)
-        }
         self.seenLiveLocationProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateSeenLiveLocationForMessageIds(messageIds: messageIds)
         }
@@ -773,7 +769,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
             switch animatedEmoji {
                 case let .result(_, items, _):
-                    for case let item as StickerPackItem in items {
+                    for item in items {
                         if let emoji = item.getStringRepresentationsOfIndexKeys().first {
                             animatedEmojiStickers[emoji.basicEmoji.0] = [item]
                             let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
@@ -794,7 +790,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var animatedEmojiStickers: [String: [Int: StickerPackItem]] = [:]
             switch animatedEmoji {
                 case let .result(_, items, _):
-                    for case let item as StickerPackItem in items {
+                    for item in items {
                         let indexKeys = item.getStringRepresentationsOfIndexKeys()
                         if indexKeys.count > 1, let first = indexKeys.first, let last = indexKeys.last {
                             let emoji: String?
@@ -1219,7 +1215,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let appConfiguration = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> take(1)
         |> map { view in
-            return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+            return view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
         }
         
         var didSetPresentationData = false
@@ -1503,7 +1499,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             var messageIdsWithViewCount: [MessageId] = []
             var messageIdsWithAds: [MessageId] = []
-            var messageIdsWithUpdateableReactions: [MessageId] = []
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithRefreshMedia: [MessageId] = []
@@ -1541,7 +1536,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 contentRequiredValidation = true
                             }
                         }
-                        var isAction = false
                         for media in message.media {
                             if let _ = media as? TelegramMediaUnsupported {
                                 contentRequiredValidation = true
@@ -1550,8 +1544,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.timestamp + liveBroadcastingTimeout > timestamp {
                                     messageIdsWithLiveLocation.append(message.id)
                                 }
-                            } else if let _ = media as? TelegramMediaAction {
-                                isAction = true
                             } else if let telegramFile = media as? TelegramMediaFile {
                                 if telegramFile.isAnimatedSticker, (message.id.peerId.namespace == Namespaces.Peer.SecretChat || !telegramFile.previewRepresentations.isEmpty), let size = telegramFile.size, size > 0 && size <= 128 * 1024 {
                                     if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -1571,9 +1563,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     }
                                 }
                             }
-                        }
-                        if !isAction && message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
-                            messageIdsWithUpdateableReactions.append(message.id)
                         }
                         if contentRequiredValidation {
                             messageIdsWithUnsupportedMedia.append(message.id)
@@ -1702,9 +1691,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
             if !messageIdsWithAds.isEmpty {
                 self.adSeenProcessingManager.add(messageIdsWithAds)
-            }
-            if !messageIdsWithUpdateableReactions.isEmpty {
-                self.messageReactionsProcessingManager.add(messageIdsWithUpdateableReactions)
             }
             if !messageIdsWithLiveLocation.isEmpty {
                 self.seenLiveLocationProcessingManager.add(messageIdsWithLiveLocation)

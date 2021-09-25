@@ -1,6 +1,5 @@
 import Foundation
 import TelegramCore
-import Postbox
 import SwiftSignalKit
 import CoreLocation
 import DeviceLocationManager
@@ -9,7 +8,7 @@ import AccountContext
 public final class LiveLocationManagerImpl: LiveLocationManager {
     private let queue = Queue.mainQueue()
     
-    private let account: Account
+    private let engine: TelegramEngine
     private let locationManager: DeviceLocationManager
     
     private let summaryManagerImpl: LiveLocationSummaryManagerImpl
@@ -36,51 +35,48 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
     
     private var deviceLocationPromise = Promise<(CLLocation, Double?)>()
     
-    private var broadcastToMessageIds: [MessageId: Int32] = [:]
-    private var stopMessageIds = Set<MessageId>()
+    private var broadcastToMessageIds: [EngineMessage.Id: Int32] = [:]
+    private var stopMessageIds = Set<EngineMessage.Id>()
     
-    private let editMessageDisposables = DisposableDict<MessageId>()
+    private let editMessageDisposables = DisposableDict<EngineMessage.Id>()
     
     private var invalidationTimer: (SwiftSignalKit.Timer, Int32)?
     
-    public init(engine: TelegramEngine, account: Account, locationManager: DeviceLocationManager, inForeground: Signal<Bool, NoError>) {
-        self.account = account
+    public init(engine: TelegramEngine, locationManager: DeviceLocationManager, inForeground: Signal<Bool, NoError>) {
+        self.engine = engine
         self.locationManager = locationManager
         
-        self.summaryManagerImpl = LiveLocationSummaryManagerImpl(queue: self.queue, engine: engine, postbox: account.postbox, accountPeerId: account.peerId, viewTracker: account.viewTracker)
-        
-        let viewKey: PostboxViewKey = .localMessageTag(.OutgoingLiveLocation)
-        self.messagesDisposable = (account.postbox.combinedView(keys: [viewKey])
-        |> deliverOn(self.queue)).start(next: { [weak self] view in
+        self.summaryManagerImpl = LiveLocationSummaryManagerImpl(queue: self.queue, engine: engine, accountPeerId: engine.account.peerId)
+
+        self.messagesDisposable = (self.engine.messages.activeLiveLocationMessages()
+        |> deliverOn(self.queue)).start(next: { [weak self] message in
             if let strongSelf = self {
                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 
-                var broadcastToMessageIds: [MessageId: Int32] = [:]
-                var stopMessageIds = Set<MessageId>()
-                
-                if let view = view.views[viewKey] as? LocalMessageTagsView {
-                    for message in view.messages.values {
-                        if !message.flags.contains(.Incoming) {
-                            if message.flags.intersection([.Failed, .Unsent]).isEmpty {
-                                var activeLiveBroadcastingTimeout: Int32?
-                                for media in message.media {
-                                    if let telegramMap = media as? TelegramMediaMap {
-                                        if let liveBroadcastingTimeout = telegramMap.liveBroadcastingTimeout {
-                                            if message.timestamp + liveBroadcastingTimeout > timestamp {
-                                                activeLiveBroadcastingTimeout = liveBroadcastingTimeout
-                                            }
+                var broadcastToMessageIds: [EngineMessage.Id: Int32] = [:]
+                var stopMessageIds = Set<EngineMessage.Id>()
+
+                for message in message {
+                    if !message.flags.contains(.Incoming) {
+                        if message.flags.intersection([.Failed, .Unsent]).isEmpty {
+                            var activeLiveBroadcastingTimeout: Int32?
+                            for media in message.media {
+                                if let telegramMap = media as? TelegramMediaMap {
+                                    if let liveBroadcastingTimeout = telegramMap.liveBroadcastingTimeout {
+                                        if message.timestamp + liveBroadcastingTimeout > timestamp {
+                                            activeLiveBroadcastingTimeout = liveBroadcastingTimeout
                                         }
                                     }
                                 }
-                                if let activeLiveBroadcastingTimeout = activeLiveBroadcastingTimeout {
-                                    broadcastToMessageIds[message.id] = message.timestamp + activeLiveBroadcastingTimeout
-                                } else {
-                                    stopMessageIds.insert(message.id)
-                                }
                             }
-                        } else {
-                            assertionFailure()
+                            if let activeLiveBroadcastingTimeout = activeLiveBroadcastingTimeout {
+                                broadcastToMessageIds[message.id] = message.timestamp + activeLiveBroadcastingTimeout
+                            } else {
+                                stopMessageIds.insert(message.id)
+                            }
                         }
+                    } else {
+                        assertionFailure()
                     }
                 }
                 
@@ -139,7 +135,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         self.invalidationTimer?.0.invalidate()
     }
     
-    private func update(broadcastToMessageIds: [MessageId: Int32], stopMessageIds: Set<MessageId>) {
+    private func update(broadcastToMessageIds: [EngineMessage.Id: Int32], stopMessageIds: Set<EngineMessage.Id>) {
         assert(self.queue.isCurrent())
         
         if self.broadcastToMessageIds == broadcastToMessageIds && self.stopMessageIds == stopMessageIds {
@@ -170,7 +166,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         let addedStopped = stopMessageIds.subtracting(self.stopMessageIds)
         self.stopMessageIds = stopMessageIds
         for id in addedStopped {
-            self.editMessageDisposables.set((TelegramEngine(account: self.account).messages.requestEditLiveLocation(messageId: id, stop: true, coordinate: nil, heading: nil, proximityNotificationRadius: nil)
+            self.editMessageDisposables.set((self.engine.messages.requestEditLiveLocation(messageId: id, stop: true, coordinate: nil, heading: nil, proximityNotificationRadius: nil)
                 |> deliverOn(self.queue)).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.editMessageDisposables.set(nil, forKey: id)
@@ -187,7 +183,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         var updatedBroadcastToMessageIds = self.broadcastToMessageIds
         var updatedStopMessageIds = self.stopMessageIds
         
-        var earliestCancelIdAndTimestamp: (MessageId, Int32)?
+        var earliestCancelIdAndTimestamp: (EngineMessage.Id, Int32)?
         for (id, timestamp) in self.broadcastToMessageIds {
             if currentTimestamp >= timestamp {
                 updatedBroadcastToMessageIds.removeValue(forKey: id)
@@ -223,9 +219,9 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         assert(self.queue.isCurrent())
         
         let ids = self.broadcastToMessageIds
-        let remainingIds = Atomic<Set<MessageId>>(value: Set(ids.keys))
+        let remainingIds = Atomic<Set<EngineMessage.Id>>(value: Set(ids.keys))
         for id in ids.keys {
-            self.editMessageDisposables.set((TelegramEngine(account: self.account).messages.requestEditLiveLocation(messageId: id, stop: false, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: Int32(accuracyRadius)), heading: heading.flatMap { Int32($0) }, proximityNotificationRadius: nil)
+            self.editMessageDisposables.set((self.engine.messages.requestEditLiveLocation(messageId: id, stop: false, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: Int32(accuracyRadius)), heading: heading.flatMap { Int32($0) }, proximityNotificationRadius: nil)
             |> deliverOn(self.queue)).start(completed: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.editMessageDisposables.set(nil, forKey: id)
@@ -243,29 +239,12 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         }
     }
     
-    public func cancelLiveLocation(peerId: PeerId) {
+    public func cancelLiveLocation(peerId: EnginePeer.Id) {
         assert(self.queue.isCurrent())
         
         let ids = self.broadcastToMessageIds.keys.filter({ $0.peerId == peerId })
         if !ids.isEmpty {
-            let _ = self.account.postbox.transaction({ transaction -> Void in
-                for id in ids {
-                    transaction.updateMessage(id, update: { currentMessage in
-                        var storeForwardInfo: StoreMessageForwardInfo?
-                        if let forwardInfo = currentMessage.forwardInfo {
-                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
-                        }
-                        var updatedMedia = currentMessage.media
-                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                        for i in 0 ..< updatedMedia.count {
-                            if let media = updatedMedia[i] as? TelegramMediaMap, let _ = media.liveBroadcastingTimeout {
-                                updatedMedia[i] = TelegramMediaMap(latitude: media.latitude, longitude: media.longitude, heading: media.heading, accuracyRadius: media.accuracyRadius, geoPlace: media.geoPlace, venue: media.venue, liveBroadcastingTimeout: max(0, timestamp - currentMessage.timestamp - 1), liveProximityNotificationRadius: nil)
-                            }
-                        }
-                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
-                    })
-                }
-            }).start()
+            let _ = self.engine.messages.requestCancelLiveLocation(ids: ids).start()
         }
     }
     
@@ -275,7 +254,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         }
     }
     
-    public func internalMessageForPeerId(_ peerId: PeerId) -> MessageId? {
+    public func internalMessageForPeerId(_ peerId: EnginePeer.Id) -> EngineMessage.Id? {
         for id in self.broadcastToMessageIds.keys {
             if id.peerId == peerId {
                 return id

@@ -698,6 +698,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/MtProtoKit:MtProtoKit",
@@ -737,6 +738,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -779,6 +781,7 @@ ios_framework(
         ":SwiftSignalKitFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/Postbox:Postbox",
@@ -818,6 +821,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramApi:TelegramApi",
@@ -862,6 +866,7 @@ ios_framework(
         ":PostboxFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramCore:TelegramCore",
@@ -901,6 +906,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
@@ -987,6 +993,7 @@ ios_framework(
         ":AsyncDisplayKitFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/Display:Display",
@@ -1034,6 +1041,7 @@ ios_framework(
         ":DisplayFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramUI:TelegramUI",
@@ -1096,6 +1104,9 @@ swift_library(
     srcs = glob([
         "Share/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramUI:TelegramUI"
     ],
@@ -1178,6 +1189,9 @@ swift_library(
     srcs = glob([
         "NotificationContent/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
         ":NotificationContentExtensionLink",
@@ -1269,6 +1283,9 @@ swift_library(
     srcs = glob([
         "WidgetKitWidget/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     data = [
         ":WidgetAssets",
     ],
@@ -1397,6 +1414,9 @@ swift_library(
     srcs = glob([
         "SiriIntents/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     data = glob([
         "SiriIntents/*.lproj/Intents.intentdefinition"
     ]) + [
@@ -1496,6 +1516,9 @@ swift_library(
     srcs = glob([
         "BroadcastUpload/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
         "//submodules/TelegramVoip:TelegramVoip",
@@ -1623,6 +1646,7 @@ ios_extension(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
+        ":TelegramCoreFramework",
     ],
 )
 

@@ -55,7 +55,7 @@ TEST_P(FailureSignalHandlerDeathTest, AbslFailureSignal) {
               exit_regex);
 #else
   // Windows doesn't have testing::KilledBySignal().
-  EXPECT_DEATH(InstallHandlerAndRaise(signo), exit_regex);
+  EXPECT_DEATH_IF_SUPPORTED(InstallHandlerAndRaise(signo), exit_regex);
 #endif
 }
 
@@ -107,8 +107,8 @@ TEST_P(FailureSignalHandlerDeathTest, AbslFatalSignalsWithWriterFn) {
               testing::KilledBySignal(signo), exit_regex);
 #else
   // Windows doesn't have testing::KilledBySignal().
-  EXPECT_DEATH(InstallHandlerWithWriteToFileAndRaise(file.c_str(), signo),
-               exit_regex);
+  EXPECT_DEATH_IF_SUPPORTED(
+      InstallHandlerWithWriteToFileAndRaise(file.c_str(), signo), exit_regex);
 #endif
 
   // Open the file in this process and check its contents.
@@ -121,6 +121,12 @@ TEST_P(FailureSignalHandlerDeathTest, AbslFatalSignalsWithWriterFn) {
       StartsWith(absl::StrCat(
           "*** ", absl::debugging_internal::FailureSignalToString(signo),
           " received at ")));
+
+  // On platforms where it is possible to get the current CPU, the
+  // CPU number is also logged. Check that it is present in output.
+#if defined(__linux__)
+  EXPECT_THAT(error_line, testing::HasSubstr(" on cpu "));
+#endif
 
   if (absl::debugging_internal::StackTraceWorksForTest()) {
     std::getline(error_output, error_line);

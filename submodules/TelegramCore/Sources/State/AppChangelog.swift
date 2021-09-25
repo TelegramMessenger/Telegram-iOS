@@ -10,7 +10,7 @@ func managedAppChangelog(postbox: Postbox, network: Network, stateManager: Accou
     |> take(1)
     |> mapToSignal { _ -> Signal<Void, NoError> in
         return postbox.transaction { transaction -> AppChangelogState in
-            return transaction.getPreferencesEntry(key: PreferencesKeys.appChangelogState) as? AppChangelogState ?? AppChangelogState.default
+            return transaction.getPreferencesEntry(key: PreferencesKeys.appChangelogState)?.get(AppChangelogState.self) ?? AppChangelogState.default
         }
         |> mapToSignal { appChangelogState -> Signal<Void, NoError> in
             let appChangelogState = appChangelogState

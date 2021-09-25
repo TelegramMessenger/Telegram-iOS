@@ -5,7 +5,7 @@ import SwiftSignalKit
 import Postbox
 import UrlEscaping
 
-public struct ExternalMusicAlbumArtResourceId: MediaResourceId {
+public struct ExternalMusicAlbumArtResourceId {
     public let title: String
     public let performer: String
     public let isThumbnail: Bool
@@ -22,14 +22,6 @@ public struct ExternalMusicAlbumArtResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.title.hashValue &* 31 &+ self.performer.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? ExternalMusicAlbumArtResourceId {
-            return self.title == to.title && self.performer == to.performer && self.isThumbnail == to.isThumbnail
-        } else {
-            return false
-        }
     }
 }
 
@@ -57,7 +49,7 @@ public class ExternalMusicAlbumArtResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return ExternalMusicAlbumArtResourceId(title: self.title, performer: self.performer, isThumbnail: self.isThumbnail)
+        return MediaResourceId(ExternalMusicAlbumArtResourceId(title: self.title, performer: self.performer, isThumbnail: self.isThumbnail).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {

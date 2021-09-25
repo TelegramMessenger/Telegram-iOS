@@ -3,12 +3,12 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-public struct Country: PostboxCoding, Equatable {
+public struct Country: Codable, Equatable {
     public static func == (lhs: Country, rhs: Country) -> Bool {
         return lhs.id == rhs.id && lhs.name == rhs.name && lhs.localizedName == rhs.localizedName && lhs.countryCodes == rhs.countryCodes && lhs.hidden == rhs.hidden
     }
     
-    public struct CountryCode: PostboxCoding, Equatable {
+    public struct CountryCode: Codable, Equatable {
         public let code: String
         public let prefixes: [String]
         public let patterns: [String]
@@ -19,16 +19,20 @@ public struct Country: PostboxCoding, Equatable {
             self.patterns = patterns
         }
         
-        public init(decoder: PostboxDecoder) {
-            self.code = decoder.decodeStringForKey("c", orElse: "")
-            self.prefixes = decoder.decodeStringArrayForKey("pfx")
-            self.patterns = decoder.decodeStringArrayForKey("ptrn")
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+            self.code = try container.decode(String.self, forKey: "c")
+            self.prefixes = try container.decode([String].self, forKey: "pfx")
+            self.patterns = try container.decode([String].self, forKey: "ptrn")
         }
         
-        public func encode(_ encoder: PostboxEncoder) {
-            encoder.encodeString(self.code, forKey: "c")
-            encoder.encodeStringArray(self.prefixes, forKey: "pfx")
-            encoder.encodeStringArray(self.patterns, forKey: "ptrn")
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: StringCodingKey.self)
+
+            try container.encode(self.code, forKey: "c")
+            try container.encode(self.prefixes, forKey: "pfx")
+            try container.encode(self.patterns, forKey: "ptrn")
         }
     }
     
@@ -46,28 +50,28 @@ public struct Country: PostboxCoding, Equatable {
         self.hidden = hidden
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.id = decoder.decodeStringForKey("c", orElse: "")
-        self.name = decoder.decodeStringForKey("n", orElse: "")
-        self.localizedName = decoder.decodeOptionalStringForKey("ln")
-        self.countryCodes = decoder.decodeObjectArrayForKey("cc").map { $0 as! CountryCode }
-        self.hidden = decoder.decodeBoolForKey("h", orElse: false)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.id = try container.decode(String.self, forKey: "c")
+        self.name = try container.decode(String.self, forKey: "n")
+        self.localizedName = try container.decodeIfPresent(String.self, forKey: "ln")
+        self.countryCodes = try container.decode([CountryCode].self, forKey: "cc")
+        self.hidden = try container.decode(Bool.self, forKey: "h")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.id, forKey: "c")
-        encoder.encodeString(self.name, forKey: "n")
-        if let localizedName = self.localizedName {
-            encoder.encodeString(localizedName, forKey: "ln")
-        } else {
-            encoder.encodeNil(forKey: "ln")
-        }
-        encoder.encodeObjectArray(self.countryCodes, forKey: "cc")
-        encoder.encodeBool(self.hidden, forKey: "h")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.id, forKey: "c")
+        try container.encode(self.name, forKey: "n")
+        try container.encodeIfPresent(self.localizedName, forKey: "ln")
+        try container.encode(self.countryCodes, forKey: "cc")
+        try container.encode(self.hidden, forKey: "h")
     }
 }
 
-public final class CountriesList: PreferencesEntry, Equatable {
+public final class CountriesList: Codable, Equatable {
     public let countries: [Country]
     public let hash: Int32
  
@@ -76,22 +80,18 @@ public final class CountriesList: PreferencesEntry, Equatable {
         self.hash = hash
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.countries = decoder.decodeObjectArrayForKey("c").map { $0 as! Country }
-        self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.countries = try container.decode([Country].self, forKey: "c")
+        self.hash = try container.decode(Int32.self, forKey: "h")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObjectArray(self.countries, forKey: "c")
-        encoder.encodeInt32(self.hash, forKey: "h")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? CountriesList {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.countries, forKey: "c")
+        try container.encode(self.hash, forKey: "h")
     }
     
     public static func ==(lhs: CountriesList, rhs: CountriesList) -> Bool {
@@ -113,7 +113,7 @@ func _internal_getCountriesList(accountManager: AccountManager<TelegramAccountMa
                     } else {
                         let _ = accountManager.transaction { transaction in
                             transaction.updateSharedData(SharedDataKeys.countriesList, { _ in
-                                return CountriesList(countries: result, hash: hash)
+                                return PreferencesEntry(CountriesList(countries: result, hash: hash))
                             })
                         }.start()
                         return .single(result)
@@ -130,7 +130,7 @@ func _internal_getCountriesList(accountManager: AccountManager<TelegramAccountMa
         return accountManager.sharedData(keys: [SharedDataKeys.countriesList])
         |> take(1)
         |> map { sharedData -> ([Country], Int32) in
-            if let countriesList = sharedData.entries[SharedDataKeys.countriesList] as? CountriesList {
+            if let countriesList = sharedData.entries[SharedDataKeys.countriesList]?.get(CountriesList.self) {
                 return (countriesList.countries, countriesList.hash)
             } else {
                 return ([], 0)

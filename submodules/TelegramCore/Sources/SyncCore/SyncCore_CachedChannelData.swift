@@ -413,7 +413,7 @@ public final class CachedChannelData: CachedPeerData {
         self.flags = CachedChannelFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
         self.about = decoder.decodeOptionalStringForKey("a")
         self.participantsSummary = CachedChannelParticipantsSummary(decoder: decoder)
-        self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
+        self.exportedInvitation = decoder.decode(ExportedInvitation.self, forKey: "i")
         self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
         var peerIds = Set<PeerId>()
         
@@ -515,7 +515,7 @@ public final class CachedChannelData: CachedPeerData {
         }
         self.participantsSummary.encode(encoder)
         if let exportedInvitation = self.exportedInvitation {
-            encoder.encodeObject(exportedInvitation, forKey: "i")
+            encoder.encode(exportedInvitation, forKey: "i")
         } else {
             encoder.encodeNil(forKey: "i")
         }

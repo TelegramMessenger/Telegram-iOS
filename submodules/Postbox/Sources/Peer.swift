@@ -294,7 +294,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     }
 }
 
-public protocol Peer: class, PostboxCoding {
+public protocol Peer: AnyObject, PostboxCoding {
     var id: PeerId { get }
     var indexName: PeerIndexNameRepresentation { get }
     var associatedPeerId: PeerId? { get }

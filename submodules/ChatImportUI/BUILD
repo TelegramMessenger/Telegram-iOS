@@ -22,7 +22,6 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
-        "//submodules/ChatHistoryImportTasks:ChatHistoryImportTasks",
         "//submodules/MimeTypes:MimeTypes",
         "//submodules/ConfettiEffect:ConfettiEffect",
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",

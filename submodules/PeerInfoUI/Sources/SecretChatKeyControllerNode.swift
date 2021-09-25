@@ -118,7 +118,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
         
         let (keyTextLayout, keyTextApply) = makeKeyTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.semiboldMonospace(15.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: layout.size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         
-        let infoString = self.presentationData.strings.EncryptionKey_Description(self.peer.compactDisplayTitle, self.peer.compactDisplayTitle)
+        let infoString = self.presentationData.strings.EncryptionKey_Description(EnginePeer(self.peer).compactDisplayTitle, EnginePeer(self.peer).compactDisplayTitle)
         let infoText = NSMutableAttributedString(string: infoString.string, attributes: [.font: Font.regular(14.0), .foregroundColor: self.presentationData.theme.list.itemPrimaryTextColor])
         
         for range in infoString.ranges {

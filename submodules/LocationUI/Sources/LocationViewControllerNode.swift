@@ -126,7 +126,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                     distanceString = nil
                 }
                 let eta = time.flatMap { stringForEstimatedDuration(strings: presentationData.strings, eta: $0) }
-                return LocationInfoListItem(presentationData: ItemListPresentationData(presentationData), account: context.account, location: location, address: addressString, distance: distanceString, eta: eta, action: {
+                return LocationInfoListItem(presentationData: ItemListPresentationData(presentationData), engine: context.engine, location: location, address: addressString, distance: distanceString, eta: eta, action: {
                     interaction?.goToCoordinate(location.coordinate)
                 }, getDirections: {
                     interaction?.requestDirections()
@@ -138,7 +138,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 } else {
                     beginTimeAndTimeout = nil
                 }
-                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: context.account, title: title, subtitle: subtitle, icon: beginTimeAndTimeout != nil ? .stopLiveLocation : .liveLocation, beginTimeAndTimeout: beginTimeAndTimeout, action: {
+                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), engine: context.engine, title: title, subtitle: subtitle, icon: beginTimeAndTimeout != nil ? .stopLiveLocation : .liveLocation, beginTimeAndTimeout: beginTimeAndTimeout, action: {
                     if beginTimeAndTimeout != nil {
                         interaction?.stopLiveLocation()
                     } else {
@@ -720,7 +720,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
           
             var text: String = strongSelf.presentationData.strings.Location_ProximityGroupTip
             if peer.id.namespace == Namespaces.Peer.CloudUser {
-                text = strongSelf.presentationData.strings.Location_ProximityTip(peer.compactDisplayTitle).string
+                text = strongSelf.presentationData.strings.Location_ProximityTip(EnginePeer(peer).compactDisplayTitle).string
             }
             
             strongSelf.interaction.present(TooltipScreen(account: strongSelf.context.account, text: text, icon: nil, location: .point(location.offsetBy(dx: -9.0, dy: 0.0), .right), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in

@@ -8,12 +8,12 @@ public func updateContentPrivacySettings(postbox: Postbox, _ f: @escaping (Conte
     return postbox.transaction { transaction -> Void in
         var updated: ContentPrivacySettings?
         transaction.updatePreferencesEntry(key: PreferencesKeys.contentPrivacySettings, { current in
-            if let current = current as? ContentPrivacySettings {
+            if let current = current?.get(ContentPrivacySettings.self) {
                 updated = f(current)
-                return updated
+                return PreferencesEntry(updated)
             } else {
                 updated = f(ContentPrivacySettings.defaultSettings)
-                return updated
+                return PreferencesEntry(updated)
             }
         })
     }

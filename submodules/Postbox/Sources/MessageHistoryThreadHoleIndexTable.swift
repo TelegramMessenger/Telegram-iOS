@@ -25,11 +25,11 @@ final class MessageHistoryThreadHoleIndexTable: Table {
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
-    init(valueBox: ValueBox, table: ValueBoxTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.seedConfiguration = seedConfiguration
         self.metadataTable = metadataTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(threadId: Int64, id: MessageId, space: MessageHistoryHoleSpace) -> ValueBoxKey {
@@ -268,7 +268,6 @@ final class MessageHistoryThreadHoleIndexTable: Table {
         }
         let clippedRange = clippedLowerBound ... clippedUpperBound
         
-        var removedIndices = IndexSet()
         var insertedIndices = IndexSet()
         var removeKeys: [Int32] = []
         var insertRanges = IndexSet()
@@ -351,8 +350,6 @@ final class MessageHistoryThreadHoleIndexTable: Table {
     }
     
     private func removeInternal(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>, operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
-        var removedIndices = IndexSet()
-        var insertedIndices = IndexSet()
         var removeKeys: [Int32] = []
         var insertRanges = IndexSet()
         
