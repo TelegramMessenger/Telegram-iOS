@@ -414,6 +414,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
 }
 
 public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersContext {
+    public var captionPanelView: (() -> TGCaptionPanelView?)!
     public var presentStickersController: ((((Any?, Bool, UIView?, CGRect) -> Void)?) -> TGPhotoPaintStickersScreen?)!
     
     private let context: AccountContext

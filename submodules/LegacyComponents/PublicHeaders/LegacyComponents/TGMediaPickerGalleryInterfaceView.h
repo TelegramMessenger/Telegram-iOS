@@ -5,6 +5,7 @@
 
 #import <LegacyComponents/LegacyComponentsContext.h>
 
+@protocol TGPhotoPaintStickersContext;
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
 @class TGSuggestionContext;
@@ -12,7 +13,7 @@
 
 @interface TGMediaPickerGalleryInterfaceView : UIView <TGModernGalleryInterfaceView>
 
-@property (nonatomic, copy) void (^captionSet)(id<TGModernGalleryItem>, NSString *, NSArray *);
+@property (nonatomic, copy) void (^captionSet)(id<TGModernGalleryItem>, NSAttributedString *);
 @property (nonatomic, copy) void (^donePressed)(id<TGModernGalleryItem>);
 @property (nonatomic, copy) void (^doneLongPressed)(id<TGModernGalleryItem>);
 
@@ -37,7 +38,7 @@
 
 @property (nonatomic, readonly) UIView *timerButton;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasSelectionPanel:(bool)hasSelectionPanel hasCameraButton:(bool)hasCameraButton recipientName:(NSString *)recipientName;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context focusItem:(id<TGModernGalleryItem>)focusItem selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext hasSelectionPanel:(bool)hasSelectionPanel hasCameraButton:(bool)hasCameraButton recipientName:(NSString *)recipientName;
 
 - (void)setSelectedItemsModel:(TGMediaPickerGallerySelectedItemsModel *)selectedItemsModel;
 - (void)setEditorTabPressed:(void (^)(TGPhotoEditorTab tab))editorTabPressed;

@@ -123,8 +123,8 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     controller.finishedWithResults = { [weak menuController, weak legacyController] overlayController, selectionContext, editingContext, currentItem, silentPosting, scheduleTime in
         if let selectionContext = selectionContext, let editingContext = editingContext {
             let nativeGenerator = legacyAssetPickerItemGenerator()
-            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedPhotos && !isSecretChat, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, descriptionGenerator: { _1, _2, _3, _4 in
-                nativeGenerator(_1, _2, _3, _4, nil)
+            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedPhotos && !isSecretChat, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, descriptionGenerator: { _1, _2, _3 in
+                nativeGenerator(_1, _2, _3, nil)
             })
             sendMessagesWithSignals(signals, silentPosting, scheduleTime)
         }
@@ -133,7 +133,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
         legacyController?.dismissWithAnimation()
     }
     
-    controller.finishedWithPhoto = { [weak menuController, weak legacyController] overlayController, image, caption, entities, stickers, timer in
+    controller.finishedWithPhoto = { [weak menuController, weak legacyController] overlayController, image, caption, stickers, timer in
         if let image = image {
             let description = NSMutableDictionary()
             description["type"] = "capturedPhoto"
@@ -141,7 +141,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
             if let timer = timer {
                 description["timer"] = timer
             }
-            if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil, nil) {
+            if let item = legacyAssetPickerItemGenerator()(description, caption, nil, nil) {
                 sendMessagesWithSignals([SSignal.single(item)], false, 0)
             }
         }
@@ -150,7 +150,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
         legacyController?.dismissWithAnimation()
     }
     
-    controller.finishedWithVideo = { [weak menuController, weak legacyController] overlayController, videoURL, previewImage, duration, dimensions, adjustments, caption, entities, stickers, timer in
+    controller.finishedWithVideo = { [weak menuController, weak legacyController] overlayController, videoURL, previewImage, duration, dimensions, adjustments, caption, stickers, timer in
         if let videoURL = videoURL {
             let description = NSMutableDictionary()
             description["type"] = "video"
@@ -166,7 +166,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
             if let timer = timer {
                 description["timer"] = timer
             }
-            if let item = legacyAssetPickerItemGenerator()(description, caption, entities, nil, nil) {
+            if let item = legacyAssetPickerItemGenerator()(description, caption, nil, nil) {
                 sendMessagesWithSignals([SSignal.single(item)], false, 0)
             }
         }
@@ -220,8 +220,8 @@ func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: B
     controller.finishedWithResults = { [weak parentController] overlayController, selectionContext, editingContext, currentItem, _, _ in
         if let selectionContext = selectionContext, let editingContext = editingContext {
             let nativeGenerator = legacyAssetPickerItemGenerator()
-            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: { _1, _2, _3, _4 in
-                nativeGenerator(_1, _2, _3, _4, nil)
+            let signals = TGCameraController.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, storeAssets: saveCapturedMedia, saveEditedPhotos: saveEditedPhotos, descriptionGenerator: { _1, _2, _3 in
+                nativeGenerator(_1, _2, _3, nil)
             })
             if let parentController = parentController {
                 parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, text, account in

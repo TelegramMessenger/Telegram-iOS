@@ -826,7 +826,7 @@
     }
 }
 
-- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *, NSString *))descriptionGenerator
+- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *, NSString *))descriptionGenerator
 {
     bool storeAssets = (_editingContext != nil) && self.shouldStoreAssets;
     
@@ -843,7 +843,7 @@
     return value;
 }
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)__unused useMediaCache descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets useMediaCache:(bool)__unused useMediaCache descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     NSMutableArray *selectedItems = selectionContext.selectedItems ? [selectionContext.selectedItems mutableCopy] : [[NSMutableArray alloc] init];
@@ -944,8 +944,7 @@
             {
                 if (intent == TGMediaAssetsControllerSendFileIntent)
                 {
-                    NSString *caption = [editingContext captionForItem:asset];
-                    NSArray *entities = [editingContext entitiesForItem:asset];
+                    NSAttributedString *caption = [editingContext captionForItem:asset];
                     
                     [signals addObject:[[[TGMediaAssetImageSignals imageDataForAsset:asset allowNetworkAccess:false] map:^NSDictionary *(TGMediaAssetImageData *assetData)
                     {
@@ -961,7 +960,7 @@
                         if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                        id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
                     }] catch:^SSignal *(id error)
                     {
@@ -987,7 +986,7 @@
                             if (groupedId != nil)
                                 dict[@"groupedId"] = groupedId;
                             
-                            id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                            id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                             return generatedItem;
                         }];
                     }]];
@@ -996,8 +995,7 @@
                 }
                 else
                 {
-                    NSString *caption = [editingContext captionForItem:asset];
-                    NSArray *entities = [editingContext entitiesForItem:asset];
+                    NSAttributedString *caption = [editingContext captionForItem:asset];
                     id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
                     NSNumber *timer = [editingContext timerForItem:asset];
                     
@@ -1014,7 +1012,7 @@
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                        id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
                     }];
                     
@@ -1090,7 +1088,7 @@
                                 else if (groupedId != nil && !hasAnyTimers)
                                     dict[@"groupedId"] = groupedId;
                                 
-                                id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                                id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                                 return generatedItem;
                             }];
                         }]];
@@ -1172,7 +1170,7 @@
                             else if (groupedId != nil && !hasAnyTimers)
                                 dict[@"groupedId"] = groupedId;
                             
-                            id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                            id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                             return generatedItem;
                         }] catch:^SSignal *(__unused id error)
                         {
@@ -1189,8 +1187,7 @@
             {
                 if (intent == TGMediaAssetsControllerSendFileIntent)
                 {
-                    NSString *caption = [editingContext captionForItem:asset];
-                    NSArray *entities = [editingContext entitiesForItem:asset];
+                    NSAttributedString *caption = [editingContext captionForItem:asset];
                     id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
                     
                     CGSize dimensions = asset.originalSize;
@@ -1213,7 +1210,7 @@
                         if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                        id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
                     }]];
                     
@@ -1222,8 +1219,7 @@
                 else
                 {
                     TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[editingContext adjustmentsForItem:asset];
-                    NSString *caption = [editingContext captionForItem:asset];
-                    NSArray *entities = [editingContext entitiesForItem:asset];
+                    NSAttributedString *caption = [editingContext captionForItem:asset];
                     NSNumber *timer = [editingContext timerForItem:asset];
                     
                     UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
@@ -1283,7 +1279,7 @@
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                        id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
                     }]];
                     
@@ -1300,8 +1296,7 @@
                 }
                 
                 TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[editingContext adjustmentsForItem:video];
-                NSString *caption = [editingContext captionForItem:video];
-                NSArray *entities = [editingContext entitiesForItem:video];
+                NSAttributedString *caption = [editingContext captionForItem:video];
                 NSNumber *timer = [editingContext timerForItem:video];
                 
                 UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
@@ -1361,7 +1356,7 @@
                     if (timer != nil)
                         dict[@"timer"] = timer;
                     
-                    id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                    id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                     return generatedItem;
                 }]];
                 

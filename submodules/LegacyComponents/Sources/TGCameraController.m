@@ -1439,7 +1439,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     {
         editingContext = [[TGMediaEditingContext alloc] init];
         if (self.forcedCaption != nil)
-            [editingContext setForcedCaption:self.forcedCaption entities:self.forcedEntities];
+            [editingContext setForcedCaption:self.forcedCaption];
         _editingContext = editingContext;
         _interfaceView.editingContext = editingContext;
     }
@@ -1711,11 +1711,11 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             [editingContext setImage:resultImage thumbnailImage:thumbnailImage forItem:editableItem synchronous:false];
         };
 
-        model.saveItemCaption = ^(id<TGMediaEditableItem> editableItem, NSString *caption, NSArray *entities)
+        model.saveItemCaption = ^(id<TGMediaEditableItem> editableItem, NSAttributedString *caption)
         {
             __strong TGCameraController *strongSelf = weakSelf;
             if (strongSelf != nil)
-                [strongSelf->_editingContext setCaption:caption entities:entities forItem:editableItem];
+                [strongSelf->_editingContext setCaption:caption forItem:editableItem];
         };
 
         model.interfaceView.hasSwipeGesture = false;
@@ -2048,10 +2048,10 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 }
                 
                 if (strongSelf.finishedWithVideo != nil)
-                    strongSelf.finishedWithVideo(nil, [NSURL fileURLWithPath:filePath], previewImage, 0, CGSizeZero, adjustments, nil, nil, nil, nil);
+                    strongSelf.finishedWithVideo(nil, [NSURL fileURLWithPath:filePath], previewImage, 0, CGSizeZero, adjustments, nil, nil, nil);
             } else {
                 if (strongSelf.finishedWithPhoto != nil)
-                    strongSelf.finishedWithPhoto(nil, resultImage, nil, nil, nil, nil);
+                    strongSelf.finishedWithPhoto(nil, resultImage, nil, nil, nil);
             }
                         
             if (strongSelf.shouldStoreCapturedAssets && [input isKindOfClass:[UIImage class]])
@@ -2079,7 +2079,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         TGDispatchOnMainThread(^
         {
             if (strongSelf.finishedWithVideo != nil)
-                strongSelf.finishedWithVideo(nil, [(AVURLAsset *)asset URL], resultImage, 0, CGSizeZero, adjustments, nil, nil, nil, nil);
+                strongSelf.finishedWithVideo(nil, [(AVURLAsset *)asset URL], resultImage, 0, CGSizeZero, adjustments, nil, nil, nil);
         
             __strong TGPhotoEditorController *strongController = weakController;
             if (strongController != nil)
@@ -2760,7 +2760,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     }
 }
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem storeAssets:(bool)storeAssets saveEditedPhotos:(bool)saveEditedPhotos descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext currentItem:(id<TGMediaSelectableItem>)currentItem storeAssets:(bool)storeAssets saveEditedPhotos:(bool)saveEditedPhotos descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *))descriptionGenerator
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     NSMutableArray *selectedItems = selectionContext.selectedItems != nil ? [selectionContext.selectedItems mutableCopy] : [[NSMutableArray alloc] init];
@@ -2887,8 +2887,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     {
         if ([asset isKindOfClass:[TGCameraCapturedPhoto class]])
         {
-            NSString *caption = [editingContext captionForItem:asset];
-            NSArray *entities = [editingContext entitiesForItem:asset];
+            NSAttributedString *caption = [editingContext captionForItem:asset];
             id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
             NSNumber *timer = [editingContext timerForItem:asset];
 
@@ -2908,7 +2907,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                         dict[@"caption"] = caption;
                     return dict;
                 } else {
-                    id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                    id generatedItem = descriptionGenerator(dict, caption, nil);
                     return generatedItem;
                 }
             }];
@@ -2994,7 +2993,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                         dict[@"caption"] = caption;
                     return dict;
                 } else {
-                    id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                    id generatedItem = descriptionGenerator(dict, caption, nil);
                     return generatedItem;
                 }
             }] catch:^SSignal *(__unused id error)
@@ -3011,8 +3010,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             TGCameraCapturedVideo *video = (TGCameraCapturedVideo *)asset;
             
             TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[editingContext adjustmentsForItem:asset];
-            NSString *caption = [editingContext captionForItem:asset];
-            NSArray *entities = [editingContext entitiesForItem:asset];
+            NSAttributedString *caption = [editingContext captionForItem:asset];
             NSNumber *timer = [editingContext timerForItem:asset];
             
             UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
@@ -3070,7 +3068,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     else if (groupedId != nil && !hasAnyTimers)
                         dict[@"groupedId"] = groupedId;
                     
-                    id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                    id generatedItem = descriptionGenerator(dict, caption, nil);
                     return generatedItem;
                 }];
             }]];
@@ -3126,7 +3124,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             dict[@"fileName"] = @"Document Scan.pdf";
             dict[@"mimeType"] = @"application/pdf";
             
-            id generatedItem = descriptionGenerator(dict, dict[@"caption"], nil, nil);
+            id generatedItem = descriptionGenerator(dict, dict[@"caption"], nil);
             return generatedItem;
         }];
         signals = [NSMutableArray arrayWithObject:scanSignal];
