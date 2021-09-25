@@ -281,12 +281,20 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             string = strings.Conversation_AutoremoveTimerSetUser(authorString, timeValue).string
                         }
                     } else if let _ = messagePeer as? TelegramGroup {
-                        string = strings.Conversation_AutoremoveTimerSetGroup(timeValue).string
-                    } else if let channel = messagePeer as? TelegramChannel {
-                        if case .group = channel.info {
-                            string = strings.Conversation_AutoremoveTimerSetGroup(timeValue).string
+                        if message.author?.id == accountPeerId {
+                            string = strings.Conversation_AutoremoveTimerSetUserYou(timeValue).string
                         } else {
-                            string = strings.Conversation_AutoremoveTimerSetChannel(timeValue).string
+                            string = strings.Conversation_AutoremoveTimerSetGroup(timeValue).string
+                        }
+                    } else if let channel = messagePeer as? TelegramChannel {
+                        if message.author?.id == accountPeerId {
+                            string = strings.Conversation_AutoremoveTimerSetUserYou(timeValue).string
+                        } else {
+                            if case .group = channel.info {
+                                string = strings.Conversation_AutoremoveTimerSetGroup(timeValue).string
+                            } else {
+                                string = strings.Conversation_AutoremoveTimerSetChannel(timeValue).string
+                            }
                         }
                     } else {
                         if message.author?.id == accountPeerId {

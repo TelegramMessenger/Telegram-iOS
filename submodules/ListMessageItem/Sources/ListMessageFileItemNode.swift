@@ -899,6 +899,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
         if isVoice {
             iconStatusBackgroundColor = item.presentationData.theme.theme.list.itemAccentColor
             iconStatusForegroundColor = item.presentationData.theme.theme.list.itemCheckColors.foregroundColor
+        } else if isAudio {
+            iconStatusForegroundColor = item.presentationData.theme.theme.list.itemCheckColors.foregroundColor
         }
         
         if !isAudio && !isInstantVideo {
@@ -929,6 +931,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         }
         self.iconStatusNode.backgroundNodeColor = iconStatusBackgroundColor
         self.iconStatusNode.foregroundNodeColor = iconStatusForegroundColor
+        self.iconStatusNode.overlayForegroundNodeColor = .white
         self.iconStatusNode.transitionToState(iconStatusState)
     }
     

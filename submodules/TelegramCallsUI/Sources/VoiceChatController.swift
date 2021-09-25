@@ -5024,12 +5024,12 @@ public final class VoiceChatController: ViewController {
                 displayPanelVideos = self.displayPanelVideos
             }
             
-            let isLivestream: Bool
-            if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
-                isLivestream = true
-            } else {
-                isLivestream = false
-            }
+//            let isLivestream: Bool
+//            if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
+//                isLivestream = true
+//            } else {
+//                isLivestream = false
+//            }
             
             let canManageCall = self.callState?.canManageCall ?? false
             
