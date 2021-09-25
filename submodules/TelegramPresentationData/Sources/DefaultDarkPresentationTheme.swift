@@ -59,6 +59,11 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
         } else {
             bubbleColors = [accentColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98).rgb, accentColor.rgb]
         }
+    } else {
+        let accentColor = accentColor ?? UIColor(rgb: 0xffffff)
+        if accentColor.rgb == 0xffffff {
+            monochrome = true
+        }
     }
     
     var badgeFillColor: UIColor?
