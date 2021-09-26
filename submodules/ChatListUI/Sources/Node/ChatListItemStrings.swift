@@ -100,7 +100,15 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     textIsReady = true
                 }
             case .generic:
-                break
+                var messageTypes = Set<MessageGroupType>()
+                for message in messages {
+                    messageTypes.insert(singleMessageType(message: message))
+                }
+                if messageTypes.count == 2 && messageTypes.contains(.photos) && messageTypes.contains(.videos) {
+                    if !messageText.isEmpty {
+                        textIsReady = true
+                    }
+                }
             }
         }
         

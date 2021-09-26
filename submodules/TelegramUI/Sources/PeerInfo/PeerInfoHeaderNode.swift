@@ -2009,13 +2009,25 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         if let peer = peer {
+            var title: String
             if peer.id == self.context.account.peerId && !self.isSettings {
-                titleString = NSAttributedString(string: presentationData.strings.Conversation_SavedMessages, font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                title = presentationData.strings.Conversation_SavedMessages
             } else if peer.id == self.context.account.peerId && !self.isSettings {
-                titleString = NSAttributedString(string: presentationData.strings.DialogList_Replies, font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                title = presentationData.strings.DialogList_Replies
             } else {
-                titleString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                title = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
+            title = title.replacingOccurrences(of: "\u{1160}", with: "").replacingOccurrences(of: "\u{3164}", with: "")
+            if title.isEmpty {
+                if let peer = peer as? TelegramUser, let phone = peer.phone {
+                    title = formatPhoneNumber(phone)
+                } else if let addressName = peer.addressName {
+                    title = "@\(addressName)"
+                } else {
+                    title = " "
+                }
+            }
+            titleString = NSAttributedString(string: title, font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             
             if self.isSettings, let user = peer as? TelegramUser {
                 let formattedPhone = formatPhoneNumber(user.phone ?? "")

@@ -151,10 +151,10 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 let text: String
                 if let peer = peer as? TelegramChannel, let addressName = peer.addressName, !addressName.isEmpty {
                     text = "@\(addressName)"
-                } else if let peer = peer as? TelegramChannel, case .group = peer.info {
-                    text = strings.Channel_DiscussionGroup_PrivateGroup
-                } else {
+                } else if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                     text = strings.Channel_DiscussionGroup_PrivateChannel
+                } else {
+                    text = strings.Channel_DiscussionGroup_PrivateGroup
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: nameOrder, context: arguments.context, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.selectGroup(peer.id)
