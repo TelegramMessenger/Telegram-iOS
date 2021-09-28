@@ -16,7 +16,7 @@ url=https://github.com/ali-fareed/rules_swift.git
 	url = https://github.com/telegramdesktop/libtgvoip.git
 [submodule "build-system/tulsi"]
 	path = build-system/tulsi
-url=https://github.com/bazelbuild/tulsi.git
+url=https://github.com/ali-fareed/tulsi.git
 [submodule "submodules/TgVoipWebrtc/tgcalls"]
 	path = submodules/TgVoipWebrtc/tgcalls
 url=../tgcalls.git
