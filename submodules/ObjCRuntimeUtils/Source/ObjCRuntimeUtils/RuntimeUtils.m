@@ -98,6 +98,19 @@
     object_setClass(self, newClass);
 }
 
+- (NSNumber * _Nullable)floatValueForKeyPath:(NSString * _Nonnull)keyPath {
+    id value = [self valueForKeyPath:keyPath];
+    if (value != nil) {
+        if ([value respondsToSelector:@selector(floatValue)]) {
+            return @([value floatValue]);
+        } else {
+            return nil;
+        }
+    } else {
+        return nil;
+    }
+}
+
 + (NSArray<NSString *> * _Nonnull)getIvarList:(Class _Nonnull)classValue {
     NSMutableArray<NSString *> *result = [[NSMutableArray alloc] init];
 
