@@ -701,7 +701,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             let phoneNumber = formatPhoneNumber(peer.phone ?? "")
             items[.phone]!.append(PeerInfoScreenInfoItem(id: 0, title: presentationData.strings.Settings_CheckPhoneNumberTitle(phoneNumber).string, text: .markdown(presentationData.strings.Settings_CheckPhoneNumberText), linkAction: { link in
                 if case .tap = link {
-                    interaction.openFaq("q-i-have-a-new-phone-number-what-do-i-do")
+                    interaction.openFaq(presentationData.strings.Settings_CheckPhoneNumberFAQAnchor)
                 }
             }))
             items[.phone]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_KeepPhoneNumber(phoneNumber).string, action: {
