@@ -7,6 +7,8 @@ build --per_file_copt="third-party/webrtc/.*\.cpp$","@-std=c++14"
 build --per_file_copt="third-party/webrtc/.*\.cc$","@-std=c++14"
 build --per_file_copt="third-party/webrtc/.*\.mm$","@-std=c++14"
 
+build --swiftcopt=-disallow-use-new-driver
+
 build --features=debug_prefix_map_pwd_is_dot
 build --features=swift.cacheable_swiftmodules
 build --features=swift.debug_prefix_map
