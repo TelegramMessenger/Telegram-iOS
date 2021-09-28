@@ -109,6 +109,8 @@
     } else {
         return nil;
     }
+}
+
 + (NSArray<NSString *> * _Nonnull)getIvarList:(Class _Nonnull)classValue {
     NSMutableArray<NSString *> *result = [[NSMutableArray alloc] init];
 
