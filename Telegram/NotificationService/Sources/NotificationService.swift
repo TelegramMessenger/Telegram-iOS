@@ -10,6 +10,8 @@ import WebPBinding
 import RLottieBinding
 import GZip
 import UIKit
+import Intents
+import PersistentStringHash
 
 private let queue = Queue()
 
@@ -277,6 +279,166 @@ private func convertLottieImage(data: Data) -> UIImage? {
     return context.generateImage()
 }
 
+private func testAvatarImage(size: CGSize) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
+    let context = UIGraphicsGetCurrentContext()!
+
+    context.beginPath()
+    context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    context.clip()
+
+    context.setFillColor(UIColor.red.cgColor)
+    context.fill(CGRect(origin: CGPoint(), size: size))
+
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return image
+}
+
+private func avatarRoundImage(size: CGSize, source: UIImage) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+    let context = UIGraphicsGetCurrentContext()
+
+    context?.beginPath()
+    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    context?.clip()
+
+    source.draw(in: CGRect(origin: CGPoint(), size: size))
+
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return image
+}
+
+private extension UIColor {
+    convenience init(rgb: UInt32) {
+        self.init(red: CGFloat((rgb >> 16) & 0xff) / 255.0, green: CGFloat((rgb >> 8) & 0xff) / 255.0, blue: CGFloat(rgb & 0xff) / 255.0, alpha: 1.0)
+    }
+}
+
+private let gradientColors: [NSArray] = [
+    [UIColor(rgb: 0xff516a).cgColor, UIColor(rgb: 0xff885e).cgColor],
+    [UIColor(rgb: 0xffa85c).cgColor, UIColor(rgb: 0xffcd6a).cgColor],
+    [UIColor(rgb: 0x665fff).cgColor, UIColor(rgb: 0x82b1ff).cgColor],
+    [UIColor(rgb: 0x54cb68).cgColor, UIColor(rgb: 0xa0de7e).cgColor],
+    [UIColor(rgb: 0x4acccd).cgColor, UIColor(rgb: 0x00fcfd).cgColor],
+    [UIColor(rgb: 0x2a9ef1).cgColor, UIColor(rgb: 0x72d5fd).cgColor],
+    [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
+]
+
+private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: Int64, letters: [String]) -> UIImage? {
+    UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
+    let context = UIGraphicsGetCurrentContext()
+
+    context?.beginPath()
+    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    context?.clip()
+
+    let colorIndex = abs(Int(accountPeerId + peerId))
+
+    let colorsArray = gradientColors[colorIndex % gradientColors.count]
+    var locations: [CGFloat] = [1.0, 0.0]
+    let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+
+    context?.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+
+    context?.setBlendMode(.normal)
+
+    let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
+    let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 20.0), NSAttributedString.Key.foregroundColor: UIColor.white])
+
+    let line = CTLineCreateWithAttributedString(attributedString)
+    let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+
+    let lineOffset = CGPoint(x: string == "B" ? 1.0 : 0.0, y: 0.0)
+    let lineOrigin = CGPoint(x: floor(-lineBounds.origin.x + (size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floor(-lineBounds.origin.y + (size.height - lineBounds.size.height) / 2.0))
+
+    context?.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+    context?.scaleBy(x: 1.0, y: -1.0)
+    context?.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+
+    context?.translateBy(x: lineOrigin.x, y: lineOrigin.y)
+    if let context = context {
+        CTLineDraw(line, context)
+    }
+    context?.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+
+    let image = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return image
+}
+
+private func avatarImage(path: String?, peerId: Int64, accountPeerId: Int64, letters: [String], size: CGSize) -> UIImage {
+    if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+        return roundImage
+    } else {
+        return avatarViewLettersImage(size: size, peerId: peerId, accountPeerId: accountPeerId, letters: letters)!
+    }
+}
+
+private func storeTemporaryImage(path: String) -> String {
+    let imagesPath = NSTemporaryDirectory() + "/aps-data"
+    let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: imagesPath), withIntermediateDirectories: true, attributes: nil)
+
+    let tempPath = imagesPath + "\(path.persistentHashValue)"
+    if FileManager.default.fileExists(atPath: tempPath) {
+        return tempPath
+    }
+
+    let _ = try? FileManager.default.copyItem(at: URL(fileURLWithPath: path), to: URL(fileURLWithPath: tempPath))
+
+    return tempPath
+}
+
+@available(iOS 15.0, *)
+private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) -> INImage? {
+    if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
+        let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "intents.png", keepDuration: .shortLived)
+        if let _ = fileSize(cachedPath), let data = try? Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped) {
+            do {
+                return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
+            } catch {
+                return nil
+            }
+        } else {
+            let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+            if let data = image.pngData() {
+                let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
+            }
+            do {
+                //let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+                //return INImage(imageData: data)
+                return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
+            } catch {
+                return nil
+            }
+        }
+    }
+
+    let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar-\(peer.displayLetters.joined(separator: ","))", representationId: "intents.png", keepDuration: .shortLived)
+    if let _ = fileSize(cachedPath) {
+        do {
+            //let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: [])
+            //return INImage(imageData: data)
+            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
+        } catch {
+            return nil
+        }
+    } else {
+        let image = avatarImage(path: nil, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+        if let data = image.pngData() {
+            let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
+        }
+        do {
+            //let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
+            //return INImage(imageData: data)
+            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
+        } catch {
+            return nil
+        }
+    }
+}
+
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
 private struct NotificationContent {
     var title: String?
@@ -289,8 +451,33 @@ private struct NotificationContent {
     var userInfo: [AnyHashable: Any] = [:]
     var attachments: [UNNotificationAttachment] = []
 
-    func asNotificationContent() -> UNNotificationContent {
-        let content = UNMutableNotificationContent()
+    var senderPerson: INPerson?
+    var senderImage: INImage?
+
+    mutating func addSenderInfo(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) {
+        if #available(iOS 15.0, *) {
+            let image = peerAvatar(mediaBox: mediaBox, accountPeerId: accountPeerId, peer: peer)
+
+            self.senderImage = image
+
+            var personNameComponents = PersonNameComponents()
+            personNameComponents.nickname = peer.debugDisplayTitle
+
+            self.senderPerson = INPerson(
+                personHandle: INPersonHandle(value: "\(peer.id.toInt64())", type: .unknown),
+                nameComponents: personNameComponents,
+                displayName: peer.debugDisplayTitle,
+                image: image,
+                contactIdentifier: nil,
+                customIdentifier: nil,
+                isMe: false,
+                suggestionType: .none
+            )
+        }
+    }
+
+    func generate() -> UNNotificationContent {
+        var content = UNMutableNotificationContent()
 
         if let title = self.title {
             content.title = title
@@ -320,6 +507,46 @@ private struct NotificationContent {
             content.attachments = self.attachments
         }
 
+        if #available(iOS 15.0, *) {
+            if let senderPerson = self.senderPerson {
+                let mePerson = INPerson(
+                    personHandle: INPersonHandle(value: "0", type: .unknown),
+                    nameComponents: nil,
+                    displayName: nil,
+                    image: nil,
+                    contactIdentifier: nil,
+                    customIdentifier: nil,
+                    isMe: true,
+                    suggestionType: .none
+                )
+
+                let incomingCommunicationIntent = INSendMessageIntent(
+                    recipients: [mePerson],
+                    outgoingMessageType: .outgoingMessageText,
+                    content: content.body,
+                    speakableGroupName: INSpeakableString(spokenPhrase: "Sender Name"),
+                    conversationIdentifier: "sampleConversationIdentifier",
+                    serviceName: nil,
+                    sender: senderPerson,
+                    attachments: nil
+                )
+
+                if let senderImage = self.senderImage {
+                    incomingCommunicationIntent.setImage(senderImage, forParameterNamed: \.sender)
+                }
+
+                let interaction = INInteraction(intent: incomingCommunicationIntent, response: nil)
+                interaction.direction = .incoming
+                interaction.donate(completion: nil)
+
+                do {
+                    content = try content.updating(from: incomingCommunicationIntent) as! UNMutableNotificationContent
+                } catch let e {
+                    print("Exception: \(e)")
+                }
+            }
+        }
+
         return content
     }
 }
@@ -334,7 +561,7 @@ private final class NotificationServiceHandler {
     private let notificationKeyDisposable = MetaDisposable()
     private let pollDisposable = MetaDisposable()
 
-    init?(queue: Queue, updateCurrentContent: @escaping (UNNotificationContent) -> Void, completed: @escaping () -> Void, payload: [AnyHashable: Any]) {
+    init?(queue: Queue, updateCurrentContent: @escaping (NotificationContent) -> Void, completed: @escaping () -> Void, payload: [AnyHashable: Any]) {
         self.queue = queue
 
         guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
@@ -434,6 +661,8 @@ private final class NotificationServiceHandler {
                     var messageId: MessageId.Id?
                     var mediaAttachment: Media?
 
+                    var interactionAuthorId: PeerId?
+
                     if let messageIdString = payloadJson["msg_id"] as? String {
                         messageId = Int32(messageIdString)
                     }
@@ -510,6 +739,7 @@ private final class NotificationServiceHandler {
 
                             if let messageId = messageId {
                                 content.userInfo["msg_id"] = "\(messageId)"
+                                interactionAuthorId = peerId
                             }
 
                             if peerId.namespace == Namespaces.Peer.CloudUser {
@@ -579,7 +809,7 @@ private final class NotificationServiceHandler {
 
                             action = .poll(peerId: peerId, content: content)
 
-                            updateCurrentContent(content.asNotificationContent())
+                            updateCurrentContent(content)
                         }
                     }
 
@@ -587,9 +817,11 @@ private final class NotificationServiceHandler {
                         switch action {
                         case .logout:
                             completed()
-                        case .poll(let peerId, var content):
+                        case let .poll(peerId, initialContent):
                             if let stateManager = strongSelf.stateManager {
-                                let pollCompletion: () -> Void = {
+                                let pollCompletion: (NotificationContent) -> Void = { content in
+                                    var content = content
+
                                     queue.async {
                                         guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
                                             completed()
@@ -728,7 +960,7 @@ private final class NotificationServiceHandler {
                                                     }
                                                 }
 
-                                                updateCurrentContent(content.asNotificationContent())
+                                                updateCurrentContent(content)
 
                                                 completed()
                                             })
@@ -764,8 +996,31 @@ private final class NotificationServiceHandler {
                                     pollSignal = signal
                                 }
 
-                                strongSelf.pollDisposable.set(pollSignal.start(completed: {
-                                    pollCompletion()
+                                let pollWithUpdatedContent: Signal<NotificationContent, NoError>
+                                if let interactionAuthorId = interactionAuthorId {
+                                    pollWithUpdatedContent = stateManager.postbox.transaction { transaction -> NotificationContent in
+                                        var content = initialContent
+
+                                        if let peer = transaction.getPeer(interactionAuthorId) {
+                                            content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer)
+                                        }
+
+                                        return content
+                                    }
+                                    |> then(
+                                        pollSignal
+                                        |> map { _ -> NotificationContent in }
+                                    )
+                                } else {
+                                    pollWithUpdatedContent = pollSignal
+                                    |> map { _ -> NotificationContent in }
+                                }
+
+                                var updatedContent = initialContent
+                                strongSelf.pollDisposable.set(pollWithUpdatedContent.start(next: { content in
+                                    updatedContent = content
+                                }, completed: {
+                                    pollCompletion(updatedContent)
                                 }))
                             } else {
                                 completed()
@@ -800,7 +1055,7 @@ private final class NotificationServiceHandler {
                                             var content = NotificationContent()
                                             content.badge = Int(value.0)
 
-                                            updateCurrentContent(content.asNotificationContent())
+                                            updateCurrentContent(content)
 
                                             completed()
                                         })
@@ -843,7 +1098,7 @@ private final class NotificationServiceHandler {
                                             var content = NotificationContent()
                                             content.badge = Int(value.0)
 
-                                            updateCurrentContent(content.asNotificationContent())
+                                            updateCurrentContent(content)
 
                                             completed()
                                         })
@@ -862,7 +1117,7 @@ private final class NotificationServiceHandler {
                         }
                     } else {
                         let content = NotificationContent()
-                        updateCurrentContent(content.asNotificationContent())
+                        updateCurrentContent(content)
 
                         completed()
                     }
@@ -891,7 +1146,8 @@ private final class BoxedNotificationServiceHandler {
 final class NotificationService: UNNotificationServiceExtension {
     private var impl: QueueLocalObject<BoxedNotificationServiceHandler>?
 
-    private let content = Atomic<UNNotificationContent?>(value: nil)
+    private var initialContent: UNNotificationContent?
+    private let content = Atomic<NotificationContent?>(value: nil)
     private var contentHandler: ((UNNotificationContent) -> Void)?
     
     override init() {
@@ -899,7 +1155,7 @@ final class NotificationService: UNNotificationServiceExtension {
     }
     
     override func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
-        let _ = self.content.swap(request.content)
+        self.initialContent = request.content
         self.contentHandler = contentHandler
 
         self.impl = nil
@@ -917,8 +1173,17 @@ final class NotificationService: UNNotificationServiceExtension {
                         return
                     }
                     strongSelf.impl = nil
-                    if let content = content.with({ $0 }), let contentHandler = strongSelf.contentHandler {
-                        contentHandler(content)
+
+                    if let contentHandler = strongSelf.contentHandler {
+                        if let content = content.with({ $0 }) {
+                            /*let request = UNNotificationRequest(identifier: UUID().uuidString, content: content.generate(), trigger: .none)
+                            UNUserNotificationCenter.current().add(request)
+                            contentHandler(UNMutableNotificationContent())*/
+
+                            contentHandler(content.generate())
+                        } else if let initialContent = strongSelf.initialContent {
+                            contentHandler(initialContent)
+                        }
                     }
                 },
                 payload: request.content.userInfo
@@ -927,8 +1192,12 @@ final class NotificationService: UNNotificationServiceExtension {
     }
     
     override func serviceExtensionTimeWillExpire() {
-        if let content = self.content.with({ $0 }), let contentHandler = self.contentHandler {
-            contentHandler(content)
+        if let contentHandler = self.contentHandler {
+            if let content = self.content.with({ $0 }) {
+                contentHandler(content.generate())
+            } else if let initialContent = self.initialContent {
+                contentHandler(initialContent)
+            }
         }
     }
 }

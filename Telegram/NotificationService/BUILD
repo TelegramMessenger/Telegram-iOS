@@ -20,6 +20,7 @@ swift_library(
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/rlottie:RLottieBinding",
         "//submodules/GZip:GZip",
+        "//submodules/PersistentStringHash:PersistentStringHash",
     ],
     visibility = [
         "//visibility:public",
