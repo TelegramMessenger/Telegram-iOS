@@ -2,6 +2,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import UIKitRuntimeUtils
+import ObjCRuntimeUtils
 
 private let infiniteScrollSize: CGFloat = 10000.0
 private let insertionAnimationDuration: Double = 0.4
@@ -822,11 +823,27 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private var generalAccumulatedDeltaY: CGFloat = 0.0
+    private var previousDidScrollTimestamp: Double = 0.0
     
     private func updateScrollViewDidScroll(_ scrollView: UIScrollView, synchronous: Bool) {
         if self.ignoreScrollingEvents || scroller !== self.scroller {
             return
         }
+
+        /*let timestamp = CACurrentMediaTime()
+        if !self.previousDidScrollTimestamp.isZero {
+            let delta = timestamp - self.previousDidScrollTimestamp
+            if delta < 0.1 {
+                print("Scrolling delta: \(delta)")
+            }
+        }
+        self.previousDidScrollTimestamp = timestamp
+
+        if let displayLink = self.scroller.getIvarValue("_scrollHeartbeat") as? CADisplayLink {
+            if #available(iOS 10.0, *) {
+                displayLink.preferredFramesPerSecond = 120
+            }
+        }*/
             
         //CATransaction.begin()
         //CATransaction.setDisableActions(true)
@@ -854,7 +871,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.trackingOffset += -deltaY
         }
         
-        self.enqueueUpdateVisibleItems(synchronous: synchronous)
+        self.enqueueUpdateVisibleItems(synchronous: true)
         
         var useScrollDynamics = false
         

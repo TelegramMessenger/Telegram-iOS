@@ -1793,6 +1793,8 @@ plist_fragment(
             </dict>
         </dict>
     </array>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
     )

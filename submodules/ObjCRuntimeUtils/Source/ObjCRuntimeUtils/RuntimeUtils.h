@@ -22,6 +22,8 @@ typedef enum {
 - (id _Nullable)associatedObjectForKey:(void const * _Nonnull)key;
 - (bool)checkObjectIsKindOfClass:(Class _Nonnull)targetClass;
 - (void)setClass:(Class _Nonnull)newClass;
++ (NSArray<NSString *> * _Nonnull)getIvarList:(Class _Nonnull)classValue;
+- (id _Nullable)getIvarValue:(NSString * _Nonnull)name;
 
 @end
 
