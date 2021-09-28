@@ -5827,6 +5827,10 @@ public final class VoiceChatController: ViewController {
                     let translation = recognizer.translation(in: self.contentContainer.view)
                     var velocity = recognizer.velocity(in: self.contentContainer.view)
                     
+                    if self.isScheduled && (translation.y < 0.0 || velocity.y < 0.0) {
+                        return
+                    }
+                    
                     if case let .known(value) = contentOffset, value > 0.0 {
                         velocity = CGPoint()
                     } else if case .unknown = contentOffset {

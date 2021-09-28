@@ -142,6 +142,9 @@ enum ChatMediaInputGridEntry: Equatable, Comparable, Identifiable {
                 if lhsStrings !== rhsStrings {
                     return false
                 }
+                if lhsPacks.count != rhsPacks.count {
+                    return false
+                }
                 for i in 0 ..< lhsPacks.count {
                     if lhsPacks[i].unread != rhsPacks[i].unread {
                         return false
