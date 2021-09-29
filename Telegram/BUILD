@@ -436,6 +436,11 @@ app_groups_fragment = """
     telegram_bundle_id=telegram_bundle_id
 )
 
+communication_notifications_fragment = """
+<key>com.apple.developer.usernotifications.communication</key>
+<true/>
+"""
+
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
@@ -447,7 +452,8 @@ plist_fragment(
         icloud_fragment,
         apple_pay_merchants_fragment,
         unrestricted_voip_fragment,
-        carplay_fragment
+        carplay_fragment,
+        communication_notifications_fragment,
     ])
 )
 
@@ -1338,7 +1344,7 @@ ios_extension(
     ],
     minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionWidgetExtension",
-    provides_main = True,
+    #provides_main = True,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
@@ -1595,6 +1601,13 @@ plist_fragment(
         <string>com.apple.usernotifications.service</string>
         <key>NSExtensionPrincipalClass</key>
         <string>NotificationService</string>
+        <key>NSExtensionAttributes</key>
+        <dict>
+            <key>IntentsSupported</key>
+            <array>
+                <string>INSendMessageIntent</string>
+            </array>
+        </dict>
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
@@ -1817,6 +1830,8 @@ plist_fragment(
             </dict>
         </dict>
     </array>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
     )

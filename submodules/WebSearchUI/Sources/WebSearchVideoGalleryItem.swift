@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import Display
-import Postbox
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
@@ -81,7 +80,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let statusDisposable = MetaDisposable()
     
     private let fetchDisposable = MetaDisposable()
-    private var fetchStatus: MediaResourceStatus?
+    private var fetchStatus: EngineMediaResource.FetchStatus?
     private var fetchControls: FetchControls?
     
     var playbackCompleted: (() -> Void)?
@@ -153,10 +152,10 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     func setupItem(_ item: WebSearchVideoGalleryItem) {
         if self.item?.content.id != item.content.id {
             var isAnimated = false
-            var mediaResource: MediaResource?
+            var mediaResource: EngineMediaResource?
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
-                mediaResource = content.fileReference.media.resource
+                mediaResource = EngineMediaResource(content.fileReference.media.resource)
             }
             
             if let videoNode = self.videoNode {
@@ -175,9 +174,12 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             videoNode.canAttachContent = true
             
             self.requiresDownload = true
-            var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
+            var mediaFileStatus: Signal<EngineMediaResource.FetchStatus?, NoError> = .single(nil)
             if let mediaResource = mediaResource {
-                mediaFileStatus = item.context.account.postbox.mediaBox.resourceStatus(mediaResource)
+                mediaFileStatus = item.context.account.postbox.mediaBox.resourceStatus(mediaResource._asResource())
+                |> map { status in
+                    return EngineMediaResource.FetchStatus(status)
+                }
                 |> map(Optional.init)
             }
             

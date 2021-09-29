@@ -165,7 +165,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         self.imageNode.displaysAsynchronously = false
         
         var timebase: CMTimebase?
-        CMTimebaseCreateWithMasterClock(allocator: nil, masterClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
+        CMTimebaseCreateWithSourceClock(allocator: nil, sourceClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
         CMTimebaseSetRate(timebase!, rate: 0.0)
         self.timebase = timebase!
         

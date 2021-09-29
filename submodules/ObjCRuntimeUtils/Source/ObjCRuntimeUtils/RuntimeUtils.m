@@ -111,6 +111,36 @@
     }
 }
 
++ (NSArray<NSString *> * _Nonnull)getIvarList:(Class _Nonnull)classValue {
+    NSMutableArray<NSString *> *result = [[NSMutableArray alloc] init];
+
+    unsigned int varCount;
+
+    Ivar *vars = class_copyIvarList(classValue, &varCount);
+
+    for (int i = 0; i < varCount; i++) {
+        Ivar var = vars[i];
+
+        const char* name = ivar_getName(var);
+        const char* typeEncoding = ivar_getTypeEncoding(var);
+
+        [result addObject:[NSString stringWithFormat:@"%s: %s", name, typeEncoding]];
+    }
+
+    free(vars);
+
+    return result;
+}
+
+- (id _Nullable)getIvarValue:(NSString * _Nonnull)name {
+    Ivar ivar = class_getInstanceVariable([self class], [name UTF8String]);
+    if (!ivar){
+       return nil;
+    }
+    id value = object_getIvar(self, ivar);
+    return value;
+}
+
 @end
 
 SEL _Nonnull makeSelectorFromString(NSString * _Nonnull string) {
