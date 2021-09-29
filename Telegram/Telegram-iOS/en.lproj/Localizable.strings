@@ -6862,3 +6862,7 @@ Ads should no longer be synonymous with abuse of user privacy. Let us redefine h
 "VoiceChat.RecordPortrait" = "Portrait";
 "VoiceChat.RecordLandscape" = "Landscape";
 "VoiceChat.RecordStartRecording" = "Start Recording";
+
+"MediaPicker.JpegConversionText" = "Do you want to convert photos to JPEG?";
+"MediaPicker.KeepHeic" = "Keep HEIC";
+"MediaPicker.ConvertToJpeg" = "Convert to JPEG";

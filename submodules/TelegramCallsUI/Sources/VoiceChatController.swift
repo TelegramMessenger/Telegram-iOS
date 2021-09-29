@@ -5931,6 +5931,7 @@ public final class VoiceChatController: ViewController {
                         if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) {
                             if self.isScheduling {
                                 self.dismissScheduled()
+                                dismissing = true
                             } else if case .regular = layout.metrics.widthClass {
                                 self.controller?.dismiss(closing: false, manual: true)
                                 dismissing = true

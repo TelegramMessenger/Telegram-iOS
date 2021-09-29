@@ -126,6 +126,14 @@ const CGFloat TGSelectionGestureVerticalFailureThreshold = 5.0f;
     _gestureRecognizer.enabled = true;
 }
 
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
+    CGPoint point = [gestureRecognizer locationInView:gestureRecognizer.view];
+    if (point.x > gestureRecognizer.view.frame.size.width - 44.0) {
+        return false;
+    }
+    return true;
+}
+
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)__unused otherGestureRecognizer
 {
     if ([otherGestureRecognizer.view isKindOfClass:[UIScrollView class]])
