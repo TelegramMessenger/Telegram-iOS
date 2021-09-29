@@ -37,6 +37,30 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
     return false
 }
 
+// MARK: Postufgram Code: {
+private func getPublicCoveringViewSnapshot(window: Window1) -> UIImage? {
+    let scale: CGFloat = 0.5
+    let unscaledSize = window.hostView.containerView.frame.size
+    
+    return generateImage(CGSize(width: floor(unscaledSize.width * scale), height: floor(unscaledSize.height * scale)), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.scaleBy(x: scale, y: scale)
+        UIGraphicsPushContext(context)
+        window.forEachViewController { controller in
+            if let tabBarController = controller as? TabBarController {
+                tabBarController.controllers.forEach { controller in
+                    if let controller = controller as? ChatListController {
+                        controller.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
+                    }
+                }
+            }
+            return true
+        }
+        UIGraphicsPopContext()
+    }).flatMap(applyScreenshotEffectToImage)
+}
+// MARK: Postufgram Code: }
+
 private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
     let scale: CGFloat = 0.5
     let unscaledSize = window.hostView.containerView.frame.size
@@ -71,6 +95,9 @@ public final class AppLockContextImpl: AppLockContext {
     private let window: Window1?
     private let rootController: UIViewController?
     
+    // MARK: Postufgram Code: {
+    private var snapshotView: LockedWindowCoveringView?
+    // MARK: Postufgram Code: }
     private var coveringView: LockedWindowCoveringView?
     private var passcodeController: PasscodeEntryController?
     
@@ -90,8 +117,10 @@ public final class AppLockContextImpl: AppLockContext {
     
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
-    
     // MARK: Postufgram Code: {
+    private var isCurrentAccountHidden = false
+    
+    private let checkCurrentAccountDisposable = MetaDisposable()
     private var hiddenAccountsAccessChallengeDataDisposable: Disposable?
     public private(set) var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
 
@@ -174,7 +203,9 @@ public final class AppLockContextImpl: AppLockContext {
             } else {
                 strongSelf.lastActiveValue = false
             }
-            
+            // MARK: Postufgram Code: {
+            strongSelf.checkCurrentAccountDisposable.set(strongSelf.updateIsCurrentAccountHiddenProperty())
+            // MARK: Postufgram Code: }
             var shouldDisplayCoveringView = false
             var isCurrentlyLocked = false
             
@@ -258,6 +289,15 @@ public final class AppLockContextImpl: AppLockContext {
                                 rootViewController.dismiss(animated: false, completion: nil)
                             }
                         }
+                        // MARK: Postufgram Code: {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                            if let window = strongSelf.window {
+                                let coveringView = LockedWindowCoveringView(theme: presentationData.theme)
+                                coveringView.updateSnapshot(getPublicCoveringViewSnapshot(window: window))
+                                strongSelf.snapshotView = coveringView
+                            }
+                        }
+                        // MARK: Postufgram Code: }
                         strongSelf.window?.present(passcodeController, on: .passcode)
                     }
                 } else if let passcodeController = strongSelf.passcodeController {
@@ -278,7 +318,9 @@ public final class AppLockContextImpl: AppLockContext {
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window {
                     let coveringView = LockedWindowCoveringView(theme: presentationData.theme)
+                    // MARK: Postufgram Code: {
                     coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
+                    // MARK: Postufgram Code: }
                     strongSelf.coveringView = coveringView
                     window.coveringView = coveringView
                     
@@ -309,6 +351,14 @@ public final class AppLockContextImpl: AppLockContext {
                     //FIXME: - Проверить нужна ли нам это строка
                     //UIApplication.shared.isStatusBarHidden = false
                 }
+                
+                // MARK: Postufgram Code: {
+                if strongSelf.isCurrentAccountHidden {
+                    strongSelf.coveringView = strongSelf.snapshotView
+                    strongSelf.window?.coveringView = strongSelf.snapshotView
+                }
+                // MARK: Postufgram Code: }
+                
                 strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
         })
         
@@ -321,6 +371,20 @@ public final class AppLockContextImpl: AppLockContext {
             }
         })
     }
+    
+    // MARK: Postufgram Code: {
+    private func updateIsCurrentAccountHiddenProperty() -> Disposable {
+        (accountManager.currentAccountRecord(allocateIfNotExists: false)
+            |> mapToQueue { [weak self] accountRecord -> Signal<Bool, NoError> in
+                guard let strongSelf = self,
+                      let accountRecord = accountRecord else { return .never() }
+                let accountRecordId = accountRecord.0
+                return strongSelf.accountManager.hiddenAccountManager.isAccountHidden(accountRecordId: accountRecordId, accountManager: strongSelf.accountManager)
+            }).start() { [weak self] isAccountHidden in
+                self?.isCurrentAccountHidden = isAccountHidden
+            }
+    }
+    // MARK: Postufgram Code: }
     
     private func updateTimestampRenewTimer(shouldRun: Bool) {
         if shouldRun {
