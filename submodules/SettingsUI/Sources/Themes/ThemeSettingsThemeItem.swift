@@ -612,7 +612,6 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     
                     var entries: [ThemeSettingsThemeEntry] = []
                     var index: Int = 0
-
                     for theme in item.themes {
                         if case let .cloud(theme) = theme {
                             if !item.displayUnsupported && theme.theme.file == nil {

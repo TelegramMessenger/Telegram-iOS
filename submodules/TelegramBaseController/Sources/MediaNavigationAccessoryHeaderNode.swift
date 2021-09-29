@@ -439,7 +439,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
         guard let (size, _, _) = self.validLayout else {
             return
         }
-
+        
         self.dismissedPromise.set(true)
 
         transition.updatePosition(node: self.separatorNode, position: self.separatorNode.position.offsetBy(dx: 0.0, dy: size.height))

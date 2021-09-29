@@ -1466,7 +1466,7 @@ ios_extension(
 plist_fragment(
     name = "BroadcastUploadInfoPlist",
     extension = "plist",
-    template = 
+    template =
     """
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>

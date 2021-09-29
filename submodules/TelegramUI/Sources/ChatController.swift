@@ -329,6 +329,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var chatUnreadMentionCountDisposable: Disposable?
     private var peerInputActivitiesDisposable: Disposable?
     
+    private var peerInputActivitiesPromise = Promise<[(Peer, PeerInputActivity)]>()
+    private var interactiveEmojiSyncDisposable = MetaDisposable()
+    
     private var recentlyUsedInlineBotsValue: [Peer] = []
     private var recentlyUsedInlineBotsDisposable: Disposable?
     
@@ -2883,6 +2886,44 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 strongSelf.choosingStickerActivityPromise.set(value)
             }
+        }, commitEmojiInteraction: { [weak self] messageId, emoji, interaction, file in
+            guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, peer.id != strongSelf.context.account.peerId else {
+                return
+            }
+            
+            strongSelf.context.account.updateLocalInputActivity(peerId: PeerActivitySpace(peerId: messageId.peerId, category: .global), activity: .interactingWithEmoji(emoticon: emoji, messageId: messageId, interaction: interaction), isPresent: true)
+            
+            let currentTimestamp = Int32(Date().timeIntervalSince1970)
+            let _ = (ApplicationSpecificNotice.getInteractiveEmojiSyncTip(accountManager: strongSelf.context.sharedContext.accountManager)
+            |> deliverOnMainQueue).start(next: { [weak self] count, timestamp in
+                if let strongSelf = self, count < 3 && currentTimestamp > timestamp + 24 * 60 * 60 {
+                    strongSelf.interactiveEmojiSyncDisposable.set(
+                        (strongSelf.peerInputActivitiesPromise.get()
+                        |> filter { activities -> Bool in
+                            var found = false
+                            for (_, activity) in activities {
+                                if case .seeingEmojiInteraction(emoji) = activity {
+                                    found = true
+                                    break
+                                }
+                            }
+                            return found
+                        }
+                        |> map { _ -> Bool in
+                            return true
+                        }
+                        |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(false))).start(next: { [weak self] responded in
+                            if let strongSelf = self {
+                                if !responded {
+                                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, text: strongSelf.presentationData.strings.Conversation_InteractiveEmojiSyncTip(peer.compactDisplayTitle).string), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                    
+                                    let _ = ApplicationSpecificNotice.incrementInteractiveEmojiSyncTip(accountManager: strongSelf.context.sharedContext.accountManager, timestamp: currentTimestamp).start()
+                                }
+                            }
+                        })
+                    )
+                }
+            })
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -4196,6 +4237,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.buttonUnreadCountDisposable?.dispose()
         self.chatUnreadMentionCountDisposable?.dispose()
         self.peerInputActivitiesDisposable?.dispose()
+        self.interactiveEmojiSyncDisposable.dispose()
         self.recentlyUsedInlineBotsDisposable?.dispose()
         self.unpinMessageDisposable?.dispose()
         self.inputActivityDisposable?.dispose()
@@ -5481,7 +5523,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         dismissAction()
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } }, completion: { _ in
                             let _ = (strongSelf.context.engine.peers.reportPeerMessages(messageIds: Array(messageIds), reason: reportReason, message: message)
-                            |> deliverOnMainQueue).start(completed: { [weak self] in
+                            |> deliverOnMainQueue).start(completed: {
                                 strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .emoji(name: "PoliceCar", text: presentationData.strings.Report_Succeed), elevatedLayout: false, action: { _ in return false }), in: .current)
                             })
                         })
@@ -7453,6 +7495,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         })
                         strongSelf.chatTitleView?.inputActivities = (peerId, displayActivities)
+                        
+                        strongSelf.peerInputActivitiesPromise.set(.single(activities))
                         
                         for activity in activities {
                             if case let .interactingWithEmoji(emoticon, messageId, maybeInteraction) = activity.1, let interaction = maybeInteraction {

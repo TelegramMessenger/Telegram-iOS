@@ -410,7 +410,7 @@ public struct SharedDataKeys {
         key.setInt32(0, value: SharedDataKeyValues.wallapersState.rawValue)
         return key
     }()
-
+    
     public static let chatThemes: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: SharedDataKeyValues.chatThemes.rawValue)

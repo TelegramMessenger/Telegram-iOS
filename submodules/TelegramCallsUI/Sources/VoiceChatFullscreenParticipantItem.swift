@@ -389,7 +389,7 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                 profileNode.frame = CGRect(origin: CGPoint(), size: extractedRect.size)
                 self.profileNode = profileNode
                 self.contextSourceNode.contentNode.addSubnode(profileNode)
-
+                
                 profileNode.animateIn(from: self, targetRect: extractedRect, transition: transition)
                 var appearenceTransition = transition
                 if transition.isAnimated {
@@ -625,7 +625,6 @@ class VoiceChatFullscreenParticipantItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                         
                     strongSelf.accessibilityLabel = titleAttributedString?.string
-
                     let combinedValueString = ""
 //                    if let statusString = statusAttributedString?.string, !statusString.isEmpty {
 //                        combinedValueString.append(statusString)

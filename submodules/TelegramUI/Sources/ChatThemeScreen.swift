@@ -63,6 +63,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
         if lhs.emoticon != rhs.emoticon {
             return false
         }
+        
         if lhs.themeReference?.index != rhs.themeReference?.index {
             return false
         }
@@ -407,7 +408,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             return (itemLayout, { animated in
                 if let strongSelf = self {
                     strongSelf.item = item
-
+                        
                     if updatedThemeReference || updatedWallpaper {
                         if let themeReference = item.themeReference {
                             strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, emoticon: true))
@@ -448,7 +449,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                     
                     strongSelf.overlayNode.frame = strongSelf.imageNode.frame.insetBy(dx: -1.0, dy: -1.0)
                     strongSelf.emojiNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 79.0), size: CGSize(width: 90.0, height: 30.0))
-
+                    
                     let emojiFrame = CGRect(origin: CGPoint(x: 33.0, y: 79.0), size: CGSize(width: 24.0, height: 24.0))
                     if let file = item.emojiFile, updatedEmoticon {
                         let imageApply = strongSelf.emojiImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: emojiFrame.size, boundingSize: emojiFrame.size, intrinsicInsets: UIEdgeInsets()))
@@ -643,6 +644,7 @@ final class ChatThemeScreen: ViewController {
         })
     
         self.controllerNode.animateOut(completion: completion)
+        
         self.dismissed?()
     }
     
@@ -700,6 +702,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
     private var initialized = false
     
     private let peerName: String
+    
     private let initiallySelectedEmoticon: String?
     private var selectedEmoticon: String? {
         didSet {
@@ -707,7 +710,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
     }
     private var selectedEmoticonPromise: ValuePromise<String?>
-    
+
     private var isDarkAppearancePromise: ValuePromise<Bool>
     private var isDarkAppearance: Bool = false {
         didSet {
@@ -757,7 +760,6 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         
         let backgroundColor = self.presentationData.theme.actionSheet.itemBackgroundColor
         let textColor = self.presentationData.theme.actionSheet.primaryTextColor
-
         let secondaryTextColor = self.presentationData.theme.actionSheet.secondaryTextColor
         let blurStyle: UIBlurEffect.Style = self.presentationData.theme.actionSheet.backgroundType == .light ? .light : .dark
         
@@ -778,7 +780,6 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
         
         self.switchThemeButton = HighlightTrackingButtonNode()
-
         self.animationContainerNode = ASDisplayNode()
         self.animationContainerNode.isUserInteractionEnabled = false
         
@@ -869,6 +870,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             strongSelf.enqueueTransition(transition)
             
             strongSelf.entries = entries
+            
             if isFirstTime {
                 for theme in themes {
                     if let wallpaper = theme.theme.settings?.wallpaper, case let .file(file) = wallpaper {
@@ -954,6 +956,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         }
         let previousTheme = self.presentationData.theme
         self.presentationData = presentationData
+                        
         self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.semibold(16.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(12.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
         
@@ -1062,7 +1065,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
                 snapshotView?.removeFromSuperview()
             })
         }
-        
+                
         self.listNode.forEachVisibleItemNode { node in
             if let node = node as? ThemeSettingsThemeItemIconNode {
                 node.crossfade()

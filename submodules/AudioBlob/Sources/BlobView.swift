@@ -321,6 +321,7 @@ final class BlobNode: ASDisplayNode {
         })
         
         super.init()
+
         self.addSubnode(self.hierarchyTrackingNode)
         self.layer.addSublayer(self.shapeLayer)
         
@@ -340,7 +341,6 @@ final class BlobNode: ASDisplayNode {
     func setColor(_ color: UIColor, animated: Bool) {
         let previousColor = self.shapeLayer.fillColor
         self.shapeLayer.fillColor = color.cgColor
-
         if animated, let previousColor = previousColor, self.isCurrentlyInHierarchy {
             self.shapeLayer.animate(from: previousColor, to: color.cgColor, keyPath: "fillColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
         }

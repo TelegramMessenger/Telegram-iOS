@@ -1503,7 +1503,7 @@ final class ChatMediaInputNode: ChatInputNode {
                             |> deliverOnMainQueue
                             |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
                                 if let strongSelf = self {
-                                    var menuItems: [ContextMenuItem] = []
+                                    var menuItems: [ContextMenuItem] = []                                    
                                     if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
                                         var isScheduledMessages = false
                                         if case .scheduledMessages = interfaceState.subject {

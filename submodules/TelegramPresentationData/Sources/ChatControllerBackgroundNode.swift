@@ -42,7 +42,6 @@ public func chatControllerBackgroundImage(theme: PresentationTheme?, wallpaper i
                     context.setFillColor(UIColor(argb: color).withAlphaComponent(1.0).cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
                 })
-
             case let .gradient(gradient):
                 backgroundImage = generateImage(CGSize(width: 640.0, height: 1280.0), rotatedContext: { size, context in
                     let gradientColors = [UIColor(argb: gradient.colors.count >= 1 ? gradient.colors[0] : 0).cgColor, UIColor(argb: gradient.colors.count >= 2 ? gradient.colors[1] : 0).cgColor] as CFArray

@@ -91,6 +91,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
     private let textNode: ImmediateTextNode
     private let highlightNode: ASImageNode
     private let titleNode: ImmediateTextNode
+    
     private var animatedStickerNode: AnimatedStickerNode?
     
     private var currentExpanded = false

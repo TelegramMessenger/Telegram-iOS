@@ -1189,10 +1189,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 ignoreForward = true
                 effectiveAuthor = author
                 displayAuthorInfo = !mergedTop.merged && incoming
-            } else if let _ = item.content.firstMessage.adAttribute, let author = item.content.firstMessage.author {
-                ignoreForward = true
-                effectiveAuthor = author
-                displayAuthorInfo = !mergedTop.merged && incoming
             } else {
                 effectiveAuthor = firstMessage.author
                 
@@ -2316,7 +2312,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             backgroundType = .incoming(mergeType)
         }
         let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
-
         if item.presentationData.theme.theme.forceSync {
             transition = .immediate
         }
@@ -2675,7 +2670,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     
                     let contextSourceNode: ContextExtractedContentContainingNode
                     let containerSupernode: ASDisplayNode
-
                     if isAttachment {
                         contextSourceNode = strongSelf.mainContextSourceNode
                         containerSupernode = strongSelf.clippingNode

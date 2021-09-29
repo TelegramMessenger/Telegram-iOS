@@ -364,7 +364,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
         }
         self.avatarHeader = avatarHeader
-
+        
         var headers: [ListViewItemHeader] = [self.dateHeader]
         if case .forwardedMessages = associatedData.subject {
             headers = []

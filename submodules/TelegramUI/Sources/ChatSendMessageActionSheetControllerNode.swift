@@ -246,6 +246,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.contentNodes = contentNodes
         
         super.init()
+                        
 //        self.sendButtonNode.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(self.presentationData.theme), for: [])
         self.sendButtonNode.addTarget(self, action: #selector(self.sendButtonPressed), forControlEvents: .touchUpInside)
         

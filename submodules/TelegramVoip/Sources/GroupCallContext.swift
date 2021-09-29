@@ -338,6 +338,7 @@ public final class OngoingGroupCallContext {
             self.mirrorVertically = frameData.mirrorVertically
         }
     }
+
     public struct Stats {
         public struct IncomingVideoStats {
             public var receivingQuality: Int

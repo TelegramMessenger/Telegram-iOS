@@ -699,6 +699,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 colors = [defaultColor]
             }
 
+            
             let maximumNumberOfColors: Int
             switch self.state.section {
             case .accent:

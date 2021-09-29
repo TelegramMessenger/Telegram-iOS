@@ -695,6 +695,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
     
     let buttonStrokeColor = accentColor.withMultiplied(hue: 1.014, saturation: 0.56, brightness: 0.64).withAlphaComponent(0.15)
     let incomingFillColor = mainBackgroundColor.withMultipliedAlpha(0.9)
+    
     let incomingBubbleAlpha: CGFloat = 0.9
     
     let message = PresentationThemeChatMessage(

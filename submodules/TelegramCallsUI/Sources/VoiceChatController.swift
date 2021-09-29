@@ -802,6 +802,7 @@ public final class VoiceChatController: ViewController {
         private var scheduleButtonTitle = ""
         
         private let titleNode: VoiceChatTitleNode
+        private let participantsNode: VoiceChatTimerNode
         
         private var enqueuedTransitions: [ListTransition] = []
         private var enqueuedFullscreenTransitions: [ListTransition] = []
@@ -828,6 +829,7 @@ public final class VoiceChatController: ViewController {
         private var currentSubtitle: String = ""
         private var currentSpeakingSubtitle: String?
         private var currentCallMembers: ([GroupCallParticipantsContext.Participant], String?)?
+        private var currentTotalCount: Int32 = 0
         private var currentInvitedPeers: [Peer]?
         private var currentSpeakingPeers: Set<PeerId>?
         private var currentContentOffset: CGFloat?
@@ -1131,6 +1133,8 @@ public final class VoiceChatController: ViewController {
             
             self.timerNode = VoiceChatTimerNode(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
             self.timerNode.isHidden = true
+            
+            self.participantsNode = VoiceChatTimerNode(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
             
             super.init()
             
@@ -1847,6 +1851,7 @@ public final class VoiceChatController: ViewController {
             self.listContainer.addSubnode(self.topCornersNode)
             self.contentContainer.addSubnode(self.bottomGradientNode)
             self.contentContainer.addSubnode(self.bottomPanelBackgroundNode)
+            self.contentContainer.addSubnode(self.participantsNode)
             self.contentContainer.addSubnode(self.tileGridNode)
             self.contentContainer.addSubnode(self.mainStageContainerNode)
             self.contentContainer.addSubnode(self.transitionContainerNode)
@@ -1935,7 +1940,10 @@ public final class VoiceChatController: ViewController {
                 
                 strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, callMembers: (callMembers?.participants ?? [], callMembers?.loadMoreToken), invitedPeers: invitedPeers, speakingPeers: callMembers?.speakingParticipants ?? [])
                 
-                let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(Int32(max(1, callMembers?.totalCount ?? 0)))
+                let totalCount = Int32(max(1, callMembers?.totalCount ?? 0))
+                strongSelf.currentTotalCount = totalCount
+                
+                let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(totalCount)
                 strongSelf.currentSubtitle = subtitle
                 
                 if strongSelf.isScheduling {
@@ -1979,6 +1987,14 @@ public final class VoiceChatController: ViewController {
                 
                 let (title, isRecording) = titleAndRecording
                 if let peer = peerViewMainPeer(view) {
+                    let isLivestream: Bool
+                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                        isLivestream = true
+                    } else {
+                        isLivestream = false
+                    }
+                    strongSelf.participantsNode.isHidden = !isLivestream
+                    
                     strongSelf.peer = peer
                     strongSelf.currentTitleIsCustom = title != nil
                     strongSelf.currentTitle = title ?? peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
@@ -2193,6 +2209,22 @@ public final class VoiceChatController: ViewController {
                 }
             }
             
+            self.listNode.visibleContentOffsetChanged = { [weak self] offset in
+                guard let strongSelf = self else {
+                    return
+                }
+                var scrollAtTop = false
+                if case let .known(value) = offset, value < 180.0 {
+                    scrollAtTop = true
+                } else {
+                    scrollAtTop = false
+                }
+                if scrollAtTop != strongSelf.scrollAtTop {
+                    strongSelf.scrollAtTop = scrollAtTop
+                    strongSelf.updateTitle(transition: .immediate)
+                }
+            }
+            
             self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
                 guard let strongSelf = self else {
                     return
@@ -2211,12 +2243,10 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if event.joined {
-                    let text: String
                     if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
-                        text = strongSelf.presentationData.strings.LiveStream_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
-                    } else {
-                        text = strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
+                        return
                     }
+                    let text = strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                     strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: event.peer, text: text), action: { _ in return false })
                 }
             }))
@@ -2612,6 +2642,7 @@ public final class VoiceChatController: ViewController {
                             let alertController = textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: strongSelf.presentationData.strings.VoiceChat_StopRecordingTitle, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_StopRecordingStop, action: {
                                 if let strongSelf = self {
                                     strongSelf.call.setShouldBeRecording(false, title: nil, videoOrientation: nil)
+
                                     
                                     let text: String
                                     if let channel = strongSelf.peer as? TelegramChannel, case .broadcast = channel.info {
@@ -2649,11 +2680,12 @@ public final class VoiceChatController: ViewController {
                                 return generateStartRecordingIcon(color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
                                 f(.dismissWithoutContent)
-                                guard let strongSelf = self else {
+
+                                guard let strongSelf = self, let peer = strongSelf.peer else {
                                     return
                                 }
 
-                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, completion: { [weak self] videoOrientation in
+                                let controller = VoiceChatRecordingSetupController(context: strongSelf.context, peer: peer, completion: { [weak self] videoOrientation in
                                     if let strongSelf = self {
                                         let title: String
                                         let text: String
@@ -3956,6 +3988,10 @@ public final class VoiceChatController: ViewController {
                     transition.animatePositionAdditive(node: self.bottomPanelBackgroundNode, offset: positionDelta)
                 }
             }
+            
+            let participantsFrame = CGRect(x: 0.0, y: bottomCornersFrame.maxY - 100.0, width: size.width, height: 216.0)
+            transition.updateFrame(node: self.participantsNode, frame: participantsFrame)
+            self.participantsNode.update(size: participantsFrame.size, participants: self.currentTotalCount, groupingSeparator: self.presentationData.dateTimeFormat.groupingSeparator, transition: .immediate)
         }
         
         private var decorationsAreDark: Bool?
@@ -4453,7 +4489,7 @@ public final class VoiceChatController: ViewController {
             let timerFrame = CGRect(x: 0.0, y: layout.size.height - bottomPanelHeight - 216.0, width: size.width, height: 216.0)
             transition.updateFrame(node: self.timerNode, frame: timerFrame)
             self.timerNode.update(size: timerFrame.size, scheduleTime: self.callState?.scheduleTimestamp, transition: .immediate)
-            
+                        
             let scheduleTextSize = self.scheduleTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
             self.scheduleTextNode.frame = CGRect(origin: CGPoint(x: floor((size.width - scheduleTextSize.width) / 2.0), y: layout.size.height - layout.intrinsicInsets.bottom - scheduleTextSize.height - 145.0), size: scheduleTextSize)
             
@@ -5000,6 +5036,15 @@ public final class VoiceChatController: ViewController {
                 displayPanelVideos = self.displayPanelVideos
             }
             
+            let isLivestream: Bool
+            if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
+                isLivestream = true
+            } else {
+                isLivestream = false
+            }
+            
+            let canManageCall = self.callState?.canManageCall ?? false
+            
             var joinedVideo = self.joinedVideo ?? true
             
             var myEntry: VoiceChatPeerEntry?
@@ -5012,7 +5057,10 @@ public final class VoiceChatController: ViewController {
                 
                 let memberState: VoiceChatPeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
-                if member.hasRaiseHand && !(member.muteState?.canUnmute ?? false) {
+                if member.hasRaiseHand && !(member.muteState?.canUnmute ?? true) {
+                    if isLivestream && !canManageCall {
+                        continue
+                    }
                     memberState = .raisedHand
                     memberMuteState = member.muteState
                     
@@ -5048,6 +5096,10 @@ public final class VoiceChatController: ViewController {
                         disposable.dispose()
                         self.raisedHandDisplayDisposables[member.peer.id] = nil
                     }
+                    
+                    if isLivestream && !(memberMuteState?.canUnmute ?? true) {
+                        continue
+                    }
                 }
                 
                 var memberPeer = member.peer
@@ -5078,7 +5130,7 @@ public final class VoiceChatController: ViewController {
                     effectiveSpeakerVideoEndpointId: self.effectiveSpeaker?.1,
                     state: memberState,
                     muteState: memberMuteState,
-                    canManageCall: self.callState?.canManageCall ?? false,
+                    canManageCall: canManageCall,
                     volume: member.volume,
                     raisedHand: member.hasRaiseHand,
                     displayRaisedHandStatus: self.displayedRaisedHands.contains(member.peer.id),

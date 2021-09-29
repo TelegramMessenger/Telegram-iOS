@@ -395,6 +395,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDel
     
         var transition = transition
         if let previousAdditionalSideInsets = previousAdditionalSideInsets, previousAdditionalSideInsets.right != additionalSideInsets.right {
+            
             if case .animated = transition {
                 transition = .animated(duration: 0.2, curve: .easeInOut)
             }
@@ -610,7 +611,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDel
         
         if let (width, leftInset, rightInset, _, maxHeight, metrics, _) = self.validLayout {
             let composeButtonsOffset: CGFloat = 0.0
-
+            
             let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
             var textFieldMinHeight: CGFloat = 33.0

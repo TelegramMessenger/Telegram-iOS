@@ -311,7 +311,6 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                             stickersEnabled = false
                         }
                     }
-
                     if chatPresentationInterfaceState.hasBots {
                         accessoryItems.append(.commands)
                     }

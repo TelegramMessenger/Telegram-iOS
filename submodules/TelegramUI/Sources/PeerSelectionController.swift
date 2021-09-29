@@ -168,6 +168,10 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
             self?.multiplePeersSelected?(peers, peerMap, text, mode, forwardOptionsState)
         }
         
+        self.peerSelectionNode.requestSend = { [weak self] peers, peerMap, text, mode, forwardOptionsState in
+            self?.multiplePeersSelected?(peers, peerMap, text, mode, forwardOptionsState)
+        }
+        
         self.peerSelectionNode.requestDeactivateSearch = { [weak self] in
             self?.deactivateSearch()
         }

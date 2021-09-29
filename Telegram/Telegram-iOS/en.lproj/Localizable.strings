@@ -6623,7 +6623,9 @@ Sorry for the inconvenience.";
 "VoiceChat.VideoPreviewShareScreenInfo" = "Everything on your screen\nwill be shared";
 
 "Gallery.SaveToGallery" = "Save to Gallery";
+"Gallery.ImageSaved" = "Image Saved";
 "Gallery.VideoSaved" = "Video Saved";
+"Gallery.ImagesAndVideosSaved" = "Media Saved";
 "Gallery.WaitForVideoDownoad" = "Please wait for the video to be fully downloaded.";
 
 "Gallery.SaveImage" = "Save Image";
@@ -6812,6 +6814,7 @@ Ads should no longer be synonymous with abuse of user privacy. Let us redefine h
 "Gif.Emotion.Party" = "Party";
 
 "Conversation.ForwardFrom" = "From: %@";
+
 "Conversation.ContextMenuSeen_1" = "1 Seen";
 "Conversation.ContextMenuSeen_any" = "%@ Seen";
 "Conversation.ContextMenuListened_1" = "1 Listened";
@@ -6832,6 +6835,33 @@ Ads should no longer be synonymous with abuse of user privacy. Let us redefine h
 "CHAT_MESSAGE_NOTHEME" = "%1$@ set theme to default one in the group %2$@";
 
 "Activity.EnjoyingAnimations" = "enjoying %@ animations";
+
+"Conversation.InteractiveEmojiSyncTip" = "If %@ was viewing the chat right now, he would also enjoy this animation.";
+
+"Contacts.Search.NoResults" = "No Results";
+"Contacts.Search.NoResultsQueryDescription" = "There were no results for \"%@\".\nTry a new search.";
+
+"LiveStream.Listening.Members_0" = "%@ listening";
+"LiveStream.Listening.Members_1" = "%@ listening";
+"LiveStream.Listening.Members_2" = "%@ listening";
+"LiveStream.Listening.Members_3_10" = "%@ listening";
+"LiveStream.Listening.Members_many" = "%@ listening";
+"LiveStream.Listening.Members_any" = "%@ listening";
+
+"LiveStream.Watching.Members_0" = "%@ watching";
+"LiveStream.Watching.Members_1" = "%@ watching";
+"LiveStream.Watching.Members_2" = "%@ watching";
+"LiveStream.Watching.Members_3_10" = "%@ watching";
+"LiveStream.Watching.Members_many" = "%@ watching";
+"LiveStream.Watching.Members_any" = "%@ watching";
+
+"VoiceChat.RecordTitle" = "Record Video Chat";
+"LiveStream.RecordTitle" = "Record Live Stream";
+"VoiceChat.RecordVideoAndAudio" = "Video and Audio";
+"VoiceChat.RecordOnlyAudio" = "Only Audio";
+"VoiceChat.RecordPortrait" = "Portrait";
+"VoiceChat.RecordLandscape" = "Landscape";
+"VoiceChat.RecordStartRecording" = "Start Recording";
 
 "DoubleBottom.Settings.Text" = "Double Bottom";
 "DoubleBottom.HideAccount.Title" = "Double Bottom";

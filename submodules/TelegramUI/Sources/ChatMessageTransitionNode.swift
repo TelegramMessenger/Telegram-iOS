@@ -730,7 +730,6 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         for animatingItemNode in self.animatingItemNodes {
             animatingItemNode.addContentOffset(offset: offset, itemNode: itemNode)
         }
-
         if itemNode == nil {
             for decorationItemNode in self.decorationItemNodes {
                 decorationItemNode.addContentOffset(offset: offset)

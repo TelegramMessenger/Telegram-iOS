@@ -2263,6 +2263,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     _dismissing = true;
     self.view.userInteractionEnabled = false;
     
+    
     _focusControl.active = false;
     _rectangleView.hidden = true;
     

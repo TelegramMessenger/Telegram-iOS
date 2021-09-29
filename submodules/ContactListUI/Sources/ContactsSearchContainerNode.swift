@@ -15,6 +15,8 @@ import ContactsPeerItem
 import ContextUI
 import PhoneNumberFormat
 import ItemListUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 private enum ContactListSearchGroup {
     case contacts
@@ -175,16 +177,18 @@ struct ContactListSearchContainerTransition {
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let isSearching: Bool
+    let emptyResults: Bool
+    let query: String
 }
 
-private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?) -> ContactListSearchContainerTransition {
+private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, emptyResults: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?) -> ContactListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, addContact: addContact, openPeer: openPeer, contextAction: contextAction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, timeFormat: timeFormat, addContact: addContact, openPeer: openPeer, contextAction: contextAction), directionHint: nil) }
     
-    return ContactListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
+    return ContactListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching, emptyResults: emptyResults, query: query)
 }
 
 public struct ContactsSearchCategories: OptionSet {
@@ -207,6 +211,11 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
     
     private let dimNode: ASDisplayNode
     public let listNode: ListView
+    
+    private let emptyResultsTitleNode: ImmediateTextNode
+    private let emptyResultsTextNode: ImmediateTextNode
+    private let emptyResultsAnimationNode: AnimatedStickerNode
+    private var emptyResultsAnimationSize: CGSize = CGSize()
     
     private let searchQuery = Promise<String?>()
     private let searchDisposable = MetaDisposable()
@@ -241,13 +250,35 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
+        self.emptyResultsTitleNode = ImmediateTextNode()
+        self.emptyResultsTitleNode.displaysAsynchronously = false
+        self.emptyResultsTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.Contacts_Search_NoResults, font: Font.semibold(17.0), textColor: self.presentationData.theme.list.freeTextColor)
+        self.emptyResultsTitleNode.textAlignment = .center
+        self.emptyResultsTitleNode.isHidden = true
+        
+        self.emptyResultsTextNode = ImmediateTextNode()
+        self.emptyResultsTextNode.displaysAsynchronously = false
+        self.emptyResultsTextNode.maximumNumberOfLines = 0
+        self.emptyResultsTextNode.textAlignment = .center
+        self.emptyResultsTextNode.isHidden = true
+             
+        self.emptyResultsAnimationNode = AnimatedStickerNode()
+        self.emptyResultsAnimationNode.isHidden = true
+        
         super.init()
+        
+        self.emptyResultsAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ChatListNoResults"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+        self.emptyResultsAnimationSize = CGSize(width: 148.0, height: 148.0)
         
         self.backgroundColor = nil
         self.isOpaque = false
         
         self.addSubnode(self.dimNode)
         self.addSubnode(self.listNode)
+        
+        self.addSubnode(self.emptyResultsAnimationNode)
+        self.addSubnode(self.emptyResultsTitleNode)
+        self.addSubnode(self.emptyResultsTextNode)
         
         self.listNode.isHidden = true
         
@@ -256,7 +287,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         let previousFoundRemoteContacts = Atomic<([FoundPeer], [FoundPeer])?>(value: nil)
         
         let searchItems = self.searchQuery.get()
-        |> mapToSignal { query -> Signal<[ContactListSearchEntry]?, NoError> in
+        |> mapToSignal { query -> Signal<([ContactListSearchEntry]?, String), NoError> in
             if let query = query, !query.isEmpty {
                 let foundLocalContacts: Signal<([Peer], [PeerId: PeerPresence]), NoError>
                 if categories.contains(.cloudContacts) {
@@ -286,7 +317,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                 
                 return combineLatest(foundLocalContacts, foundRemoteContacts, foundDeviceContacts, themeAndStringsPromise.get())
                 |> delay(0.1, queue: Queue.concurrentDefaultQueue())
-                |> map { localPeersAndPresences, remotePeers, deviceContacts, themeAndStrings -> [ContactListSearchEntry] in
+                |> map { localPeersAndPresences, remotePeers, deviceContacts, themeAndStrings -> ([ContactListSearchEntry], String) in
                     let _ = previousFoundRemoteContacts.swap(remotePeers)
                     
                     var entries: [ContactListSearchEntry] = []
@@ -381,18 +412,18 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                         entries.append(.addContact(themeAndStrings.0, themeAndStrings.1, query))
                     }
                     
-                    return entries
+                    return (entries, query)
                 }
             } else {
                 let _ = previousFoundRemoteContacts.swap(nil)
-                return .single(nil)
+                return .single((nil, ""))
             }
         }
         
         let previousSearchItems = Atomic<[ContactListSearchEntry]>(value: [])
         
         self.searchDisposable.set((searchItems
-        |> deliverOnMainQueue).start(next: { [weak self] items in
+        |> deliverOnMainQueue).start(next: { [weak self] items, query in
             if let strongSelf = self {
                 let previousItems = previousSearchItems.swap(items ?? [])
                 
@@ -404,7 +435,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                     }
                 }
                 
-                let transition = contactListSearchContainerPreparedRecentTransition(from: previousItems, to: items ?? [], isSearching: items != nil, context: context, presentationData: strongSelf.presentationData, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, timeFormat: strongSelf.presentationData.dateTimeFormat, addContact: addContact, openPeer: { peer in
+                let transition = contactListSearchContainerPreparedRecentTransition(from: previousItems, to: items ?? [], isSearching: items != nil, emptyResults: items?.isEmpty ?? false, query: query, context: context, presentationData: strongSelf.presentationData, nameSortOrder: strongSelf.presentationData.nameSortOrder, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder, timeFormat: strongSelf.presentationData.dateTimeFormat, addContact: addContact, openPeer: { peer in
                     self?.listNode.clearHighlightAnimated(true)
                     self?.openPeer(peer)
                 }, contextAction: strongSelf.contextAction)
@@ -462,6 +493,27 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
+        let size = layout.size
+        let sideInset = layout.safeInsets.left
+        let visibleHeight = layout.size.height
+        let bottomInset = layout.insets(options: .input).bottom
+            
+        let padding: CGFloat = 16.0
+        let emptyTitleSize = self.emptyResultsTitleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let emptyTextSize = self.emptyResultsTextNode.updateLayout(CGSize(width: size.width - sideInset * 2.0 - padding * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        
+        let emptyAnimationHeight = self.emptyResultsAnimationSize.height
+        let emptyAnimationSpacing: CGFloat = 8.0
+        let emptyTextSpacing: CGFloat = 8.0
+        let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSize.height + emptyTextSpacing
+        let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
+        
+        let textTransition = ContainedViewLayoutTransition.immediate
+        textTransition.updateFrame(node: self.emptyResultsAnimationNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - self.emptyResultsAnimationSize.width) / 2.0, y: emptyAnimationY), size: self.emptyResultsAnimationSize))
+        textTransition.updateFrame(node: self.emptyResultsTitleNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTitleSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing), size: emptyTitleSize))
+        textTransition.updateFrame(node: self.emptyResultsTextNode, frame: CGRect(origin: CGPoint(x: sideInset + padding + (size.width - sideInset * 2.0 - padding * 2.0 - emptyTextSize.width) / 2.0, y: emptyAnimationY + emptyAnimationHeight + emptyAnimationSpacing + emptyTitleSize.height + emptyTextSpacing), size: emptyTextSize))
+        self.emptyResultsAnimationNode.updateLayout(size: self.emptyResultsAnimationSize)
+        
         if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
@@ -488,9 +540,26 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
             options.insert(.PreferSynchronousResourceLoading)
             
             let isSearching = transition.isSearching
+            let emptyResults = transition.emptyResults
+            let query = transition.query
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
-                self?.listNode.isHidden = !isSearching
-                self?.dimNode.isHidden = isSearching
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                strongSelf.emptyResultsTextNode.attributedText = NSAttributedString(string: strongSelf.presentationData.strings.Contacts_Search_NoResultsQueryDescription(query).string, font: Font.regular(15.0), textColor: strongSelf.presentationData.theme.list.freeTextColor)
+                
+                if let (layout, navigationBarHeight) = strongSelf.containerViewLayout {
+                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                }
+                strongSelf.listNode.isHidden = !isSearching
+                strongSelf.dimNode.isHidden = isSearching
+                
+                strongSelf.emptyResultsAnimationNode.isHidden = !emptyResults
+                strongSelf.emptyResultsTitleNode.isHidden = !emptyResults
+                strongSelf.emptyResultsTextNode.isHidden = !emptyResults
+                strongSelf.emptyResultsAnimationNode.visibility = emptyResults
+                
             })
         }
     }

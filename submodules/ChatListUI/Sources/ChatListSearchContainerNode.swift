@@ -896,7 +896,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     return
                 }
                 strongController.dismiss()
-
+                                
                 var result: [EnqueueMessage] = []
                 if messageText.string.count > 0 {
                     let inputText = convertMarkdownToAttributes(messageText)

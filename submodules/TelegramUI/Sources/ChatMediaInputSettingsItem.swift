@@ -106,6 +106,7 @@ final class ChatMediaInputSettingsItemNode: ListViewItemNode {
             self.theme = theme
             
             self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelSettingsIconImage(theme)
+            
             self.titleNode.attributedText = NSAttributedString(string: strings.Stickers_Settings, font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
         }
         

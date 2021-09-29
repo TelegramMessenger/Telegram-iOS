@@ -24,6 +24,7 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
     private let containerNode: ASDisplayNode
     private let videoViewContainer: UIView
     private let videoView: VideoRenderingView
+
     private let debugTextNode: ImmediateTextNode
     
     private let backdropVideoViewContainer: UIView
@@ -56,6 +57,7 @@ final class GroupVideoNode: ASDisplayNode, PreviewVideoNode {
         self.backdropVideoViewContainer = UIView()
         self.backdropVideoViewContainer.isUserInteractionEnabled = false
         self.backdropVideoView = backdropVideoView
+
         self.debugTextNode = ImmediateTextNode()
                 
         super.init()

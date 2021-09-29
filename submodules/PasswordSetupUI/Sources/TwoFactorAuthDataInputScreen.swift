@@ -1271,7 +1271,7 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         case .emailConfirmation, .passwordRecoveryEmail:
             let animatedStickerNode = AnimatedStickerNode()
             animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupMail"), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-            animatedStickerNode.visibility = true
+                animatedStickerNode.visibility = true
             self.animatedStickerNode = animatedStickerNode
         case .passwordHint:
             let animatedStickerNode = AnimatedStickerNode()

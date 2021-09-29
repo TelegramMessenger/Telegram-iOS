@@ -905,7 +905,6 @@ public final class AnimatedStickerNode: ASDisplayNode {
                         strongSelf.isSetUpForPlayback = false
                         strongSelf.isPlaying = true
                     }
-
                     let fromIndex = strongSelf.playFromIndex
                     strongSelf.playFromIndex = nil
                     strongSelf.play(fromIndex: fromIndex)
@@ -978,7 +977,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     private var isSetUpForPlayback = false
-
+        
     public func play(firstFrame: Bool = false, fromIndex: Int? = nil) {
         switch self.playbackMode {
         case .once:

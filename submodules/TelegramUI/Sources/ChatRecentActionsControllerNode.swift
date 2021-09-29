@@ -118,12 +118,13 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.loadingNode = ChatLoadingNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners)
         self.emptyNode = ChatRecentActionsEmptyNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, chatBubbleCorners: self.presentationData.chatBubbleCorners)
         self.emptyNode.alpha = 0.0
+                
         self.chatPresentationDataPromise = Promise()
         
         self.eventLogContext = self.context.engine.peers.channelAdminEventLog(peerId: self.peer.id)
         
         super.init()
-        
+                
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.listNode)
         self.addSubnode(self.loadingNode)
@@ -529,6 +530,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, getMessageTransitionNode: {
             return nil
         }, updateChoosingSticker: { _ in
+        }, commitEmojiInteraction: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

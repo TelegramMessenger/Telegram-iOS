@@ -4447,7 +4447,7 @@ public extension Api {
                         return result
                     })
                 }
-
+            
                 public static func getMessageReadParticipants(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int64]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(745510839)
@@ -7731,7 +7731,7 @@ public extension Api {
                         return result
                     })
                 }
-
+            
                 public static func getChatThemes(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.ChatThemes>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-690545285)
