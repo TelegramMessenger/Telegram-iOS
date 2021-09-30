@@ -1,6 +1,6 @@
 import Postbox
 
-public struct CacheStorageSettings: Codable {
+public struct CacheStorageSettings: Codable, Equatable {
     public let defaultCacheStorageTimeout: Int32
     public let defaultCacheStorageLimitGigabytes: Int32
 
