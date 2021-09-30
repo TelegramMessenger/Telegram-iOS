@@ -47,6 +47,10 @@ public func makePresentationTheme(cloudTheme: TelegramTheme) -> PresentationThem
 }
 
 public func makePresentationTheme(mediaBox: MediaBox, themeReference: PresentationThemeReference, extendingThemeReference: PresentationThemeReference? = nil, accentColor: UIColor? = nil, outgoingAccentColor: UIColor? = nil, backgroundColors: [UInt32] = [], bubbleColors: [UInt32] = [], animateBubbleColors: Bool? = nil, wallpaper: TelegramWallpaper? = nil, baseColor: PresentationThemeBaseColor? = nil, serviceBackgroundColor: UIColor? = nil, preview: Bool = false) -> PresentationTheme? {
+    var accentColor = accentColor
+    if accentColor == .clear {
+        accentColor = nil
+    }
     let theme: PresentationTheme
     switch themeReference {
         case let .builtin(reference):

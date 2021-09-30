@@ -20,8 +20,8 @@ public struct ChatTheme: PostboxCoding, Equatable {
     
     public init(decoder: PostboxDecoder) {
         self.emoji = decoder.decodeStringForKey("e", orElse: "")
-        self.theme = decoder.decodeObjectForKey("t") as! TelegramTheme
-        self.darkTheme = decoder.decodeObjectForKey("dt") as! TelegramTheme
+        self.theme = decoder.decodeObjectForKey("t", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme
+        self.darkTheme = decoder.decodeObjectForKey("dt", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme
     }
     
     public func encode(_ encoder: PostboxEncoder) {

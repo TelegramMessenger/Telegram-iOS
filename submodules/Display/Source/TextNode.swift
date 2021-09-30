@@ -6,9 +6,11 @@ import CoreText
 private let defaultFont = UIFont.systemFont(ofSize: 15.0)
 
 private final class TextNodeStrikethrough {
+    let range: NSRange
     let frame: CGRect
     
-    init(frame: CGRect) {
+    init(range: NSRange, frame: CGRect) {
+        self.range = range
         self.frame = frame
     }
 }
@@ -990,7 +992,7 @@ public class TextNode: ASDisplayNode {
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
                             let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
                             let x = lowerX < upperX ? lowerX : upperX
-                            strikethroughs.append(TextNodeStrikethrough(frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                            strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
                         } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
                             headIndent = paragraphStyle.headIndent
                             
@@ -1042,7 +1044,7 @@ public class TextNode: ASDisplayNode {
                                 let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
                                 let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
                                 let x = lowerX < upperX ? lowerX : upperX
-                                strikethroughs.append(TextNodeStrikethrough(frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                                strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
                             } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
                                 headIndent = paragraphStyle.headIndent
                             }
@@ -1190,6 +1192,15 @@ public class TextNode: ASDisplayNode {
                 
                 if !line.strikethroughs.isEmpty {
                     for strikethrough in line.strikethroughs {
+                        var textColor: UIColor?
+                        layout.attributedString?.enumerateAttributes(in: NSMakeRange(line.range.location, line.range.length), options: []) { attributes, range, _ in
+                            if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
+                                textColor = color
+                            }
+                        }
+                        if let textColor = textColor {
+                            context.setFillColor(textColor.cgColor)
+                        }
                         let frame = strikethrough.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
                         context.fill(CGRect(x: frame.minX, y: frame.minY - 5.0, width: frame.width, height: 1.0))
                     }

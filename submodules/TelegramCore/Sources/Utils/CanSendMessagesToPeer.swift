@@ -7,7 +7,9 @@ private final class LinkHelperClass: NSObject {
 }
 
 public func canSendMessagesToPeer(_ peer: Peer) -> Bool {
-    if peer is TelegramUser || peer is TelegramGroup {
+    if let peer = peer as? TelegramUser, peer.username == "replies" {
+        return false
+    } else if peer is TelegramUser || peer is TelegramGroup {
         return !peer.isDeleted
     } else if let peer = peer as? TelegramSecretChat {
         return peer.embeddedState == .active
