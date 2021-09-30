@@ -385,8 +385,8 @@ private final class ChatTextLinkEditAlertContentNode: AlertContentNode {
     }
 }
 
-func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Account, text: String, link: String?, apply: @escaping (String?) -> Void) -> AlertController {
-    let presentationData = sharedContext.currentPresentationData.with { $0 }
+func chatTextLinkEditController(sharedContext: SharedAccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, account: Account, text: String, link: String?, apply: @escaping (String?) -> Void) -> AlertController {
+    let presentationData = updatedPresentationData?.initial ?? sharedContext.currentPresentationData.with { $0 }
     
     var dismissImpl: ((Bool) -> Void)?
     var applyImpl: (() -> Void)?
@@ -416,7 +416,7 @@ func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Ac
     }
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
-    let presentationDataDisposable = sharedContext.presentationData.start(next: { [weak controller, weak contentNode] presentationData in
+    let presentationDataDisposable = (updatedPresentationData?.signal ?? sharedContext.presentationData).start(next: { [weak controller, weak contentNode] presentationData in
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
         contentNode?.inputFieldNode.updateTheme(presentationData.theme)
     })

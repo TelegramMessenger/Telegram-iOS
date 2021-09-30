@@ -204,8 +204,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         })
         
         startCallImpl = { [weak self] context, uuid, handle, isVideo in
-            if let strongSelf = self, let userId = Int32(handle) {
-                return strongSelf.startCall(context: context, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), isVideo: isVideo, internalId: uuid)
+            if let strongSelf = self, let userId = Int64(handle) {
+                return strongSelf.startCall(context: context, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), isVideo: isVideo, internalId: uuid)
                 |> take(1)
                 |> map { result -> Bool in
                     return result

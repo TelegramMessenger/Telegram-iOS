@@ -1,12 +1,12 @@
 import Foundation
 import UIKit
-import AppBundle
 import AsyncDisplayKit
 import Display
 import SolidRoundedButtonNode
 import SwiftSignalKit
 import OverlayStatusController
 import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import AccountContext
 import TelegramPresentationData
 import PresentationDataUtils
@@ -141,21 +141,17 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
             texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Intro_Text, font: textFont, textColor: textColor)]
             buttonText = self.presentationData.strings.TwoFactorSetup_Intro_Action
             
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 124.0, height: 124.0)
-                self.animationNode.visibility = true
-            }
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupIntro"), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            self.animationSize = CGSize(width: 124.0, height: 124.0)
+            self.animationNode.visibility = true
         case .done:
             title = self.presentationData.strings.TwoFactorSetup_Done_Title
             texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Done_Text, font: textFont, textColor: textColor)]
             buttonText = self.presentationData.strings.TwoFactorSetup_Done_Action
             
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupDone", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 124.0, height: 124.0)
-                self.animationNode.visibility = true
-            }
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupDone"), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
+            self.animationSize = CGSize(width: 124.0, height: 124.0)
+            self.animationNode.visibility = true
         case let .recoveryDone(_, _, isPasswordSet):
             title = isPasswordSet ? self.presentationData.strings.TwoFactorSetup_ResetDone_Title : self.presentationData.strings.TwoFactorSetup_ResetDone_TitleNoPassword
 
@@ -176,21 +172,17 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
             texts = splitTexts.map { NSAttributedString(string: $0, font: textFont, textColor: textColor) }
             buttonText = self.presentationData.strings.TwoFactorSetup_ResetDone_Action
 
-            if let path = getAppBundle().path(forResource: isPasswordSet ? "TwoFactorSetupDone" : "TwoFactorRemovePasswordDone", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: isPasswordSet ? .loop : .once, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 124.0, height: 124.0)
-                self.animationNode.visibility = true
-            }
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: isPasswordSet ? "TwoFactorSetupDone" : "TwoFactorRemovePasswordDone"), width: 248, height: 248, playbackMode: isPasswordSet ? .loop : .once, mode: .direct(cachePathPrefix: nil))
+            self.animationSize = CGSize(width: 124.0, height: 124.0)
+            self.animationNode.visibility = true
         case .remember:
             title = self.presentationData.strings.TwoFactorRemember_Done_Title
             texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorRemember_Done_Text, font: textFont, textColor: textColor)]
             buttonText = self.presentationData.strings.TwoFactorRemember_Done_Action
             
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupRememberSuccess", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 124.0, height: 124.0)
-                self.animationNode.visibility = true
-            }
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupRememberSuccess"), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
+            self.animationSize = CGSize(width: 124.0, height: 124.0)
+            self.animationNode.visibility = true
         }
         
         self.titleNode = ImmediateTextNode()

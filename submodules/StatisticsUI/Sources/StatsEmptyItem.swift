@@ -6,13 +6,16 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import AnimatedStickerNode
-import AppBundle
+import TelegramAnimatedStickerNode
+import AccountContext
 
 final class StatsEmptyStateItem: ItemListControllerEmptyStateItem {
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+        self.context = context
         self.theme = theme
         self.strings = strings
     }
@@ -54,10 +57,8 @@ final class StatsEmptyStateItemNode: ItemListControllerEmptyStateItemNode {
         self.item = item
         
         self.animationNode = AnimatedStickerNode()
-        if let path = getAppBundle().path(forResource: "Charts", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-            self.animationNode.visibility = true
-        }
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Charts"), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        self.animationNode.visibility = true
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false

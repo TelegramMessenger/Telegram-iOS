@@ -22,6 +22,8 @@ import SlotMachineAnimationNode
 import UniversalMediaPlayer
 import ShimmerEffect
 import WallpaperBackgroundNode
+import LocalMediaResources
+import AppBundle
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -167,8 +169,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
     private(set) var placeholderNode: StickerShimmerEffectNode
     private(set) var animationNode: GenericAnimatedStickerNode?
+    private var animationSize: CGSize?
     private var didSetUpAnimationNode = false
     private var isPlaying = false
+    
+    private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
+    private var enqueuedAdditionalAnimations: [(Int, Double)] = []
+    private var additionalAnimationsCommitTimer: SwiftSignalKit.Timer?
   
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
@@ -181,6 +188,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     var emojiFile: TelegramMediaFile?
     var telegramDice: TelegramMediaDice?
     private let disposable = MetaDisposable()
+    private let disposables = DisposableSet()
     
     private var forwardInfoNode: ChatMessageForwardInfoNode?
     private var forwardBackgroundNode: NavigationBackgroundNode?
@@ -198,6 +206,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     private var forceStopAnimations = false
     
+    private var hapticFeedback: HapticFeedback?
     private var haptic: EmojiHaptic?
     private var mediaPlayer: MediaPlayer?
     private let mediaStatusDisposable = MetaDisposable()
@@ -303,7 +312,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     deinit {
         self.disposable.dispose()
+        self.disposables.dispose()
         self.mediaStatusDisposable.set(nil)
+        self.additionalAnimationsCommitTimer?.invalidate()
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -331,7 +342,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     return .fail
                 }
                 
-                if strongSelf.telegramFile == nil {
+                if false, strongSelf.telegramFile == nil {
                     if let animationNode = strongSelf.animationNode, animationNode.frame.contains(point) {
                         return .waitForDoubleTap
                     }
@@ -394,6 +405,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if self.visibilityStatus != oldValue {
                 self.updateVisibility()
                 self.haptic?.enabled = self.visibilityStatus
+                
+                
             }
         }
     }
@@ -406,7 +419,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let telegramDice = self.telegramDice {
             if telegramDice.emoji == "🎰" {
-                let animationNode = SlotMachineAnimationNode()
+                let animationNode = SlotMachineAnimationNode(account: item.context.account)
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     animationNode.success = { [weak self] onlyHaptic in
                         if let strongSelf = self, let item = strongSelf.item {
@@ -511,6 +524,28 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
                 }
                 self.updateVisibility()
+                
+                let textEmoji = item.message.text.strippedEmoji
+                var additionalTextEmoji = textEmoji
+                let (basicEmoji, fitz) = item.message.text.basicEmoji
+                if ["💛", "💙", "💚", "💜", "🧡", "🖤", "🤎", "🤍"].contains(textEmoji) {
+                    additionalTextEmoji = "❤️".strippedEmoji
+                } else if fitz != nil {
+                    additionalTextEmoji = basicEmoji
+                }
+                
+                var animationItems: [Int: StickerPackItem]?
+                if let items = item.associatedData.additionalAnimatedEmojiStickers[textEmoji] {
+                    animationItems = items
+                } else if let items = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji] {
+                    animationItems = items
+                }
+                
+                if let animationItems = animationItems {
+                    for (_, animationItem) in animationItems {
+                        self.disposables.add(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: animationItem.file)).start())
+                    }
+                }
             }
         }
     }
@@ -522,6 +557,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let animationNode = self.animationNode as? AnimatedStickerNode {
             let isPlaying = self.visibilityStatus && !self.forceStopAnimations
+            
+            if !isPlaying {
+                for decorationNode in self.additionalAnimationNodes {
+                    if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
+                        decorationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak decorationNode] _ in
+                            if let decorationNode = decorationNode {
+                                transitionNode.remove(decorationNode: decorationNode)
+                            }
+                        })
+                    }
+                }
+                self.additionalAnimationNodes.removeAll()
+            }
+            
             if self.isPlaying != isPlaying {
                 self.isPlaying = isPlaying
                 
@@ -577,7 +626,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         
                         let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
                         let mode: AnimatedStickerMode = .direct(cachePathPrefix: pathPrefix)
-                        
+                        self.animationSize = fittedSize
                         animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: mode)
                     }
                 }
@@ -1288,6 +1337,149 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
+    private func startAdditionalAnimationsCommitTimer() {
+        guard self.additionalAnimationsCommitTimer == nil else {
+            return
+        }
+        let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+            self?.commitEnqueuedAnimations()
+            self?.additionalAnimationsCommitTimer?.invalidate()
+            self?.additionalAnimationsCommitTimer = nil
+        }, queue: Queue.mainQueue())
+        self.additionalAnimationsCommitTimer = timer
+        timer.start()
+    }
+    
+    private func commitEnqueuedAnimations() {
+        guard let item = self.item, let file = self.emojiFile, !self.enqueuedAdditionalAnimations.isEmpty else {
+            return
+        }
+        
+        let enqueuedAnimations = self.enqueuedAdditionalAnimations
+        self.enqueuedAdditionalAnimations.removeAll()
+        
+        guard let startTimestamp = enqueuedAnimations.first?.1 else {
+            return
+        }
+        
+        var animations: [EmojiInteraction.Animation] = []
+        for (index, timestamp) in enqueuedAnimations {
+            animations.append(EmojiInteraction.Animation(index: index, timeOffset: Float(max(0.0, timestamp - startTimestamp))))
+        }
+        item.controllerInteraction.commitEmojiInteraction(item.message.id, item.message.text.strippedEmoji, EmojiInteraction(animations: animations), file)
+    }
+    
+    func playEmojiInteraction(_ interaction: EmojiInteraction) {
+        guard interaction.animations.count <= 7 else {
+            return
+        }
+        
+        var hapticFeedback: HapticFeedback
+        if let current = self.hapticFeedback {
+            hapticFeedback = current
+        } else {
+            hapticFeedback = HapticFeedback()
+            self.hapticFeedback = hapticFeedback
+        }
+        
+        var playHaptic = true
+        if let existingHaptic = self.haptic, existingHaptic.active {
+            playHaptic = false
+        }
+        hapticFeedback.prepareImpact(.light)
+        hapticFeedback.prepareImpact(.medium)
+                
+        var index = 0
+        for animation in interaction.animations {
+            if animation.timeOffset > 0.0 {
+                Queue.mainQueue().after(Double(animation.timeOffset)) {
+                    self.playAdditionalAnimation(index: animation.index)
+                    if playHaptic {
+                        let style: ImpactHapticFeedbackStyle
+                        if index == 1 {
+                            style = .medium
+                        } else {
+                            style = [.light, .medium].randomElement() ?? .medium
+                        }
+                        hapticFeedback.impact(style)
+                    }
+                    index += 1
+                }
+            } else {
+                self.playAdditionalAnimation(index: animation.index)
+                if playHaptic {
+                    hapticFeedback.impact(interaction.animations.count > 1 ? .light : .medium)
+                }
+                index += 1
+            }
+        }
+    }
+    
+    func playAdditionalAnimation(index: Int) {
+        guard let item = self.item else {
+            return
+        }
+        
+        let textEmoji = item.message.text.strippedEmoji
+        var additionalTextEmoji = textEmoji
+        let (basicEmoji, fitz) = item.message.text.basicEmoji
+        if ["💛", "💙", "💚", "💜", "🧡", "🖤", "🤎", "🤍"].contains(textEmoji) {
+            additionalTextEmoji = "❤️".strippedEmoji
+        } else if fitz != nil {
+            additionalTextEmoji = basicEmoji
+        }
+        
+        guard let animationItems = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji], index < 10, let file = animationItems[index]?.file else {
+            return
+        }
+        let source = AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: nil)
+        guard let animationSize = self.animationSize, let animationNode = self.animationNode, self.additionalAnimationNodes.count < 4 else {
+            return
+        }
+        
+        if let animationNode = animationNode as? AnimatedStickerNode {
+            let _ = animationNode.playIfNeeded()
+        }
+        
+        let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
+                    
+        let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+        let additionalAnimationNode = AnimatedStickerNode()
+        additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2.0), height: Int(animationSize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+        var animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
+            .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
+        animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
+        additionalAnimationNode.frame = animationFrame
+        if incomingMessage {
+            additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+        }
+
+        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() else {
+            return
+        }
+        let decorationNode = transitionNode.add(decorationNode: additionalAnimationNode, itemNode: self)
+        additionalAnimationNode.completed = { [weak self, weak decorationNode, weak transitionNode] _ in
+            guard let decorationNode = decorationNode else {
+                return
+            }
+            self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
+            transitionNode?.remove(decorationNode: decorationNode)
+        }
+        additionalAnimationNode.isPlayingChanged = { [weak self, weak decorationNode, weak transitionNode] isPlaying in
+            if !isPlaying {
+                guard let decorationNode = decorationNode else {
+                    return
+                }
+                self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
+                transitionNode?.remove(decorationNode: decorationNode)
+            }
+        }
+        
+        self.additionalAnimationNodes.append(decorationNode)
+        
+        additionalAnimationNode.play()
+    }
+    
     private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {
         switch gesture {
         case .tap:
@@ -1392,14 +1584,116 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         |> map { view in
                             return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
                         }
-                                                
-                        if let text = self.item?.message.text, var firstScalar = text.unicodeScalars.first {
+                                          
+                        let text = item.message.text
+                        if var firstScalar = text.unicodeScalars.first {
                             var textEmoji = text.strippedEmoji
+                            var additionalTextEmoji = textEmoji
                             if beatingHearts.contains(firstScalar.value) {
                                 textEmoji = "❤️"
                                 firstScalar = UnicodeScalar(heart)!
                             }
+                            
+                            let (basicEmoji, fitz) = text.basicEmoji
+                            if ["💛", "💙", "💚", "💜", "🧡", "🖤", "🤎", "🤍", "❤️"].contains(textEmoji) {
+                                additionalTextEmoji = "❤️".strippedEmoji
+                            } else if fitz != nil {
+                                additionalTextEmoji = basicEmoji
+                            }
+                            
+                            let syncAnimations = item.message.id.peerId.namespace == Namespaces.Peer.CloudUser
+                        
                             return .optionalAction({
+                                var haptic: EmojiHaptic?
+                                if let current = self.haptic {
+                                    haptic = current
+                                } else {
+                                    if firstScalar.value == heart {
+                                        haptic = HeartbeatHaptic()
+                                    } else if firstScalar.value == coffin {
+                                        haptic = CoffinHaptic()
+                                    } else if firstScalar.value == peach {
+                                        haptic = PeachHaptic()
+                                    }
+                                    haptic?.enabled = true
+                                    self.haptic = haptic
+                                }
+                                
+                                if syncAnimations, let animationItems = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji] {
+                                    let playHaptic = haptic == nil
+                                    
+                                    var hapticFeedback: HapticFeedback
+                                    if let current = self.hapticFeedback {
+                                        hapticFeedback = current
+                                    } else {
+                                        hapticFeedback = HapticFeedback()
+                                        self.hapticFeedback = hapticFeedback
+                                    }
+                                    
+                                    if syncAnimations {
+                                        self.startAdditionalAnimationsCommitTimer()
+                                    }
+                                    
+                                    let timestamp = CACurrentMediaTime()
+                                    let previousAnimation = self.enqueuedAdditionalAnimations.last
+                                    
+                                    var availableAnimations = animationItems
+                                    var delay: Double = 0.0
+                                    if availableAnimations.count > 1, let (previousIndex, _) = previousAnimation {
+                                        availableAnimations.removeValue(forKey: previousIndex)
+                                    }
+                                    if let (_, previousTimestamp) = previousAnimation {
+                                        delay = min(0.15, max(0.0, previousTimestamp + 0.15 - timestamp))
+                                    }
+                                    if let index = availableAnimations.randomElement()?.0 {
+                                        if delay > 0.0 {
+                                            Queue.mainQueue().after(delay) {
+                                                if playHaptic {
+                                                    if previousAnimation == nil {
+                                                        hapticFeedback.impact(.light)
+                                                    } else {
+                                                        let style: ImpactHapticFeedbackStyle
+                                                        if self.enqueuedAdditionalAnimations.count == 1 {
+                                                            style = .medium
+                                                        } else {
+                                                            style = [.light, .medium].randomElement() ?? .medium
+                                                        }
+                                                        hapticFeedback.impact(style)
+                                                    }
+                                                }
+                                                
+                                                if syncAnimations {
+                                                    self.enqueuedAdditionalAnimations.append((index, timestamp + delay))
+                                                }
+                                                self.playAdditionalAnimation(index: index)
+                                                
+                                                if syncAnimations, self.additionalAnimationsCommitTimer == nil {
+                                                    self.startAdditionalAnimationsCommitTimer()
+                                                }
+                                            }
+                                        } else {
+                                            if playHaptic {
+                                                if previousAnimation == nil {
+                                                    hapticFeedback.impact(.light)
+                                                } else {
+                                                    let style: ImpactHapticFeedbackStyle
+                                                    if self.enqueuedAdditionalAnimations.count == 1 {
+                                                        style = .medium
+                                                    } else {
+                                                        style = [.light, .medium].randomElement() ?? .medium
+                                                    }
+                                                    hapticFeedback.impact(style)
+                                                }
+                                            }
+                                            
+                                            if syncAnimations {
+                                                self.enqueuedAdditionalAnimations.append((index, timestamp))
+                                            }
+                                            self.playAdditionalAnimation(index: index)
+                                        }
+                                    }
+                                }
+                                
                                 if shouldPlay {
                                     let _ = (appConfiguration
                                     |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] appConfiguration in
@@ -1407,8 +1701,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                             return
                                         }
                                         let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
+                                        var hasSound = false
                                         for (emoji, file) in emojiSounds.sounds {
                                             if emoji.strippedEmoji == textEmoji.strippedEmoji {
+                                                hasSound = true
                                                 let mediaManager = item.context.sharedContext.mediaManager
                                                 let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
                                                 mediaPlayer.togglePlayPause()
@@ -1420,22 +1716,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                 strongSelf.mediaStatusDisposable.set((mediaPlayer.status
                                                 |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] status in
                                                     if let strongSelf = self {
-                                                        
-                                                        var haptic: EmojiHaptic?
-                                                        if let current = strongSelf.haptic {
-                                                            haptic = current
-                                                        } else {
-                                                            if firstScalar.value == heart {
-                                                                haptic = HeartbeatHaptic()
-                                                            } else if firstScalar.value == coffin {
-                                                                haptic = CoffinHaptic()
-                                                            } else if firstScalar.value == peach {
-                                                                haptic = PeachHaptic()
-                                                            }
-                                                            haptic?.enabled = true
-                                                            strongSelf.haptic = haptic
-                                                        }
-                                                        
                                                         if let haptic = haptic, !haptic.active {
                                                             haptic.start(time: 0.0)
                                                         }
@@ -1452,7 +1732,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                 return
                                             }
                                         }
-                                        animationNode?.play()
+                                        if !hasSound {
+                                            if let haptic = haptic, !haptic.active {
+                                                haptic.start(time: 0.0)
+                                            }
+                                            animationNode?.play()
+                                        }
                                     })
                                 }
                             })
@@ -1608,11 +1893,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let selectionState = item.controllerInteraction.selectionState {
-            var selected = false
-            var incoming = true
-            
-            selected = selectionState.selectedIds.contains(item.message.id)
-            incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            let selected = selectionState.selectedIds.contains(item.message.id)
+            let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             
             let offset: CGFloat = incoming ? 42.0 : 0.0
             

@@ -12,10 +12,10 @@ let telegramThemeFileExtension = "tgios-theme"
 #endif
 
 public func telegramThemes(postbox: Postbox, network: Network, accountManager: AccountManager<TelegramAccountManagerTypes>?, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
-    let fetch: ([TelegramTheme]?, Int32?) -> Signal<[TelegramTheme], NoError> = { current, hash in
+    let fetch: ([TelegramTheme]?, Int64?) -> Signal<[TelegramTheme], NoError> = { current, hash in
         network.request(Api.functions.account.getThemes(format: telegramThemeFormat, hash: hash ?? 0))
         |> retryRequest
-        |> mapToSignal { result -> Signal<([TelegramTheme], Int32), NoError> in
+        |> mapToSignal { result -> Signal<([TelegramTheme], Int64), NoError> in
             switch result {
                 case let .themes(hash, themes):
                     let result = themes.compactMap { TelegramTheme(apiTheme: $0) }
@@ -70,7 +70,7 @@ public func telegramThemes(postbox: Postbox, network: Network, accountManager: A
     if forceUpdate {
         return fetch(nil, nil)
     } else {
-        return postbox.transaction { transaction -> ([TelegramTheme], Int32?) in
+        return postbox.transaction { transaction -> ([TelegramTheme], Int64?) in
             let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedThemesConfiguration, key: ValueBoxKey(length: 0))) as? CachedThemesConfiguration
             let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
             return (items.map { $0.contents as! TelegramTheme }, configuration?.hash)

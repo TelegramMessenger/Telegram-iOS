@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import PersistentStringHash
 
 public final class VideoMediaResourceAdjustments: PostboxCoding, Equatable {
     public let data: MemoryBuffer
@@ -313,6 +314,59 @@ public final class LocalFileGifMediaResource: TelegramMediaResource {
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? LocalFileGifMediaResource {
             return self.randomId == to.randomId && self.path == to.path
+        } else {
+            return false
+        }
+    }
+}
+
+
+public struct BundleResourceId: MediaResourceId {
+    public let nameHash: Int64
+    
+    public var uniqueId: String {
+        return "bundle-\(nameHash)"
+    }
+    
+    public var hashValue: Int {
+        return self.nameHash.hashValue
+    }
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if let to = to as? BundleResourceId {
+            return self.nameHash == to.nameHash
+        } else {
+            return false
+        }
+    }
+}
+
+public class BundleResource: TelegramMediaResource {
+    public let nameHash: Int64
+    public let path: String
+    
+    public init(name: String, path: String) {
+        self.nameHash = Int64(bitPattern: name.persistentHashValue)
+        self.path = path
+    }
+    
+    public required init(decoder: PostboxDecoder) {
+        self.nameHash = decoder.decodeInt64ForKey("h", orElse: 0)
+        self.path = decoder.decodeStringForKey("p", orElse: "")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64(self.nameHash, forKey: "h")
+        encoder.encodeString(self.path, forKey: "p")
+    }
+    
+    public var id: MediaResourceId {
+        return BundleResourceId(nameHash: self.nameHash)
+    }
+    
+    public func isEqual(to: MediaResource) -> Bool {
+        if let to = to as? BundleResource {
+            return self.nameHash == to.nameHash
         } else {
             return false
         }

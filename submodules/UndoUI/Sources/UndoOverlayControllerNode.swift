@@ -78,6 +78,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         var displayUndo = true
         var undoText = presentationData.strings.Undo_Undo
         var undoTextColor = UIColor(rgb: 0x5ac8fa)
+        undoTextColor = presentationData.theme.list.itemAccentColor.withMultiplied(hue: 1.0, saturation: 0.64, brightness: 1.08)
         
         if presentationData.theme.overallDarkAppearance {
             self.animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
@@ -303,14 +304,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = undo
                 self.originalRemainingSeconds = 5
-            case let .emoji(path, text):
+            case let .emoji(name, text):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = AnimatedStickerNode()
                 self.animatedStickerNode?.visibility = true
-                self.animatedStickerNode?.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 100, height: 100, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                self.animatedStickerNode?.setup(source: AnimatedStickerNodeLocalFileSource(name: name), width: 100, height: 100, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -447,7 +448,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }
                 
                 if dice.emoji == "🎰" {
-                    let slotMachineNode = SlotMachineAnimationNode(size: CGSize(width: 42.0, height: 42.0))
+                    let slotMachineNode = SlotMachineAnimationNode(account: context.account, size: CGSize(width: 42.0, height: 42.0))
                     self.slotMachineNode = slotMachineNode
                     
                     slotMachineNode.setState(.rolling)
@@ -714,10 +715,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 let animatedStickerNode = AnimatedStickerNode()
                 self.animatedStickerNode = animatedStickerNode
-                if let path = getAppBundle().path(forResource: "anim_savemedia", ofType: "tgs") {
-                    animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 80, height: 80, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                    animatedStickerNode.visibility = true
-                }
+                
+                animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "anim_savemedia"), width: 80, height: 80, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                animatedStickerNode.visibility = true
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)

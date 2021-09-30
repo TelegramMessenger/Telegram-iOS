@@ -158,7 +158,7 @@ static bool isEmojiCharacter(NSString *singleChar)
     _label.hidden = true;
 }
 
-- (void)loadUserPlaceholderWithSize:(CGSize)size uid:(int)uid firstName:(NSString *)firstName lastName:(NSString *)lastName placeholder:(UIImage *)placeholder
+- (void)loadUserPlaceholderWithSize:(CGSize)size uid:(int64_t)uid firstName:(NSString *)firstName lastName:(NSString *)lastName placeholder:(UIImage *)placeholder
 {
     _label.font = _doubleFont;
     _usingSingleFont = false;

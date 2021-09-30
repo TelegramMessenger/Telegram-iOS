@@ -40,6 +40,7 @@ struct ThemeColorState {
     fileprivate var displayPatternPanel: Bool
     
     var accentColor: HSBColor
+    var outgoingAccentColor: HSBColor?
     var initialWallpaper: TelegramWallpaper?
     var backgroundColors: [HSBColor]
     
@@ -61,6 +62,7 @@ struct ThemeColorState {
         self.colorPanelCollapsed = false
         self.displayPatternPanel = false
         self.accentColor = HSBColor(hue: 0.0, saturation: 0.0, brightness: 1.0)
+        self.outgoingAccentColor = nil
         self.initialWallpaper = nil
         self.backgroundColors = []
         self.preview = false
@@ -74,11 +76,12 @@ struct ThemeColorState {
         self.rotation = 0
     }
     
-    init(section: ThemeColorSection, accentColor: HSBColor, initialWallpaper: TelegramWallpaper?, backgroundColors: [HSBColor], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, animateMessageColors: Bool, defaultMessagesColor: HSBColor?, messagesColors: [HSBColor], selectedColor: Int = 0, rotation: Int32 = 0) {
+    init(section: ThemeColorSection, accentColor: HSBColor, outgoingAccentColor: HSBColor?, initialWallpaper: TelegramWallpaper?, backgroundColors: [HSBColor], patternWallpaper: TelegramWallpaper?, patternIntensity: Int32, animateMessageColors: Bool, defaultMessagesColor: HSBColor?, messagesColors: [HSBColor], selectedColor: Int = 0, rotation: Int32 = 0) {
         self.section = section
         self.colorPanelCollapsed = false
         self.displayPatternPanel = false
         self.accentColor = accentColor
+        self.outgoingAccentColor = outgoingAccentColor
         self.initialWallpaper = initialWallpaper
         self.backgroundColors = backgroundColors
         self.preview = false
@@ -94,6 +97,9 @@ struct ThemeColorState {
     
     func isEqual(to otherState: ThemeColorState) -> Bool {
         if self.accentColor != otherState.accentColor {
+            return false
+        }
+        if self.outgoingAccentColor != otherState.outgoingAccentColor {
             return false
         }
         if self.preview != otherState.preview {
@@ -289,7 +295,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.patternPanelNode = WallpaperPatternPanelNode(context: self.context, theme: self.theme, strings: self.presentationData.strings)
         
         let doneButtonType: WallpaperGalleryToolbarDoneButtonType
-        if case .edit(_, _, _, _, true, _) = self.mode {
+        if case .edit(_, _, _, _, _, true, _) = self.mode {
             doneButtonType = .proceed
         } else {
             doneButtonType = .set
@@ -344,6 +350,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         case .accent:
                             if let firstColor = colors.first {
                                 updated.accentColor = firstColor
+                            }
+                            if colors.count == 2, let secondColor = colors.last {
+                                updated.outgoingAccentColor = secondColor
+                            } else {
+                                updated.outgoingAccentColor = nil
                             }
                         case .background:
                             updated.backgroundColors = colors
@@ -434,6 +445,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
         |> map { state -> (PresentationTheme?, TelegramWallpaper, UIColor, [HSBColor], Int32, PatternWallpaperArguments, Bool) in
             let accentColor = state.accentColor
+            let outgoingAccentColor = state.outgoingAccentColor
             var backgroundColors = state.backgroundColors
             let messagesColors = state.messagesColors
 
@@ -484,9 +496,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
 
             if !updateOnlyWallpaper {
                 if let themeReference = mode.themeReference {
-                    updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
-                } else if case let .edit(theme, _, _, _, _, _) = mode {
-                    updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors)
+                    updatedTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, accentColor: accentColor.color, outgoingAccentColor: outgoingAccentColor?.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors, serviceBackgroundColor: serviceBackgroundColor, preview: true) ?? defaultPresentationTheme
+                } else if case let .edit(_, theme, _, _, _, _, _) = mode {
+                    updatedTheme = customizePresentationTheme(theme, editing: false, accentColor: accentColor.color, outgoingAccentColor: outgoingAccentColor?.color, backgroundColors: backgroundColors.map { $0.rgb }, bubbleColors: messagesColors.map { $0.rgb }, animateBubbleColors: state.animateMessageColors)
                 } else {
                     updatedTheme = theme
                 }
@@ -644,9 +656,14 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             
             var colors: [HSBColor]
             var defaultColor: HSBColor?
+            var suggestedNewColor: HSBColor?
             switch section {
                 case .accent:
                     colors = [self.state.accentColor]
+                    if let outgoingAccentColor = self.state.outgoingAccentColor {
+                        colors.append(outgoingAccentColor)
+                    }
+                    suggestedNewColor = HSBColor(color: self.theme.chat.message.outgoing.accentTextColor)
                 case .background:
                     if let themeReference = self.mode.themeReference, case let .builtin(theme) = themeReference {
                         switch theme {
@@ -682,10 +699,15 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 colors = [defaultColor]
             }
 
+            
             let maximumNumberOfColors: Int
             switch self.state.section {
             case .accent:
-                maximumNumberOfColors = 1
+                if [.classic, .day].contains(self.theme.referenceTheme.baseTheme) {
+                    maximumNumberOfColors = 2
+                } else {
+                    maximumNumberOfColors = 1
+                }
             case .background:
                 maximumNumberOfColors = 4
             case .messages:
@@ -702,7 +724,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     rotateAvailable: self.state.section == .background,
                     rotation: self.state.rotation,
                     preview: false,
-                    simpleGradientGeneration: self.state.section == .messages
+                    simpleGradientGeneration: self.state.section == .messages,
+                    suggestedNewColor: suggestedNewColor
                 )
             }, animated: animated)
             
@@ -730,7 +753,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 doneButtonType = .apply
                 cancelButtonType = .discard
             } else {
-                if case .edit(_, _, _, _, true, _) = self.mode {
+                if case .edit(_, _, _, _, _, true, _) = self.mode {
                     doneButtonType = .proceed
                 } else {
                     doneButtonType = .set
@@ -818,11 +841,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let peers = SimpleDictionary<PeerId, Peer>()
         let messages = SimpleDictionary<MessageId, Message>()
         let selfPeer = TelegramUser(id: self.context.account.peerId, accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(1)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_1_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let peer2 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(2)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_2_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let peer3 = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(3)), accessHash: nil, title: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_Name, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(.init(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil)
-        let peer3Author = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(4)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_AuthorName, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        let peer4 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(4)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_4_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_1_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        let peer2 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(2)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_2_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        let peer3 = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(3)), accessHash: nil, title: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_Name, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(.init(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil)
+        let peer3Author = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(4)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_AuthorName, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        let peer4 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(4)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_4_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         
         let timestamp = self.referenceTimestamp
         
@@ -884,7 +907,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let headerItem = self.context.sharedContext.makeChatMessageDateHeaderItem(context: self.context, timestamp:  self.referenceTimestamp, theme: self.theme, strings: self.presentationData.strings, wallpaper: self.wallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder)
         
         var items: [ListViewItem] = []
-        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(1))
+        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
         let otherPeerId = self.context.account.peerId
         var peers = SimpleDictionary<PeerId, Peer>()
         var messages = SimpleDictionary<MessageId, Message>()
@@ -903,9 +926,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         sampleMessages.append(message3)
         
         let message4 = Message(stableId: 4, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 4), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66003, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_7_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        messages[message4.id] = message4
         sampleMessages.append(message4)
         
-        let message5 = Message(stableId: 5, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 5), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66004, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
+        let message5 = Message(stableId: 5, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 5), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66004, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [ReplyMessageAttribute(messageId: message4.id, threadMessageId: nil)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
         messages[message5.id] = message5
         sampleMessages.append(message5)
         
@@ -1169,7 +1193,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         } else {
             self.view.endEditing(true)
             
-            let wallpaper = self.state.previousPatternWallpaper ?? self.patternPanelNode.wallpapers.first
+            let wallpaper: TelegramWallpaper?
+            if let currentPatternWallpaper = self.state.patternWallpaper {
+                wallpaper = currentPatternWallpaper
+            } else {
+                wallpaper = self.state.previousPatternWallpaper ?? self.patternPanelNode.wallpapers.first
+            }
             let backgroundColors = self.currentBackgroundColors
             
             var appeared = false

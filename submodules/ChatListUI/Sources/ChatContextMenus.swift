@@ -250,10 +250,10 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                 updatedItems.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Back, icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
                                 }, action: { c, _ in
-                                    c.setItems(chatContextMenuItems(context: context, peerId: peerId, promoInfo: promoInfo, source: source, chatListController: chatListController, joined: joined))
+                                    c.setItems(chatContextMenuItems(context: context, peerId: peerId, promoInfo: promoInfo, source: source, chatListController: chatListController, joined: joined) |> map { ContextController.Items(items: $0) }, minHeight: nil)
                                 })))
 
-                                c.setItems(.single(updatedItems))
+                                c.setItems(.single(ContextController.Items(items: updatedItems)), minHeight: nil)
                             })))
                         }
                     }
@@ -271,7 +271,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     })))
                 }
 
-                let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(777000)) && peerId == context.account.peerId
+                let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(777000)) && peerId == context.account.peerId
                 if let (group, _) = groupAndIndex {
                     if archiveEnabled {
                         let isArchived = group == Namespaces.PeerGroup.archive

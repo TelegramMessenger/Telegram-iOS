@@ -156,7 +156,7 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                 var text = ""
                 var sourcePeer: (Bool, String)?
                 for message in messages {
-                    if let author = message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
+                    if let author = message.forwardInfo?.author ?? message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
                         uniquePeerIds.insert(author.id)
                         if !authors.isEmpty {
                             authors.append(", ")
@@ -258,27 +258,31 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, forwardOptionsState: ChatInterfaceForwardOptionsState?, force: Bool = false) {
         if force || self.theme !== theme || self.strings !== strings || self.forwardOptionsState != forwardOptionsState {
+            let previousTheme = self.theme
             self.theme = theme
             self.strings = strings
             self.forwardOptionsState = forwardOptionsState
             
-            if self.theme !== theme {
-                self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
-                self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
-                self.iconNode.image = PresentationResourcesChat.chatInputPanelForwardIconImage(theme)
-            }
+            self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
+            self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
+            self.iconNode.image = PresentationResourcesChat.chatInputPanelForwardIconImage(theme)
             
             let filteredMessages = self.messages
+            
+            var authors = self.authors ?? ""
+            if forwardOptionsState?.hideNames == true {
+                authors = self.strings.DialogList_You
+            }
             
             var title = ""
             var text = ""
             if filteredMessages.count == 1, let message = filteredMessages.first {
                 title = self.strings.Conversation_ForwardOptions_ForwardTitleSingle
                 let (string, _) = textStringForForwardedMessage(message, strings: strings)
-                text = "\(self.authors ?? ""): \(string)"
+                text = "\(authors): \(string)"
             } else {
                 title = self.strings.Conversation_ForwardOptions_ForwardTitle(Int32(filteredMessages.count))
-                text = "From \(self.authors ?? "")"
+                text = self.strings.Conversation_ForwardFrom(authors).string
             }
             
             self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)

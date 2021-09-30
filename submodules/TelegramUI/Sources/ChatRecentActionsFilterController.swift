@@ -343,7 +343,7 @@ private func channelRecentActionsFilterControllerEntries(presentationData: Prese
     return entries
 }
 
-public func channelRecentActionsFilterController(context: AccountContext, peer: Peer, events: AdminLogEventsFlags, adminPeerIds: [PeerId]?, apply: @escaping (_ events: AdminLogEventsFlags, _ adminPeerIds: [PeerId]?) -> Void) -> ViewController {
+public func channelRecentActionsFilterController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, events: AdminLogEventsFlags, adminPeerIds: [PeerId]?, apply: @escaping (_ events: AdminLogEventsFlags, _ adminPeerIds: [PeerId]?) -> Void) -> ViewController {
     let statePromise = ValuePromise(ChatRecentActionsFilterControllerState(events: events, adminPeerIds: adminPeerIds), ignoreRepeated: true)
     let stateValue = Atomic(value: ChatRecentActionsFilterControllerState(events: events, adminPeerIds: adminPeerIds))
     let updateState: ((ChatRecentActionsFilterControllerState) -> ChatRecentActionsFilterControllerState) -> Void = { f in
@@ -353,9 +353,7 @@ public func channelRecentActionsFilterController(context: AccountContext, peer: 
     var dismissImpl: (() -> Void)?
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
-    
-    let presentationDataSignal = context.sharedContext.presentationData
-    
+        
     let actionsDisposable = DisposableSet()
     
     let arguments = ChatRecentActionsFilterControllerArguments(context: context, toggleAllActions: { value in
@@ -433,7 +431,8 @@ public func channelRecentActionsFilterController(context: AccountContext, peer: 
     
     var previousPeers: [RenderedChannelParticipant]?
     
-    let signal = combineLatest(presentationDataSignal, statePromise.get(), adminsPromise.get() |> deliverOnMainQueue)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, statePromise.get(), adminsPromise.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
     |> map { presentationData, state, admins -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {

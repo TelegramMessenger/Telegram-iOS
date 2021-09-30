@@ -172,6 +172,56 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         case videoMessage(VideoMessage)
         case mediaInput(MediaInput)
     }
+            
+    final class DecorationItemNode: ASDisplayNode {
+        let itemNode: ChatMessageItemView
+        private let contentNode: ASDisplayNode
+        private let getContentAreaInScreenSpace: () -> CGRect
+        
+        private let scrollingContainer: ASDisplayNode
+        private let containerNode: ASDisplayNode
+        private let clippingNode: ASDisplayNode
+        
+        fileprivate weak var overlayController: OverlayTransitionContainerController?
+        
+        init(itemNode: ChatMessageItemView, contentNode: ASDisplayNode, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+            self.itemNode = itemNode
+            self.contentNode = contentNode
+            self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
+            
+            self.clippingNode = ASDisplayNode()
+            self.clippingNode.clipsToBounds = true
+            
+            self.scrollingContainer = ASDisplayNode()
+            self.containerNode = ASDisplayNode()
+            
+            super.init()
+            
+            self.addSubnode(self.clippingNode)
+            self.clippingNode.addSubnode(self.scrollingContainer)
+            self.scrollingContainer.addSubnode(self.containerNode)
+            self.containerNode.addSubnode(self.contentNode)
+        }
+        
+        func updateLayout(size: CGSize) {
+            self.clippingNode.frame = CGRect(origin: CGPoint(), size: size)
+            
+            let absoluteRect = self.itemNode.view.convert(self.itemNode.view.bounds, to: self.itemNode.supernode?.supernode?.view)
+            self.containerNode.frame = absoluteRect
+        }
+        
+        func addExternalOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+            if transition.isAnimated {
+                assert(true)
+            }
+            self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: -offset)
+            transition.animateOffsetAdditive(node: self.scrollingContainer, offset: offset)
+        }
+
+        func addContentOffset(offset: CGFloat) {
+            self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: offset)
+        }
+    }
 
     private final class AnimatingItemNode: ASDisplayNode {
         let itemNode: ChatMessageItemView
@@ -553,6 +603,7 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
     private var currentPendingItem: (Int64, Source, () -> Void)?
 
     private var animatingItemNodes: [AnimatingItemNode] = []
+    private var decorationItemNodes: [DecorationItemNode] = []
 
     var hasScheduledTransitions: Bool {
         return self.currentPendingItem != nil
@@ -584,6 +635,28 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
     func add(correlationId: Int64, source: Source, initiated: @escaping () -> Void) {
         self.currentPendingItem = (correlationId, source, initiated)
         self.listNode.setCurrentSendAnimationCorrelationId(correlationId)
+    }
+    
+    func add(decorationNode: ASDisplayNode, itemNode: ChatMessageItemView) -> DecorationItemNode {
+        let decorationItemNode = DecorationItemNode(itemNode: itemNode, contentNode: decorationNode, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
+        decorationItemNode.updateLayout(size: self.bounds.size)
+       
+        self.decorationItemNodes.append(decorationItemNode)
+        self.addSubnode(decorationItemNode)
+        
+//        let overlayController = OverlayTransitionContainerController()
+//        overlayController.displayNode.isUserInteractionEnabled = false
+//        overlayController.displayNode.addSubnode(decorationItemNode)
+//        decorationItemNode.overlayController = overlayController
+//        itemNode.item?.context.sharedContext.mainWindow?.presentInGlobalOverlay(overlayController)
+                
+        return decorationItemNode
+    }
+    
+    func remove(decorationNode: DecorationItemNode) {
+        self.decorationItemNodes.removeAll(where: { $0 === decorationNode })
+        decorationNode.removeFromSupernode()
+        decorationNode.overlayController?.dismiss()
     }
 
     private func beginAnimation(itemNode: ChatMessageItemView, source: Source) {
@@ -646,11 +719,21 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         for animatingItemNode in self.animatingItemNodes {
             animatingItemNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
         }
+        if itemNode == nil {
+            for decorationItemNode in self.decorationItemNodes {
+                decorationItemNode.addExternalOffset(offset: offset, transition: transition)
+            }
+        }
     }
 
     func addContentOffset(offset: CGFloat, itemNode: ListViewItemNode?) {
         for animatingItemNode in self.animatingItemNodes {
             animatingItemNode.addContentOffset(offset: offset, itemNode: itemNode)
+        }
+        if itemNode == nil {
+            for decorationItemNode in self.decorationItemNodes {
+                decorationItemNode.addContentOffset(offset: offset)
+            }
         }
     }
 

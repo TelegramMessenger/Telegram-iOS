@@ -1,8 +1,6 @@
 import UIKit
 import AsyncDisplayKit
 
-private let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
-
 private var backArrowImageCache: [Int32: UIImage] = [:]
 
 public final class SparseNode: ASDisplayNode {
@@ -236,6 +234,8 @@ open class NavigationBar: ASDisplayNode {
     public static var defaultSecondaryContentHeight: CGFloat {
         return 38.0
     }
+
+    public static let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
     
     var presentationData: NavigationBarPresentationData
     
@@ -388,7 +388,7 @@ open class NavigationBar: ASDisplayNode {
     private var title: String? {
         didSet {
             if let title = self.title {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.presentationData.theme.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: NavigationBar.titleFont, textColor: self.presentationData.theme.primaryTextColor)
                 self.titleNode.accessibilityLabel = title
                 if self.titleNode.supernode == nil {
                     self.buttonsContainerNode.addSubnode(self.titleNode)
@@ -837,7 +837,7 @@ open class NavigationBar: ASDisplayNode {
         self.rightButtonNode.rippleColor = self.presentationData.theme.primaryTextColor.withAlphaComponent(0.05)
         self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
         if let title = self.title {
-            self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.presentationData.theme.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: title, font: NavigationBar.titleFont, textColor: self.presentationData.theme.primaryTextColor)
             self.titleNode.accessibilityLabel = title
         }
         self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
@@ -919,7 +919,7 @@ open class NavigationBar: ASDisplayNode {
             self.rightButtonNode.rippleColor = self.presentationData.theme.primaryTextColor.withAlphaComponent(0.05)
             self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
             if let title = self.title {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: titleFont, textColor: self.presentationData.theme.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: NavigationBar.titleFont, textColor: self.presentationData.theme.primaryTextColor)
                 self.titleNode.accessibilityLabel = title
             }
             self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
@@ -1191,7 +1191,7 @@ open class NavigationBar: ASDisplayNode {
             }
         } else if let title = self.title {
             let node = ImmediateTextNode()
-            node.attributedText = NSAttributedString(string: title, font: titleFont, textColor: foregroundColor)
+            node.attributedText = NSAttributedString(string: title, font: NavigationBar.titleFont, textColor: foregroundColor)
             return node
         } else {
             return nil

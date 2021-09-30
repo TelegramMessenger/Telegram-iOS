@@ -128,11 +128,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private(set) var textInputPanelNode: ChatTextInputPanelNode?
     private var inputMediaNode: ChatMediaInputNode?
     
-    private let choosingStickerPromise = Promise<Bool>(false)
-    var choosingSticker: Signal<Bool, NoError> {
-        return self.choosingStickerPromise.get()
-    }
-    
     let navigateButtons: ChatHistoryNavigationButtons
     
     private var ignoreUpdateHeight = false
@@ -498,7 +493,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
-        self.textInputPanelNode = ChatTextInputPanelNode(presentationInterfaceState: chatPresentationInterfaceState, presentController: { [weak self] controller in
+        self.textInputPanelNode = ChatTextInputPanelNode(presentationInterfaceState: chatPresentationInterfaceState, presentationContext: ChatPresentationContext(backgroundNode: backgroundNode), presentController: { [weak self] controller in
             self?.interfaceInteraction?.presentController(controller, nil)
         }, sendWithKb: NGSettings.sendWithEnter)
         self.textInputPanelNode?.storedInputLanguage = chatPresentationInterfaceState.interfaceState.inputLanguage
@@ -871,7 +866,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             if let inputMediaNode = inputNode as? ChatMediaInputNode, self.inputMediaNode == nil {
                 self.inputMediaNode = inputMediaNode
-                self.choosingStickerPromise.set(inputMediaNode.choosingSticker)
                 inputMediaNode.requestDisableStickerAnimations = { [weak self] disabled in
                     self?.controller?.disableStickerAnimations = disabled
                 }
@@ -1452,9 +1446,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             if inputPanelNodeHandlesTransition {
+                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: .immediate)
                 inputPanelNode.frame = apparentInputPanelFrame
                 inputPanelNode.alpha = 1.0
             } else {
+                inputPanelNode.updateAbsoluteRect(apparentInputPanelFrame, within: layout.size, transition: transition)
                 transition.updateFrame(node: inputPanelNode, frame: apparentInputPanelFrame)
                 transition.updateAlpha(node: inputPanelNode, alpha: 1.0)
             }
@@ -1977,7 +1973,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self?.controller?.disableStickerAnimations = disabled
             }
             self.inputMediaNode = inputNode
-            self.choosingStickerPromise.set(inputNode.choosingSticker)
             if let (validLayout, _) = self.validLayout {
                 let _ = inputNode.updateLayout(width: validLayout.size.width, leftInset: validLayout.safeInsets.left, rightInset: validLayout.safeInsets.right, bottomInset: validLayout.intrinsicInsets.bottom, standardInputHeight: validLayout.standardInputHeight, inputHeight: validLayout.inputHeight ?? 0.0, maximumHeight: validLayout.standardInputHeight, inputPanelHeight: 44.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: validLayout.deviceMetrics, isVisible: false)
             }
@@ -2595,6 +2590,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return false
         }
 
+        var hasAd = false
+        self.historyNode.forEachVisibleItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                if let _ = itemNode.item?.message.adAttribute {
+                    hasAd = true
+                }
+            }
+        }
+
+        if hasAd {
+            return false
+        }
+
         switch self.historyNode.visibleContentOffset() {
         case let .known(value) where value < 20.0:
             return true
@@ -2603,6 +2611,23 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         default:
             return false
         }
+    }
+
+    var shouldUseFastMessageSendAnimation: Bool {
+        var hasAd = false
+        self.historyNode.forEachVisibleItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                if let _ = itemNode.item?.message.adAttribute {
+                    hasAd = true
+                }
+            }
+        }
+
+        if hasAd {
+            return false
+        }
+
+        return true
     }
 
     var shouldAllowOverscrollActions: Bool {
@@ -2630,6 +2655,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState
         let titleAccessoryPanelSnapshot: UIView?
         let navigationBarHeight: CGFloat
+        let inputPanelNodeSnapshot: UIView?
+        let inputPanelOverscrollNodeSnapshot: UIView?
 
         fileprivate init(
             historySnapshotState: ChatHistoryListNode.SnapshotState,
@@ -2637,7 +2664,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?,
             navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState,
             titleAccessoryPanelSnapshot: UIView?,
-            navigationBarHeight: CGFloat
+            navigationBarHeight: CGFloat,
+            inputPanelNodeSnapshot: UIView?,
+            inputPanelOverscrollNodeSnapshot: UIView?
         ) {
             self.historySnapshotState = historySnapshotState
             self.titleViewSnapshotState = titleViewSnapshotState
@@ -2645,6 +2674,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.navigationButtonsSnapshotState = navigationButtonsSnapshotState
             self.titleAccessoryPanelSnapshot = titleAccessoryPanelSnapshot
             self.navigationBarHeight = navigationBarHeight
+            self.inputPanelNodeSnapshot = inputPanelNodeSnapshot
+            self.inputPanelOverscrollNodeSnapshot = inputPanelOverscrollNodeSnapshot
         }
     }
 
@@ -2657,13 +2688,25 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             snapshot.frame = titleAccessoryPanelNode.frame
             titleAccessoryPanelSnapshot = snapshot
         }
+        var inputPanelNodeSnapshot: UIView?
+        if let inputPanelNode = self.inputPanelNode, let snapshot = inputPanelNode.view.snapshotView(afterScreenUpdates: false) {
+            snapshot.frame = inputPanelNode.frame
+            inputPanelNodeSnapshot = snapshot
+        }
+        var inputPanelOverscrollNodeSnapshot: UIView?
+        if let inputPanelOverscrollNode = self.inputPanelOverscrollNode, let snapshot = inputPanelOverscrollNode.view.snapshotView(afterScreenUpdates: false) {
+            snapshot.frame = inputPanelOverscrollNode.frame
+            inputPanelOverscrollNodeSnapshot = snapshot
+        }
         return SnapshotState(
             historySnapshotState: self.historyNode.prepareSnapshotState(),
             titleViewSnapshotState: titleViewSnapshotState,
             avatarSnapshotState: avatarSnapshotState,
             navigationButtonsSnapshotState: self.navigateButtons.prepareSnapshotState(),
             titleAccessoryPanelSnapshot: titleAccessoryPanelSnapshot,
-            navigationBarHeight: self.navigationBar?.backgroundNode.bounds.height ?? 0.0
+            navigationBarHeight: self.navigationBar?.backgroundNode.bounds.height ?? 0.0,
+            inputPanelNodeSnapshot: inputPanelNodeSnapshot,
+            inputPanelOverscrollNodeSnapshot: inputPanelOverscrollNodeSnapshot
         )
     }
 
@@ -2702,6 +2745,27 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 navigationBar.backgroundNode.update(size: previousFrame.size, transition: .immediate)
                 navigationBar.backgroundNode.update(size: currentFrame.size, transition: .animated(duration: 0.5, curve: .spring))
             }
+        }
+
+        if let inputPanelNode = self.inputPanelNode, let inputPanelNodeSnapshot = snapshotState.inputPanelNodeSnapshot {
+            inputPanelNode.view.superview?.insertSubview(inputPanelNodeSnapshot, belowSubview: inputPanelNode.view)
+
+            inputPanelNodeSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputPanelNodeSnapshot] _ in
+                inputPanelNodeSnapshot?.removeFromSuperview()
+            })
+            inputPanelNodeSnapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -5.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+
+            if let inputPanelOverscrollNodeSnapshot = snapshotState.inputPanelOverscrollNodeSnapshot {
+                inputPanelNode.view.superview?.insertSubview(inputPanelOverscrollNodeSnapshot, belowSubview: inputPanelNode.view)
+
+                inputPanelOverscrollNodeSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputPanelOverscrollNodeSnapshot] _ in
+                    inputPanelOverscrollNodeSnapshot?.removeFromSuperview()
+                })
+                inputPanelOverscrollNodeSnapshot.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -5.0), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            }
+
+            inputPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            inputPanelNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 5.0), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         }
     }
 

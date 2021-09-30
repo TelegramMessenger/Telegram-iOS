@@ -343,7 +343,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             stringValue = strings.Activity_UploadingVideoMessage
                         case .choosingSticker:
                             stringValue = strings.Activity_ChoosingSticker
-                        case .speakingInGroupCall:
+                        case let .seeingEmojiInteraction(emoticon):
+                            stringValue = strings.Activity_EnjoyingAnimations(emoticon).string
+                        case .speakingInGroupCall, .interactingWithEmoji:
                             stringValue = ""
                     }
                 } else {
@@ -372,9 +374,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         state = .uploading(string, color)
                     case .playingGame:
                         state = .playingGame(string, color)
-                    case .speakingInGroupCall:
+                    case .speakingInGroupCall, .interactingWithEmoji:
                         state = .typingText(string, color)
                     case .choosingSticker:
+                        state = .choosingSticker(string, color)
+                    case .seeingEmojiInteraction:
                         state = .choosingSticker(string, color)
                 }
             } else {

@@ -256,7 +256,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     id = mediaId.id
                     category = categoryValue
                 } else {
-                    id = Int64(entry.peer?.id.id._internalGetInt32Value() ?? 0)
+                    id = Int64(entry.peer?.id.id._internalGetInt64Value() ?? 0)
                     if let resource = entry.videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                         id = id &+ resource.photoId
                     }

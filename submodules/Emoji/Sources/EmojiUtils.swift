@@ -136,7 +136,7 @@ public extension String {
                 continue
             }
             string.unicodeScalars.append(scalar)
-            if scalar.value == 0x2764, self.unicodeScalars.count > 1, self.emojis.count == 1 {
+            if scalar.value == 0x2764 && self.unicodeScalars.count < 3 {
                 break
             }
         }

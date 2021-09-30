@@ -150,7 +150,7 @@ private final class ItemNode: ASDisplayNode {
 }
 
 enum ChatListSearchFilterEntryId: Hashable {
-    case filter(Int32)
+    case filter(Int64)
 }
 
 enum ChatListSearchFilterEntry: Equatable {

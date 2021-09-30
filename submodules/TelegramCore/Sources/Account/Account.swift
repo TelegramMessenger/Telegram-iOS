@@ -106,7 +106,9 @@ public class UnauthorizedAccount {
         
         network.context.performBatchUpdates({
             var datacenterIds: [Int] = [1, 2]
-            if !testingEnvironment {
+            if testingEnvironment {
+                datacenterIds = [3]
+            } else {
                 datacenterIds.append(contentsOf: [4])
             }
             for id in datacenterIds {
@@ -1124,9 +1126,13 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeAppLogEventsOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedNotificationSettingsBehaviors(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedThemesUpdates(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
+        if !self.testingEnvironment {
+            self.managedOperationsDisposable.add(managedChatThemesUpdates(accountManager: accountManager, network: self.network).start())
+        }
         
         if !self.supplementary {
             self.managedOperationsDisposable.add(managedAnimatedEmojiUpdates(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedAnimatedEmojiAnimationsUpdates(postbox: self.postbox, network: self.network).start())
         }
         self.managedOperationsDisposable.add(managedGreetingStickers(postbox: self.postbox, network: self.network).start())
 

@@ -669,6 +669,7 @@ final class OverscrollContentsComponent: Component {
     let unreadCount: Int
     let location: TelegramEngine.NextUnreadChannelLocation
     let expandOffset: CGFloat
+    let freezeProgress: Bool
     let absoluteRect: CGRect
     let absoluteSize: CGSize
     let wallpaperNode: WallpaperBackgroundNode?
@@ -681,6 +682,7 @@ final class OverscrollContentsComponent: Component {
         unreadCount: Int,
         location: TelegramEngine.NextUnreadChannelLocation,
         expandOffset: CGFloat,
+        freezeProgress: Bool,
         absoluteRect: CGRect,
         absoluteSize: CGSize,
         wallpaperNode: WallpaperBackgroundNode?
@@ -692,6 +694,7 @@ final class OverscrollContentsComponent: Component {
         self.unreadCount = unreadCount
         self.location = location
         self.expandOffset = expandOffset
+        self.freezeProgress = freezeProgress
         self.absoluteRect = absoluteRect
         self.absoluteSize = absoluteSize
         self.wallpaperNode = wallpaperNode
@@ -717,6 +720,9 @@ final class OverscrollContentsComponent: Component {
             return false
         }
         if lhs.expandOffset != rhs.expandOffset {
+            return false
+        }
+        if lhs.freezeProgress != rhs.freezeProgress {
             return false
         }
         if lhs.absoluteRect != rhs.absoluteRect {
@@ -811,7 +817,14 @@ final class OverscrollContentsComponent: Component {
             let minBackgroundHeight: CGFloat = backgroundWidth + 5.0
             let avatarInset: CGFloat = 6.0
 
-            let isFullyExpanded = component.expandOffset >= fullHeight
+            let apparentExpandOffset: CGFloat
+            if component.freezeProgress {
+                apparentExpandOffset = fullHeight
+            } else {
+                apparentExpandOffset = component.expandOffset
+            }
+
+            let isFullyExpanded = apparentExpandOffset >= fullHeight
 
             let isFolderMask: Bool
             switch component.location {
@@ -821,20 +834,21 @@ final class OverscrollContentsComponent: Component {
                 isFolderMask = false
             }
 
-            let expandProgress: CGFloat = max(0.1, min(1.0, component.expandOffset / fullHeight))
+            let expandProgress: CGFloat = max(0.1, min(1.0, apparentExpandOffset / fullHeight))
+            let trueExpandProgress: CGFloat = max(0.1, min(1.0, component.expandOffset / fullHeight))
 
             func interpolate(from: CGFloat, to: CGFloat, value: CGFloat) -> CGFloat {
                 return (1.0 - value) * from + value * to
             }
 
-            let backgroundHeight: CGFloat = interpolate(from: minBackgroundHeight, to: fullHeight, value: expandProgress)
+            let backgroundHeight: CGFloat = interpolate(from: minBackgroundHeight, to: fullHeight, value: trueExpandProgress)
 
             let backgroundFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - backgroundWidth) / 2.0), y: fullHeight - backgroundHeight), size: CGSize(width: backgroundWidth, height: backgroundHeight))
 
-            let alphaProgress: CGFloat = max(0.0, min(1.0, component.expandOffset / 10.0))
+            let alphaProgress: CGFloat = max(0.0, min(1.0, apparentExpandOffset / 10.0))
 
             let maxAvatarScale: CGFloat = 1.0
-            var avatarExpandProgress: CGFloat = max(0.01, min(maxAvatarScale, component.expandOffset / fullHeight))
+            var avatarExpandProgress: CGFloat = max(0.01, min(maxAvatarScale, apparentExpandOffset / fullHeight))
             avatarExpandProgress *= expandProgress
 
             let avatarOffsetProgress = interpolate(from: 0.1, to: 1.0, value: avatarExpandProgress)
@@ -978,6 +992,7 @@ final class ChatOverscrollControl: CombinedComponent {
     let location: TelegramEngine.NextUnreadChannelLocation
     let context: AccountContext
     let expandDistance: CGFloat
+    let freezeProgress: Bool
     let absoluteRect: CGRect
     let absoluteSize: CGSize
     let wallpaperNode: WallpaperBackgroundNode?
@@ -990,6 +1005,7 @@ final class ChatOverscrollControl: CombinedComponent {
         location: TelegramEngine.NextUnreadChannelLocation,
         context: AccountContext,
         expandDistance: CGFloat,
+        freezeProgress: Bool,
         absoluteRect: CGRect,
         absoluteSize: CGSize,
         wallpaperNode: WallpaperBackgroundNode?
@@ -1001,6 +1017,7 @@ final class ChatOverscrollControl: CombinedComponent {
         self.location = location
         self.context = context
         self.expandDistance = expandDistance
+        self.freezeProgress = freezeProgress
         self.absoluteRect = absoluteRect
         self.absoluteSize = absoluteSize
         self.wallpaperNode = wallpaperNode
@@ -1028,6 +1045,9 @@ final class ChatOverscrollControl: CombinedComponent {
         if lhs.expandDistance != rhs.expandDistance {
             return false
         }
+        if lhs.freezeProgress != rhs.freezeProgress {
+            return false
+        }
         if lhs.absoluteRect != rhs.absoluteRect {
             return false
         }
@@ -1053,6 +1073,7 @@ final class ChatOverscrollControl: CombinedComponent {
                     unreadCount: context.component.unreadCount,
                     location: context.component.location,
                     expandOffset: context.component.expandDistance,
+                    freezeProgress: context.component.freezeProgress,
                     absoluteRect: context.component.absoluteRect,
                     absoluteSize: context.component.absoluteSize,
                     wallpaperNode: context.component.wallpaperNode

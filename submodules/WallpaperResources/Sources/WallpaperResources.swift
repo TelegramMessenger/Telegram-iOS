@@ -363,13 +363,13 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
             targetRepresentation = representations[representations.firstIndex(where: { $0.representation == representation })!]
         }
     }
-
+    
     if let targetRepresentation = targetRepresentation {
-        let maybeFullSize = combineLatest(
-            accountManager.mediaBox.resourceData(targetRepresentation.representation.resource),
-            account.postbox.mediaBox.resourceData(targetRepresentation.representation.resource)
-        )
+        let sharedResource = mode == .screen ? accountManager.mediaBox.cachedResourceRepresentation(targetRepresentation.representation.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true) : accountManager.mediaBox.resourceData(targetRepresentation.representation.resource)
         
+        let accountResource = mode == .screen ? account.postbox.mediaBox.cachedResourceRepresentation(targetRepresentation.representation.resource, representation: CachedPreparedPatternWallpaperRepresentation(), complete: false, fetch: true) : account.postbox.mediaBox.resourceData(targetRepresentation.representation.resource)
+        
+        let maybeFullSize = combineLatest(sharedResource, accountResource)
         let signal = maybeFullSize
         |> take(1)
         |> mapToSignal { maybeSharedData, maybeData -> Signal<(Data?, Bool), NoError> in
@@ -387,11 +387,11 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
 
                 let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
                     let fetchedFullSizeDisposable = fetchedFullSize.start()
-                    let fullSizeDisposable = account.postbox.mediaBox.resourceData(targetRepresentation.representation.resource).start(next: { next in
+                    let fullSizeDisposable = accountResource.start(next: { next in
                         subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
                         
                         if next.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedRead) {
-                            accountManager.mediaBox.storeResourceData(targetRepresentation.representation.resource.id, data: data)
+                            accountManager.mediaBox.storeCachedResourceRepresentation(targetRepresentation.representation.resource, representation: CachedPreparedPatternWallpaperRepresentation(), data: data)
                         }
                     }, error: subscriber.putError, completed: subscriber.putCompletion)
                     
@@ -402,7 +402,7 @@ private func patternWallpaperDatas(account: Account, accountManager: AccountMana
                 }
 
                 let sharedFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
-                    let fullSizeDisposable = accountManager.mediaBox.resourceData(targetRepresentation.representation.resource).start(next: { next in
+                    let fullSizeDisposable = sharedResource.start(next: { next in
                         subscriber.putNext((next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
                     }, error: subscriber.putError, completed: subscriber.putCompletion)
 
@@ -450,7 +450,7 @@ public func patternWallpaperImage(account: Account, accountManager: AccountManag
         if !autoFetchFullSize || fullSizeComplete {
             return patternWallpaperImageInternal(fullSizeData: fullSizeData, fullSizeComplete: fullSizeComplete, mode: mode)
         } else {
-            return .complete()
+            return .single(nil)
         }
     }
 }
@@ -526,10 +526,12 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                     let overlayImage = generateImage(arguments.drawingRect.size, rotatedContext: { size, c in
                         c.clear(CGRect(origin: CGPoint(), size: size))
                         var image: UIImage?
-                        if let fullSizeData = fullSizeData, let unpackedData = TGGUnzipData(fullSizeData, 2 * 1024 * 1024) {
-                            image = drawSvgImage(unpackedData, CGSize(width: size.width * context.scale, height: size.height * context.scale), .black, .white)
-                        } else if let fullSizeData = fullSizeData {
-                            image = UIImage(data: fullSizeData)
+                        if let fullSizeData = fullSizeData {
+                            if mode == .screen {
+                                image = renderPreparedImage(fullSizeData, CGSize(width: size.width * context.scale, height: size.height * context.scale))
+                            } else {
+                                image = UIImage(data: fullSizeData)
+                            }
                         }
 
                         if let customPatternColor = customArguments.customPatternColor, customPatternColor.alpha < 1.0 {
@@ -1310,7 +1312,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
         themeSignal = .single(makeDefaultPresentationTheme(reference: theme, serviceBackgroundColor: nil))
     } else if case let .cloud(theme) = theme, let settings = theme.theme.settings {
         themeSignal = Signal { subscriber in
-            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, specialMode: emoticon, preview: false)
+            let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
             subscriber.putNext(theme)
             subscriber.putCompletion()
             

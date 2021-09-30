@@ -258,7 +258,7 @@ public func playSound(context: AccountContext, sound: PeerMessageSound, defaultS
     }
 }
 
-public func notificationSoundSelectionController(context: AccountContext, isModal: Bool, currentSound: PeerMessageSound, defaultSound: PeerMessageSound?, completion: @escaping (PeerMessageSound) -> Void) -> ViewController {
+public func notificationSoundSelectionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, isModal: Bool, currentSound: PeerMessageSound, defaultSound: PeerMessageSound?, completion: @escaping (PeerMessageSound) -> Void) -> ViewController {
     let statePromise = ValuePromise(NotificationSoundSelectionState(selectedSound: currentSound), ignoreRepeated: true)
     let stateValue = Atomic(value: NotificationSoundSelectionState(selectedSound: currentSound))
     let updateState: ((NotificationSoundSelectionState) -> NotificationSoundSelectionState) -> Void = { f in
@@ -282,7 +282,8 @@ public func notificationSoundSelectionController(context: AccountContext, isModa
         cancelImpl?()
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, statePromise.get())
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {

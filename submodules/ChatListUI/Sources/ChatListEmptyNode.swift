@@ -4,9 +4,11 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import AppBundle
 import SolidRoundedButtonNode
 import ActivityIndicator
+import AccountContext
 
 final class ChatListEmptyNode: ASDisplayNode {
     private let action: () -> Void
@@ -24,7 +26,7 @@ final class ChatListEmptyNode: ASDisplayNode {
     
     private var validLayout: CGSize?
     
-    init(isFilter: Bool, isLoading: Bool, theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void) {
+    init(context: AccountContext, isFilter: Bool, isLoading: Bool, theme: PresentationTheme, strings: PresentationStrings, action: @escaping () -> Void) {
         self.action = action
         self.isFilter = isFilter
         self.isLoading = isLoading
@@ -67,11 +69,10 @@ final class ChatListEmptyNode: ASDisplayNode {
         } else {
             animationName = "ChatListEmpty"
         }
-        if let path = getAppBundle().path(forResource: animationName, ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-            self.animationSize = CGSize(width: 124.0, height: 124.0)
-            self.animationNode.visibility = true
-        }
+        
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+        self.animationSize = CGSize(width: 124.0, height: 124.0)
+        self.animationNode.visibility = true
         
         self.animationNode.isHidden = self.isLoading
         self.textNode.isHidden = self.isLoading

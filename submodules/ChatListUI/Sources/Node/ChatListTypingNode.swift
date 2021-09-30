@@ -61,7 +61,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 text = strings.DialogList_Typing
                             case .choosingSticker:
                                 text = strings.Activity_ChoosingSticker
-                            case .speakingInGroupCall:
+                            case .speakingInGroupCall, .seeingEmojiInteraction, .interactingWithEmoji:
                                 text = ""
                         }
                         let string = NSAttributedString(string: text, font: textFont, textColor: color)
@@ -81,6 +81,8 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 state = .typingText(string, lightColor)
                             case .choosingSticker:
                                 state = .choosingSticker(string, lightColor)
+                            case .seeingEmojiInteraction, .interactingWithEmoji:
+                                state = .none
                         }
                     } else {
                         let text: String
@@ -105,7 +107,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                     text = strings.DialogList_SingleTypingSuffix(peerTitle).string
                                 case .choosingSticker:
                                     text = strings.DialogList_SingleChoosingStickerSuffix(peerTitle).string
-                                case .speakingInGroupCall:
+                                case .speakingInGroupCall, .seeingEmojiInteraction, .interactingWithEmoji:
                                     text = ""
                             }
                         } else {
@@ -127,6 +129,8 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                             case .speakingInGroupCall:
                                 state = .typingText(string, lightColor)
                             case .choosingSticker:
+                                state = .choosingSticker(string, lightColor)
+                            case .seeingEmojiInteraction, .interactingWithEmoji:
                                 state = .none
                         }
                     }

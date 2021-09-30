@@ -123,14 +123,14 @@ func managedSynchronizeInstalledStickerPacksOperations(postbox: Postbox, network
     }
 }
 
-private func hashForStickerPackInfos(_ infos: [StickerPackCollectionInfo]) -> Int32 {
-    var acc: UInt32 = 0
+private func hashForStickerPackInfos(_ infos: [StickerPackCollectionInfo]) -> Int64 {
+    var acc: UInt64 = 0
     
     for info in infos {
-        acc = UInt32(bitPattern: Int32(bitPattern: acc &* UInt32(20261)) &+ info.hash)
+        combineInt64Hash(&acc, with: UInt64(UInt32(bitPattern: info.hash)))
     }
     
-    return Int32(bitPattern: acc & 0x7FFFFFFF)
+    return finalizeInt64Hash(acc)
 }
 
 private enum SynchronizeInstalledStickerPacksError {

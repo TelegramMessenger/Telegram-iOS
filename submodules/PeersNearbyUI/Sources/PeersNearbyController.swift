@@ -215,7 +215,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
         let arguments = arguments as! PeersNearbyControllerArguments
         switch self {
             case let .header(theme, text):
-                return PeersNearbyHeaderItem(theme: theme, text: text, sectionId: self.section)
+                return PeersNearbyHeaderItem(context: arguments.context, theme: theme, text: text, sectionId: self.section)
             case let .usersHeader(_, text, loading):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, activityIndicator: loading ? .left : .none, sectionId: self.section)
             case let .empty(theme, text):
@@ -494,7 +494,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         chatController.canReadHistory.set(false)
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: peerNearbyContextMenuItems(context: context, peerId: peer.id, present: { c in
             presentControllerImpl?(c, nil)
-        }), reactionItems: [], gesture: gesture)
+        }) |> map { ContextController.Items(items: $0) }, reactionItems: [], gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, expandUsers: {
         expandedPromise.set(true)

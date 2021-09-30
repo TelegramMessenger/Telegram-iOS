@@ -379,7 +379,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             representations = topRepresentations
             videoRepresentations = videoRepresentationsValue
             immediateThumbnailData = immediateThumbnail
-            id = Int64(self.peer.id.id._internalGetInt32Value())
+            id = self.peer.id.id._internalGetInt64Value()
             if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                 id = id &+ resource.photoId
             }
@@ -390,7 +390,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             if case let .cloud(imageId, _, _) = reference {
                 id = imageId
             } else {
-                id = Int64(self.peer.id.id._internalGetInt32Value())
+                id = self.peer.id.id._internalGetInt64Value()
             }
         }
         self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous, skipThumbnail: fullSizeOnly), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)

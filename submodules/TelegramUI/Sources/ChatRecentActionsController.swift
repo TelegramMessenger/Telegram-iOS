@@ -19,7 +19,12 @@ final class ChatRecentActionsController: TelegramBaseController {
     private let peer: Peer
     private let initialAdminPeerId: PeerId?
     private var presentationData: PresentationData
+    private var presentationDataPromise = Promise<PresentationData>()
+    override var updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) {
+        return (self.presentationData, self.presentationDataPromise.get())
+    }
     private var presentationDataDisposable: Disposable?
+    private var didSetPresentationData = false
     
     private var interaction: ChatRecentActionsInteraction!
     private var panelInteraction: ChatPanelInterfaceInteraction!
@@ -49,7 +54,7 @@ final class ChatRecentActionsController: TelegramBaseController {
                 } else {
                     text = strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertText
                 }
-                self?.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                self?.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.Channel_AdminLog_InfoPanelAlertTitle, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }
         })
         
@@ -151,15 +156,42 @@ final class ChatRecentActionsController: TelegramBaseController {
             self?.openFilterSetup()
         }
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+        let themeEmoticon = self.context.account.postbox.peerView(id: peer.id)
+        |> map { view -> String? in
+            let cachedData = view.cachedData
+            if let cachedData = cachedData as? CachedUserData {
+                return cachedData.themeEmoticon
+            } else if let cachedData = cachedData as? CachedGroupData {
+                return cachedData.themeEmoticon
+            } else if let cachedData = cachedData as? CachedChannelData {
+                return cachedData.themeEmoticon
+            } else {
+                return nil
+            }
+        }
+        |> distinctUntilChanged
+        
+        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, context.engine.themes.getChatThemes(accountManager: context.sharedContext.accountManager, onlyCached: true), themeEmoticon).start(next: { [weak self] presentationData, chatThemes, themeEmoticon in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
                 
+                var presentationData = presentationData
+                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoji == themeEmoticon }) {
+                    let useDarkAppearance = presentationData.theme.overallDarkAppearance
+                    let customTheme = useDarkAppearance ? theme.darkTheme : theme.theme
+                    if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings) {
+                        presentationData = presentationData.withUpdated(theme: theme)
+                        presentationData = presentationData.withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
+                    }
+                }
+                
+                let isFirstTime = !strongSelf.didSetPresentationData
                 strongSelf.presentationData = presentationData
-            
-                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                strongSelf.presentationDataPromise.set(.single(presentationData))
+                strongSelf.didSetPresentationData = true
+                
+                if isFirstTime || previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.updateThemeAndStrings()
                 }
             }
@@ -179,10 +211,12 @@ final class ChatRecentActionsController: TelegramBaseController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        
+        self.controllerNode.updatePresentationData(self.presentationData)
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ChatRecentActionsControllerNode(context: self.context, peer: self.peer, presentationData: self.presentationData, interaction: self.interaction, pushController: { [weak self] c in
+        self.displayNode = ChatRecentActionsControllerNode(context: self.context, controller: self, peer: self.peer, presentationData: self.presentationData, interaction: self.interaction, pushController: { [weak self] c in
             (self?.navigationController as? NavigationController)?.pushViewController(c)
         }, presentController: { [weak self] c, t, a in
             self?.present(c, in: t, with: a, blockInteraction: true)
@@ -232,7 +266,7 @@ final class ChatRecentActionsController: TelegramBaseController {
     }
     
     private func openFilterSetup() {
-        self.present(channelRecentActionsFilterController(context: self.context, peer: self.peer, events: self.controllerNode.filter.events, adminPeerIds: self.controllerNode.filter.adminPeerIds, apply: { [weak self] events, adminPeerIds in
+        self.present(channelRecentActionsFilterController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: self.peer, events: self.controllerNode.filter.events, adminPeerIds: self.controllerNode.filter.adminPeerIds, apply: { [weak self] events, adminPeerIds in
             self?.controllerNode.updateFilter(events: events, adminPeerIds: adminPeerIds)
             self?.updateTitle()
         }), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

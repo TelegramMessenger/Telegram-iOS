@@ -40,7 +40,7 @@ private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile],
             let fetched = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: file))
             let animationItem = Signal<ManagedAnimationItem?, NoError> { subscriber in
                 let fetchedDisposable = fetched.start()
-                let resourceDisposable = (chatMessageAnimationData(postbox: account.postbox, resource: file.resource, fitzModifier: nil, width: Int(fittedSize.width), height: Int(fittedSize.height), synchronousLoad: false)
+                let resourceDisposable = (chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: file.resource, fitzModifier: nil, width: Int(fittedSize.width), height: Int(fittedSize.height), synchronousLoad: false)
                 |> filter { data in
                     return data.complete
                 }).start(next: { next in

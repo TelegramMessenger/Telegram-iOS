@@ -455,7 +455,7 @@ public final class AvatarNode: ASDisplayNode {
                     if peerId.namespace == .max {
                         colorIndex = -1
                     } else {
-                        colorIndex = abs(Int(clamping: peerId.id._internalGetInt32Value()))
+                        colorIndex = abs(Int(clamping: peerId.id._internalGetInt64Value()))
                     }
                 } else {
                     colorIndex = -1
@@ -634,7 +634,7 @@ public func drawPeerAvatarLetters(context: CGContext, size: CGSize, round: Bool 
     if peerId.namespace == .max {
         colorIndex = -1
     } else {
-        colorIndex = Int(abs(peerId.id._internalGetInt32Value()))
+        colorIndex = Int(clamping: abs(peerId.id._internalGetInt64Value()))
     }
     
     let colorsArray: NSArray

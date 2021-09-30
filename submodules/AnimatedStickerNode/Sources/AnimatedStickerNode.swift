@@ -775,24 +775,6 @@ public protocol AnimatedStickerNodeSource {
     func directDataPath() -> Signal<String, NoError>
 }
 
-public final class AnimatedStickerNodeLocalFileSource: AnimatedStickerNodeSource {
-    public var fitzModifier: EmojiFitzModifier? = nil
-    
-    public let path: String
-    
-    public init(path: String) {
-        self.path = path
-    }
-    
-    public func directDataPath() -> Signal<String, NoError> {
-        return .single(self.path)
-    }
-    
-    public func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError> {
-        return .never()
-    }
-}
-
 public final class AnimatedStickerNode: ASDisplayNode {
     private let queue: Queue
     private let disposable = MetaDisposable()
@@ -847,6 +829,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
             }
         }
     }
+    
+    public var isPlayingChanged: (Bool) -> Void = { _ in }
     
     override public init() {
         self.queue = sharedQueue
@@ -977,6 +961,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
             } else{
                 self.pause()
             }
+            
+            self.isPlayingChanged(isPlaying)
         }
         let canDisplayFirstFrame = self.automaticallyLoadFirstFrame && self.isDisplaying
         if self.canDisplayFirstFrame != canDisplayFirstFrame {
@@ -1064,7 +1050,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             if frame.isLastFrame {
                                 var stopped = false
                                 var stopNow = false
-                                if case .once = strongSelf.playbackMode {
+                                if case .still = strongSelf.playbackMode {
+                                    stopNow = true
+                                } else if case .once = strongSelf.playbackMode {
                                     stopNow = true
                                 } else if case let .count(count) = strongSelf.playbackMode {
                                     strongSelf.currentLoopCount += 1
@@ -1161,7 +1149,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             if frame.isLastFrame {
                                 var stopped = false
                                 var stopNow = false
-                                if case .once = strongSelf.playbackMode {
+                                if case .still = strongSelf.playbackMode {
+                                    stopNow = true
+                                } else if case .once = strongSelf.playbackMode {
                                     stopNow = true
                                 } else if case let .count(count) = strongSelf.playbackMode {
                                     strongSelf.currentLoopCount += 1

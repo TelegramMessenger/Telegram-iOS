@@ -113,7 +113,7 @@ static NSString * AFStringFromIndexSet(NSIndexSet *indexSet) {
 }
 
 - (BOOL)hasAcceptableStatusCode {
-    return !self.acceptableStatusCodes || [self.acceptableStatusCodes containsIndex:[self.response statusCode]];
+    return !self.acceptableStatusCodes || [self.acceptableStatusCodes containsIndex:(NSUInteger)[self.response statusCode]];
 }
 
 - (BOOL)hasAcceptableContentType {

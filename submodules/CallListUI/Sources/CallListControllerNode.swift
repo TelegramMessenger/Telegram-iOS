@@ -12,6 +12,7 @@ import AccountContext
 import TelegramNotices
 import ChatListSearchItemHeader
 import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import AppBundle
 
 private struct CallListNodeListViewTransition {
@@ -281,11 +282,8 @@ final class CallListControllerNode: ASDisplayNode {
                 self.listNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         }
         
-        
-        if let path = getAppBundle().path(forResource: "CallsPlaceholder", ofType: "tgs") {
-            self.emptyAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-            self.emptyAnimationSize = CGSize(width: 148.0, height: 148.0)
-        }
+        self.emptyAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "CallsPlaceholder"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        self.emptyAnimationSize = CGSize(width: 148.0, height: 148.0)
         
         self.emptyButtonIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call List/CallIcon"), color: presentationData.theme.list.itemAccentColor)
         

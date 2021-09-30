@@ -225,9 +225,9 @@ private func chatMessageStickerPackThumbnailData(postbox: Postbox, resource: Med
     }
 }
 
-public func chatMessageAnimationData(postbox: Postbox, resource: MediaResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, synchronousLoad: Bool) -> Signal<MediaResourceData, NoError> {
+public func chatMessageAnimationData(mediaBox: MediaBox, resource: MediaResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, synchronousLoad: Bool) -> Signal<MediaResourceData, NoError> {
     let representation = CachedAnimatedStickerRepresentation(width: Int32(width), height: Int32(height), fitzModifier: fitzModifier)
-    let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false, fetch: false, attemptSynchronously: synchronousLoad)
+    let maybeFetched = mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false, fetch: false, attemptSynchronously: synchronousLoad)
 
     return maybeFetched
     |> take(1)
@@ -235,7 +235,7 @@ public func chatMessageAnimationData(postbox: Postbox, resource: MediaResource, 
         if maybeData.complete {
             return .single(maybeData)
         } else {
-            return postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false)
+            return mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false)
         }
     }
 }

@@ -708,7 +708,7 @@ private func canEditAdminRights(accountPeerId: PeerId, channelPeer: Peer, initia
     }
 }
 
-public func groupStatsController(context: AccountContext, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
+public func groupStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
     let statePromise = ValuePromise(GroupStatsState())
     let stateValue = Atomic(value: GroupStatsState())
     let updateState: ((GroupStatsState) -> GroupStatsState) -> Void = { f in
@@ -833,15 +833,15 @@ public func groupStatsController(context: AccountContext, peerId: PeerId, cached
     
     let previousData = Atomic<GroupStats?>(value: nil)
     
-    
-    let signal = combineLatest(statePromise.get(), context.sharedContext.presentationData, dataPromise.get(), context.account.postbox.loadedPeerWithId(peerId), peersPromise.get(), longLoadingSignal)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(statePromise.get(), presentationData, dataPromise.get(), context.account.postbox.loadedPeerWithId(peerId), peersPromise.get(), longLoadingSignal)
     |> deliverOnMainQueue
     |> map { state, presentationData, data, channelPeer, peers, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if data == nil {
             if longLoading {
-                emptyStateItem = StatsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
+                emptyStateItem = StatsEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings)
             } else {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
             }

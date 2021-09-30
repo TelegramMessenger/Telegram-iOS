@@ -322,13 +322,14 @@ private class ReplyThreadHistoryContextImpl {
             return
         }
 
-        let fromId: Int32?
+        let fromIdExclusive: Int32?
         let toIndex = messageIndex
         if let maxReadIncomingMessageId = self.maxReadIncomingMessageIdValue {
-            fromId = maxReadIncomingMessageId.id + 1
+            fromIdExclusive = maxReadIncomingMessageId.id
         } else {
-            fromId = nil
+            fromIdExclusive = nil
         }
+        self.maxReadIncomingMessageIdValue = messageIndex.id
 
         let account = self.account
         
@@ -370,7 +371,7 @@ private class ReplyThreadHistoryContextImpl {
             }
 
             let inputPeer = transaction.getPeer(messageIndex.id.peerId).flatMap(apiInputPeer)
-            let readCount = transaction.getThreadMessageCount(peerId: messageId.peerId, threadId: makeMessageThreadId(messageId), namespace: messageId.namespace, fromId: fromId, toIndex: toIndex)
+            let readCount = transaction.getThreadMessageCount(peerId: messageId.peerId, threadId: makeMessageThreadId(messageId), namespace: messageId.namespace, fromIdExclusive: fromIdExclusive, toIndex: toIndex)
             let topMessageId = transaction.getMessagesWithThreadId(peerId: messageId.peerId, namespace: messageId.namespace, threadId: makeMessageThreadId(messageId), from: MessageIndex.upperBound(peerId: messageId.peerId, namespace: messageId.namespace), includeFrom: false, to: MessageIndex.lowerBound(peerId: messageId.peerId, namespace: messageId.namespace), limit: 1).first?.id
             
             return (inputPeer, topMessageId, readCount)
@@ -386,7 +387,6 @@ private class ReplyThreadHistoryContextImpl {
 
             var revalidate = false
 
-            strongSelf.maxReadIncomingMessageIdValue = messageIndex.id
             var unreadCountValue = strongSelf.unreadCountValue
             if let readCount = readCount {
                 unreadCountValue = max(0, unreadCountValue - Int(readCount))
@@ -404,7 +404,12 @@ private class ReplyThreadHistoryContextImpl {
 
             if let state = strongSelf.stateValue {
                 if let indices = state.holeIndices[messageIndex.id.namespace] {
-                    let fromIdInt = Int(fromId ?? 1)
+                    let fromIdInt: Int
+                    if let fromIdExclusive = fromIdExclusive {
+                        fromIdInt = Int(fromIdExclusive + 1)
+                    } else {
+                        fromIdInt = 1
+                    }
                     let toIdInt = Int(toIndex.id.id)
                     if fromIdInt <= toIdInt, indices.intersects(integersIn: fromIdInt ..< toIdInt) {
                         revalidate = true

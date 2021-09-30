@@ -1114,15 +1114,21 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     }
                     
                     var preferredAction = ShareControllerPreferredAction.default
+                    var actionCompletionText: String = ""
                     if let generalMessageContentKind = generalMessageContentKind {
                         switch generalMessageContentKind {
-                            case .image, .video:
+                            case .image:
                                 preferredAction = .saveToCameraRoll
+                                actionCompletionText = strongSelf.presentationData.strings.Gallery_ImageSaved
+                            case .video:
+                                preferredAction = .saveToCameraRoll
+                                actionCompletionText = strongSelf.presentationData.strings.Gallery_VideoSaved
                             default:
                                 break
                         }
                     } else if messageContentKinds.count == 2 && messageContentKinds.contains(.image) && messageContentKinds.contains(.video) {
                         preferredAction = .saveToCameraRoll
+                        actionCompletionText = strongSelf.presentationData.strings.Gallery_ImagesAndVideosSaved
                     }
                     
                     if messages.count == 1 {
@@ -1177,6 +1183,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: preferredAction, forceTheme: forceTheme)
                         shareController.dismissed = { [weak self] _ in
                             self?.interacting?(false)
+                        }
+                        shareController.actionCompleted = { [weak self] in
+                            if let strongSelf = self {
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: actionCompletionText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                            }
                         }
                         shareController.completed = { [weak self] peerIds in
                             if let strongSelf = self {

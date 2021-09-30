@@ -60,6 +60,8 @@ extension StickerPackReference {
                 self = .animatedEmoji
             case let .inputStickerSetDice(emoticon):
                 self = .dice(emoticon)
+            case .inputStickerSetAnimatedEmojiAnimations:
+                self = .animatedEmojiAnimations
         }
     }
 }

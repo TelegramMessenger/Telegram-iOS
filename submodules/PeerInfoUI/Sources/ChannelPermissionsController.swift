@@ -494,7 +494,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
     return entries
 }
 
-public func channelPermissionsController(context: AccountContext, peerId originalPeerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
+public func channelPermissionsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId originalPeerId: PeerId, loadCompleted: @escaping () -> Void = {}) -> ViewController {
     let statePromise = ValuePromise(ChannelPermissionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelPermissionsControllerState())
     let updateState: ((ChannelPermissionsControllerState) -> ChannelPermissionsControllerState) -> Void = { f in
@@ -643,13 +643,13 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             var dismissController: (() -> Void)?
             let controller = ChannelMembersSearchController(context: context, peerId: peerId, mode: .ban, openPeer: { peer, participant in
                 if let participant = participant {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                     switch participant.participant {
                         case .creator:
                             return
                         case let .member(_, _, adminInfo, _, _):
                             if let adminInfo = adminInfo, adminInfo.promotedBy != context.account.peerId {
-                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_Members_AddBannedErrorAdmin, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 return
                             }
                     }
@@ -717,7 +717,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             for (listRight, permission) in allGroupPermissionList {
                 if listRight == right {
                     let text: String
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                     if !channel.hasPermission(permission) {
                         text = presentationData.strings.GroupInfo_Permissions_EditingDisabled
                     } else if right.contains(.banAddMembers) {
@@ -725,13 +725,13 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                     } else {
                         text = presentationData.strings.GroupPermission_NotAvailableInPublicGroups
                     }
-                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     break
                 }
             }
         })
     }, presentConversionToBroadcastGroup: {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         let controller = PermissionController(context: context, splashScreen: true)
         controller.navigationPresentation = .modal
         controller.setState(.custom(icon: .animation("BroadcastGroup"), title: presentationData.strings.BroadcastGroups_IntroTitle, subtitle: nil, text: presentationData.strings.BroadcastGroups_IntroText, buttonTitle: presentationData.strings.BroadcastGroups_Convert, secondaryButtonTitle: presentationData.strings.BroadcastGroups_Cancel, footerText: nil), animated: false)
@@ -787,7 +787,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                     return
                 }
                 
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                 let progress = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 presentControllerImpl?(progress, nil)
                 
@@ -855,7 +855,8 @@ public func channelPermissionsController(context: AccountContext, peerId origina
         return .single((view, peers.1))
     }
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), viewAndParticipants)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(queue: .mainQueue(), presentationData, statePromise.get(), viewAndParticipants)
     |> deliverOnMainQueue
     |> map { presentationData, state, viewAndParticipants -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let (view, participants) = viewAndParticipants

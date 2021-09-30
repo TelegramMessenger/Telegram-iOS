@@ -139,7 +139,10 @@ private final class InnerActionsContainerNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            let actionNode = strongSelf.actionNode(at: point)
+            var actionNode = strongSelf.actionNode(at: point)
+            if let actionNodeValue = actionNode, !actionNodeValue.isActionEnabled {
+                actionNode = nil
+            }
             if actionNode !== strongSelf.currentHighlightedActionNode {
                 if actionNode != nil, moved {
                     strongSelf.feedbackTap()
@@ -321,20 +324,26 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let iconNode: ASImageNode
     
     private let text: String
-    private let targetSelectionIndex: Int
+    private let targetSelectionIndex: Int?
     
-    init(presentationData: PresentationData) {
+    init(presentationData: PresentationData, tip: ContextController.Tip) {
         self.presentationData = presentationData
         self.textNode = TextNode()
-        
-        var rawText = self.presentationData.strings.ChatContextMenu_TextSelectionTip
-        if let range = rawText.range(of: "|") {
-            rawText.removeSubrange(range)
-            self.text = rawText
-            self.targetSelectionIndex = NSRange(range, in: rawText).lowerBound
-        } else {
-            self.text = rawText
-            self.targetSelectionIndex = 1
+
+        switch tip {
+        case .textSelection:
+            var rawText = self.presentationData.strings.ChatContextMenu_TextSelectionTip
+            if let range = rawText.range(of: "|") {
+                rawText.removeSubrange(range)
+                self.text = rawText
+                self.targetSelectionIndex = NSRange(range, in: rawText).lowerBound
+            } else {
+                self.text = rawText
+                self.targetSelectionIndex = 1
+            }
+        case .messageViewsPrivacy:
+            self.text = self.presentationData.strings.ChatContextMenu_MessageViewsPrivacyTip
+            self.targetSelectionIndex = nil
         }
         
         self.iconNode = ASImageNode()
@@ -427,13 +436,13 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     }
     
     func animateIn() {
-        if let textSelectionNode = self.textSelectionNode {
+        if let textSelectionNode = self.textSelectionNode, let targetSelectionIndex = self.targetSelectionIndex {
             textSelectionNode.pretendInitiateSelection()
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.5, execute: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.textSelectionNode?.pretendExtendSelection(to: strongSelf.targetSelectionIndex)
+                strongSelf.textSelectionNode?.pretendExtendSelection(to: targetSelectionIndex)
             })
         }
     }
@@ -460,7 +469,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         return self.additionalActionsNode != nil
     }
     
-    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, displayTextSelectionTip: Bool, blurBackground: Bool) {
+    init(presentationData: PresentationData, items: ContextController.Items, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
         self.blurBackground = blurBackground
         self.shadowNode = ASImageNode()
         self.shadowNode.displaysAsynchronously = false
@@ -470,7 +479,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.shadowNode.isHidden = true
         
         var items = items
-        if let firstItem = items.first, case let .custom(_, additional) = firstItem, additional {
+        if let firstItem = items.items.first, case let .custom(_, additional) = firstItem, additional {
             let additionalShadowNode = ASImageNode()
             additionalShadowNode.displaysAsynchronously = false
             additionalShadowNode.displayWithoutProcessing = true
@@ -480,15 +489,15 @@ final class ContextActionsContainerNode: ASDisplayNode {
             self.additionalShadowNode = additionalShadowNode
             
             self.additionalActionsNode = InnerActionsContainerNode(presentationData: presentationData, items: [firstItem], getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
-            items.removeFirst()
+            items.items.removeFirst()
         } else {
             self.additionalShadowNode = nil
             self.additionalActionsNode = nil
         }
         
-        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items, getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
-        if displayTextSelectionTip {
-            let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData)
+        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items.items, getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
+        if let tip = items.tip {
+            let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
             textSelectionTipNode.isUserInteractionEnabled = false
             self.textSelectionTipNode = textSelectionTipNode
         } else {

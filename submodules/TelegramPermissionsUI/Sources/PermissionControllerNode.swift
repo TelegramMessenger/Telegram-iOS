@@ -207,7 +207,7 @@ final class PermissionControllerNode: ASDisplayNode {
                                     hasPrivacyPolicy = false
                             }
                             
-                            let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind.rawValue, icon: .image(icon), title: title, text: text, buttonTitle: buttonTitle, secondaryButtonTitle: nil, buttonAction: { [weak self] in
+                            let contentNode = PermissionContentNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, kind: dataState.kind.rawValue, icon: .image(icon), title: title, text: text, buttonTitle: buttonTitle, secondaryButtonTitle: nil, buttonAction: { [weak self] in
                                 self?.allow?()
                                 }, openPrivacyPolicy: hasPrivacyPolicy ? self.openPrivacyPolicy : nil)
                             self.insertSubnode(contentNode, at: 0)
@@ -237,7 +237,7 @@ final class PermissionControllerNode: ASDisplayNode {
                         transition.updateFrame(node: contentNode, frame: contentFrame)
                         contentNode.updateLayout(size: contentFrame.size, insets: insets, transition: transition)
                     } else {                        
-                        let contentNode = PermissionContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, kind: 0, icon: icon, title: title, subtitle: subtitle, text: text, buttonTitle: buttonTitle, secondaryButtonTitle: secondaryButtonTitle, footerText: footerText, buttonAction: { [weak self] in
+                        let contentNode = PermissionContentNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, kind: 0, icon: icon, title: title, subtitle: subtitle, text: text, buttonTitle: buttonTitle, secondaryButtonTitle: secondaryButtonTitle, footerText: footerText, buttonAction: { [weak self] in
                             self?.allow?()
                         }, openPrivacyPolicy: secondaryButtonTitle != nil ? { [weak self] in
                             self?.dismiss?()

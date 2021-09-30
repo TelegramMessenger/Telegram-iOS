@@ -90,10 +90,10 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private weak var peekController: PeekController?
     
-    init(context: AccountContext, openShare: (() -> Void)?, openMention: @escaping (String) -> Void, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?) {
+    init(context: AccountContext, presentationData: PresentationData, openShare: (() -> Void)?, openMention: @escaping (String) -> Void, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?) {
         self.context = context
         self.openShare = openShare
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         self.actionPerformed = actionPerformed
         
         self.wrappingScrollNode = ASScrollNode()
