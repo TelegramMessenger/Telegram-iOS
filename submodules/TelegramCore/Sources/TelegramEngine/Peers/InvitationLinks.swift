@@ -92,7 +92,7 @@ func _internal_editPeerExportedInvitation(account: Account, peerId: PeerId, link
             if let _ = usageLimit {
                 flags |= (1 << 1)
             }
-            return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: expireDate, usageLimit: usageLimit))
+            return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: expireDate, usageLimit: usageLimit, requestNeeded: .boolFalse))
             |> mapError { _ in return EditPeerExportedInvitationError.generic }
             |> mapToSignal { result -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> in
                 return account.postbox.transaction { transaction in
@@ -132,7 +132,7 @@ func _internal_revokePeerExportedInvitation(account: Account, peerId: PeerId, li
     return account.postbox.transaction { transaction -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
-            return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: nil, usageLimit: nil))
+            return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: nil, usageLimit: nil, requestNeeded: .boolFalse))
             |> mapError { _ in return RevokePeerExportedInvitationError.generic }
             |> mapToSignal { result -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
                 return account.postbox.transaction { transaction in
@@ -775,7 +775,7 @@ private final class PeerInvitationImportersContextImpl {
             if let inputPeer = inputPeer {
                 let offsetUser = lastResult?.peer.peer.flatMap { apiInputUser($0) } ?? .inputUserEmpty
                 let offsetDate = lastResult?.date ?? 0
-                let signal = account.network.request(Api.functions.messages.getChatInviteImporters(peer: inputPeer, link: link, offsetDate: offsetDate, offsetUser: offsetUser, limit: lastResult == nil ? 10 : 50))
+                let signal = account.network.request(Api.functions.messages.getChatInviteImporters(flags: 0, peer: inputPeer, link: link, offsetDate: offsetDate, offsetUser: offsetUser, limit: lastResult == nil ? 10 : 50))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.ChatInviteImporters?, NoError> in
                     return .single(nil)
@@ -799,7 +799,7 @@ private final class PeerInvitationImportersContextImpl {
                                 let peerId: PeerId
                                 let date: Int32
                                 switch importer {
-                                    case let .chatInviteImporter(userId, dateValue):
+                                    case let .chatInviteImporter(_, userId, dateValue, _):
                                         peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                         date = dateValue
                                 }
