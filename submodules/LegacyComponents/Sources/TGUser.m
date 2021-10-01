@@ -159,7 +159,7 @@ typedef enum {
     
     if (firstName != nil && firstName.length != 0 && lastName != nil && lastName.length != 0)
     {
-        if (TGIsKorean())
+        if (TGIsKorean() || TGIsKoreanName(firstName, lastName))
             return [[NSString alloc] initWithFormat:@"%@ %@", lastName, firstName];
         else
             return [[NSString alloc] initWithFormat:@"%@ %@", firstName, lastName];

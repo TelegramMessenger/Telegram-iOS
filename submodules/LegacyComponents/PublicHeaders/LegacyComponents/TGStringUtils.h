@@ -12,6 +12,7 @@ int32_t phoneMatchHash(NSString *phone);
 bool TGIsRTL();
 bool TGIsArabic();
 bool TGIsKorean();
+bool TGIsKoreanName(NSString *firstName, NSString *lastName);
 bool TGIsLocaleArabic();
     
 #ifdef __cplusplus
