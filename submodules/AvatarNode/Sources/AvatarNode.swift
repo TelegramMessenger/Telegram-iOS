@@ -333,7 +333,7 @@ public final class AvatarNode: ASDisplayNode {
                     representation = nil
                     icon = .phoneIcon
             }
-        } else if peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer, contentSettings: context.currentContentSettings.with { $0 }) {
+        } else if peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer?._asPeer(), contentSettings: context.currentContentSettings.with { $0 }) {
             representation = peer?.smallProfileImage
         }
         let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? EnginePeer.Id(0), peer?.displayLetters ?? [], representation)
