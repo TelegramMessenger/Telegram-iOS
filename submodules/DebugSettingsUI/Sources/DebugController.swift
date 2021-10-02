@@ -848,9 +848,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain("\(bundleId)\n\(bundleVersion) (\(bundleBuild)) \(isPremiumS)"), sectionId: self.section)
         case .resetPremium:
             return ItemListActionItem(presentationData: presentationData, title: "Reset Premium", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                guard let context = arguments.context else {
-                    return
-                }
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                 let actionSheet = ActionSheetController(presentationData: presentationData)
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [

@@ -390,7 +390,7 @@ public final class ChatInterfaceState: Codable, Equatable {
         self.mediaRecordingMode = ChatTextInputMediaRecordingButtonMode(rawValue: (try? container.decodeIfPresent(Int32.self, forKey: "mrm")) ?? 0) ?? .audio
         
         self.silentPosting = ((try? container.decode(Int32.self, forKey: "sip")) ?? 0) != 0
-        self.silentPosting = ((try? container.decode(Int32.self, forKey: "fwdcpy")) ?? 0) != 0
+        self.forwardAsCopy = ((try? container.decode(Int32.self, forKey: "fwdcpy")) ?? 0) != 0
         self.inputLanguage = try? container.decodeIfPresent(String.self, forKey: "inputLanguage")
     }
     
@@ -578,6 +578,10 @@ public final class ChatInterfaceState: Codable, Equatable {
     
     public func withUpdatedInputLanguage(_ inputLanguage: String?) -> ChatInterfaceState {
         return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, forwardAsCopy: self.forwardAsCopy, inputLanguage: inputLanguage)
+    }
+    
+    public func withUpdatedForwardAsCopy(_ forwardAsCopy: Bool) -> ChatInterfaceState {
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, forwardAsCopy: forwardAsCopy, inputLanguage: self.inputLanguage)
     }
 
     public static func parse(_ state: OpaqueChatInterfaceState) -> ChatInterfaceState {

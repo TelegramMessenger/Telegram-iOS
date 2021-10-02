@@ -11759,7 +11759,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 attributes.append(ForwardOptionsMessageAttribute(hideNames: forwardOptions?.hideNames == true, hideCaptions: forwardOptions?.hideCaptions == true))
                 
                 result.append(contentsOf: messages.map { message -> EnqueueMessage in
-                    return .forward(source: message.id, grouping: .auto, attributes: attributes, correlationId: nil, asCopy)
+                    return .forward(source: message.id, grouping: .auto, attributes: attributes, correlationId: nil, asCopy: asCopy)
                 })
                 
                 let commit: ([EnqueueMessage]) -> Void = { result in

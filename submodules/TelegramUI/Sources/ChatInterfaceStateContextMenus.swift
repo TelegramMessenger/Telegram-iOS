@@ -1236,7 +1236,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
 
 
 
-                controller.setItems(.single(ngContextItems))
+                controller.setItems(.single(ContextController.Items(items: ngContextItems)), minHeight: nil)
             })))
             //
             var didAddSeparator = false
