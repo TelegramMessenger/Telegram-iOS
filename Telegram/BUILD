@@ -335,6 +335,7 @@ plist_fragment(
             <key>CFBundleURLSchemes</key>
             <array>
                 <string>telegram</string>
+                <string>nicegram</string>
             </array>
         </dict>
         <dict>
@@ -345,6 +346,8 @@ plist_fragment(
             <key>CFBundleURLSchemes</key>
             <array>
                 <string>tg</string>
+                <string>ng</string>
+                <string>ngcn</string>
             </array>
         </dict>
     </array>
