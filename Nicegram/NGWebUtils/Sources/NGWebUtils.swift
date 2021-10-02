@@ -13,7 +13,7 @@ public func getTgId(_ peer: Peer?) -> Int64 {
         if let peer = peer as? TelegramUser  {
             peerId = peer.id.toInt64()
         } else { // Channels, Chats, Groups
-            peerId = Int64("-100" + String(peer.id.namespace._internalGetInt32Value())) ?? 1
+            peerId = Int64("-100" + String(peer.id.id._internalGetInt64Value())) ?? 1
         }
         return peerId
     }
