@@ -598,9 +598,9 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody))
     entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts))
     switch kind {
-        case .presence, .voiceCalls, .forwards, .phoneNumber:
+        case .presence, .voiceCalls, .forwards, .phoneNumber, .groupInvitations:
             entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody))
-        case .groupInvitations, .profilePhoto:
+        case .profilePhoto:
             break
     }
     if let settingInfoText = settingInfoText {
