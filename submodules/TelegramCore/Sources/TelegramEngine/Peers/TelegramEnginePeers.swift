@@ -419,12 +419,12 @@ public extension TelegramEngine {
             return _internal_checkPeerChatServiceActions(postbox: self.account.postbox, peerId: peerId)
         }
 
-        public func createPeerExportedInvitation(peerId: PeerId, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
-            return _internal_createPeerExportedInvitation(account: self.account, peerId: peerId, expireDate: expireDate, usageLimit: usageLimit)
+        public func createPeerExportedInvitation(peerId: PeerId, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Bool?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
+            return _internal_createPeerExportedInvitation(account: self.account, peerId: peerId, expireDate: expireDate, usageLimit: usageLimit, requestNeeded: requestNeeded)
         }
 
-        public func editPeerExportedInvitation(peerId: PeerId, link: String, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
-            return _internal_editPeerExportedInvitation(account: self.account, peerId: peerId, link: link, expireDate: expireDate, usageLimit: usageLimit)
+        public func editPeerExportedInvitation(peerId: PeerId, link: String, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Bool?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
+            return _internal_editPeerExportedInvitation(account: self.account, peerId: peerId, link: link, expireDate: expireDate, usageLimit: usageLimit, requestNeeded: requestNeeded)
         }
 
         public func revokePeerExportedInvitation(peerId: PeerId, link: String) -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> {
@@ -450,11 +450,15 @@ public extension TelegramEngine {
             return PeerExportedInvitationsContext(account: self.account, peerId: peerId, adminId: adminId, revoked: revoked, forceUpdate: forceUpdate)
         }
         
+        public func updateInvitationRequest(peerId: PeerId, userId: PeerId, approve: Bool) -> Signal<Never, NoError> {
+            return _internal_updateInvitationRequest(account: self.account, peerId: peerId, userId: userId, approve: approve)
+        }
+        
         public func revokePersistentPeerExportedInvitation(peerId: PeerId) -> Signal<ExportedInvitation?, NoError> {
             return _internal_revokePersistentPeerExportedInvitation(account: self.account, peerId: peerId)
         }
 
-        public func peerInvitationImporters(peerId: PeerId, invite: ExportedInvitation) -> PeerInvitationImportersContext {
+        public func peerInvitationImporters(peerId: PeerId, invite: ExportedInvitation?) -> PeerInvitationImportersContext {
             return PeerInvitationImportersContext(account: self.account, peerId: peerId, invite: invite)
         }
 

@@ -250,8 +250,6 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                         action = .groupCallUpdateParticipantVolume(peerId: parsedParticipant.peerId, volume: parsedParticipant.volume ?? 10000)
                                     case let .channelAdminLogEventActionChangeHistoryTTL(prevValue, newValue):
                                         action = .changeHistoryTTL(previousValue: prevValue, updatedValue: newValue)
-                                    case let .channelAdminLogEventActionChangeTheme(prevValue, newValue):
-                                        action = .changeTheme(previous: prevValue, updated: newValue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {
