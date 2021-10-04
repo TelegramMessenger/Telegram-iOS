@@ -148,7 +148,6 @@ public final class AppLockContextImpl: AppLockContext {
     // MARK: Postufgram Code: }
     
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
-        
         assert(Queue.mainQueue().isCurrent())
         
         self.applicationBindings = applicationBindings

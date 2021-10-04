@@ -908,7 +908,7 @@ public final class ShareController: ViewController {
         } else {
             context = self.sharedContext.makeTempAccountContext(account: self.currentAccount)
         }
-        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference) |> map(Optional.init))
+        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference) |> map(Optional.init), dismissImmediately: true)
     }
     
     private func switchToAccount(account: Account, animateIn: Bool) {

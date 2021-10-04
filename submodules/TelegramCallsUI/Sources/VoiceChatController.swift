@@ -1851,7 +1851,7 @@ public final class VoiceChatController: ViewController {
             self.listContainer.addSubnode(self.topCornersNode)
             self.contentContainer.addSubnode(self.bottomGradientNode)
             self.contentContainer.addSubnode(self.bottomPanelBackgroundNode)
-            self.contentContainer.addSubnode(self.participantsNode)
+//            self.contentContainer.addSubnode(self.participantsNode)
             self.contentContainer.addSubnode(self.tileGridNode)
             self.contentContainer.addSubnode(self.mainStageContainerNode)
             self.contentContainer.addSubnode(self.transitionContainerNode)
@@ -1975,7 +1975,6 @@ public final class VoiceChatController: ViewController {
                 }
             })
             
-            
             let titleAndRecording: Signal<(String?, Bool), NoError> = self.call.state
             |> map { state -> (String?, Bool) in
                 return (state.title, state.recordingStartTimestamp != nil)
@@ -1993,7 +1992,7 @@ public final class VoiceChatController: ViewController {
                     } else {
                         isLivestream = false
                     }
-                    strongSelf.participantsNode.isHidden = !isLivestream
+                    strongSelf.participantsNode.isHidden = !isLivestream || strongSelf.isScheduled
                     
                     strongSelf.peer = peer
                     strongSelf.currentTitleIsCustom = title != nil
@@ -2190,22 +2189,6 @@ public final class VoiceChatController: ViewController {
                     if !(strongSelf.animatingExpansion || strongSelf.animatingInsertion || strongSelf.animatingAppearance) && (strongSelf.panGestureArguments == nil || strongSelf.isExpanded) {
                         strongSelf.updateDecorationsLayout(transition: transition)
                     }
-                }
-            }
-            
-            self.listNode.visibleContentOffsetChanged = { [weak self] offset in
-                guard let strongSelf = self else {
-                    return
-                }
-                var scrollAtTop = false
-                if case let .known(value) = offset, value < 180.0 {
-                    scrollAtTop = true
-                } else {
-                    scrollAtTop = false
-                }
-                if scrollAtTop != strongSelf.scrollAtTop {
-                    strongSelf.scrollAtTop = scrollAtTop
-                    strongSelf.updateTitle(transition: .immediate)
                 }
             }
             
@@ -5036,12 +5019,12 @@ public final class VoiceChatController: ViewController {
                 displayPanelVideos = self.displayPanelVideos
             }
             
-            let isLivestream: Bool
-            if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
-                isLivestream = true
-            } else {
-                isLivestream = false
-            }
+//            let isLivestream: Bool
+//            if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
+//                isLivestream = true
+//            } else {
+//                isLivestream = false
+//            }
             
             let canManageCall = self.callState?.canManageCall ?? false
             
@@ -5058,9 +5041,9 @@ public final class VoiceChatController: ViewController {
                 let memberState: VoiceChatPeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
                 if member.hasRaiseHand && !(member.muteState?.canUnmute ?? true) {
-                    if isLivestream && !canManageCall {
-                        continue
-                    }
+//                    if isLivestream && !canManageCall {
+//                        continue
+//                    }
                     memberState = .raisedHand
                     memberMuteState = member.muteState
                     
@@ -5097,9 +5080,9 @@ public final class VoiceChatController: ViewController {
                         self.raisedHandDisplayDisposables[member.peer.id] = nil
                     }
                     
-                    if isLivestream && !(memberMuteState?.canUnmute ?? true) {
-                        continue
-                    }
+//                    if isLivestream && !(memberMuteState?.canUnmute ?? true) {
+//                        continue
+//                    }
                 }
                 
                 var memberPeer = member.peer
@@ -5843,6 +5826,10 @@ public final class VoiceChatController: ViewController {
                 case .ended:
                     let translation = recognizer.translation(in: self.contentContainer.view)
                     var velocity = recognizer.velocity(in: self.contentContainer.view)
+                    
+                    if self.isScheduled && (translation.y < 0.0 || velocity.y < 0.0) {
+                        return
+                    }
                     
                     if case let .known(value) = contentOffset, value > 0.0 {
                         velocity = CGPoint()

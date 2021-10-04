@@ -436,7 +436,7 @@ final class ThemeAccentColorController: ViewController {
                 if case let .colors(initialThemeReference, true) = strongSelf.mode {
                     let themeSpecificAccentColor = settings.themeSpecificAccentColors[themeReference.index]
                     var customAccentColor: UIColor?
-                    if let color = themeSpecificAccentColor?.color {
+                    if let color = themeSpecificAccentColor?.color, color != .clear {
                         accentColor = color
                         customAccentColor = accentColor
                     } else if case let .cloud(cloudTheme) = initialThemeReference, let settings = cloudTheme.theme.settings {

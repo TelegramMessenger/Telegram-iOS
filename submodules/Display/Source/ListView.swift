@@ -2,8 +2,8 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 import UIKitRuntimeUtils
+import ObjCRuntimeUtils
 
-private let infiniteScrollSize: CGFloat = 10000.0
 private let insertionAnimationDuration: Double = 0.4
 
 private struct VisibleHeaderNodeId: Hashable {
@@ -160,6 +160,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private final var lastContentOffset: CGPoint = CGPoint()
     private final var lastContentOffsetTimestamp: CFAbsoluteTime = 0.0
     private final var ignoreScrollingEvents: Bool = false
+
+    private let infiniteScrollSize: CGFloat
     
     private final var displayLink: CADisplayLink!
     private final var needsAnimations = false
@@ -368,6 +370,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.transactionQueue = ListViewTransactionQueue()
         
         self.scroller = ListViewScroller()
+
+        self.infiniteScrollSize = 10000.0
         
         super.init()
         
@@ -823,11 +827,21 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private var generalAccumulatedDeltaY: CGFloat = 0.0
+    private var previousDidScrollTimestamp: Double = 0.0
     
     private func updateScrollViewDidScroll(_ scrollView: UIScrollView, synchronous: Bool) {
         if self.ignoreScrollingEvents || scroller !== self.scroller {
             return
         }
+
+        /*let timestamp = CACurrentMediaTime()
+        if !self.previousDidScrollTimestamp.isZero {
+            let delta = timestamp - self.previousDidScrollTimestamp
+            if delta < 0.1 {
+                print("Scrolling delta: \(delta)")
+            }
+        }
+        self.previousDidScrollTimestamp = timestamp*/
             
         //CATransaction.begin()
         //CATransaction.setDisableActions(true)
@@ -855,7 +869,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.trackingOffset += -deltaY
         }
         
-        self.enqueueUpdateVisibleItems(synchronous: synchronous)
+        self.enqueueUpdateVisibleItems(synchronous: false)
         
         var useScrollDynamics = false
         
@@ -1515,8 +1529,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         else
         {
             self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
-            self.lastContentOffset = CGPoint(x: 0.0, y: infiniteScrollSize)
-            self.scroller.contentOffset = self.lastContentOffset
+            if abs(self.scroller.contentOffset.y - infiniteScrollSize) > infiniteScrollSize / 2.0 {
+                self.lastContentOffset = CGPoint(x: 0.0, y: infiniteScrollSize)
+                self.scroller.contentOffset = self.lastContentOffset
+            } else {
+                self.lastContentOffset = self.scroller.contentOffset
+            }
         }
         self.ignoreScrollingEvents = wasIgnoringScrollingEvents
     }

@@ -774,7 +774,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             return
         }
         if case let .peer(_, peer, _, _, _, _, _, _, promoInfo, _, _, _) = item.content {
-            if promoInfo == nil, let mainPeer = peer.chatMainPeer {
+            if promoInfo == nil, let mainPeer = peer.peer {
                 item.interaction.togglePeerSelected(mainPeer)
             }
         }

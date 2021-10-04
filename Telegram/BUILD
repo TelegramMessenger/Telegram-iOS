@@ -1466,7 +1466,7 @@ ios_extension(
 plist_fragment(
     name = "BroadcastUploadInfoPlist",
     extension = "plist",
-    template =
+    template = 
     """
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
@@ -1793,6 +1793,8 @@ plist_fragment(
             </dict>
         </dict>
     </array>
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
     )
