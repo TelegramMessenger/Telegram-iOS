@@ -78,7 +78,7 @@ private struct PeerMembersListEntry: Comparable, Identifiable {
             }))
         }
         
-        return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: member.peer, presence: member.presence, text: .presence, label: label == nil ? .none : .text(label!, .standard), editing: ItemListPeerItemEditing(editable: !options.isEmpty, editing: false, revealed: false), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: member.id != context.account.peerId, sectionId: 0, action: {
+        return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: EnginePeer(member.peer), presence: member.presence.flatMap(EnginePeer.Presence.init), text: .presence, label: label == nil ? .none : .text(label!, .standard), editing: ItemListPeerItemEditing(editable: !options.isEmpty, editing: false, revealed: false), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: member.id != context.account.peerId, sectionId: 0, action: {
             action(member, .open)
         }, setPeerIdWithRevealedOptions: { _, _ in
         }, removePeer: { _ in

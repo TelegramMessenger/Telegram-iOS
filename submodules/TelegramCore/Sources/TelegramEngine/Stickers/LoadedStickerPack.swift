@@ -28,22 +28,22 @@ extension StickerPackReference {
 public enum LoadedStickerPack {
     case fetching
     case none
-    case result(info: StickerPackCollectionInfo, items: [ItemCollectionItem], installed: Bool)
+    case result(info: StickerPackCollectionInfo, items: [StickerPackItem], installed: Bool)
 }
 
-func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> {
+func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [StickerPackItem])?, NoError> {
     return network.request(Api.functions.messages.getStickerSet(stickerset: reference.apiInputStickerSet))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.messages.StickerSet?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem])?, NoError> in
+        |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [StickerPackItem])?, NoError> in
             guard let result = result else {
                 return .single(nil)
             }
             
             let info: StickerPackCollectionInfo
-            var items: [ItemCollectionItem] = []
+            var items: [StickerPackItem] = []
             switch result {
             case let .stickerSet(set, packs, documents):
                 let namespace: ItemCollectionId.Namespace
@@ -85,7 +85,7 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
                 }
             }
             
-            return postbox.transaction { transaction -> (StickerPackCollectionInfo, [ItemCollectionItem])? in
+            return postbox.transaction { transaction -> (StickerPackCollectionInfo, [StickerPackItem])? in
                 if transaction.getItemCollectionInfo(collectionId: info.id) != nil {
                     transaction.replaceItemCollectionItems(collectionId: info.id, items: items)
                 }

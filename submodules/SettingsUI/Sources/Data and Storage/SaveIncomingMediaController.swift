@@ -118,7 +118,7 @@ func saveIncomingMediaController(context: AccountContext) -> ViewController {
     |> deliverOnMainQueue
     |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let automaticMediaDownloadSettings: MediaAutoDownloadSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings

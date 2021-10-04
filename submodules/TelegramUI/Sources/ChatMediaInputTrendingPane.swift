@@ -246,7 +246,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
             if let strongSelf = self, let info = info as? StickerPackCollectionInfo {
                 let context = strongSelf.context
                 var installSignal = context.engine.stickers.loadedStickerPack(reference: .id(id: info.id.id, accessHash: info.accessHash), forceActualized: false)
-                |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
+                |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
                     switch result {
                     case let .result(info, items, installed):
                         if installed {
@@ -259,7 +259,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                                 context.engine.stickers.addStickerPackInteractively(info: info, items: items)
                                 |> ignoreValues
                             )
-                            |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> in
+                            |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
                             }
                             |> then(.single((info, items)))
                         }

@@ -5,7 +5,7 @@ import TelegramCore
 
 public func legacyImageLocationUri(resource: MediaResource) -> String? {
     if let resource = resource as? CloudPeerPhotoSizeMediaResource {
-        return resource.id.uniqueId
+        return resource.id.stringRepresentation
     }
     return nil
 }

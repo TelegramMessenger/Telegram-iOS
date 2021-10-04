@@ -388,7 +388,7 @@ public func proxySettingsController(accountManager: AccountManager<TelegramAccou
     let proxySettings = Promise<ProxySettings>()
     proxySettings.set(accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
     |> map { sharedData -> ProxySettings in
-        if let value = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+        if let value = sharedData.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) {
             return value
         } else {
             return ProxySettings.defaultSettings

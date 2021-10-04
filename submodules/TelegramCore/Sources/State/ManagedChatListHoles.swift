@@ -50,7 +50,7 @@ func managedChatListHoles(network: Network, postbox: Postbox, accountPeerId: Pee
                 return lhs.hole.index > rhs.hole.index
             })
             
-            if let preferencesView = combinedView.views[filtersKey] as? PreferencesView, let filtersState = preferencesView.values[PreferencesKeys.chatListFilters] as? ChatListFiltersState, !filtersState.filters.isEmpty {
+            if let preferencesView = combinedView.views[filtersKey] as? PreferencesView, let filtersState = preferencesView.values[PreferencesKeys.chatListFilters]?.get(ChatListFiltersState.self), !filtersState.filters.isEmpty {
                 if let topRootHole = combinedView.views[topRootHoleKey] as? AllChatListHolesView, let hole = topRootHole.latestHole {
                     let entry = ChatListHolesEntry(groupId: .root, hole: hole)
                     if !entries.contains(entry) {

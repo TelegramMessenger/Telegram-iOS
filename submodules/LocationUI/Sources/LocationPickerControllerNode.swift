@@ -129,7 +129,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> ListViewItem {
+    func item(engine: TelegramEngine, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> ListViewItem {
         switch self {
             case let .location(_, title, subtitle, venue, coordinate):
                 let icon: LocationActionListItemIcon
@@ -138,7 +138,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 } else {
                     icon = .location
                 }
-                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: icon, beginTimeAndTimeout: nil, action: {
+                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), engine: engine, title: title, subtitle: subtitle, icon: icon, beginTimeAndTimeout: nil, action: {
                     if let venue = venue {
                         interaction?.sendVenue(venue)
                     } else if let coordinate = coordinate {
@@ -148,7 +148,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                     interaction?.updateSendActionHighlight(highlighted)
                 })
             case let .liveLocation(_, title, subtitle, coordinate):
-                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: .liveLocation, beginTimeAndTimeout: nil, action: {
+                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), engine: engine, title: title, subtitle: subtitle, icon: .liveLocation, beginTimeAndTimeout: nil, action: {
                     if let coordinate = coordinate {
                         interaction?.sendLiveLocation(coordinate)
                     }
@@ -157,7 +157,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 return LocationSectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title)
             case let .venue(_, venue, _):
                 let venueType = venue?.venue?.type ?? ""
-                return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: venue, style: .plain, action: venue.flatMap { venue in
+                return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), engine: engine, venue: venue, style: .plain, action: venue.flatMap { venue in
                     return { interaction?.sendVenue(venue) }
                 }, infoAction: ["home", "work"].contains(venueType) ? {
                     interaction?.openHomeWorkInfo()
@@ -168,12 +168,12 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [LocationPickerEntry], to toEntries: [LocationPickerEntry], isLoading: Bool, isEmpty: Bool, crossFade: Bool, account: Account, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> LocationPickerTransaction {
+private func preparedTransition(from fromEntries: [LocationPickerEntry], to toEntries: [LocationPickerEntry], isLoading: Bool, isEmpty: Bool, crossFade: Bool, engine: TelegramEngine, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> LocationPickerTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(engine: engine, presentationData: presentationData, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(engine: engine, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
     return LocationPickerTransaction(deletions: deletions, insertions: insertions, updates: updates, isLoading: isLoading, isEmpty: isEmpty, crossFade: crossFade)
 }
@@ -527,7 +527,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     crossFade = true
                 }
                 
-                let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: displayedVenues == nil, isEmpty: displayedVenues?.isEmpty ?? false, crossFade: crossFade, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
+                let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: displayedVenues == nil, isEmpty: displayedVenues?.isEmpty ?? false, crossFade: crossFade, engine: context.engine, presentationData: presentationData, interaction: strongSelf.interaction)
                 strongSelf.enqueueTransition(transition)
                       
                 var displayingPlacesButton = false

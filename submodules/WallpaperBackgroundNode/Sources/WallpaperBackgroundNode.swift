@@ -8,7 +8,6 @@ import TelegramCore
 import AccountContext
 import SwiftSignalKit
 import WallpaperResources
-import Postbox
 import FastBlur
 
 private let motionAmount: CGFloat = 32.0
@@ -395,7 +394,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     }
 
     private struct PatternKey: Equatable {
-        var mediaId: MediaId
+        var mediaId: EngineMedia.Id
         var isLight: Bool
     }
     private static var cachedSharedPattern: (PatternKey, UIImage)?
@@ -626,19 +625,16 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 if let cachedValidPatternImage = WallpaperBackgroundNode.cachedValidPatternImage, cachedValidPatternImage.generated.wallpaper == wallpaper {
                     self.validPatternImage = ValidPatternImage(wallpaper: cachedValidPatternImage.generated.wallpaper, generate: cachedValidPatternImage.generate)
                 } else {
-                    func reference(for resource: MediaResource, media: Media, message: Message?) -> MediaResourceReference {
-                        if let message = message {
-                            return .media(media: .message(message: MessageReference(message), media: media), resource: resource)
-                        }
-                        return .wallpaper(wallpaper: .slug(file.slug), resource: resource)
+                    func reference(for resource: EngineMediaResource, media: EngineMedia) -> MediaResourceReference {
+                        return .wallpaper(wallpaper: .slug(file.slug), resource: resource._asResource())
                     }
 
                     var convertedRepresentations: [ImageRepresentationWithReference] = []
                     for representation in file.file.previewRepresentations {
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file.file, message: nil)))
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: EngineMediaResource(representation.resource), media: EngineMedia(file.file))))
                     }
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: file.file.resource, media: file.file, message: nil)))
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: EngineMediaResource(file.file.resource), media: EngineMedia(file.file))))
 
                     let signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
                     self.patternImageDisposable.set((signal

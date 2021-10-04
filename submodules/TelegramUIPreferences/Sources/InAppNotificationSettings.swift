@@ -28,7 +28,7 @@ public enum TotalUnreadCountDisplayCategory: Int32 {
     }
 }
 
-public struct InAppNotificationSettings: PreferencesEntry, Equatable {
+public struct InAppNotificationSettings: Codable, Equatable {
     public var playSounds: Bool
     public var vibrate: Bool
     public var displayPreviews: Bool
@@ -53,15 +53,17 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         self.displayNotificationsFromAllAccounts = displayNotificationsFromAllAccounts
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.playSounds = decoder.decodeInt32ForKey("s", orElse: 0) != 0
-        self.vibrate = decoder.decodeInt32ForKey("v", orElse: 0) != 0
-        self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
-        self.totalUnreadCountDisplayStyle = TotalUnreadCountDisplayStyle(rawValue: decoder.decodeInt32ForKey("cds", orElse: 0)) ?? .filtered
-        self.totalUnreadCountDisplayCategory = TotalUnreadCountDisplayCategory(rawValue: decoder.decodeInt32ForKey("totalUnreadCountDisplayCategory", orElse: 1)) ?? .messages
-        if let value = decoder.decodeOptionalInt32ForKey("totalUnreadCountIncludeTags_2") {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.playSounds = (try container.decode(Int32.self, forKey: "s")) != 0
+        self.vibrate = (try container.decode(Int32.self, forKey: "v")) != 0
+        self.displayPreviews = (try container.decode(Int32.self, forKey: "p")) != 0
+        self.totalUnreadCountDisplayStyle = TotalUnreadCountDisplayStyle(rawValue: try container.decode(Int32.self, forKey: "cds")) ?? .filtered
+        self.totalUnreadCountDisplayCategory = TotalUnreadCountDisplayCategory(rawValue: try container.decodeIfPresent(Int32.self, forKey: "totalUnreadCountDisplayCategory") ?? 1) ?? .messages
+        if let value = try container.decodeIfPresent(Int32.self, forKey: "totalUnreadCountIncludeTags_2") {
             self.totalUnreadCountIncludeTags = PeerSummaryCounterTags(rawValue: value)
-        } else if let value = decoder.decodeOptionalInt32ForKey("totalUnreadCountIncludeTags") {
+        } else if let value = try container.decodeIfPresent(Int32.self, forKey: "totalUnreadCountIncludeTags") {
             var resultTags: PeerSummaryCounterTags = []
             for legacyTag in LegacyPeerSummaryCounterTags(rawValue: value) {
                 if legacyTag == .regularChatsAndPrivateGroups {
@@ -79,27 +81,21 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         } else {
             self.totalUnreadCountIncludeTags = .all
         }
-        self.displayNameOnLockscreen = decoder.decodeInt32ForKey("displayNameOnLockscreen", orElse: 1) != 0
-        self.displayNotificationsFromAllAccounts = decoder.decodeInt32ForKey("displayNotificationsFromAllAccounts", orElse: 1) != 0
+        self.displayNameOnLockscreen = (try container.decodeIfPresent(Int32.self, forKey: "displayNameOnLockscreen") ?? 1) != 0
+        self.displayNotificationsFromAllAccounts = (try container.decodeIfPresent(Int32.self, forKey: "displayNotificationsFromAllAccounts") ?? 1) != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.playSounds ? 1 : 0, forKey: "s")
-        encoder.encodeInt32(self.vibrate ? 1 : 0, forKey: "v")
-        encoder.encodeInt32(self.displayPreviews ? 1 : 0, forKey: "p")
-        encoder.encodeInt32(self.totalUnreadCountDisplayStyle.rawValue, forKey: "cds")
-        encoder.encodeInt32(self.totalUnreadCountDisplayCategory.rawValue, forKey: "totalUnreadCountDisplayCategory")
-        encoder.encodeInt32(self.totalUnreadCountIncludeTags.rawValue, forKey: "totalUnreadCountIncludeTags_2")
-        encoder.encodeInt32(self.displayNameOnLockscreen ? 1 : 0, forKey: "displayNameOnLockscreen")
-        encoder.encodeInt32(self.displayNotificationsFromAllAccounts ? 1 : 0, forKey: "displayNotificationsFromAllAccounts")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? InAppNotificationSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.playSounds ? 1 : 0) as Int32, forKey: "s")
+        try container.encode((self.vibrate ? 1 : 0) as Int32, forKey: "v")
+        try container.encode((self.displayPreviews ? 1 : 0) as Int32, forKey: "p")
+        try container.encode(self.totalUnreadCountDisplayStyle.rawValue, forKey: "cds")
+        try container.encode(self.totalUnreadCountDisplayCategory.rawValue, forKey: "totalUnreadCountDisplayCategory")
+        try container.encode(self.totalUnreadCountIncludeTags.rawValue, forKey: "totalUnreadCountIncludeTags_2")
+        try container.encode((self.displayNameOnLockscreen ? 1 : 0) as Int32, forKey: "displayNameOnLockscreen")
+        try container.encode((self.displayNotificationsFromAllAccounts ? 1 : 0) as Int32, forKey: "displayNotificationsFromAllAccounts")
     }
 }
 
@@ -107,12 +103,12 @@ public func updateInAppNotificationSettingsInteractively(accountManager: Account
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings, { entry in
             let currentSettings: InAppNotificationSettings
-            if let entry = entry as? InAppNotificationSettings {
+            if let entry = entry?.get(InAppNotificationSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = InAppNotificationSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

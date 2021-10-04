@@ -129,7 +129,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             }
         case let .chats(chatsNode):
             chatsNode.peerSelected = { [weak self] peer, _, _, _ in
-                self?.openPeer?(.peer(peer: peer, isGlobal: false, participantCount: nil))
+                self?.openPeer?(.peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil))
             }
             chatsNode.additionalCategorySelected = { [weak self] id in
                 guard let strongSelf = self else {

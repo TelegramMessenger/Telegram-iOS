@@ -1,6 +1,6 @@
 import Postbox
 
-public struct LimitsConfiguration: Equatable, PreferencesEntry {
+public struct LimitsConfiguration: Codable, Equatable {
     public static let timeIntervalForever: Int32 = 0x7fffffff
     
     public var maxPinnedChatCount: Int32
@@ -35,40 +35,37 @@ public struct LimitsConfiguration: Equatable, PreferencesEntry {
         self.maxMessageRevokeIntervalInPrivateChats = maxMessageRevokeIntervalInPrivateChats
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.maxPinnedChatCount = decoder.decodeInt32ForKey("maxPinnedChatCount", orElse: 5)
-        self.maxArchivedPinnedChatCount = decoder.decodeInt32ForKey("maxArchivedPinnedChatCount", orElse: 20)
-        self.maxGroupMemberCount = decoder.decodeInt32ForKey("maxGroupMemberCount", orElse: 200)
-        self.maxSupergroupMemberCount = decoder.decodeInt32ForKey("maxSupergroupMemberCount", orElse: 5000)
-        self.maxMessageForwardBatchSize = decoder.decodeInt32ForKey("maxMessageForwardBatchSize", orElse: 50)
-        self.maxSavedGifCount = decoder.decodeInt32ForKey("maxSavedGifCount", orElse: 200)
-        self.maxRecentStickerCount = decoder.decodeInt32ForKey("maxRecentStickerCount", orElse: 20)
-        self.maxMessageEditingInterval = decoder.decodeInt32ForKey("maxMessageEditingInterval", orElse: 2 * 24 * 60 * 60)
-        self.maxMediaCaptionLength = decoder.decodeInt32ForKey("maxMediaCaptionLength", orElse: 1000)
-        self.canRemoveIncomingMessagesInPrivateChats = decoder.decodeInt32ForKey("canRemoveIncomingMessagesInPrivateChats", orElse: 0) != 0
-        self.maxMessageRevokeInterval = decoder.decodeInt32ForKey("maxMessageRevokeInterval", orElse: 2 * 24 * 60 * 60)
-        self.maxMessageRevokeIntervalInPrivateChats = decoder.decodeInt32ForKey("maxMessageRevokeIntervalInPrivateChats", orElse: 2 * 24 * 60 * 60)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.maxPinnedChatCount = (try? container.decodeIfPresent(Int32.self, forKey: "maxPinnedChatCount")) ?? 5
+        self.maxArchivedPinnedChatCount = (try? container.decodeIfPresent(Int32.self, forKey: "maxArchivedPinnedChatCount")) ?? 20
+        self.maxGroupMemberCount = (try? container.decodeIfPresent(Int32.self, forKey: "maxGroupMemberCount")) ?? 200
+        self.maxSupergroupMemberCount = (try? container.decodeIfPresent(Int32.self, forKey: "maxSupergroupMemberCount")) ?? 5000
+        self.maxMessageForwardBatchSize = (try? container.decodeIfPresent(Int32.self, forKey: "maxMessageForwardBatchSize")) ?? 50
+        self.maxSavedGifCount = (try? container.decodeIfPresent(Int32.self, forKey: "maxSavedGifCount")) ?? 200
+        self.maxRecentStickerCount = (try? container.decodeIfPresent(Int32.self, forKey: "maxRecentStickerCount")) ?? 20
+        self.maxMessageEditingInterval = (try? container.decodeIfPresent(Int32.self, forKey: "maxMessageEditingInterval")) ?? (2 * 24 * 60 * 60)
+        self.maxMediaCaptionLength = (try? container.decodeIfPresent(Int32.self, forKey: "maxMediaCaptionLength")) ?? 1000
+        self.canRemoveIncomingMessagesInPrivateChats = (try? container.decodeIfPresent(Int32.self, forKey: "canRemoveIncomingMessagesInPrivateChats") ?? 0) != 0
+        self.maxMessageRevokeInterval = (try? container.decodeIfPresent(Int32.self, forKey: "maxMessageRevokeInterval")) ?? (2 * 24 * 60 * 60)
+        self.maxMessageRevokeIntervalInPrivateChats = (try? container.decodeIfPresent(Int32.self, forKey: "maxMessageRevokeIntervalInPrivateChats")) ?? (2 * 24 * 60 * 60)
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.maxPinnedChatCount, forKey: "maxPinnedChatCount")
-        encoder.encodeInt32(self.maxArchivedPinnedChatCount, forKey: "maxArchivedPinnedChatCount")
-        encoder.encodeInt32(self.maxGroupMemberCount, forKey: "maxGroupMemberCount")
-        encoder.encodeInt32(self.maxSupergroupMemberCount, forKey: "maxSupergroupMemberCount")
-        encoder.encodeInt32(self.maxMessageForwardBatchSize, forKey: "maxMessageForwardBatchSize")
-        encoder.encodeInt32(self.maxSavedGifCount, forKey: "maxSavedGifCount")
-        encoder.encodeInt32(self.maxRecentStickerCount, forKey: "maxRecentStickerCount")
-        encoder.encodeInt32(self.maxMessageEditingInterval, forKey: "maxMessageEditingInterval")
-        encoder.encodeInt32(self.maxMediaCaptionLength, forKey: "maxMediaCaptionLength")
-        encoder.encodeInt32(self.canRemoveIncomingMessagesInPrivateChats ? 1 : 0, forKey: "canRemoveIncomingMessagesInPrivateChats")
-        encoder.encodeInt32(self.maxMessageRevokeInterval, forKey: "maxMessageRevokeInterval")
-        encoder.encodeInt32(self.maxMessageRevokeIntervalInPrivateChats, forKey: "maxMessageRevokeIntervalInPrivateChats")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? LimitsConfiguration else {
-            return false
-        }
-        return self == to
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.maxPinnedChatCount, forKey: "maxPinnedChatCount")
+        try container.encode(self.maxArchivedPinnedChatCount, forKey: "maxArchivedPinnedChatCount")
+        try container.encode(self.maxGroupMemberCount, forKey: "maxGroupMemberCount")
+        try container.encode(self.maxSupergroupMemberCount, forKey: "maxSupergroupMemberCount")
+        try container.encode(self.maxMessageForwardBatchSize, forKey: "maxMessageForwardBatchSize")
+        try container.encode(self.maxSavedGifCount, forKey: "maxSavedGifCount")
+        try container.encode(self.maxRecentStickerCount, forKey: "maxRecentStickerCount")
+        try container.encode(self.maxMessageEditingInterval, forKey: "maxMessageEditingInterval")
+        try container.encode(self.maxMediaCaptionLength, forKey: "maxMediaCaptionLength")
+        try container.encode((self.canRemoveIncomingMessagesInPrivateChats ? 1 : 0) as Int32, forKey: "canRemoveIncomingMessagesInPrivateChats")
+        try container.encode(self.maxMessageRevokeInterval, forKey: "maxMessageRevokeInterval")
+        try container.encode(self.maxMessageRevokeIntervalInPrivateChats, forKey: "maxMessageRevokeIntervalInPrivateChats")
     }
 }

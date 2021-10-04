@@ -419,9 +419,9 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                 
                 let _ = context.account.postbox.transaction({ transaction in
                     transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
-                        var settings = current as? ContactsSettings ?? ContactsSettings.defaultSettings
+                        var settings = current?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
                         settings.synchronizeContacts = false
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
                 
@@ -440,9 +440,9 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     }, updateSyncContacts: { value in
         let _ = context.account.postbox.transaction({ transaction in
             transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
-                var settings = current as? ContactsSettings ?? ContactsSettings.defaultSettings
+                var settings = current?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
                 settings.synchronizeContacts = value
-                return settings
+                return PreferencesEntry(settings)
             })
         }).start()
     }, updateSuggestFrequentContacts: { value in
@@ -506,7 +506,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     |> map { presentationData, state, noticeView, sharedData, preferences, recentPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let secretChatLinkPreviews = noticeView.value.flatMap({ ApplicationSpecificNotice.getSecretChatLinkPreviews($0) })
         
-        let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings ?? ContactsSettings.defaultSettings
+        let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings]?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
         
         let synchronizeDeviceContacts: Bool = settings.synchronizeContacts
         

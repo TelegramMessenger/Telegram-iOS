@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import Display
 import SwiftSignalKit
@@ -20,7 +19,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
         self.addSubnode(self.activityNode)
     }
     
-    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, PeerId, [(Peer, PeerInputActivity)]) -> (CGSize, () -> Void) {
+    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, EnginePeer.Id, [(EnginePeer, PeerInputActivity)]) -> (CGSize, () -> Void) {
         return { [weak self] boundingSize, presentationData, color, peerId, activities in
             let strings = presentationData.strings
             

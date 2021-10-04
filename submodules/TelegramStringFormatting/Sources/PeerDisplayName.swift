@@ -1,10 +1,9 @@
 import Foundation
-import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramCore
 
-public func stringForFullAuthorName(message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> String {
+public func stringForFullAuthorName(message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: EnginePeer.Id) -> String {
     var authorString = ""
     if let author = message.author, [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace) {
         var authorName = ""
@@ -13,12 +12,12 @@ public func stringForFullAuthorName(message: Message, strings: PresentationStrin
         } else {
             authorName = author.compactDisplayTitle
         }
-        if let peer = message.peers[message.id.peerId], author.id != peer.id {
+        if let peer = message.peers[message.id.peerId].flatMap(EnginePeer.init), author.id != peer.id {
             authorString = "\(authorName) → \(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder))"
         } else {
             authorString = authorName
         }
-    } else if let peer = message.peers[message.id.peerId] {
+    } else if let peer = message.peers[message.id.peerId].flatMap(EnginePeer.init) {
         if message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
             authorString = peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
         } else {

@@ -3,11 +3,11 @@ import Foundation
 final class MutableSynchronizeGroupMessageStatsView: MutablePostboxView {
     fileprivate var groupsAndNamespaces: Set<PeerGroupAndNamespace>
     
-    init(postbox: Postbox) {
+    init(postbox: PostboxImpl) {
         self.groupsAndNamespaces = postbox.synchronizeGroupMessageStatsTable.get()
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         if !transaction.currentUpdatedGroupSummarySynchronizeOperations.isEmpty {
             for (groupIdAndNamespace, value) in transaction.currentUpdatedGroupSummarySynchronizeOperations {

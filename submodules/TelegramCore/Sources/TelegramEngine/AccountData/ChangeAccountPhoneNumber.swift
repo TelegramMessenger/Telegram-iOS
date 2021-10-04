@@ -114,6 +114,6 @@ func _internal_requestChangeAccountPhoneNumber(account: Account, phoneNumber: St
                 updatePeers(transaction: transaction, peers: [user], update: { _, updated in
                     return updated
                 })
-            } |> mapError { _ -> ChangeAccountPhoneNumberError in return .generic }
+            } |> mapError { _ -> ChangeAccountPhoneNumberError in }
         }
 }

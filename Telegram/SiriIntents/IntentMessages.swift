@@ -36,7 +36,7 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
     |> mapToSignal { view -> Signal<[INMessage], NoError> in
         var signals: [Signal<[INMessage], NoError>] = []
         for entry in view.0.entries {
-            if case let .MessageEntry(index, _, readState, notificationSettings, _, _, _, _, _, _) = entry {
+            if case let .MessageEntry(index, _, readState, isMuted, _, _, _, _, _, _) = entry {
                 if index.messageIndex.id.peerId.namespace != Namespaces.Peer.CloudUser {
                     continue
                 }
@@ -46,12 +46,6 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
                 if let readState = readState {
                     hasUnread = readState.count != 0
                     fixedCombinedReadStates = .peer([index.messageIndex.id.peerId: readState])
-                }
-                var isMuted = false
-                if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
-                    if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-                        isMuted = true
-                    }
                 }
                 
                 if !isMuted && hasUnread {

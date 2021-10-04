@@ -67,9 +67,9 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
     |> mapToSignal { (result) -> Signal<ExternalJoiningChatState, NoError> in
         if let result = result {
             switch result {
-                case let .chatInvite(invite):
-                    let photo = telegramMediaImageFromApiPhoto(invite.photo).flatMap({ smallestImageRepresentation($0.representations) })
-                    return .single(.invite(title: invite.title, photoRepresentation: photo, participantsCount: invite.participantsCount, participants: invite.participants?.map({TelegramUser(user: $0)})))
+                case let .chatInvite(_, title, invitePhoto, participantsCount, participants):
+                    let photo = telegramMediaImageFromApiPhoto(invitePhoto).flatMap({ smallestImageRepresentation($0.representations) })
+                    return .single(.invite(title: title, photoRepresentation: photo, participantsCount: participantsCount, participants: participants?.map({TelegramUser(user: $0)})))
                 case let .chatInviteAlready(chat):
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         return account.postbox.transaction({ (transaction) -> ExternalJoiningChatState in

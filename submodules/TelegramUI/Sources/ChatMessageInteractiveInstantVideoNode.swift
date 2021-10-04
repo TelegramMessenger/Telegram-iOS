@@ -179,14 +179,14 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 if let file = media as? TelegramMediaFile {
                     updatedFile = file
                     if let previousFile = previousFile {
-                        updatedMedia = !previousFile.resource.id.isEqual(to: file.resource.id)
+                        updatedMedia = previousFile.resource.id != file.resource.id
                     } else if previousFile == nil {
                         updatedMedia = true
                     }
                 } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let file = content.file {
                     updatedFile = file
                     if let previousFile = previousFile {
-                        updatedMedia = !previousFile.resource.id.isEqual(to: file.resource.id)
+                        updatedMedia = previousFile.resource.id != file.resource.id
                     } else if previousFile == nil {
                         updatedMedia = true
                     }
@@ -274,20 +274,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 }
             }
             
-            var dateReactions: [MessageReaction] = []
-            var dateReactionCount = 0
-            if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
-                for reaction in reactionsAttribute.reactions {
-                    if reaction.isSelected {
-                        dateReactions.insert(reaction, at: 0)
-                    } else {
-                        dateReactions.append(reaction)
-                    }
-                    dateReactionCount += Int(reaction.count)
-                }
-            }
-            
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular, reactionCount: dateReactionCount)
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular)
             
             let maxDateAndStatusWidth: CGFloat
             if case .bubble = statusDisplayType {
@@ -301,7 +288,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 isReplyThread = true
             }
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
             
             var displayVideoFrame = videoFrame
             displayVideoFrame.size.width *= imageScale

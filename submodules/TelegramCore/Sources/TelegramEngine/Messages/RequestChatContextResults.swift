@@ -9,7 +9,7 @@ public enum RequestChatContextResultsError {
     case locationRequired
 }
 
-public final class CachedChatContextResult: PostboxCoding {
+public final class CachedChatContextResult: Codable {
     public let data: Data
     public let timestamp: Int32
     
@@ -18,14 +18,18 @@ public final class CachedChatContextResult: PostboxCoding {
         self.timestamp = timestamp
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.data = decoder.decodeDataForKey("data") ?? Data()
-        self.timestamp = decoder.decodeInt32ForKey("timestamp", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.data = try container.decode(Data.self, forKey: "data")
+        self.timestamp = try container.decode(Int32.self, forKey: "timestamp")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeData(self.data, forKey: "data")
-        encoder.encodeInt32(self.timestamp, forKey: "timestamp")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.data, forKey: "data")
+        try container.encode(self.timestamp, forKey: "timestamp")
     }
 }
 
@@ -82,7 +86,7 @@ func _internal_requestChatContextResults(account: Account, botId: PeerId, peerId
                 let requestData = RequestData(version: requestVersion, botId: botId, peerId: peerId, query: query)
                 if let keyData = try? JSONEncoder().encode(requestData) {
                     let key = ValueBoxKey(MemoryBuffer(data: keyData))
-                    if let cachedEntry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedContextResults, key: key)) as? CachedChatContextResult {
+                    if let cachedEntry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedContextResults, key: key))?.get(CachedChatContextResult.self) {
                         if let cachedResult = try? JSONDecoder().decode(ChatContextResultCollection.self, from: cachedEntry.data) {
                             let timestamp = Int32(Date().timeIntervalSince1970)
                             if cachedEntry.timestamp + cachedResult.cacheTimeout > timestamp {
@@ -115,7 +119,7 @@ func _internal_requestChatContextResults(account: Account, botId: PeerId, peerId
             }
             if let (latitude, longitude) = location {
                 flags |= (1 << 0)
-                var geoPointFlags: Int32 = 0
+                let geoPointFlags: Int32 = 0
                 geoPoint = Api.InputGeoPoint.inputGeoPoint(flags: geoPointFlags, lat: latitude, long: longitude, accuracyRadius: nil)
             }
             
@@ -141,7 +145,9 @@ func _internal_requestChatContextResults(account: Account, botId: PeerId, peerId
                             let requestData = RequestData(version: requestVersion, botId: botId, peerId: peerId, query: query)
                             if let keyData = try? JSONEncoder().encode(requestData) {
                                 let key = ValueBoxKey(MemoryBuffer(data: keyData))
-                                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedContextResults, key: key), entry: CachedChatContextResult(data: resultData, timestamp: Int32(Date().timeIntervalSince1970)), collectionSpec: collectionSpec)
+                                if let entry = CodableEntry(CachedChatContextResult(data: resultData, timestamp: Int32(Date().timeIntervalSince1970))) {
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedContextResults, key: key), entry: entry, collectionSpec: collectionSpec)
+                                }
                             }
                         }
                     }

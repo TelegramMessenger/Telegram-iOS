@@ -4,7 +4,7 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
     let peerIds: Set<PeerId>
     var notificationSettings: [PeerId: PeerNotificationSettings]
     
-    init(postbox: Postbox, peerIds: Set<PeerId>) {
+    init(postbox: PostboxImpl, peerIds: Set<PeerId>) {
         self.peerIds = peerIds
         self.notificationSettings = [:]
         for peerId in peerIds {
@@ -18,7 +18,7 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         if !transaction.currentUpdatedPeerNotificationSettings.isEmpty {
             var updated = false
             for peerId in self.peerIds {

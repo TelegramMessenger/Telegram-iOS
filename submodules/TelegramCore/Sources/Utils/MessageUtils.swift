@@ -1,6 +1,6 @@
 import Foundation
 import Postbox
-
+import TelegramApi
 
 public extension MessageFlags {
     var isSending: Bool {
@@ -302,3 +302,15 @@ public extension Message {
     }
 }
 
+public func _internal_parseMediaAttachment(data: Data) -> Media? {
+    guard let object = Api.parse(Buffer(buffer: MemoryBuffer(data: data))) else {
+        return nil
+    }
+    if let photo = object as? Api.Photo {
+        return telegramMediaImageFromApiPhoto(photo)
+    } else if let file = object as? Api.Document {
+        return telegramMediaFileFromApiDocument(file)
+    } else {
+        return nil
+    }
+}

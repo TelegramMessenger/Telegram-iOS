@@ -371,7 +371,7 @@ final class ThemeAccentColorController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
                 
             let accentColor: UIColor
             let outgoingAccentColor: UIColor?

@@ -15,6 +15,7 @@
 //
 #include "absl/random/mocking_bit_gen.h"
 
+#include <cmath>
 #include <numeric>
 #include <random>
 
@@ -26,6 +27,8 @@
 #include "absl/random/random.h"
 
 namespace {
+
+using ::testing::_;
 using ::testing::Ne;
 using ::testing::Return;
 
@@ -326,8 +329,9 @@ TEST(BasicMocking, WillByDefaultWithArgs) {
 
   absl::MockingBitGen gen;
   ON_CALL(absl::MockPoisson<int>(), Call(gen, _))
-      .WillByDefault(
-          [](double lambda) { return static_cast<int>(lambda * 10); });
+      .WillByDefault([](double lambda) {
+        return static_cast<int>(std::rint(lambda * 10));
+      });
   EXPECT_EQ(absl::Poisson<int>(gen, 1.7), 17);
   EXPECT_EQ(absl::Poisson<int>(gen, 0.03), 0);
 }
@@ -342,6 +346,49 @@ TEST(MockingBitGen, InSequenceSucceedsInOrder) {
 
   EXPECT_EQ(absl::Poisson<int>(gen, 1.0), 3);
   EXPECT_EQ(absl::Poisson<int>(gen, 2.0), 4);
+}
+
+TEST(MockingBitGen, NiceMock) {
+  ::testing::NiceMock<absl::MockingBitGen> gen;
+  ON_CALL(absl::MockUniform<int>(), Call(gen, _, _)).WillByDefault(Return(145));
+
+  ON_CALL(absl::MockPoisson<int>(), Call(gen, _)).WillByDefault(Return(3));
+
+  EXPECT_EQ(absl::Uniform(gen, 1, 1000), 145);
+  EXPECT_EQ(absl::Uniform(gen, 10, 1000), 145);
+  EXPECT_EQ(absl::Uniform(gen, 100, 1000), 145);
+}
+
+TEST(MockingBitGen, NaggyMock) {
+  // This is difficult to test, as only the output matters, so just verify
+  // that ON_CALL can be installed. Anything else requires log inspection.
+  ::testing::NaggyMock<absl::MockingBitGen> gen;
+
+  ON_CALL(absl::MockUniform<int>(), Call(gen, _, _)).WillByDefault(Return(145));
+  ON_CALL(absl::MockPoisson<int>(), Call(gen, _)).WillByDefault(Return(3));
+
+  EXPECT_EQ(absl::Uniform(gen, 1, 1000), 145);
+}
+
+TEST(MockingBitGen, StrictMock_NotEnough) {
+  EXPECT_NONFATAL_FAILURE(
+      []() {
+        ::testing::StrictMock<absl::MockingBitGen> gen;
+        EXPECT_CALL(absl::MockUniform<int>(), Call(gen, _, _))
+            .WillOnce(Return(145));
+      }(),
+      "unsatisfied and active");
+}
+
+TEST(MockingBitGen, StrictMock_TooMany) {
+  ::testing::StrictMock<absl::MockingBitGen> gen;
+
+  EXPECT_CALL(absl::MockUniform<int>(), Call(gen, _, _)).WillOnce(Return(145));
+  EXPECT_EQ(absl::Uniform(gen, 1, 1000), 145);
+
+  EXPECT_NONFATAL_FAILURE(
+      [&]() { EXPECT_EQ(absl::Uniform(gen, 10, 1000), 0); }(),
+      "over-saturated and active");
 }
 
 }  // namespace

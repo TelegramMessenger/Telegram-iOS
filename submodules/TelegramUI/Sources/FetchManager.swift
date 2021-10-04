@@ -16,7 +16,7 @@ private struct FetchManagerLocationEntryId: Hashable {
         if lhs.location != rhs.location {
             return false
         }
-        if !lhs.resourceId.isEqual(to: rhs.resourceId) {
+        if lhs.resourceId != rhs.resourceId {
             return false
         }
         if lhs.locationKey != rhs.locationKey {
@@ -24,9 +24,10 @@ private struct FetchManagerLocationEntryId: Hashable {
         }
         return true
     }
-    
-    var hashValue: Int {
-        return self.resourceId.hashValue &* 31 &+ self.locationKey.hashValue
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(self.resourceId.hashValue)
+        hasher.combine(self.locationKey)
     }
 }
 
@@ -221,7 +222,6 @@ private final class FetchManagerCategoryContext {
                             return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                             |> castError(FetchResourceError.self)
                             |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
-                                return .complete()
                             }
                             |> then(.single(type))
                         }
@@ -349,7 +349,7 @@ private final class FetchManagerCategoryContext {
                     if isVideoPreload {
                         activeContext.disposable = (preloadVideoResource(postbox: self.postbox, resourceReference: entry.resourceReference, duration: 4.0)
                         |> castError(FetchResourceError.self)
-                        |> map { _ -> FetchResourceSourceType in return .local }
+                        |> map { _ -> FetchResourceSourceType in }
                         |> then(.single(.local))
                         |> deliverOnMainQueue).start(next: { _ in
                             entryCompleted(topEntryId)
@@ -362,7 +362,6 @@ private final class FetchManagerCategoryContext {
                                 return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                                 |> castError(FetchResourceError.self)
                                 |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
-                                    return .complete()
                                 }
                                 |> then(.single(type))
                             }
@@ -389,7 +388,7 @@ private final class FetchManagerCategoryContext {
         var id: FetchManagerLocationEntryId = entryId
         if self.entries[id] == nil {
             for (key, _) in self.entries {
-                if key.resourceId.isEqual(to: entryId.resourceId) {
+                if key.resourceId == entryId.resourceId {
                     id = key
                     break
                 }

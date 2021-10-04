@@ -1,29 +1,25 @@
 import Postbox
 
-public final class ThemeSettings: PreferencesEntry, Equatable {
+public final class ThemeSettings: Codable, Equatable {
     public let currentTheme: TelegramTheme?
  
     public init(currentTheme: TelegramTheme?) {
         self.currentTheme = currentTheme
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.currentTheme = decoder.decodeObjectForKey("t", decoder: { TelegramTheme(decoder: $0) }) as? TelegramTheme
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.currentTheme = (try container.decodeIfPresent(TelegramThemeNativeCodable.self, forKey: "t"))?.value
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        if let currentTheme = currentTheme {
-            encoder.encodeObject(currentTheme, forKey: "t")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        if let currentTheme = self.currentTheme {
+            try container.encode(TelegramThemeNativeCodable(currentTheme), forKey: "t")
         } else {
-            encoder.encodeNil(forKey: "t")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? ThemeSettings {
-            return self == to
-        } else {
-            return false
+            try container.encodeNil(forKey: "t")
         }
     }
     

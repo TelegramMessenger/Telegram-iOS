@@ -233,7 +233,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
         let arguments = arguments as! CreateGroupArguments
         switch self {
             case let .groupInfo(_, _, dateTimeFormat, peer, state, avatar):
-                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer.flatMap(EnginePeer.init), presence: nil, memberCount: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.changeProfilePhoto()
@@ -243,11 +243,11 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                     arguments.changeProfilePhoto()
                 })
             case let .member(_, _, _, dateTimeFormat, nameDisplayOrder, peer, presence):
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: presence, text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(peer), presence: presence.flatMap(EnginePeer.Presence.init), text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .locationHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .location(theme, location):
-                let imageSignal = chatMapSnapshotImage(account: arguments.context.account, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
+                let imageSignal = chatMapSnapshotImage(engine: arguments.context.engine, resource: MapSnapshotMediaResource(latitude: location.latitude, longitude: location.longitude, width: 90, height: 90))
                 return ItemListAddressItem(theme: theme, label: "", text: location.address.replacingOccurrences(of: ", ", with: "\n"), imageSignal: imageSignal, selected: nil, sectionId: self.section, style: .blocks, action: nil)
             case let .changeLocation(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
@@ -258,7 +258,7 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .venueHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .venue(_, _, venue):
-                return ItemListVenueItem(presentationData: presentationData, account: arguments.context.account, venue: venue, sectionId: self.section, style: .blocks, action: {
+                return ItemListVenueItem(presentationData: presentationData, engine: arguments.context.engine, venue: venue, sectionId: self.section, style: .blocks, action: {
                     arguments.updateWithVenue(venue)
                 })
         }
@@ -488,7 +488,6 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         return .complete()
                     }
                     |> mapToSignal { _ -> Signal<PeerId?, CreateGroupError> in
-                        return .complete()
                     }
                     |> then(.single(peerId))
                 } else {
@@ -702,7 +701,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
-                let controller = WebSearchController(context: context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
+                let controller = WebSearchController(context: context, peer: peer.flatMap(EnginePeer.init), chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
                     assetsController?.dismiss()
                     completedGroupPhotoImpl(result)
                 }))

@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public struct CloudFileMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct CloudFileMediaResourceId: Hashable, Equatable {
     let datacenterId: Int
     let volumeId: Int64
     let localId: Int32
@@ -17,14 +17,6 @@ public struct CloudFileMediaResourceId: MediaResourceId, Hashable, Equatable {
     public var uniqueId: String {
         return "telegram-cloud-file-\(self.datacenterId)-\(self.volumeId)-\(self.localId)-\(self.secret)"
     }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? CloudFileMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
-    }
 }
 
 public final class CloudFileMediaResource: TelegramMediaResource {
@@ -36,7 +28,7 @@ public final class CloudFileMediaResource: TelegramMediaResource {
     public let fileReference: Data?
     
     public var id: MediaResourceId {
-        return CloudFileMediaResourceId(datacenterId: self.datacenterId, volumeId: self.volumeId, localId: self.localId, secret: self.secret)
+        return MediaResourceId(CloudFileMediaResourceId(datacenterId: self.datacenterId, volumeId: self.volumeId, localId: self.localId, secret: self.secret).uniqueId)
     }
     
     public init(datacenterId: Int, volumeId: Int64, localId: Int32, secret: Int64, size: Int?, fileReference: Data?) {
@@ -87,7 +79,7 @@ public final class CloudFileMediaResource: TelegramMediaResource {
     }
 }
 
-public struct CloudPhotoSizeMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct CloudPhotoSizeMediaResourceId: Hashable, Equatable {
     let datacenterId: Int32
     let photoId: Int64
     let sizeSpec: String
@@ -101,14 +93,6 @@ public struct CloudPhotoSizeMediaResourceId: MediaResourceId, Hashable, Equatabl
     public var uniqueId: String {
         return "telegram-cloud-photo-size-\(self.datacenterId)-\(self.photoId)-\(self.sizeSpec)"
     }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? CloudPhotoSizeMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
-    }
 }
 
 public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
@@ -120,7 +104,7 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
     public let fileReference: Data?
     
     public var id: MediaResourceId {
-        return CloudPhotoSizeMediaResourceId(datacenterId: Int32(self.datacenterId), photoId: self.photoId, sizeSpec: self.sizeSpec)
+        return MediaResourceId(CloudPhotoSizeMediaResourceId(datacenterId: Int32(self.datacenterId), photoId: self.photoId, sizeSpec: self.sizeSpec).uniqueId)
     }
     
     public init(datacenterId: Int32, photoId: Int64, accessHash: Int64, sizeSpec: String, size: Int?, fileReference: Data?) {
@@ -171,7 +155,7 @@ public final class CloudPhotoSizeMediaResource: TelegramMediaResource {
     }
 }
 
-public struct CloudDocumentSizeMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct CloudDocumentSizeMediaResourceId: Hashable, Equatable {
     let datacenterId: Int32
     let documentId: Int64
     let sizeSpec: String
@@ -185,14 +169,6 @@ public struct CloudDocumentSizeMediaResourceId: MediaResourceId, Hashable, Equat
     public var uniqueId: String {
         return "telegram-cloud-document-size-\(self.datacenterId)-\(self.documentId)-\(self.sizeSpec)"
     }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? CloudDocumentSizeMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
-    }
 }
 
 public final class CloudDocumentSizeMediaResource: TelegramMediaResource {
@@ -203,7 +179,7 @@ public final class CloudDocumentSizeMediaResource: TelegramMediaResource {
     public let fileReference: Data?
     
     public var id: MediaResourceId {
-        return CloudDocumentSizeMediaResourceId(datacenterId: Int32(self.datacenterId), documentId: self.documentId, sizeSpec: self.sizeSpec)
+        return MediaResourceId(CloudDocumentSizeMediaResourceId(datacenterId: Int32(self.datacenterId), documentId: self.documentId, sizeSpec: self.sizeSpec).uniqueId)
     }
     
     public init(datacenterId: Int32, documentId: Int64, accessHash: Int64, sizeSpec: String, fileReference: Data?) {
@@ -248,7 +224,7 @@ public enum CloudPeerPhotoSizeSpec: Int32 {
     case fullSize
 }
 
-public struct CloudPeerPhotoSizeMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct CloudPeerPhotoSizeMediaResourceId: Hashable, Equatable {
     let datacenterId: Int32
     let photoId: Int64?
     let sizeSpec: CloudPeerPhotoSizeSpec
@@ -270,14 +246,6 @@ public struct CloudPeerPhotoSizeMediaResourceId: MediaResourceId, Hashable, Equa
             return "telegram-peer-photo-size-\(self.datacenterId)-\(self.sizeSpec.rawValue)-\(self.volumeId ?? 0)-\(self.localId ?? 0)"
         }
     }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? CloudPeerPhotoSizeMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
-    }
 }
 
 public final class CloudPeerPhotoSizeMediaResource: TelegramMediaResource {
@@ -288,7 +256,7 @@ public final class CloudPeerPhotoSizeMediaResource: TelegramMediaResource {
     public let localId: Int32?
     
     public var id: MediaResourceId {
-        return CloudPeerPhotoSizeMediaResourceId(datacenterId: Int32(self.datacenterId), photoId: self.photoId, sizeSpec: self.sizeSpec, volumeId: self.volumeId, localId: self.localId)
+        return MediaResourceId(CloudPeerPhotoSizeMediaResourceId(datacenterId: Int32(self.datacenterId), photoId: self.photoId, sizeSpec: self.sizeSpec, volumeId: self.volumeId, localId: self.localId).uniqueId)
     }
     
     public init(datacenterId: Int32, photoId: Int64?, sizeSpec: CloudPeerPhotoSizeSpec, volumeId: Int64?, localId: Int32?) {
@@ -336,7 +304,7 @@ public final class CloudPeerPhotoSizeMediaResource: TelegramMediaResource {
     }
 }
 
-public struct CloudStickerPackThumbnailMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct CloudStickerPackThumbnailMediaResourceId: Hashable, Equatable {
     let datacenterId: Int32
     let thumbVersion: Int32?
     let volumeId: Int64?
@@ -356,14 +324,6 @@ public struct CloudStickerPackThumbnailMediaResourceId: MediaResourceId, Hashabl
             return "telegram-stickerpackthumbnail-\(self.datacenterId)-\(self.volumeId ?? 0)-\(self.localId ?? 0)"
         }
     }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? CloudStickerPackThumbnailMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
-    }
 }
 
 public final class CloudStickerPackThumbnailMediaResource: TelegramMediaResource {
@@ -373,7 +333,7 @@ public final class CloudStickerPackThumbnailMediaResource: TelegramMediaResource
     public let localId: Int32?
     
     public var id: MediaResourceId {
-        return CloudStickerPackThumbnailMediaResourceId(datacenterId: Int32(self.datacenterId), thumbVersion: self.thumbVersion, volumeId: self.volumeId, localId: self.localId)
+        return MediaResourceId(CloudStickerPackThumbnailMediaResourceId(datacenterId: Int32(self.datacenterId), thumbVersion: self.thumbVersion, volumeId: self.volumeId, localId: self.localId).uniqueId)
     }
     
     public init(datacenterId: Int32, thumbVersion: Int32?, volumeId: Int64?, localId: Int32?) {
@@ -418,7 +378,7 @@ public final class CloudStickerPackThumbnailMediaResource: TelegramMediaResource
     }
 }
 
-public struct CloudDocumentMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct CloudDocumentMediaResourceId: Hashable, Equatable {
     public let datacenterId: Int
     public let fileId: Int64
     
@@ -429,14 +389,6 @@ public struct CloudDocumentMediaResourceId: MediaResourceId, Hashable, Equatable
     
     public var uniqueId: String {
         return "telegram-cloud-document-\(self.datacenterId)-\(self.fileId)"
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? CloudDocumentMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
     }
 }
 
@@ -449,7 +401,7 @@ public final class CloudDocumentMediaResource: TelegramMediaResource {
     public let fileName: String?
     
     public var id: MediaResourceId {
-        return CloudDocumentMediaResourceId(datacenterId: self.datacenterId, fileId: self.fileId)
+        return MediaResourceId(CloudDocumentMediaResourceId(datacenterId: self.datacenterId, fileId: self.fileId).uniqueId)
 	}
     
     public init(datacenterId: Int, fileId: Int64, accessHash: Int64, size: Int?, fileReference: Data?, fileName: String?) {
@@ -504,23 +456,15 @@ public final class CloudDocumentMediaResource: TelegramMediaResource {
     }
 }
 
-public struct LocalFileMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct LocalFileMediaResourceId: Hashable, Equatable {
     public let fileId: Int64
     
     public var uniqueId: String {
         return "telegram-local-file-\(self.fileId)"
     }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? LocalFileMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
-    }
 }
 
-public class LocalFileMediaResource: TelegramMediaResource {
+public class LocalFileMediaResource: TelegramMediaResource, Codable {
     public let fileId: Int64
     public let size: Int?
     
@@ -541,6 +485,14 @@ public class LocalFileMediaResource: TelegramMediaResource {
             self.size = nil
         }
     }
+
+    public required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.fileId = try container.decode(Int64.self, forKey: "f")
+        self.isSecretRelated = try container.decodeIfPresent(Bool.self, forKey: "sr") ?? false
+        self.size = (try container.decodeIfPresent(Int32.self, forKey: "s")).flatMap(Int.init)
+    }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.fileId, forKey: "f")
@@ -551,9 +503,17 @@ public class LocalFileMediaResource: TelegramMediaResource {
             encoder.encodeNil(forKey: "s")
         }
     }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.fileId, forKey: "f")
+        try container.encode(self.isSecretRelated, forKey: "sr")
+        try container.encodeIfPresent(self.size.flatMap(Int32.init), forKey: "s")
+    }
     
     public var id: MediaResourceId {
-        return LocalFileMediaResourceId(fileId: self.fileId)
+        return MediaResourceId(LocalFileMediaResourceId(fileId: self.fileId).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -565,19 +525,11 @@ public class LocalFileMediaResource: TelegramMediaResource {
     }
 }
 
-public struct LocalFileReferenceMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct LocalFileReferenceMediaResourceId: Hashable, Equatable {
     public let randomId: Int64
     
     public var uniqueId: String {
         return "local-file-\(self.randomId)"
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? LocalFileReferenceMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
     }
 }
 
@@ -613,7 +565,7 @@ public class LocalFileReferenceMediaResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return LocalFileReferenceMediaResourceId(randomId: self.randomId)
+        return MediaResourceId(LocalFileReferenceMediaResourceId(randomId: self.randomId).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -625,16 +577,8 @@ public class LocalFileReferenceMediaResource: TelegramMediaResource {
     }
 }
 
-public struct HttpReferenceMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct HttpReferenceMediaResourceId: Hashable, Equatable {
     public let url: String
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? HttpReferenceMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
-    }
     
     public var uniqueId: String {
         return "http-\(persistentHash32(self.url))"
@@ -669,7 +613,7 @@ public final class HttpReferenceMediaResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return HttpReferenceMediaResourceId(url: self.url)
+        return MediaResourceId(HttpReferenceMediaResourceId(url: self.url).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -681,18 +625,10 @@ public final class HttpReferenceMediaResource: TelegramMediaResource {
     }
 }
 
-public struct WebFileReferenceMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct WebFileReferenceMediaResourceId: Hashable, Equatable {
     public let url: String
     public let accessHash: Int64
     public let size: Int32
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? WebFileReferenceMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
-    }
     
     public var uniqueId: String {
         return "proxy-\(persistentHash32(self.url))-\(size)-\(accessHash)"
@@ -723,7 +659,7 @@ public final class WebFileReferenceMediaResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return WebFileReferenceMediaResourceId(url: self.url, accessHash: accessHash, size: self.size)
+        return MediaResourceId(WebFileReferenceMediaResourceId(url: self.url, accessHash: accessHash, size: self.size).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -736,7 +672,7 @@ public final class WebFileReferenceMediaResource: TelegramMediaResource {
 }
 
 
-public struct SecretFileMediaResourceId: MediaResourceId, Hashable, Equatable {
+public struct SecretFileMediaResourceId: Hashable, Equatable {
     public let fileId: Int64
     public let datacenterId: Int32
     
@@ -747,14 +683,6 @@ public struct SecretFileMediaResourceId: MediaResourceId, Hashable, Equatable {
     public init(fileId: Int64, datacenterId: Int32) {
         self.fileId = fileId
         self.datacenterId = datacenterId
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? SecretFileMediaResourceId {
-            return self == to
-        } else {
-            return false
-        }
     }
 }
 
@@ -797,7 +725,7 @@ public final class SecretFileMediaResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return SecretFileMediaResourceId(fileId: self.fileId, datacenterId: Int32(self.datacenterId))
+        return MediaResourceId(SecretFileMediaResourceId(fileId: self.fileId, datacenterId: Int32(self.datacenterId)).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -827,17 +755,13 @@ public final class SecretFileMediaResource: TelegramMediaResource {
     }
 }
 
-public struct EmptyMediaResourceId: MediaResourceId {
+public struct EmptyMediaResourceId {
     public var uniqueId: String {
         return "empty-resource"
     }
     
     public var hashValue: Int {
         return 0
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        return to is EmptyMediaResourceId
     }
 }
 
@@ -852,7 +776,7 @@ public final class EmptyMediaResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return EmptyMediaResourceId()
+        return MediaResourceId(EmptyMediaResourceId().uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -860,7 +784,7 @@ public final class EmptyMediaResource: TelegramMediaResource {
     }
 }
 
-public struct WallpaperDataResourceId: MediaResourceId {
+public struct WallpaperDataResourceId {
     public var uniqueId: String {
         return "wallpaper-\(self.slug)"
     }
@@ -873,16 +797,6 @@ public struct WallpaperDataResourceId: MediaResourceId {
 
     public init(slug: String) {
         self.slug = slug
-    }
-
-    public func isEqual(to: MediaResourceId) -> Bool {
-        guard let to = to as? WallpaperDataResourceId else {
-            return false
-        }
-        if self.slug != to.slug {
-            return false
-        }
-        return true
     }
 }
 
@@ -902,7 +816,7 @@ public final class WallpaperDataResource: TelegramMediaResource {
     }
 
     public var id: MediaResourceId {
-        return WallpaperDataResourceId(slug: self.slug)
+        return MediaResourceId(WallpaperDataResourceId(slug: self.slug).uniqueId)
     }
 
     public func isEqual(to: MediaResource) -> Bool {

@@ -118,7 +118,7 @@ public final class CachedGroupData: CachedPeerData {
     public init(decoder: PostboxDecoder) {
         let participants = decoder.decodeObjectForKey("p", decoder: { CachedGroupParticipants(decoder: $0) }) as? CachedGroupParticipants
         self.participants = participants
-        self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
+        self.exportedInvitation = decoder.decode(ExportedInvitation.self, forKey: "i")
         self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
         if let legacyValue = decoder.decodeOptionalInt32ForKey("pcs") {
             self.peerStatusSettings = PeerStatusSettings(flags: PeerStatusSettings.Flags(rawValue: legacyValue), geoDistance: nil)
@@ -181,7 +181,7 @@ public final class CachedGroupData: CachedPeerData {
             encoder.encodeNil(forKey: "p")
         }
         if let exportedInvitation = self.exportedInvitation {
-            encoder.encodeObject(exportedInvitation, forKey: "i")
+            encoder.encode(exportedInvitation, forKey: "i")
         } else {
             encoder.encodeNil(forKey: "i")
         }

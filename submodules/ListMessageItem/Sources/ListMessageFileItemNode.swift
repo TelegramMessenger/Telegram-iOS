@@ -425,7 +425,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             }
                             
                             if item.isGlobalSearchResult {
-                                let authorString = stringForFullAuthorName(message: item.message, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                                let authorString = stringForFullAuthorName(message: EngineMessage(item.message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                                 if descriptionString.isEmpty {
                                     descriptionString = authorString
                                 } else {
@@ -443,7 +443,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 }
                             } else {
                                 titleText = NSAttributedString(string: " ", font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
-                                descriptionText = NSAttributedString(string: item.message.author?.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast) ?? " ", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
+                                descriptionText = NSAttributedString(string: item.message.author.flatMap(EnginePeer.init)?.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast) ?? " ", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                             }
                         }
                     }
@@ -454,7 +454,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             if author.id == item.context.account.peerId {
                                 authorName = item.presentationData.strings.DialogList_You
                             } else {
-                                authorName = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                                authorName = EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                             }
                         } else if let signature = message.forwardInfo?.authorSignature {
                             authorName = signature
@@ -462,14 +462,14 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             if author.id == item.context.account.peerId {
                                 authorName = item.presentationData.strings.DialogList_You
                             } else {
-                                authorName = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                                authorName = EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                             }
                         } else {
                             authorName = " "
                         }
                         
                         if item.isGlobalSearchResult {
-                            authorName = stringForFullAuthorName(message: item.message, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                            authorName = stringForFullAuthorName(message: EngineMessage(item.message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                         }
                         
                         titleText = NSAttributedString(string: authorName, font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
@@ -522,7 +522,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                         
                         if item.isGlobalSearchResult {
-                            let authorString = stringForFullAuthorName(message: item.message, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                            let authorString = stringForFullAuthorName(message: EngineMessage(item.message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                             if descriptionString.isEmpty {
                                 descriptionString = authorString
                             } else {
@@ -682,7 +682,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         case let .imageRepresentation(file, representation):
                             updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, fileReference: .message(message: MessageReference(message), media: file), representation: representation)
                         case let .albumArt(file, albumArt):
-                            updateIconImageSignal = playerAlbumArt(postbox: item.context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), emptyColor: item.presentationData.theme.theme.list.itemAccentColor)
+                            updateIconImageSignal = playerAlbumArt(postbox: item.context.account.postbox, engine: item.context.engine, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), emptyColor: item.presentationData.theme.theme.list.itemAccentColor)
                         case let .roundVideo(file):
                             updateIconImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, videoReference: FileMediaReference.message(message: MessageReference(message), media: file), autoFetchFullSizeThumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3))
                     }

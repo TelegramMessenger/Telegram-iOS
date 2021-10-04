@@ -42,7 +42,7 @@ func _internal_updateGroupDiscussionForChannel(network: Network, postbox: Postbo
     return postbox.transaction { transaction -> (channel: Peer?, group: Peer?) in
         return (channel: channelId.flatMap(transaction.getPeer), group: groupId.flatMap(transaction.getPeer))
     }
-    |> mapError { _ in ChannelDiscussionGroupError.generic }
+    |> mapError { _ -> ChannelDiscussionGroupError in }
     |> mapToSignal { channel, group -> Signal<Bool, ChannelDiscussionGroupError> in
         let apiChannel = channel.flatMap(apiInputChannel) ?? Api.InputChannel.inputChannelEmpty
         let apiGroup = group.flatMap(apiInputChannel) ?? Api.InputChannel.inputChannelEmpty

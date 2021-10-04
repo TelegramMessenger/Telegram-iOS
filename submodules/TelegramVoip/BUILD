@@ -12,7 +12,6 @@ swift_library(
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/Postbox:Postbox",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/TgVoip:TgVoip",
         "//submodules/TgVoipWebrtc:TgVoipWebrtc",

@@ -1,57 +1,33 @@
 import Postbox
 
-public struct NetworkSettings: PreferencesEntry, Equatable {
+public struct NetworkSettings: Codable {
     public var reducedBackupDiscoveryTimeout: Bool
     public var applicationUpdateUrlPrefix: String?
     public var backupHostOverride: String?
-    public var defaultEnableTempKeys: Bool
-    public var userEnableTempKeys: Bool?
     
     public static var defaultSettings: NetworkSettings {
-        return NetworkSettings(reducedBackupDiscoveryTimeout: false, applicationUpdateUrlPrefix: nil, backupHostOverride: nil, defaultEnableTempKeys: false, userEnableTempKeys: nil)
+        return NetworkSettings(reducedBackupDiscoveryTimeout: false, applicationUpdateUrlPrefix: nil, backupHostOverride: nil)
     }
     
-    public init(reducedBackupDiscoveryTimeout: Bool, applicationUpdateUrlPrefix: String?, backupHostOverride: String?, defaultEnableTempKeys: Bool, userEnableTempKeys: Bool?) {
+    public init(reducedBackupDiscoveryTimeout: Bool, applicationUpdateUrlPrefix: String?, backupHostOverride: String?) {
         self.reducedBackupDiscoveryTimeout = reducedBackupDiscoveryTimeout
         self.applicationUpdateUrlPrefix = applicationUpdateUrlPrefix
         self.backupHostOverride = backupHostOverride
-        self.defaultEnableTempKeys = defaultEnableTempKeys
-        self.userEnableTempKeys = userEnableTempKeys
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.reducedBackupDiscoveryTimeout = decoder.decodeInt32ForKey("reducedBackupDiscoveryTimeout", orElse: 0) != 0
-        self.applicationUpdateUrlPrefix = decoder.decodeOptionalStringForKey("applicationUpdateUrlPrefix")
-        self.backupHostOverride = decoder.decodeOptionalStringForKey("backupHostOverride")
-        self.defaultEnableTempKeys = decoder.decodeBoolForKey("defaultEnableTempKeys", orElse: false)
-        self.userEnableTempKeys = decoder.decodeOptionalBoolForKey("userEnableTempKeys")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.reducedBackupDiscoveryTimeout = ((try? container.decode(Int32.self, forKey: "reducedBackupDiscoveryTimeout")) ?? 0) != 0
+        self.applicationUpdateUrlPrefix = try? container.decodeIfPresent(String.self, forKey: "applicationUpdateUrlPrefix")
+        self.backupHostOverride = try? container.decodeIfPresent(String.self, forKey: "backupHostOverride")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.reducedBackupDiscoveryTimeout ? 1 : 0, forKey: "reducedBackupDiscoveryTimeout")
-        if let applicationUpdateUrlPrefix = self.applicationUpdateUrlPrefix {
-            encoder.encodeString(applicationUpdateUrlPrefix, forKey: "applicationUpdateUrlPrefix")
-        } else {
-            encoder.encodeNil(forKey: "applicationUpdateUrlPrefix")
-        }
-        if let backupHostOverride = self.backupHostOverride {
-            encoder.encodeString(backupHostOverride, forKey: "backupHostOverride")
-        } else {
-            encoder.encodeNil(forKey: "backupHostOverride")
-        }
-        encoder.encodeBool(self.defaultEnableTempKeys, forKey: "defaultEnableTempKeys")
-        if let userEnableTempKeys = self.userEnableTempKeys {
-            encoder.encodeBool(userEnableTempKeys, forKey: "userEnableTempKeys")
-        } else {
-            encoder.encodeNil(forKey: "userEnableTempKeys")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? NetworkSettings else {
-            return false
-        }
-        
-        return self == to
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.reducedBackupDiscoveryTimeout ? 1 : 0) as Int32, forKey: "reducedBackupDiscoveryTimeout")
+        try container.encodeIfPresent(self.applicationUpdateUrlPrefix, forKey: "applicationUpdateUrlPrefix")
+        try container.encodeIfPresent(self.backupHostOverride, forKey: "backupHostOverride")
     }
 }

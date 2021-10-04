@@ -75,6 +75,10 @@ public final class TelegramEngine {
     public lazy var data: EngineData = {
         return EngineData(account: self.account)
     }()
+
+    public lazy var orderedLists: OrderedLists = {
+        return OrderedLists(account: self.account)
+    }()
 }
 
 public final class TelegramEngineUnauthorized {

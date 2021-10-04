@@ -38,7 +38,7 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
         return .fail(.generic)
     }
     return uploadedSticker(postbox: account.postbox, network: account.network, resource: resource)
-    |> mapError { _ -> UploadStickerError in return .generic }
+    |> mapError { _ -> UploadStickerError in }
     |> mapToSignal { result -> Signal<UploadStickerStatus, UploadStickerError> in
         switch result.content {
             case .error:
@@ -91,7 +91,7 @@ public struct ImportSticker {
 
 public enum CreateStickerSetStatus {
     case progress(Float, Int32, Int32)
-    case complete(StickerPackCollectionInfo, [ItemCollectionItem])
+    case complete(StickerPackCollectionInfo, [StickerPackItem])
 }
 
 func _internal_createStickerSet(account: Account, title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, isAnimated: Bool, software: String?) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
@@ -150,7 +150,7 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
                 }
                 |> mapToSignal { result -> Signal<CreateStickerSetStatus, CreateStickerSetError> in
                     let info: StickerPackCollectionInfo
-                    var items: [ItemCollectionItem] = []
+                    var items: [StickerPackItem] = []
                     
                     switch result {
                     case let .stickerSet(set, packs, documents):

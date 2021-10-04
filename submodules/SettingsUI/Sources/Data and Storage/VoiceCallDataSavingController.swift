@@ -125,14 +125,14 @@ func voiceCallDataSavingController(context: AccountContext) -> ViewController {
     let sharedSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.voiceCallSettings])
     |> map { sharedData -> (VoiceCallSettings, AutodownloadSettings) in
         let voiceCallSettings: VoiceCallSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings] as? VoiceCallSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) {
             voiceCallSettings = value
         } else {
             voiceCallSettings = VoiceCallSettings.defaultSettings
         }
         
         let autodownloadSettings: AutodownloadSettings
-        if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
+        if let value = sharedData.entries[SharedDataKeys.autodownloadSettings]?.get(AutodownloadSettings.self) {
             autodownloadSettings = value
         } else {
             autodownloadSettings = AutodownloadSettings.defaultSettings

@@ -436,6 +436,11 @@ app_groups_fragment = """
     telegram_bundle_id=telegram_bundle_id
 )
 
+communication_notifications_fragment = """
+<key>com.apple.developer.usernotifications.communication</key>
+<true/>
+"""
+
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
@@ -447,7 +452,8 @@ plist_fragment(
         icloud_fragment,
         apple_pay_merchants_fragment,
         unrestricted_voip_fragment,
-        carplay_fragment
+        carplay_fragment,
+        communication_notifications_fragment,
     ])
 )
 
@@ -698,6 +704,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/MtProtoKit:MtProtoKit",
@@ -737,6 +744,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -779,6 +787,7 @@ ios_framework(
         ":SwiftSignalKitFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/Postbox:Postbox",
@@ -818,6 +827,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramApi:TelegramApi",
@@ -862,6 +872,7 @@ ios_framework(
         ":PostboxFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramCore:TelegramCore",
@@ -901,6 +912,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
@@ -987,6 +999,7 @@ ios_framework(
         ":AsyncDisplayKitFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/Display:Display",
@@ -1034,6 +1047,7 @@ ios_framework(
         ":DisplayFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramUI:TelegramUI",
@@ -1096,6 +1110,9 @@ swift_library(
     srcs = glob([
         "Share/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramUI:TelegramUI"
     ],
@@ -1178,6 +1195,9 @@ swift_library(
     srcs = glob([
         "NotificationContent/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
         ":NotificationContentExtensionLink",
@@ -1269,6 +1289,9 @@ swift_library(
     srcs = glob([
         "WidgetKitWidget/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     data = [
         ":WidgetAssets",
     ],
@@ -1321,7 +1344,7 @@ ios_extension(
     ],
     minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionWidgetExtension",
-    provides_main = True,
+    #provides_main = True,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
@@ -1397,6 +1420,9 @@ swift_library(
     srcs = glob([
         "SiriIntents/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     data = glob([
         "SiriIntents/*.lproj/Intents.intentdefinition"
     ]) + [
@@ -1496,6 +1522,9 @@ swift_library(
     srcs = glob([
         "BroadcastUpload/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
         "//submodules/TelegramVoip:TelegramVoip",
@@ -1572,6 +1601,13 @@ plist_fragment(
         <string>com.apple.usernotifications.service</string>
         <key>NSExtensionPrincipalClass</key>
         <string>NotificationService</string>
+        <key>NSExtensionAttributes</key>
+        <dict>
+            <key>IntentsSupported</key>
+            <array>
+                <string>INSendMessageIntent</string>
+            </array>
+        </dict>
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
@@ -1623,6 +1659,7 @@ ios_extension(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
+        ":TelegramCoreFramework",
     ],
 )
 

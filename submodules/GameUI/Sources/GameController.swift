@@ -4,7 +4,6 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import AccountContext
 
@@ -15,11 +14,11 @@ public final class GameController: ViewController {
     
     private let context: AccountContext
     private let url: String
-    private let message: Message
+    private let message: EngineMessage
     
     private var presentationData: PresentationData
     
-    public init(context: AccountContext, url: String, message: Message) {
+    public init(context: AccountContext, url: String, message: EngineMessage) {
         self.context = context
         self.url = url
         self.message = message
@@ -36,10 +35,10 @@ public final class GameController: ViewController {
             if let game = media as? TelegramMediaGame {
                 let titleView = GameControllerTitleView(theme: self.presentationData.theme)
                 
-                var botPeer: Peer?
+                var botPeer: EnginePeer?
                 inner: for attribute in message.attributes {
                     if let attribute = attribute as? InlineBotMessageAttribute, let peerId = attribute.peerId {
-                        botPeer = message.peers[peerId]
+                        botPeer = message.peers[peerId].flatMap(EnginePeer.init)
                         break inner
                     }
                 }

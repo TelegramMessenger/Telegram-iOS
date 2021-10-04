@@ -31,7 +31,7 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
                                 resultPoll = transaction.getMedia(pollId) as? TelegramMediaPoll
                                 if let poll = poll {
                                     switch poll {
-                                    case let .poll(id, flags, question, answers, closePeriod, _):
+                                    case let .poll(_, flags, question, answers, closePeriod, _):
                                         let publicity: TelegramMediaPollPublicity
                                         if (flags & (1 << 1)) != 0 {
                                             publicity = .public
@@ -45,15 +45,13 @@ func _internal_requestMessageSelectPollOption(account: Account, messageId: Messa
                                             kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
                                         }
                                         resultPoll = TelegramMediaPoll(pollId: pollId, publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod)
-                                    default:
-                                        break
                                     }
                                 }
                                 
                                 let resultsMin: Bool
                                 switch results {
-                                case let .pollResults(pollResults):
-                                    resultsMin = (pollResults.flags & (1 << 0)) != 0
+                                case let .pollResults(flags, _, _, _, _, _):
+                                    resultsMin = (flags & (1 << 0)) != 0
                                 }
                                 resultPoll = resultPoll?.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
                                 
@@ -153,7 +151,7 @@ func _internal_requestClosePoll(postbox: Postbox, network: Network, stateManager
 
 private let cachedPollResultsCollectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 20, highWaterItemCount: 40)
 
-final class CachedPollOptionResult: PostboxCoding {
+final class CachedPollOptionResult: Codable {
     let peerIds: [PeerId]
     let count: Int32
     
@@ -170,14 +168,18 @@ final class CachedPollOptionResult: PostboxCoding {
         self.count = count
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.peerIds = decoder.decodeInt64ArrayForKey("peerIds").map(PeerId.init)
-        self.count = decoder.decodeInt32ForKey("count", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.peerIds = (try container.decode([Int64].self, forKey: "peerIds")).map(PeerId.init)
+        self.count = try container.decode(Int32.self, forKey: "count")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt64Array(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
-        encoder.encodeInt32(self.count, forKey: "count")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
+        try container.encode(self.count, forKey: "count")
     }
 }
 
@@ -208,7 +210,7 @@ private final class PollResultsOptionContext {
         
         self.isLoadingMore = true
         self.disposable.set((account.postbox.transaction { transaction -> (peers: [RenderedPeer], canLoadMore: Bool)? in
-            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier))) as? CachedPollOptionResult
+            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier)))?.get(CachedPollOptionResult.self)
             if let cachedResult = cachedResult, Int(cachedResult.count) == count {
                 var result: [RenderedPeer] = []
                 for peerId in cachedResult.peerIds {
@@ -296,15 +298,15 @@ private final class PollResultsOptionContext {
                                 }
                             }
                             if populateCache {
-                                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier)), entry: CachedPollOptionResult(peerIds: resultPeers.map { $0.peerId }, count: count), collectionSpec: cachedPollResultsCollectionSpec)
+                                if let entry = CodableEntry(CachedPollOptionResult(peerIds: resultPeers.map { $0.peerId }, count: count)) {
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPollResults, key: CachedPollOptionResult.key(pollId: pollId, optionOpaqueIdentifier: opaqueIdentifier)), entry: entry, collectionSpec: cachedPollResultsCollectionSpec)
+                                }
                             }
                             return (resultPeers, Int(count), nextOffset)
                         }
                     }
                 }
-                #if DEBUG
-                //return signal |> delay(4.0, queue: .concurrentDefaultQueue())
-                #endif
+
                 return signal
             } else {
                 return .single(([], 0, nil))

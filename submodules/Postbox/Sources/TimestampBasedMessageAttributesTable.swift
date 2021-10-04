@@ -26,10 +26,10 @@ final class TimestampBasedMessageAttributesTable: Table {
     
     private let indexTable: TimestampBasedMessageAttributesIndexTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, indexTable: TimestampBasedMessageAttributesIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, indexTable: TimestampBasedMessageAttributesIndexTable) {
         self.indexTable = indexTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(tag: UInt16, timestamp: Int32, id: MessageId) -> ValueBoxKey {

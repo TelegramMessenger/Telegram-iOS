@@ -1,6 +1,7 @@
 import Foundation
 import TextFormat
 import Postbox
+import TelegramCore
 import AccountContext
 
 func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, attribute: NSAttributedString.Key) -> ChatTextInputState {
@@ -90,9 +91,9 @@ func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: Peer) -
         let selectionPosition = range.lowerBound + (replacementText as NSString).length
         
         return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
-    } else if !peer.compactDisplayTitle.isEmpty {
+    } else if !EnginePeer(peer).compactDisplayTitle.isEmpty {
         let replacementText = NSMutableAttributedString()
-        replacementText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
+        replacementText.append(NSAttributedString(string: EnginePeer(peer).compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
         replacementText.append(NSAttributedString(string: " "))
         
         let updatedRange = NSRange(location: range.location , length: range.length)

@@ -1,6 +1,6 @@
 import Postbox
 
-public struct AppChangelogState: PreferencesEntry, Equatable {
+public struct AppChangelogState: Codable {
     public var checkedVersion: String
     public var previousVersion: String
     
@@ -11,21 +11,17 @@ public struct AppChangelogState: PreferencesEntry, Equatable {
         self.previousVersion = previousVersion
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.checkedVersion = decoder.decodeStringForKey("checkedVersion", orElse: "")
-        self.previousVersion = decoder.decodeStringForKey("previousVersion", orElse: "")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.checkedVersion = (try? container.decode(String.self, forKey: "checkedVersion")) ?? ""
+        self.previousVersion = (try? container.decode(String.self, forKey: "previousVersion")) ?? ""
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.checkedVersion, forKey: "checkedVersion")
-        encoder.encodeString(self.previousVersion, forKey: "previousVersion")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? AppChangelogState else {
-            return false
-        }
-        
-        return self == to
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.checkedVersion, forKey: "checkedVersion")
+        try container.encode(self.previousVersion, forKey: "previousVersion")
     }
 }

@@ -8,7 +8,6 @@ import Display
 import TelegramUIPreferences
 import AccountContext
 import TextSelectionNode
-import ReactionSelectionNode
 import ContextUI
 import ChatInterfaceState
 import UndoUI
@@ -45,8 +44,6 @@ struct ChatInterfacePollActionState: Equatable {
 public enum ChatControllerInteractionSwipeAction {
     case none
     case reply
-    case like
-    case unlike
 }
 
 public final class ChatControllerInteraction {
@@ -83,7 +80,6 @@ public final class ChatControllerInteraction {
     let presentController: (ViewController, Any?) -> Void
     let navigationController: () -> NavigationController?
     let chatControllerNode: () -> ASDisplayNode?
-    let reactionContainerNode: () -> ReactionSelectionParentNode?
     let presentGlobalOverlayController: (ViewController, Any?) -> Void
     let callPeer: (PeerId, Bool) -> Void
     let longTap: (ChatControllerInteractionLongTapAction, Message?) -> Void
@@ -104,8 +100,6 @@ public final class ChatControllerInteraction {
     let sendScheduledMessagesNow: ([MessageId]) -> Void
     let editScheduledMessagesTime: ([MessageId]) -> Void
     let performTextSelectionAction: (UInt32, NSAttributedString, TextSelectionAction) -> Void
-    let updateMessageLike: (MessageId, Bool) -> Void
-    let openMessageReactions: (MessageId) -> Void
     let displayImportedMessageTooltip: (ASDisplayNode) -> Void
     let displaySwipeToReplyHint: () -> Void
     let dismissReplyMarkupMessage: (Message) -> Void
@@ -180,7 +174,6 @@ public final class ChatControllerInteraction {
         presentController: @escaping (ViewController, Any?) -> Void,
         navigationController: @escaping () -> NavigationController?,
         chatControllerNode: @escaping () -> ASDisplayNode?,
-        reactionContainerNode: @escaping () -> ReactionSelectionParentNode?,
         presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void,
         callPeer: @escaping (PeerId, Bool) -> Void,
         longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void,
@@ -201,8 +194,6 @@ public final class ChatControllerInteraction {
         sendScheduledMessagesNow: @escaping ([MessageId]) -> Void,
         editScheduledMessagesTime: @escaping ([MessageId]) -> Void,
         performTextSelectionAction: @escaping (UInt32, NSAttributedString, TextSelectionAction) -> Void,
-        updateMessageLike: @escaping (MessageId, Bool) -> Void,
-        openMessageReactions: @escaping (MessageId) -> Void,
         displayImportedMessageTooltip: @escaping (ASDisplayNode) -> Void,
         displaySwipeToReplyHint: @escaping () -> Void,
         dismissReplyMarkupMessage: @escaping (Message) -> Void,
@@ -263,7 +254,6 @@ public final class ChatControllerInteraction {
         self.presentController = presentController
         self.navigationController = navigationController
         self.chatControllerNode = chatControllerNode
-        self.reactionContainerNode = reactionContainerNode
         self.presentGlobalOverlayController = presentGlobalOverlayController
         self.callPeer = callPeer
         self.longTap = longTap
@@ -287,8 +277,6 @@ public final class ChatControllerInteraction {
         self.sendScheduledMessagesNow = sendScheduledMessagesNow
         self.editScheduledMessagesTime = editScheduledMessagesTime
         self.performTextSelectionAction = performTextSelectionAction
-        self.updateMessageLike = updateMessageLike
-        self.openMessageReactions = openMessageReactions
         self.displayImportedMessageTooltip = displayImportedMessageTooltip
         self.displaySwipeToReplyHint = displaySwipeToReplyHint
         self.dismissReplyMarkupMessage = dismissReplyMarkupMessage
@@ -324,8 +312,6 @@ public final class ChatControllerInteraction {
             return nil
         }, chatControllerNode: {
             return nil
-        }, reactionContainerNode: {
-            return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
@@ -342,8 +328,6 @@ public final class ChatControllerInteraction {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
-        }, updateMessageLike: { _, _ in
-        }, openMessageReactions: { _ in
         }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in

@@ -1,6 +1,6 @@
 import Postbox
 
-public struct WallpaperSettings: PostboxCoding, Equatable {
+public struct WallpaperSettings: Codable, Equatable {
     public var blur: Bool
     public var motion: Bool
     public var colors: [UInt32]
@@ -15,37 +15,33 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
         self.rotation = rotation
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.blur = decoder.decodeInt32ForKey("b", orElse: 0) != 0
-        self.motion = decoder.decodeInt32ForKey("m", orElse: 0) != 0
-        if let topColor = decoder.decodeOptionalInt32ForKey("c").flatMap(UInt32.init(bitPattern:)) {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.blur = try container.decode(Int32.self, forKey: "b") != 0
+        self.motion = try container.decode(Int32.self, forKey: "m") != 0
+        if let topColor = (try container.decodeIfPresent(Int32.self, forKey: "c")).flatMap(UInt32.init(bitPattern:)) {
             var colors: [UInt32] = [topColor]
-            if let bottomColor = decoder.decodeOptionalInt32ForKey("bc").flatMap(UInt32.init(bitPattern:)) {
+            if let bottomColor = (try container.decodeIfPresent(Int32.self, forKey: "bc")).flatMap(UInt32.init(bitPattern:)) {
                 colors.append(bottomColor)
             }
             self.colors = colors
         } else {
-            self.colors = decoder.decodeInt32ArrayForKey("colors").map(UInt32.init(bitPattern:))
+            self.colors = (try container.decode([Int32].self, forKey: "colors")).map(UInt32.init(bitPattern:))
         }
 
-        self.intensity = decoder.decodeOptionalInt32ForKey("i")
-        self.rotation = decoder.decodeOptionalInt32ForKey("r")
+        self.intensity = try container.decodeIfPresent(Int32.self, forKey: "i")
+        self.rotation = try container.decodeIfPresent(Int32.self, forKey: "r")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.blur ? 1 : 0, forKey: "b")
-        encoder.encodeInt32(self.motion ? 1 : 0, forKey: "m")
-        encoder.encodeInt32Array(self.colors.map(Int32.init(bitPattern:)), forKey: "colors")
-        if let intensity = self.intensity {
-            encoder.encodeInt32(intensity, forKey: "i")
-        } else {
-            encoder.encodeNil(forKey: "i")
-        }
-        if let rotation = self.rotation {
-            encoder.encodeInt32(rotation, forKey: "r")
-        } else {
-            encoder.encodeNil(forKey: "r")
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.blur ? 1 : 0) as Int32, forKey: "b")
+        try container.encode((self.motion ? 1 : 0) as Int32, forKey: "m")
+        try container.encode(self.colors.map(Int32.init(bitPattern:)), forKey: "colors")
+        try container.encodeIfPresent(self.intensity, forKey: "i")
+        try container.encodeIfPresent(self.rotation, forKey: "r")
     }
     
     public static func ==(lhs: WallpaperSettings, rhs: WallpaperSettings) -> Bool {
@@ -68,7 +64,108 @@ public struct WallpaperSettings: PostboxCoding, Equatable {
     }
 }
 
-public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
+public struct TelegramWallpaperNativeCodable: Codable {
+    public let value: TelegramWallpaper
+
+    public init(_ value: TelegramWallpaper) {
+        self.value = value
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        switch try container.decode(Int32.self, forKey: "v") {
+        case 0:
+            let settings = try container.decode(WallpaperSettings.self, forKey: "settings")
+            self.value = .builtin(settings)
+        case 1:
+            self.value = .color(UInt32(bitPattern: try container.decode(Int32.self, forKey: "c")))
+        case 2:
+            let settings = try container.decode(WallpaperSettings.self, forKey: "settings")
+            let representations = (try container.decode([AdaptedPostboxDecoder.RawObjectData].self, forKey: "i")).map { itemData in
+                return TelegramMediaImageRepresentation(decoder: PostboxDecoder(buffer: MemoryBuffer(data: itemData.data)))
+            }
+            self.value = .image(representations, settings)
+        case 3:
+            let settings = try container.decode(WallpaperSettings.self, forKey: "settings")
+            if let fileData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "file") {
+                let file = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: fileData.data)))
+                self.value = .file(TelegramWallpaper.File(
+                    id: try container.decode(Int64.self, forKey: "id"),
+                    accessHash: try container.decode(Int64.self, forKey: "accessHash"),
+                    isCreator: try container.decode(Int32.self, forKey: "isCreator") != 0,
+                    isDefault: try container.decode(Int32.self, forKey: "isDefault") != 0,
+                    isPattern: try container.decode(Int32.self, forKey: "isPattern") != 0,
+                    isDark: try container.decode(Int32.self, forKey: "isDark") != 0,
+                    slug: try container.decode(String.self, forKey: "slug"),
+                    file: file,
+                    settings: settings
+                ))
+            } else {
+                self.value = .color(0xffffff)
+            }
+        case 4:
+            let settings = try container.decode(WallpaperSettings.self, forKey: "settings")
+
+            var colors: [UInt32] = []
+
+            if let topColor = (try container.decodeIfPresent(Int32.self, forKey: "c1")).flatMap(UInt32.init(bitPattern:)) {
+                colors.append(topColor)
+                if let bottomColor = (try container.decodeIfPresent(Int32.self, forKey: "c2")).flatMap(UInt32.init(bitPattern:)) {
+                    colors.append(bottomColor)
+                }
+            } else {
+                colors = (try container.decode([Int32].self, forKey: "colors")).map(UInt32.init(bitPattern:))
+            }
+
+            self.value = .gradient(TelegramWallpaper.Gradient(
+                id: try container.decodeIfPresent(Int64.self, forKey: "id"),
+                colors: colors,
+                settings: settings
+            ))
+        default:
+            assertionFailure()
+            self.value = .color(0xffffff)
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        switch self.value {
+            case let .builtin(settings):
+                try container.encode(0 as Int32, forKey: "v")
+                try container.encode(settings, forKey: "settings")
+            case let .color(color):
+                try container.encode(1 as Int32, forKey: "v")
+                try container.encode(Int32(bitPattern: color), forKey: "c")
+            case let .gradient(gradient):
+                try container.encode(4 as Int32, forKey: "v")
+                try container.encodeIfPresent(gradient.id, forKey: "id")
+                try container.encode(gradient.colors.map(Int32.init(bitPattern:)), forKey: "colors")
+                try container.encode(gradient.settings, forKey: "settings")
+            case let .image(representations, settings):
+                try container.encode(2 as Int32, forKey: "v")
+                try container.encode(representations.map { item in
+                    return PostboxEncoder().encodeObjectToRawData(item)
+                }, forKey: "i")
+                try container.encode(settings, forKey: "settings")
+            case let .file(file):
+                try container.encode(3 as Int32, forKey: "v")
+                try container.encode(file.id, forKey: "id")
+                try container.encode(file.accessHash, forKey: "accessHash")
+                try container.encode((file.isCreator ? 1 : 0) as Int32, forKey: "isCreator")
+                try container.encode((file.isDefault ? 1 : 0) as Int32, forKey: "isDefault")
+                try container.encode((file.isPattern ? 1 : 0) as Int32, forKey: "isPattern")
+                try container.encode((file.isDark ? 1 : 0) as Int32, forKey: "isDark")
+                try container.encode(file.slug, forKey: "slug")
+                try container.encode(PostboxEncoder().encodeObjectToRawData(file.file), forKey: "file")
+                try container.encode(file.settings, forKey: "settings")
+        }
+    }
+}
+
+public enum TelegramWallpaper: Equatable {
     public struct Gradient: Equatable {
         public var id: Int64?
         public var colors: [UInt32]
@@ -125,85 +222,12 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
     case image([TelegramMediaImageRepresentation], WallpaperSettings)
     case file(File)
     
-    public init(decoder: PostboxDecoder) {
-        switch decoder.decodeInt32ForKey("v", orElse: 0) {
-        case 0:
-            let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
-            self = .builtin(settings)
-        case 1:
-            self = .color(UInt32(bitPattern: decoder.decodeInt32ForKey("c", orElse: 0)))
-        case 2:
-            let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
-            self = .image(decoder.decodeObjectArrayWithDecoderForKey("i"), settings)
-        case 3:
-            let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
-            if let file = decoder.decodeObjectForKey("file", decoder: { TelegramMediaFile(decoder: $0) }) as? TelegramMediaFile {
-                self = .file(File(id: decoder.decodeInt64ForKey("id", orElse: 0), accessHash: decoder.decodeInt64ForKey("accessHash", orElse: 0), isCreator: decoder.decodeInt32ForKey("isCreator", orElse: 0) != 0, isDefault: decoder.decodeInt32ForKey("isDefault", orElse: 0) != 0, isPattern: decoder.decodeInt32ForKey("isPattern", orElse: 0) != 0, isDark: decoder.decodeInt32ForKey("isDark", orElse: 0) != 0, slug: decoder.decodeStringForKey("slug", orElse: ""), file: file, settings: settings))
-            } else {
-                self = .color(0xffffff)
-            }
-        case 4:
-            let settings = decoder.decodeObjectForKey("settings", decoder: { WallpaperSettings(decoder: $0) }) as? WallpaperSettings ?? WallpaperSettings()
-
-            var colors: [UInt32] = []
-
-            if let topColor = decoder.decodeOptionalInt32ForKey("c1").flatMap(UInt32.init(bitPattern:)) {
-                colors.append(topColor)
-                if let bottomColor = decoder.decodeOptionalInt32ForKey("c2").flatMap(UInt32.init(bitPattern:)) {
-                    colors.append(bottomColor)
-                }
-            } else {
-                colors = decoder.decodeInt32ArrayForKey("colors").map(UInt32.init(bitPattern:))
-            }
-
-            self = .gradient(Gradient(id: decoder.decodeOptionalInt64ForKey("id"), colors: colors, settings: settings))
-        default:
-            assertionFailure()
-            self = .color(0xffffff)
-        }
-    }
-    
     public var hasWallpaper: Bool {
         switch self {
             case .color:
                 return false
             default:
                 return true
-        }
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        switch self {
-            case let .builtin(settings):
-                encoder.encodeInt32(0, forKey: "v")
-                encoder.encodeObject(settings, forKey: "settings")
-            case let .color(color):
-                encoder.encodeInt32(1, forKey: "v")
-                encoder.encodeInt32(Int32(bitPattern: color), forKey: "c")
-            case let .gradient(gradient):
-                encoder.encodeInt32(4, forKey: "v")
-                if let id = gradient.id {
-                    encoder.encodeInt64(id, forKey: "id")
-                } else {
-                    encoder.encodeNil(forKey: "id")
-                }
-                encoder.encodeInt32Array(gradient.colors.map(Int32.init(bitPattern:)), forKey: "colors")
-                encoder.encodeObject(gradient.settings, forKey: "settings")
-            case let .image(representations, settings):
-                encoder.encodeInt32(2, forKey: "v")
-                encoder.encodeObjectArray(representations, forKey: "i")
-                encoder.encodeObject(settings, forKey: "settings")
-            case let .file(file):
-                encoder.encodeInt32(3, forKey: "v")
-                encoder.encodeInt64(file.id, forKey: "id")
-                encoder.encodeInt64(file.accessHash, forKey: "accessHash")
-                encoder.encodeInt32(file.isCreator ? 1 : 0, forKey: "isCreator")
-                encoder.encodeInt32(file.isDefault ? 1 : 0, forKey: "isDefault")
-                encoder.encodeInt32(file.isPattern ? 1 : 0, forKey: "isPattern")
-                encoder.encodeInt32(file.isDark ? 1 : 0, forKey: "isDark")
-                encoder.encodeString(file.slug, forKey: "slug")
-                encoder.encodeObject(file.file, forKey: "file")
-                encoder.encodeObject(file.settings, forKey: "settings")
         }
     }
     

@@ -132,7 +132,7 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
                     arguments.removePeer(peer.id)
                 })])
                 
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .none, label: .none, editing: editing, revealOptions: revealOptions, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(peer), presence: nil, text: .none, label: .none, editing: editing, revealOptions: revealOptions, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)

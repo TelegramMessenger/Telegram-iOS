@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import AppBundle
+import ObjCRuntimeUtils
 
 private let innerCircleDiameter: CGFloat = 110.0
 private let outerCircleDiameter = innerCircleDiameter + 50.0
@@ -138,7 +139,7 @@ final class ChatTextInputAudioRecordingOverlay {
         })
         
         var currentScaleValue: CGFloat = outerCircleMinScale
-        if let currentScale = self.outerCircleNode.layer.value(forKeyPath: "transform.scale") as? AnyObject, currentScale.responds(to: Selector("floatValue")) {
+        if let currentScale = self.outerCircleNode.layer.floatValue(forKeyPath: "transform.scale") {
             currentScaleValue = CGFloat(currentScale.floatValue)
         }
         

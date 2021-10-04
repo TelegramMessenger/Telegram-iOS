@@ -11,10 +11,10 @@ final class PeerNotificationSettingsBehaviorTable: Table {
     
     private let indexTable: PeerNotificationSettingsBehaviorIndexTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, indexTable: PeerNotificationSettingsBehaviorIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, indexTable: PeerNotificationSettingsBehaviorIndexTable) {
         self.indexTable = indexTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(peerId: PeerId, timestamp: Int32) -> ValueBoxKey {

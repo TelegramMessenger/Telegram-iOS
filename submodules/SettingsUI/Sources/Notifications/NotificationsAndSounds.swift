@@ -1077,14 +1077,14 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
         |> map { presentationData, sharedData, view, exceptions, authorizationStatus, warningSuppressed, hasMoreThanOneAccount -> (ItemListControllerState, (ItemListNodeState, Any)) in
             
             let viewSettings: GlobalNotificationSettingsSet
-            if let settings = view.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+            if let settings = view.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
                 viewSettings = settings.effective
             } else {
                 viewSettings = GlobalNotificationSettingsSet.defaultSettings
             }
             
             let inAppSettings: InAppNotificationSettings
-            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings {
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) {
                 inAppSettings = settings
             } else {
                 inAppSettings = InAppNotificationSettings.defaultSettings

@@ -13,7 +13,7 @@ public enum PresentationPersonNameOrder: Int32 {
     case lastFirst = 1
 }
 
-public struct ContactSynchronizationSettings: Equatable, PreferencesEntry {
+public struct ContactSynchronizationSettings: Equatable, Codable {
     public var _legacySynchronizeDeviceContacts: Bool
     public var nameDisplayOrder: PresentationPersonNameOrder
     public var sortOrder: ContactsSortOrder
@@ -28,24 +28,20 @@ public struct ContactSynchronizationSettings: Equatable, PreferencesEntry {
         self.sortOrder = sortOrder
     }
     
-    public init(decoder: PostboxDecoder) {
-        self._legacySynchronizeDeviceContacts = decoder.decodeInt32ForKey("synchronizeDeviceContacts", orElse: 0) != 0
-        self.nameDisplayOrder = PresentationPersonNameOrder(rawValue: decoder.decodeInt32ForKey("nameDisplayOrder", orElse: 0)) ?? .firstLast
-        self.sortOrder = ContactsSortOrder(rawValue: decoder.decodeInt32ForKey("sortOrder", orElse: 0)) ?? .presence
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self._legacySynchronizeDeviceContacts = (try container.decode(Int32.self, forKey: "synchronizeDeviceContacts")) != 0
+        self.nameDisplayOrder = PresentationPersonNameOrder(rawValue: try container.decode(Int32.self, forKey: "nameDisplayOrder")) ?? .firstLast
+        self.sortOrder = ContactsSortOrder(rawValue: try container.decode(Int32.self, forKey: "sortOrder")) ?? .presence
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self._legacySynchronizeDeviceContacts ? 1 : 0, forKey: "synchronizeDeviceContacts")
-        encoder.encodeInt32(self.nameDisplayOrder.rawValue, forKey: "nameDisplayOrder")
-        encoder.encodeInt32(self.sortOrder.rawValue, forKey: "sortOrder")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? ContactSynchronizationSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self._legacySynchronizeDeviceContacts ? 1 : 0) as Int32, forKey: "synchronizeDeviceContacts")
+        try container.encode(self.nameDisplayOrder.rawValue, forKey: "nameDisplayOrder")
+        try container.encode(self.sortOrder.rawValue, forKey: "sortOrder")
     }
 }
 
@@ -53,12 +49,12 @@ public func updateContactSettingsInteractively(accountManager: AccountManager<Te
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings, { entry in
             let currentSettings: ContactSynchronizationSettings
-            if let entry = entry as? ContactSynchronizationSettings {
+            if let entry = entry?.get(ContactSynchronizationSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = .defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

@@ -98,15 +98,15 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 var text = ""
                 if let forwardInfo = message?.forwardInfo, forwardInfo.flags.contains(.isImported) {
                     if let author = forwardInfo.author {
-                        authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                        authorName = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                     } else if let authorSignature = forwardInfo.authorSignature {
                         authorName = authorSignature
                     }
                 } else if let author = message?.effectiveAuthor {
-                    authorName = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                    authorName = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
                 if let message = message {
-                    (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
+                    (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
                 }
                 
                 var updatedMediaReference: AnyMediaReference?
@@ -172,7 +172,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 
                 let isMedia: Bool
                 if let message = message {
-                    switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId) {
+                    switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId) {
                         case .text:
                             isMedia = false
                         default:
@@ -187,7 +187,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 
                 let headerString: String
                 if let message = message, message.flags.contains(.Incoming), let author = message.author {
-                    headerString = "Reply to message. From: \(author.displayTitle(strings: strings, displayOrder: nameDisplayOrder))"
+                    headerString = "Reply to message. From: \(EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder))"
                 } else if let message = message, !message.flags.contains(.Incoming) {
                     headerString = "Reply to your message"
                 } else {

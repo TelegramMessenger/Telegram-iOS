@@ -358,7 +358,7 @@ public final class CallListController: TelegramBaseController {
             }
         }
     
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: self, sourceNode: buttonNode.contentNode, keepInPlace: false, blurBackground: false)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: nil)
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ExtractedContentSourceImpl(controller: self, sourceNode: buttonNode.contentNode, keepInPlace: false, blurBackground: false)), items: .single(ContextController.Items(items: items)), gesture: nil)
         self.presentInGlobalOverlay(contextController)
     }
     
@@ -448,7 +448,7 @@ public final class CallListController: TelegramBaseController {
                 if let cachedUserData = view.cachedData as? CachedUserData, cachedUserData.callsPrivate {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     
-                    strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(peer.compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_ConnectionErrorTitle, text: presentationData.strings.Call_PrivacyErrorMessage(EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     return
                 }
                 

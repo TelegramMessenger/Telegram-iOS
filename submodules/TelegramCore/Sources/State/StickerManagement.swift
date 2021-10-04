@@ -4,13 +4,13 @@ import Postbox
 import SwiftSignalKit
 
 
-private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
+private func hashForIdsReverse(_ ids: [Int64]) -> Int64 {
     var acc: UInt64 = 0
     
     for id in ids {
         combineInt64Hash(&acc, with: UInt64(bitPattern: id))
     }
-    return Int32(bitPattern: UInt32(clamping: acc & UInt64(0x7FFFFFFF)))
+    return Int64(bitPattern: acc)
 }
 
 func manageStickerPacks(network: Network, postbox: Postbox) -> Signal<Void, NoError> {
@@ -28,15 +28,15 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
         let initialPacks = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
         var initialPackMap: [Int64: FeaturedStickerPackItem] = [:]
         for entry in initialPacks {
-            let item = entry.contents as! FeaturedStickerPackItem
+            let item = entry.contents.get(FeaturedStickerPackItem.self)!
             initialPackMap[FeaturedStickerPackItemId(entry.id).packId] = item
         }
         
         let initialPackIds = initialPacks.map {
             return FeaturedStickerPackItemId($0.id).packId
         }
-        let initialHash: Int32 = hashForIdsReverse(initialPackIds)
-        return network.request(Api.functions.messages.getFeaturedStickers(hash: 0))
+        let initialHash: Int64 = hashForIdsReverse(initialPackIds)
+        return network.request(Api.functions.messages.getFeaturedStickers(hash: initialHash))
         |> retryRequest
         |> mapToSignal { result -> Signal<Void, NoError> in
             return postbox.transaction { transaction -> Void in
@@ -55,7 +55,13 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
                         }
                         updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
                     }
-                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, items: updatedPacks.map { OrderedItemListEntry(id: FeaturedStickerPackItemId($0.info.id.id).rawValue, contents: $0) })
+                    transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, items: updatedPacks.compactMap { item -> OrderedItemListEntry? in
+                        if let entry = CodableEntry(item) {
+                            return OrderedItemListEntry(id: FeaturedStickerPackItemId(item.info.id.id).rawValue, contents: entry)
+                        } else {
+                            return nil
+                        }
+                    })
                 }
             }
         }
@@ -83,7 +89,7 @@ public func requestOldFeaturedStickerPacks(network: Network, postbox: Postbox, o
 
 public func preloadedFeaturedStickerSet(network: Network, postbox: Postbox, id: ItemCollectionId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let pack = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents as? FeaturedStickerPackItem {
+        if let pack = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents.get(FeaturedStickerPackItem.self) {
             if pack.topItems.count < 5 && pack.topItems.count < pack.info.count {
                 return _internal_requestStickerSet(postbox: postbox, network: network, reference: .id(id: pack.info.id.id, accessHash: pack.info.accessHash))
                 |> map(Optional.init)
@@ -93,12 +99,14 @@ public func preloadedFeaturedStickerSet(network: Network, postbox: Postbox, id: 
                 |> mapToSignal { result -> Signal<Void, NoError> in
                     if let result = result {
                         return postbox.transaction { transaction -> Void in
-                            if let pack = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents as? FeaturedStickerPackItem {
+                            if let pack = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue)?.contents.get(FeaturedStickerPackItem.self) {
                                 var items = result.items.map({ $0 as? StickerPackItem }).compactMap({ $0 })
                                 if items.count > 5 {
                                     items.removeSubrange(5 ..< items.count)
                                 }
-                                transaction.updateOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue, item: FeaturedStickerPackItem(info: pack.info, topItems: items, unread: pack.unread))
+                                if let entry = CodableEntry(FeaturedStickerPackItem(info: pack.info, topItems: items, unread: pack.unread)) {
+                                    transaction.updateOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, itemId: FeaturedStickerPackItemId(id.id).rawValue, item: entry)
+                                }
                             }
                         }
                     } else {

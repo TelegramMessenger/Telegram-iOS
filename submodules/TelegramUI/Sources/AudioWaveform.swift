@@ -39,11 +39,11 @@ final class AudioWaveform: Equatable {
         var result = Data()
         result.count = numSamples * 2
         
-        bitstream.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
-            result.withUnsafeMutableBytes { (samples: UnsafeMutablePointer<Int16>) -> Void in
+        bitstream.withUnsafeBytes { bytes -> Void in
+            result.withUnsafeMutableBytes { samples -> Void in
                 let norm = Int64((1 << bitsPerSample) - 1)
                 for i in 0 ..< numSamples {
-                    samples[i] = Int16(Int64(getBits(data: bytes, length: bitstream.count, bitOffset: i * 5, numBits: 5)) * norm / norm)
+                    samples.baseAddress!.assumingMemoryBound(to: Int16.self)[i] = Int16(Int64(getBits(data: bytes.baseAddress!.assumingMemoryBound(to: Int8.self), length: bitstream.count, bitOffset: i * 5, numBits: 5)) * norm / norm)
                 }
             }
         }
@@ -59,8 +59,12 @@ final class AudioWaveform: Equatable {
         
         let maxSample: Int32 = self.peak
         
-        self.samples.withUnsafeBytes { (samples: UnsafePointer<Int16>) -> Void in
-            result.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int16>) -> Void in
+        self.samples.withUnsafeBytes { rawSamples -> Void in
+            let samples = rawSamples.baseAddress!.assumingMemoryBound(to: Int16.self)
+            
+            result.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int16.self)
+
                 for i in 0 ..< numSamples {
                     let value: Int32 = min(Int32(31), abs(Int32(samples[i])) * 31 / maxSample)
                     if i == 99 {

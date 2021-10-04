@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public struct SecureFileMediaResourceId: MediaResourceId {
+public struct SecureFileMediaResourceId {
     public let fileId: Int64
     
     public init(fileId: Int64) {
@@ -15,21 +15,13 @@ public struct SecureFileMediaResourceId: MediaResourceId {
     public var hashValue: Int {
         return self.fileId.hashValue
     }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? SecureFileMediaResourceId {
-            return self.fileId == to.fileId
-        } else {
-            return false
-        }
-    }
 }
 
 public final class SecureFileMediaResource: TelegramMediaResource {
     public let file: SecureIdFileReference
     
     public var id: MediaResourceId {
-        return SecureFileMediaResourceId(fileId: self.file.id)
+        return MediaResourceId(SecureFileMediaResourceId(fileId: self.file.id).uniqueId)
     }
     
     public var datacenterId: Int {

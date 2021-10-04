@@ -112,7 +112,7 @@ final class PeerInfoState {
 final class TelegramGlobalSettings {
     let suggestPhoneNumberConfirmation: Bool
     let suggestPasswordConfirmation: Bool
-    let accountsAndPeers: [(AccountContext, Peer, Int32)]
+    let accountsAndPeers: [(AccountContext, EnginePeer, Int32)]
     let activeSessionsContext: ActiveSessionsContext?
     let webSessionsContext: WebSessionsContext?
     let otherSessionsCount: Int?
@@ -131,7 +131,7 @@ final class TelegramGlobalSettings {
     init(
         suggestPhoneNumberConfirmation: Bool,
         suggestPasswordConfirmation: Bool,
-        accountsAndPeers: [(AccountContext, Peer, Int32)],
+        accountsAndPeers: [(AccountContext, EnginePeer, Int32)],
         activeSessionsContext: ActiveSessionsContext?,
         webSessionsContext: WebSessionsContext?,
         otherSessionsCount: Int?,
@@ -356,7 +356,7 @@ func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId) -> Signa
     }
 }
 
-func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, accountsAndPeers: Signal<[(AccountContext, Peer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>) -> Signal<PeerInfoScreenData, NoError> {
+func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, accountsAndPeers: Signal<[(AccountContext, EnginePeer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>) -> Signal<PeerInfoScreenData, NoError> {
     let preferences = context.sharedContext.accountManager.sharedData(keys: [
         SharedDataKeys.proxySettings,
         ApplicationSpecificSharedDataKeys.inAppNotificationSettings,
@@ -406,15 +406,15 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
             let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
             let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
             
-            let proxySettings: ProxySettings = sharedPreferences.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
-            let inAppNotificationSettings: InAppNotificationSettings = sharedPreferences.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
+            let proxySettings: ProxySettings = sharedPreferences.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) ?? ProxySettings.defaultSettings
+            let inAppNotificationSettings: InAppNotificationSettings = sharedPreferences.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
             
             let unreadTrendingStickerPacks = featuredStickerPacks.reduce(0, { count, item -> Int in
                 return item.unread ? count + 1 : count
             })
             
             var enableQRLogin = false
-            if let appConfiguration = accountPreferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration, let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR {
+            if let appConfiguration = accountPreferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self), let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR {
                 enableQRLogin = true
             }
             
@@ -482,7 +482,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     let data = manager.with { manager -> PeerInfoStatusData? in
                         if let presence = manager.currentValue {
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                            let (text, isActivity) = stringAndActivityForUserPresence(strings: strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp), expanded: true)
+                            let (text, isActivity) = stringAndActivityForUserPresence(strings: strings, dateTimeFormat: dateTimeFormat, presence: EnginePeer.Presence(presence), relativeTo: Int32(timestamp), expanded: true)
                             return PeerInfoStatusData(text: text, isActivity: isActivity)
                         } else {
                             return nil
@@ -537,7 +537,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                                     })
                                 }
                                 updateManager.with { updateManager in
-                                    updateManager.reset(presence: presence)
+                                    updateManager.reset(presence: EnginePeer.Presence(presence))
                                 }
                             } else if let _ = manager.updateManager {
                                 manager.updateManager = nil
@@ -564,7 +564,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             |> map { peerView, availablePanes, combinedView, status -> PeerInfoScreenData in
                 var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
                 if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
-                    if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                    if let settings = preferencesView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
                         globalNotificationSettings = settings
                     }
                 }
@@ -631,7 +631,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             |> map { peerView, availablePanes, combinedView, status, currentInvitationsContext, invitations -> PeerInfoScreenData in
                 var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
                 if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
-                    if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                    if let settings = preferencesView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
                         globalNotificationSettings = settings
                     }
                 }
@@ -779,7 +779,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             |> map { peerView, availablePanes, combinedView, status, membersData, currentInvitationsContext, invitations -> PeerInfoScreenData in
                 var globalNotificationSettings: GlobalNotificationSettings = .defaultSettings
                 if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
-                    if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                    if let settings = preferencesView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
                         globalNotificationSettings = settings
                     }
                 }
@@ -888,8 +888,8 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                     switch channelMember.participant {
                     case .creator:
                         break
-                    case let .member(member):
-                        if let adminInfo = member.adminInfo {
+                    case let .member(_, _, adminInfo, _, _):
+                        if let adminInfo = adminInfo {
                             if adminInfo.promotedBy == accountPeerId {
                                 if !channel.flags.contains(.isGigagroup) {
                                     result.insert(.restrict)
@@ -920,8 +920,8 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                 result.insert(.promote)
             case .admin:
                 switch member {
-                case let .legacyGroupMember(legacyGroupMember):
-                    if legacyGroupMember.invitedBy == accountPeerId {
+                case let .legacyGroupMember(_, _, invitedBy, _):
+                    if invitedBy == accountPeerId {
                         result.insert(.restrict)
                         result.insert(.promote)
                     }
@@ -932,8 +932,8 @@ func availableActionsForMemberOfPeer(accountPeerId: PeerId, peer: Peer?, member:
                 }
             case .member:
                 switch member {
-                case let .legacyGroupMember(legacyGroupMember):
-                    if legacyGroupMember.invitedBy == accountPeerId {
+                case let .legacyGroupMember(_, _, invitedBy, _):
+                    if invitedBy == accountPeerId {
                         result.insert(.restrict)
                     }
                 case .channelMember:

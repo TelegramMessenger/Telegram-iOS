@@ -14,11 +14,11 @@ class MessageHistoryTagsTable: Table {
     private let summaryTable: MessageHistoryTagsSummaryTable
     private let summaryTags: MessageTags
     
-    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration, summaryTable: MessageHistoryTagsSummaryTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, seedConfiguration: SeedConfiguration, summaryTable: MessageHistoryTagsSummaryTable) {
         self.summaryTable = summaryTable
         self.summaryTags = seedConfiguration.messageTagsWithSummary
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(tag: MessageTags, index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 4 + 4 + 4 + 4)) -> ValueBoxKey {

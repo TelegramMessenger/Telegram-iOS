@@ -1,6 +1,6 @@
 import Postbox
 
-public struct ExportedInvitation: PostboxCoding, Equatable {
+public struct ExportedInvitation: Codable, Equatable {
     public let link: String
     public let isPermanent: Bool
     public let isRevoked: Bool
@@ -23,44 +23,32 @@ public struct ExportedInvitation: PostboxCoding, Equatable {
         self.count = count
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.link = decoder.decodeStringForKey("l", orElse: "")
-        self.isPermanent = decoder.decodeBoolForKey("permanent", orElse: false)
-        self.isRevoked = decoder.decodeBoolForKey("revoked", orElse: false)
-        self.adminId = PeerId(decoder.decodeInt64ForKey("adminId", orElse: 0))
-        self.date = decoder.decodeInt32ForKey("date", orElse: 0)
-        self.startDate = decoder.decodeOptionalInt32ForKey("startDate")
-        self.expireDate = decoder.decodeOptionalInt32ForKey("expireDate")
-        self.usageLimit = decoder.decodeOptionalInt32ForKey("usageLimit")
-        self.count = decoder.decodeOptionalInt32ForKey("count")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.link = try container.decode(String.self, forKey: "l")
+        self.isPermanent = try container.decode(Bool.self, forKey: "permanent")
+        self.isRevoked = try container.decode(Bool.self, forKey: "revoked")
+        self.adminId = PeerId(try container.decode(Int64.self, forKey: "adminId"))
+        self.date = try container.decode(Int32.self, forKey: "date")
+        self.startDate = try container.decodeIfPresent(Int32.self, forKey: "startDate")
+        self.expireDate = try container.decodeIfPresent(Int32.self, forKey: "expireDate")
+        self.usageLimit = try container.decodeIfPresent(Int32.self, forKey: "usageLimit")
+        self.count = try container.decodeIfPresent(Int32.self, forKey: "count")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.link, forKey: "l")
-        encoder.encodeBool(self.isPermanent, forKey: "permanent")
-        encoder.encodeBool(self.isRevoked, forKey: "revoked")
-        encoder.encodeInt64(self.adminId.toInt64(), forKey: "adminId")
-        encoder.encodeInt32(self.date, forKey: "date")
-        if let startDate = self.startDate {
-            encoder.encodeInt32(startDate, forKey: "startDate")
-        } else {
-            encoder.encodeNil(forKey: "startDate")
-        }
-        if let expireDate = self.expireDate {
-            encoder.encodeInt32(expireDate, forKey: "expireDate")
-        } else {
-            encoder.encodeNil(forKey: "expireDate")
-        }
-        if let usageLimit = self.usageLimit {
-            encoder.encodeInt32(usageLimit, forKey: "usageLimit")
-        } else {
-            encoder.encodeNil(forKey: "usageLimit")
-        }
-        if let count = self.count {
-            encoder.encodeInt32(count, forKey: "count")
-        } else {
-            encoder.encodeNil(forKey: "count")
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.link, forKey: "l")
+        try container.encode(self.isPermanent, forKey: "permanent")
+        try container.encode(self.isRevoked, forKey: "revoked")
+        try container.encode(self.adminId.toInt64(), forKey: "adminId")
+        try container.encode(self.date, forKey: "date")
+        try container.encodeIfPresent(self.startDate, forKey: "startDate")
+        try container.encodeIfPresent(self.expireDate, forKey: "expireDate")
+        try container.encodeIfPresent(self.usageLimit, forKey: "usageLimit")
+        try container.encodeIfPresent(self.count, forKey: "count")
     }
     
     public static func ==(lhs: ExportedInvitation, rhs: ExportedInvitation) -> Bool {

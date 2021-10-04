@@ -816,7 +816,6 @@ public final class PendingMessageManager {
                     if let strongSelf = self {
                         return strongSelf.applySentGroupMessages(postbox: postbox, stateManager: stateManager, messages: messages.map { $0.0 }, result: result)
                         |> mapError { _ -> MTRpcError in
-                            return MTRpcError(errorCode: 400, errorDescription: "empty")
                         }
                     } else {
                         return .never()
@@ -1058,12 +1057,10 @@ public final class PendingMessageManager {
                         case .acknowledged:
                             return strongSelf.applyAcknowledgedMessage(postbox: postbox, message: message)
                             |> mapError { _ -> MTRpcError in
-                                return MTRpcError(errorCode: 400, errorDescription: "internal")
                             }
                         case let .result(result):
                             return strongSelf.applySentMessage(postbox: postbox, stateManager: stateManager, message: message, result: result)
                             |> mapError { _ -> MTRpcError in
-                                return MTRpcError(errorCode: 400, errorDescription: "internal")
                             }
                     }
                 }

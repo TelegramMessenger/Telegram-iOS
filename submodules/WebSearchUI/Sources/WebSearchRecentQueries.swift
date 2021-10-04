@@ -24,21 +24,23 @@ private struct WebSearchRecentQueryItemId {
     }
 }
 
-public final class RecentWebSearchQueryItem: OrderedItemListEntryContents {
+public final class RecentWebSearchQueryItem: Codable {
     init() {
     }
     
-    public init(decoder: PostboxDecoder) {
+    public init(from decoder: Decoder) throws {
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
     }
 }
 
 func addRecentWebSearchQuery(postbox: Postbox, string: String) -> Signal<Void, NoError> {
     return postbox.transaction { transaction in
         if let itemId = WebSearchRecentQueryItemId(string) {
-            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries, item: OrderedItemListEntry(id: itemId.rawValue, contents: RecentWebSearchQueryItem()), removeTailIfCountExceeds: 100)
+            if let entry = CodableEntry(RecentWebSearchQueryItem()) {
+                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.webSearchRecentQueries, item: OrderedItemListEntry(id: itemId.rawValue, contents: entry), removeTailIfCountExceeds: 100)
+            }
         }
     }
 }

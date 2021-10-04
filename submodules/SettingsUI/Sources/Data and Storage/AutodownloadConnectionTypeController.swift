@@ -321,14 +321,14 @@ func autodownloadMediaConnectionTypeController(context: AccountContext, connecti
         |> deliverOnMainQueue
         |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var automaticMediaDownloadSettings: MediaAutoDownloadSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
                 automaticMediaDownloadSettings = value
             } else {
                 automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
             }
             
             var autodownloadSettings: AutodownloadSettings
-            if let value = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings {
+            if let value = sharedData.entries[SharedDataKeys.autodownloadSettings]?.get(AutodownloadSettings.self) {
                 autodownloadSettings = value
                 automaticMediaDownloadSettings = automaticMediaDownloadSettings.updatedWithAutodownloadSettings(autodownloadSettings)
             } else {

@@ -41,7 +41,7 @@ func secretChatAdvanceRekeySessionIfNeeded(encryptionProvider: EncryptionProvide
             if let rekeySession = sequenceState.rekeyState, rekeySession.id == rekeySessionId {
                 switch rekeySession.data {
                     case let .requested(a, config):
-                        var gValue: Int32 = config.g.byteSwapped
+                        //var gValue: Int32 = config.g.byteSwapped
                         let p = config.p.makeData()
                         
                         let aData = a.makeData()
@@ -62,7 +62,9 @@ func secretChatAdvanceRekeySessionIfNeeded(encryptionProvider: EncryptionProvide
                         let keyHash = MTSha1(key)
                         
                         var keyFingerprint: Int64 = 0
-                        keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                        keyHash.withUnsafeBytes { rawBytes -> Void in
+                            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                             memcpy(&keyFingerprint, bytes.advanced(by: keyHash.count - 8), 8)
                         }
                         

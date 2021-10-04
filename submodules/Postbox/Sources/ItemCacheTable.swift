@@ -8,13 +8,14 @@ public final class ItemCacheEntryId: Equatable, Hashable {
         self.collectionId = collectionId
         self.key = key
     }
-    
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.collectionId)
+        hasher.combine(self.key)
+    }
+
     public static func ==(lhs: ItemCacheEntryId, rhs: ItemCacheEntryId) -> Bool {
         return lhs.collectionId == rhs.collectionId && lhs.key == rhs.key
-    }
-    
-    public var hashValue: Int {
-        return self.collectionId.hashValue &* 31 &+ self.key.hashValue
     }
 }
 
@@ -63,29 +64,14 @@ final class ItemCacheTable: Table {
         key.setInt32(2, value: index)
         return key
     }
-    
-    func put(id: ItemCacheEntryId, entry: PostboxCoding, metaTable: ItemCacheMetaTable) {
-        let encoder = PostboxEncoder()
-        encoder.encodeRootObject(entry)
-        withExtendedLifetime(encoder, {
-            self.valueBox.set(self.table, key: self.itemKey(id: id), value: encoder.readBufferNoCopy())
-        })
+
+    func put(id: ItemCacheEntryId, entry: CodableEntry, metaTable: ItemCacheMetaTable) {
+        self.valueBox.set(self.table, key: self.itemKey(id: id), value: ReadBuffer(data: entry.data))
     }
 
-    func putData(id: ItemCacheEntryId, entry: Data, metaTable: ItemCacheMetaTable) {
-        self.valueBox.set(self.table, key: self.itemKey(id: id), value: ReadBuffer(data: entry))
-    }
-    
-    func retrieve(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) -> PostboxCoding? {
-        if let value = self.valueBox.get(self.table, key: self.itemKey(id: id)), let entry = PostboxDecoder(buffer: value).decodeRootObject() {
-            return entry
-        }
-        return nil
-    }
-
-    func retrieveData(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) -> Data? {
+    func retrieve(id: ItemCacheEntryId, metaTable: ItemCacheMetaTable) -> CodableEntry? {
         if let value = self.valueBox.get(self.table, key: self.itemKey(id: id)) {
-            return value.makeData()
+            return CodableEntry(data: value.makeData())
         }
         return nil
     }

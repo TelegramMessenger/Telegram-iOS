@@ -386,14 +386,14 @@ static int32_t fixedTimeDifferenceValue = 0;
             NSDictionary *datacenterAuthInfoById = [keychain objectForKey:@"datacenterAuthInfoById" group:@"persistent"];
             if (datacenterAuthInfoById != nil) {
                 _datacenterAuthInfoById = [[NSMutableDictionary alloc] initWithDictionary:datacenterAuthInfoById];
-#if DEBUG
+/*#if DEBUG
                 NSArray<NSNumber *> *keys = [_datacenterAuthInfoById allKeys];
                 for (NSNumber *key in keys) {
                     if (parseAuthInfoMapKeyInteger(key).selector != MTDatacenterAuthInfoSelectorPersistent) {
                         [_datacenterAuthInfoById removeObjectForKey:key];
                     }
                 }
-#endif
+#endif*/
             }
             
             NSDictionary *datacenterPublicKeysById = [keychain objectForKey:@"datacenterPublicKeysById" group:@"ephemeral"];

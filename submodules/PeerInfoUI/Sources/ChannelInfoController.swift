@@ -327,7 +327,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelInfoControllerArguments
         switch self {
             case let .info(_, _, dateTimeFormat, peer, cachedData, state, updatingAvatar):
-                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: cachedData, state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer.flatMap(EnginePeer.init), presence: nil, memberCount: (cachedData as? CachedChannelData)?.participantsSummary.memberCount.flatMap(Int.init), state: state, sectionId: self.section, style: .plain, editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                     arguments.tapAvatarAction()
@@ -500,7 +500,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                     if let addressName = peer.addressName, !addressName.isEmpty {
                         discussionGroupTitle = "@\(addressName)"
                     } else {
-                        discussionGroupTitle = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        discussionGroupTitle = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                     }
                 } else {
                     discussionGroupTitle = presentationData.strings.Channel_DiscussionGroupAdd
@@ -535,7 +535,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                         if let addressName = peer.addressName, !addressName.isEmpty {
                             discussionGroupTitle = "@\(addressName)"
                         } else {
-                            discussionGroupTitle = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            discussionGroupTitle = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                         }
                     } else if canEditChannel {
                         discussionGroupTitle = presentationData.strings.Channel_DiscussionGroupAdd
@@ -756,7 +756,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: true)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.requestSearchController = { assetsController in
-                    let controller = WebSearchController(context: context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { result in
+                    let controller = WebSearchController(context: context, peer: peer.flatMap(EnginePeer.init), chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { result in
                         assetsController?.dismiss()
                         completedImpl(result)
                     }))
@@ -823,7 +823,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = (context.account.postbox.transaction { transaction -> (TelegramPeerNotificationSettings, GlobalNotificationSettings) in
             let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings) ?? TelegramPeerNotificationSettings.defaultSettings
-            let globalSettings: GlobalNotificationSettings = (transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications) as? GlobalNotificationSettings) ?? GlobalNotificationSettings.defaultSettings
+            let globalSettings: GlobalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) ?? GlobalNotificationSettings.defaultSettings
             return (peerSettings, globalSettings)
         }
         |> deliverOnMainQueue).start(next: { peerSettings, globalSettings in
@@ -929,7 +929,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             
             var globalNotificationSettings: GlobalNotificationSettings = GlobalNotificationSettings.defaultSettings
             if let preferencesView = combinedView.views[globalNotificationsKey] as? PreferencesView {
-                if let settings = preferencesView.values[PreferencesKeys.globalNotifications] as? GlobalNotificationSettings {
+                if let settings = preferencesView.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
                     globalNotificationSettings = settings
                 }
             }
@@ -1027,7 +1027,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                             text = about
                         }
                         updateState { state in
-                            return state.withUpdatedEditingState(ChannelInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(channel), editingDescriptionText: text))
+                            return state.withUpdatedEditingState(ChannelInfoEditingState(editingName: ItemListAvatarAndNameInfoItemName(EnginePeer(channel)), editingDescriptionText: text))
                         }
                     }
                 })

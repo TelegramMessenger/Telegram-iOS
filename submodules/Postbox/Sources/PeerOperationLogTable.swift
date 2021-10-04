@@ -112,11 +112,11 @@ final class PeerOperationLogTable: Table {
     private let metadataTable: PeerOperationLogMetadataTable
     private let mergedIndexTable: PeerMergedOperationLogIndexTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, metadataTable: PeerOperationLogMetadataTable, mergedIndexTable: PeerMergedOperationLogIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, metadataTable: PeerOperationLogMetadataTable, mergedIndexTable: PeerMergedOperationLogIndexTable) {
         self.metadataTable = metadataTable
         self.mergedIndexTable = mergedIndexTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(peerId: PeerId, tag: PeerOperationLogTag, index: Int32) -> ValueBoxKey {

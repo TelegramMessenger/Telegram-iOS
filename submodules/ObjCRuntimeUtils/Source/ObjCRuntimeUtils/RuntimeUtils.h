@@ -25,6 +25,8 @@ typedef enum {
 + (NSArray<NSString *> * _Nonnull)getIvarList:(Class _Nonnull)classValue;
 - (id _Nullable)getIvarValue:(NSString * _Nonnull)name;
 
+- (NSNumber * _Nullable)floatValueForKeyPath:(NSString * _Nonnull)keyPath;
+
 @end
 
 SEL _Nonnull makeSelectorFromString(NSString * _Nonnull string);

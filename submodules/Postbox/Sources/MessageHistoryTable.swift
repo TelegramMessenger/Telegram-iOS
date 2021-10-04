@@ -20,7 +20,7 @@ private enum AdjacentEntryGroupInfo {
 
 private func getAdjacentEntryGroupInfo(_ entry: IntermediateMessageHistoryEntry?, key: Int64) -> (IntermediateMessageHistoryEntry?, AdjacentEntryGroupInfo) {
     if let entry = entry {
-        if let groupingKey = entry.message.groupingKey, let groupInfo = entry.message.groupInfo {
+        if let groupingKey = entry.message.groupingKey, let _ = entry.message.groupInfo {
             if groupingKey == key {
                 if let groupInfo = entry.message.groupInfo {
                     return (entry, .sameGroup(groupInfo))
@@ -90,7 +90,7 @@ final class MessageHistoryTable: Table {
     let summaryTable: MessageHistoryTagsSummaryTable
     let pendingActionsTable: PendingMessageActionsTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration, messageHistoryIndexTable: MessageHistoryIndexTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, failedTable: MessageHistoryFailedTable, tagsTable: MessageHistoryTagsTable, threadsTable: MessageHistoryThreadsTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, timeBasedAttributesTable: TimestampBasedMessageAttributesTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, seedConfiguration: SeedConfiguration, messageHistoryIndexTable: MessageHistoryIndexTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, failedTable: MessageHistoryFailedTable, tagsTable: MessageHistoryTagsTable, threadsTable: MessageHistoryThreadsTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, timeBasedAttributesTable: TimestampBasedMessageAttributesTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
         self.seedConfiguration = seedConfiguration
         self.messageHistoryIndexTable = messageHistoryIndexTable
         self.messageHistoryHoleIndexTable = messageHistoryHoleIndexTable
@@ -110,7 +110,7 @@ final class MessageHistoryTable: Table {
         self.summaryTable = summaryTable
         self.pendingActionsTable = pendingActionsTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 4 + 4 + 4)) -> ValueBoxKey {
@@ -624,7 +624,7 @@ final class MessageHistoryTable: Table {
         return messageIds
     }
     
-    func applyInteractiveMaxReadIndex(postbox: Postbox, messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
+    func applyInteractiveMaxReadIndex(postbox: PostboxImpl, messageIndex: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [MessageId] {
         var topMessageId: (MessageId.Id, Bool)?
         if let index = self.topIndexEntry(peerId: messageIndex.id.peerId, namespace: messageIndex.id.namespace) {
             if let message = self.getMessage(index) {
@@ -2515,6 +2515,10 @@ final class MessageHistoryTable: Table {
         var peers = SimpleDictionary<PeerId, Peer>()
         if let authorId = message.author?.id {
             author = peerTable.get(authorId)
+        }
+
+        if let author = author {
+            peers[author.id] = author
         }
         
         if let chatPeer = peerTable.get(message.id.peerId) {

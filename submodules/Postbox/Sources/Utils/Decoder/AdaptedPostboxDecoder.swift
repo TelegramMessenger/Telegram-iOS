@@ -1,6 +1,6 @@
 import Foundation
 
-final public class AdaptedPostboxDecoder {
+public final class AdaptedPostboxDecoder {
     enum ContentType {
         case object
         case int32Array
@@ -8,15 +8,20 @@ final public class AdaptedPostboxDecoder {
         case objectArray
         case stringArray
         case dataArray
+        case objectDict
     }
 
-    public final class RawObjectData: Codable {
+    public final class RawObjectData: Decodable {
         public let data: Data
         public let typeHash: Int32
 
         public init(data: Data, typeHash: Int32) {
             self.data = data
             self.typeHash = typeHash
+        }
+
+        public init(from decoder: Decoder) throws {
+            preconditionFailure()
         }
     }
 
@@ -28,6 +33,13 @@ final public class AdaptedPostboxDecoder {
     }
 
     func decode<T>(_ type: T.Type, from data: Data, contentType: ContentType) throws -> T where T : Decodable {
+        if type == AdaptedPostboxDecoder.RawObjectData.self {
+            if case .object = contentType {
+                return AdaptedPostboxDecoder.RawObjectData(data: data, typeHash: 0) as! T
+            } else {
+                preconditionFailure()
+            }
+        }
         let decoder = _AdaptedPostboxDecoder(data: data, contentType: contentType)
         return try T(from: decoder)
     }
@@ -55,7 +67,7 @@ extension AdaptedPostboxDecoder.ContentType {
         case .ObjectArray:
             self = .objectArray
         case .ObjectDictionary:
-            return nil
+            self = .objectDict
         case .Bytes:
             return nil
         case .Nil:
@@ -117,6 +129,8 @@ extension _AdaptedPostboxDecoder: Decoder {
             content = .stringArray(decoder.decodeStringArrayRaw())
         case .dataArray:
             content = .dataArray(decoder.decodeBytesArrayRaw().map { $0.makeData() })
+        case .objectDict:
+            content = .objectDict(decoder.decodeObjectDataDictRaw())
         }
 
         if let content = content {

@@ -126,7 +126,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         let peerSignal = context.account.postbox.loadedPeerWithId(peerId)
                         let _ = (peerSignal
                         |> deliverOnMainQueue).start(next: { peer in
-                            let searchController = HashtagSearchController(context: context, peer: peer, query: hashtag)
+                            let searchController = HashtagSearchController(context: context, peer: EnginePeer(peer), query: hashtag)
                             (controller.navigationController as? NavigationController)?.pushViewController(searchController)
                         })
                     }

@@ -269,7 +269,7 @@ public enum AnyMediaReference: Equatable {
                 return .stickerPack(stickerPack: stickerPack)
             case .savedGif:
                 return .savedGif
-            case let .avatarList(peer, media):
+            case .avatarList:
                 return nil
         }
     }

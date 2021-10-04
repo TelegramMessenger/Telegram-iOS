@@ -115,8 +115,6 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             return nil
         }, chatControllerNode: {
             return nil
-        }, reactionContainerNode: {
-            return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
@@ -133,8 +131,6 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
-        }, updateMessageLike: { _, _ in
-        }, openMessageReactions: { _ in
         }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
@@ -958,7 +954,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     func updateLayout(width: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
         let searchMode: ChatMediaInputSearchMode? = nil
                 
-        let displaySearch = false
+        let displaySearch = !"".isEmpty //silence warning
         let separatorHeight = max(UIScreenPixel, 1.0 - UIScreenPixel)
         let topPanelHeight: CGFloat = 56.0
         let panelHeight: CGFloat

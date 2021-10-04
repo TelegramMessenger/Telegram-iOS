@@ -75,7 +75,7 @@ private func chatMessageStickerDatas(postbox: Postbox, file: TelegramMediaFile, 
                 }
                 
                 var fetchThumbnail: Disposable?
-                if !thumbnailResource.id.isEqual(to: resource.id) {
+                if thumbnailResource.id != resource.id {
                     fetchThumbnail = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: stickerPackFileReference(file).resourceReference(thumbnailResource)).start()
                 }
                 let disposable = (combineLatest(thumbnailData, fullSizeData)
@@ -126,7 +126,7 @@ public func chatMessageAnimatedStickerDatas(postbox: Postbox, file: TelegramMedi
                 }
                 
                 var fetchThumbnail: Disposable?
-                if !thumbnailResource.id.isEqual(to: resource.id) {
+                if thumbnailResource.id != resource.id {
                     fetchThumbnail = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: stickerPackFileReference(file).resourceReference(thumbnailResource)).start()
                 }
                 let disposable = (combineLatest(thumbnailData, fullSizeData)

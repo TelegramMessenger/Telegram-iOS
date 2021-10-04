@@ -68,7 +68,7 @@ func sharedAccountInfos(accountManager: AccountManager<TelegramAccountManagerTyp
     return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.proxySettings]), accounts)
     |> take(1)
     |> mapToSignal { sharedData, accounts -> Signal<StoredAccountInfos, NoError> in
-        let proxySettings = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings
+        let proxySettings = sharedData.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self)
         let proxy = proxySettings?.effectiveActiveServer.flatMap { proxyServer -> AccountProxyConnection? in
             var username: String?
             var password: String?

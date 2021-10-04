@@ -12,9 +12,9 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
         |> mapToSignal { result -> Signal<Void, NoError> in
             return postbox.transaction { transaction -> Signal<Void, NoError> in
                 switch result {
-                    case let .config(config):
+                case let .config(flags, _, _, _, _, dcOptions, _, chatSizeMax, megagroupSizeMax, forwardedCountMax, _, _, _, _, _, _, _, _, savedGifsLimit, editTimeLimit, revokeTimeLimit, revokePmTimeLimit, _, stickersRecentLimit, _, _, _, pinnedDialogsCountMax, pinnedInfolderCountMax, _, _, _, _, _, autoupdateUrlPrefix, gifSearchUsername, venueSearchUsername, imgSearchUsername, _, captionLengthMax, _, webfileDcId, suggestedLangCode, langPackVersion, baseLangPackVersion):
                         var addressList: [Int: [MTDatacenterAddress]] = [:]
-                        for option in config.dcOptions {
+                        for option in dcOptions {
                             switch option {
                                 case let .dcOption(flags, id, ipAddress, port, secret):
                                     let preferForMedia = (flags & (1 << 1)) != 0
@@ -33,28 +33,25 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                             }
                         }
                         
-                        let blockedMode = (config.flags & 8) != 0
-                        
-                        let defaultEnableTempKeys = (config.flags & (1 << 13)) != 0
+                        let blockedMode = (flags & 8) != 0
                         
                         updateNetworkSettingsInteractively(transaction: transaction, network: network, { settings in
                             var settings = settings
                             settings.reducedBackupDiscoveryTimeout = blockedMode
-                            settings.applicationUpdateUrlPrefix = config.autoupdateUrlPrefix
-                            settings.defaultEnableTempKeys = defaultEnableTempKeys
+                            settings.applicationUpdateUrlPrefix = autoupdateUrlPrefix
                             return settings
                         })
                         
-                        updateRemoteStorageConfiguration(transaction: transaction, configuration: RemoteStorageConfiguration(webDocumentsHostDatacenterId: config.webfileDcId))
+                        updateRemoteStorageConfiguration(transaction: transaction, configuration: RemoteStorageConfiguration(webDocumentsHostDatacenterId: webfileDcId))
                         
                         transaction.updatePreferencesEntry(key: PreferencesKeys.suggestedLocalization, { entry in
                             var currentLanguageCode: String?
-                            if let entry = entry as? SuggestedLocalizationEntry {
+                            if let entry = entry?.get(SuggestedLocalizationEntry.self) {
                                 currentLanguageCode = entry.languageCode
                             }
-                            if currentLanguageCode != config.suggestedLangCode {
-                                if let suggestedLangCode = config.suggestedLangCode {
-                                    return SuggestedLocalizationEntry(languageCode: suggestedLangCode, isSeen: false)
+                            if currentLanguageCode != suggestedLangCode {
+                                if let suggestedLangCode = suggestedLangCode {
+                                    return PreferencesEntry(SuggestedLocalizationEntry(languageCode: suggestedLangCode, isSeen: false))
                                 } else {
                                     return nil
                                 }
@@ -62,17 +59,17 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                             return entry
                         })
                         
-                        updateLimitsConfiguration(transaction: transaction, configuration: LimitsConfiguration(maxPinnedChatCount: config.pinnedDialogsCountMax, maxArchivedPinnedChatCount: config.pinnedInfolderCountMax, maxGroupMemberCount: config.chatSizeMax, maxSupergroupMemberCount: config.megagroupSizeMax, maxMessageForwardBatchSize: config.forwardedCountMax, maxSavedGifCount: config.savedGifsLimit, maxRecentStickerCount: config.stickersRecentLimit, maxMessageEditingInterval: config.editTimeLimit, maxMediaCaptionLength: config.captionLengthMax, canRemoveIncomingMessagesInPrivateChats: (config.flags & (1 << 6)) != 0, maxMessageRevokeInterval: config.revokeTimeLimit, maxMessageRevokeIntervalInPrivateChats: config.revokePmTimeLimit))
+                        updateLimitsConfiguration(transaction: transaction, configuration: LimitsConfiguration(maxPinnedChatCount: pinnedDialogsCountMax, maxArchivedPinnedChatCount: pinnedInfolderCountMax, maxGroupMemberCount: chatSizeMax, maxSupergroupMemberCount: megagroupSizeMax, maxMessageForwardBatchSize: forwardedCountMax, maxSavedGifCount: savedGifsLimit, maxRecentStickerCount: stickersRecentLimit, maxMessageEditingInterval: editTimeLimit, maxMediaCaptionLength: captionLengthMax, canRemoveIncomingMessagesInPrivateChats: (flags & (1 << 6)) != 0, maxMessageRevokeInterval: revokeTimeLimit, maxMessageRevokeIntervalInPrivateChats: revokePmTimeLimit))
                         
-                        updateSearchBotsConfiguration(transaction: transaction, configuration: SearchBotsConfiguration(imageBotUsername: config.imgSearchUsername, gifBotUsername: config.gifSearchUsername, venueBotUsername: config.venueSearchUsername))
+                        updateSearchBotsConfiguration(transaction: transaction, configuration: SearchBotsConfiguration(imageBotUsername: imgSearchUsername, gifBotUsername: gifSearchUsername, venueBotUsername: venueSearchUsername))
                     
                         return accountManager.transaction { transaction -> Signal<Void, NoError> in
                             let (primary, secondary) = getLocalization(transaction)
                             var invalidateLocalization = false
-                            if primary.version != config.langPackVersion {
+                            if primary.version != langPackVersion {
                                 invalidateLocalization = true
                             }
-                            if let secondary = secondary, let baseLangPackVersion = config.baseLangPackVersion {
+                            if let secondary = secondary, let baseLangPackVersion = baseLangPackVersion {
                                 if secondary.version != baseLangPackVersion {
                                     invalidateLocalization = true
                                 }

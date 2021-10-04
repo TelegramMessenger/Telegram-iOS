@@ -1,6 +1,6 @@
 import Postbox
 
-public struct LocalizationInfo: PostboxCoding, Equatable {
+public struct LocalizationInfo: PostboxCoding, Codable, Equatable {
     public let languageCode: String
     public let baseLanguageCode: String?
     public let customPluralizationCode: String?
@@ -34,6 +34,20 @@ public struct LocalizationInfo: PostboxCoding, Equatable {
         self.translatedStringCount = decoder.decodeInt32ForKey("lsc", orElse: 0)
         self.platformUrl = decoder.decodeStringForKey("platformUrl", orElse: "")
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.languageCode = (try? container.decode(String.self, forKey: "lc")) ?? ""
+        self.baseLanguageCode = try? container.decodeIfPresent(String.self, forKey: "nlc")
+        self.customPluralizationCode = try? container.decodeIfPresent(String.self, forKey: "cpc")
+        self.title = (try? container.decode(String.self, forKey: "t")) ?? ""
+        self.localizedTitle = (try? container.decode(String.self, forKey: "lt")) ?? ""
+        self.isOfficial = ((try? container.decode(Int32.self, forKey: "of")) ?? 0) != 0
+        self.totalStringCount = (try? container.decode(Int32.self, forKey: "tsc")) ?? 0
+        self.translatedStringCount = (try? container.decode(Int32.self, forKey: "lsc")) ?? 0
+        self.platformUrl = (try? container.decode(String.self, forKey: "platformUrl")) ?? ""
+    }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.languageCode, forKey: "lc")
@@ -53,5 +67,19 @@ public struct LocalizationInfo: PostboxCoding, Equatable {
         encoder.encodeInt32(self.totalStringCount, forKey: "tsc")
         encoder.encodeInt32(self.translatedStringCount, forKey: "lsc")
         encoder.encodeString(self.platformUrl, forKey: "platformUrl")
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.languageCode, forKey: "lc")
+        try container.encodeIfPresent(self.baseLanguageCode, forKey: "nlc")
+        try container.encodeIfPresent(self.customPluralizationCode, forKey: "cpc")
+        try container.encode(self.title, forKey: "t")
+        try container.encode(self.localizedTitle, forKey: "lt")
+        try container.encode((self.isOfficial ? 1 : 0) as Int32, forKey: "of")
+        try container.encode(self.totalStringCount, forKey: "tsc")
+        try container.encode(self.translatedStringCount, forKey: "lsc")
+        try container.encode(self.platformUrl, forKey: "platformUrl")
     }
 }

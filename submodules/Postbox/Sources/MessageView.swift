@@ -11,7 +11,7 @@ final class MutableMessageView {
         self.stableId = message?.stableId
     }
     
-    func replay(postbox: Postbox, operations: [MessageHistoryOperation], updatedMedia: [MediaId: Media?]) -> Bool {
+    func replay(postbox: PostboxImpl, operations: [MessageHistoryOperation], updatedMedia: [MediaId: Media?]) -> Bool {
         var updated = false
         for operation in operations {
             switch operation {

@@ -1,7 +1,6 @@
 import Display
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
@@ -25,7 +24,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
     private var hasValidLayout = false
     
-    init(context: AccountContext, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings, navigationBar: NavigationBar?, navigationController: NavigationController?) {
+    init(context: AccountContext, peer: EnginePeer?, query: String, theme: PresentationTheme, strings: PresentationStrings, navigationBar: NavigationBar?, navigationController: NavigationController?) {
         self.navigationBar = navigationBar
 
         self.context = context

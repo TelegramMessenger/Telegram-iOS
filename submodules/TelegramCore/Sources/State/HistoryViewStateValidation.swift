@@ -228,9 +228,9 @@ final class HistoryViewStateValidationContexts {
                                         completedMessageIds.append(messageId)
                                     }
                                 }
-                                for messageId in completedMessageIds {
-                                    //context.batchReferences.removeValue(forKey: messageId)
-                                }
+                                /*for messageId in completedMessageIds {
+                                    context.batchReferences.removeValue(forKey: messageId)
+                                }*/
                             }
                         }))
                     }

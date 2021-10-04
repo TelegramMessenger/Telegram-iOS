@@ -1,25 +1,26 @@
 import Postbox
 
-public final class RemoteStorageConfiguration: PreferencesEntry {
+public final class RemoteStorageConfiguration: Codable, Equatable {
     public let webDocumentsHostDatacenterId: Int32
     
     public init(webDocumentsHostDatacenterId: Int32) {
         self.webDocumentsHostDatacenterId = webDocumentsHostDatacenterId
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.webDocumentsHostDatacenterId = decoder.decodeInt32ForKey("webDocumentsHostDatacenterId", orElse: 4)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.webDocumentsHostDatacenterId = try container.decode(Int32.self, forKey: "webDocumentsHostDatacenterId")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.webDocumentsHostDatacenterId, forKey: "webDocumentsHostDatacenterId")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.webDocumentsHostDatacenterId, forKey: "webDocumentsHostDatacenterId")
     }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? RemoteStorageConfiguration else {
-            return false
-        }
-        if self.webDocumentsHostDatacenterId != to.webDocumentsHostDatacenterId {
+
+    public static func ==(lhs: RemoteStorageConfiguration, rhs: RemoteStorageConfiguration) -> Bool {
+        if lhs.webDocumentsHostDatacenterId != rhs.webDocumentsHostDatacenterId {
             return false
         }
         return true

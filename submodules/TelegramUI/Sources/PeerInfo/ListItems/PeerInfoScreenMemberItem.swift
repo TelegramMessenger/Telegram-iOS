@@ -184,7 +184,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
             itemText = .presence
         }
         
-        let peerItem = ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: item.context, peer: item.member.peer, height: itemHeight, presence: item.member.presence, text: itemText, label: itemLabel, editing: ItemListPeerItemEditing(editable: !options.isEmpty, editing: false, revealed: nil), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: false, sectionId: 0, action: nil, setPeerIdWithRevealedOptions: { lhs, rhs in
+        let peerItem = ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: item.context, peer: EnginePeer(item.member.peer), height: itemHeight, presence: item.member.presence.flatMap(EnginePeer.Presence.init), text: itemText, label: itemLabel, editing: ItemListPeerItemEditing(editable: !options.isEmpty, editing: false, revealed: nil), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: false, sectionId: 0, action: nil, setPeerIdWithRevealedOptions: { lhs, rhs in
             
         }, removePeer: { _ in
             

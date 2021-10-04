@@ -44,13 +44,13 @@ func _internal_updatePeersNearbyVisibility(account: Account, update: PeerNearbyV
     
     let _ = (account.postbox.transaction { transaction in
         transaction.updatePreferencesEntry(key: PreferencesKeys.peersNearby, { entry in
-            var settings = entry as? PeersNearbyState ?? PeersNearbyState.default
+            var settings = entry?.get(PeersNearbyState.self) ?? PeersNearbyState.default
             if case .invisible = update {
                 settings.visibilityExpires = nil
             } else if let expires = selfExpires {
                 settings.visibilityExpires = expires
             }
-            return settings
+            return PreferencesEntry(settings)
         })
     }).start()
 
@@ -65,9 +65,9 @@ func _internal_updatePeersNearbyVisibility(account: Account, update: PeerNearbyV
             if error.errorDescription == "USERPIC_PRIVACY_REQUIRED" {
                 let _ = (account.postbox.transaction { transaction in
                     transaction.updatePreferencesEntry(key: PreferencesKeys.peersNearby, { entry in
-                        var settings = entry as? PeersNearbyState ?? PeersNearbyState.default
+                        var settings = entry?.get(PeersNearbyState.self) ?? PeersNearbyState.default
                         settings.visibilityExpires = nil
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             }
@@ -282,7 +282,7 @@ public func updateChannelGeoLocation(postbox: Postbox, network: Network, channel
     }
 }
 
-public struct PeersNearbyState: PreferencesEntry, Equatable {
+public struct PeersNearbyState: Codable, Equatable {
     public var visibilityExpires: Int32?
     
     public static var `default` = PeersNearbyState(visibilityExpires: nil)
@@ -291,23 +291,15 @@ public struct PeersNearbyState: PreferencesEntry, Equatable {
         self.visibilityExpires = visibilityExpires
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.visibilityExpires = decoder.decodeOptionalInt32ForKey("expires")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.visibilityExpires = try container.decodeIfPresent(Int32.self, forKey: "expires")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        if let expires = self.visibilityExpires {
-            encoder.encodeInt32(expires, forKey: "expires")
-        } else {
-            encoder.encodeNil(forKey: "expires")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? PeersNearbyState, self == to {
-            return true
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encodeIfPresent(self.visibilityExpires, forKey: "expires")
     }
 }
