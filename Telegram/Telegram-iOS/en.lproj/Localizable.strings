@@ -6919,3 +6919,6 @@ Ads should no longer be synonymous with abuse of user privacy. Let us redefine h
 "MemberRequests.RequestToJoinSent" = "Request to join Sent";
 "MemberRequests.RequestToJoinSentDescriptionGroup" = "You will be added to the group once it admins approve your request.";
 "MemberRequests.RequestToJoinSentDescriptionChannel" = "You will be added to the channel once it admins approve your request.";
+
+"Notification.JoinedGroupByRequest" = "Your request to join the group was approved";
+"Notification.JoinedChannelByRequest" = "Your request to join the channel was approved";

@@ -79,6 +79,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             }
         case let .messageActionSetChatTheme(emoji):
             return TelegramMediaAction(action: .setChatTheme(emoji: emoji))
+        case .messageActionChatJoinedByRequest:
+            return TelegramMediaAction(action: .joinedByRequest)
     }
 }
 

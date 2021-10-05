@@ -643,6 +643,7 @@ public struct PeerInvitationImportersState: Equatable {
     public struct Importer: Equatable {
         public var peer: RenderedPeer
         public var date: Int32
+        public var about: String?
         public var approvedBy: PeerId?
     }
     public var importers: [Importer]
@@ -838,15 +839,17 @@ private final class PeerInvitationImportersContextImpl {
                             for importer in importers {
                                 let peerId: PeerId
                                 let date: Int32
+                                let about: String?
                                 let approvedBy: PeerId?
                                 switch importer {
-                                    case let .chatInviteImporter(_, userId, dateValue, approvedByValue):
+                                    case let .chatInviteImporter(_, userId, dateValue, aboutValue, approvedByValue):
                                         peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                         date = dateValue
+                                        about = aboutValue
                                         approvedBy = approvedByValue.flatMap { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }
                                 }
                                 if let peer = transaction.getPeer(peerId) {
-                                    resultImporters.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date, approvedBy: approvedBy))
+                                    resultImporters.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date, about: about, approvedBy: approvedBy))
                                 }
                             }
                             if populateCache {
