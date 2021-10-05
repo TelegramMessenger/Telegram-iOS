@@ -60,7 +60,7 @@
         int32_t hex = 0x29c519;
         UIColor *greenColor = [[UIColor alloc] initWithRed:(((hex >> 16) & 0xff) / 255.0f) green:(((hex >> 8) & 0xff) / 255.0f) blue:(((hex) & 0xff) / 255.0f) alpha:1.0f];
         
-        hex = 0x007ee5;
+        hex = 0x007aff;
         UIColor *blueColor = [[UIColor alloc] initWithRed:(((hex >> 16) & 0xff) / 255.0f) green:(((hex >> 8) & 0xff) / 255.0f) blue:(((hex) & 0xff) / 255.0f) alpha:1.0f];
         
         hex = 0xcacacf;

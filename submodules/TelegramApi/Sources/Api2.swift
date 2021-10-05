@@ -12207,48 +12207,6 @@ public extension Api {
         }
     
     }
-    public enum SearchResultsPosition: TypeConstructorDescription {
-        case searchResultPosition(msgId: Int32, date: Int32, offset: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .searchResultPosition(let msgId, let date, let offset):
-                    if boxed {
-                        buffer.appendInt32(2137295719)
-                    }
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeInt32(offset, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .searchResultPosition(let msgId, let date, let offset):
-                return ("searchResultPosition", [("msgId", msgId), ("date", date), ("offset", offset)])
-    }
-    }
-    
-        public static func parse_searchResultPosition(_ reader: BufferReader) -> SearchResultsPosition? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.SearchResultsPosition.searchResultPosition(msgId: _1!, date: _2!, offset: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
     public enum StatsGraph: TypeConstructorDescription {
         case statsGraphAsync(token: String)
         case statsGraphError(error: String)
@@ -14866,17 +14824,18 @@ public extension Api {
     
     }
     public enum ChatInviteImporter: TypeConstructorDescription {
-        case chatInviteImporter(flags: Int32, userId: Int64, date: Int32, approvedBy: Int64?)
+        case chatInviteImporter(flags: Int32, userId: Int64, date: Int32, about: String?, approvedBy: Int64?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .chatInviteImporter(let flags, let userId, let date, let approvedBy):
+                case .chatInviteImporter(let flags, let userId, let date, let about, let approvedBy):
                     if boxed {
-                        buffer.appendInt32(-1574303204)
+                        buffer.appendInt32(-1940201511)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(userId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(about!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt64(approvedBy!, buffer: buffer, boxed: false)}
                     break
     }
@@ -14884,8 +14843,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .chatInviteImporter(let flags, let userId, let date, let approvedBy):
-                return ("chatInviteImporter", [("flags", flags), ("userId", userId), ("date", date), ("approvedBy", approvedBy)])
+                case .chatInviteImporter(let flags, let userId, let date, let about, let approvedBy):
+                return ("chatInviteImporter", [("flags", flags), ("userId", userId), ("date", date), ("about", about), ("approvedBy", approvedBy)])
     }
     }
     
@@ -14896,14 +14855,17 @@ public extension Api {
             _2 = reader.readInt64()
             var _3: Int32?
             _3 = reader.readInt32()
-            var _4: Int64?
-            if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt64() }
+            var _4: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = parseString(reader) }
+            var _5: Int64?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.ChatInviteImporter.chatInviteImporter(flags: _1!, userId: _2!, date: _3!, approvedBy: _4)
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.ChatInviteImporter.chatInviteImporter(flags: _1!, userId: _2!, date: _3!, about: _4, approvedBy: _5)
             }
             else {
                 return nil
@@ -21075,6 +21037,7 @@ public extension Api {
         case messageActionChannelCreate(title: String)
         case messageActionChatMigrateTo(channelId: Int64)
         case messageActionChannelMigrateFrom(title: String, chatId: Int64)
+        case messageActionChatJoinedByRequest
         case messageActionPinMessage
         case messageActionHistoryClear
         case messageActionGameScore(gameId: Int64, score: Int32)
@@ -21171,6 +21134,12 @@ public extension Api {
                     }
                     serializeString(title, buffer: buffer, boxed: false)
                     serializeInt64(chatId, buffer: buffer, boxed: false)
+                    break
+                case .messageActionChatJoinedByRequest:
+                    if boxed {
+                        buffer.appendInt32(-339958837)
+                    }
+                    
                     break
                 case .messageActionPinMessage:
                     if boxed {
@@ -21337,6 +21306,8 @@ public extension Api {
                 return ("messageActionChatMigrateTo", [("channelId", channelId)])
                 case .messageActionChannelMigrateFrom(let title, let chatId):
                 return ("messageActionChannelMigrateFrom", [("title", title), ("chatId", chatId)])
+                case .messageActionChatJoinedByRequest:
+                return ("messageActionChatJoinedByRequest", [])
                 case .messageActionPinMessage:
                 return ("messageActionPinMessage", [])
                 case .messageActionHistoryClear:
@@ -21492,6 +21463,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_messageActionChatJoinedByRequest(_ reader: BufferReader) -> MessageAction? {
+            return Api.MessageAction.messageActionChatJoinedByRequest
         }
         public static func parse_messageActionPinMessage(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionPinMessage

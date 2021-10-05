@@ -1,7 +1,7 @@
 #import <NetworkLogging/NetworkLogging.h>
 
 #import <Foundation/Foundation.h>
-#import <MtProtoKit/MtLogging.h>
+#import <MtProtoKit/MTLogging.h>
 
 static void (*bridgingTrace)(NSString *, NSString *);
 void setBridgingTraceFunction(void (*f)(NSString *, NSString *)) {

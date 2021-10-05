@@ -1733,7 +1733,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var animateInputActivitiesFrame = false
                     let inputActivities = inputActivities?.filter({
                         switch $0.1 {
-                            case .speakingInGroupCall, .interactingWithEmoji, .seeingEmojiInteraction:
+                            case .speakingInGroupCall, .seeingEmojiInteraction:
                                 return false
                             default:
                                 return true

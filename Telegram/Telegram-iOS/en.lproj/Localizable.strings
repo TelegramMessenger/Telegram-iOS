@@ -6706,6 +6706,8 @@ Sorry for the inconvenience.";
 "Activity.ChoosingSticker" = "choosing sticker";
 "DialogList.SingleChoosingStickerSuffix" = "%@ is choosing sticker";
 
+"Activity.TappingInteractiveEmoji" = "tapping on %@";
+
 "WallpaperPreview.Animate" = "Animate";
 "WallpaperPreview.AnimateDescription" = "Colors will move when you send messages";
 
@@ -6866,3 +6868,57 @@ Ads should no longer be synonymous with abuse of user privacy. Let us redefine h
 "MediaPicker.JpegConversionText" = "Do you want to convert photos to JPEG?";
 "MediaPicker.KeepHeic" = "Keep HEIC";
 "MediaPicker.ConvertToJpeg" = "Convert to JPEG";
+
+"GroupInfo.MemberRequests" = "Member Requests";
+
+"InviteLink.Create.RequestApproval" = "Request Admin Approval";
+"InviteLink.Create.RequestApprovalOffInfoGroup" = "New users will be able to join the group without being approved by the admins.";
+"InviteLink.Create.RequestApprovalOffInfoChannel" = "New users will be able to join the channel without being approved by the admins.";
+"InviteLink.Create.RequestApprovalOnInfoGroup" = "New users will be able to join the group only after having been approved by the admins.";
+"InviteLink.Create.RequestApprovalOnInfoChannel" = "New users will be able to join the channel only after having been approved by the admins.";
+
+"MemberRequests.Title" = "Member Requests";
+"MemberRequests.DescriptionGroup" = "Some [additional links]() are set up to accept requests to join the group.";
+"MemberRequests.DescriptionChannel" = "Some [additional links]() are set up to accept requests to join the channel.";
+
+"MemberRequests.PeopleRequested_1" = "%@ requested to join";
+"MemberRequests.PeopleRequested_2" = "%@ requested to join";
+"MemberRequests.PeopleRequested_3_10" = "%@ requested to join";
+"MemberRequests.PeopleRequested_many" = "%@ requested to join";
+"MemberRequests.PeopleRequested_any" = "%@ requested to join";
+
+"MemberRequests.PeopleRequestedShort_1" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_2" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_3_10" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_many" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_any" = "%@ requested";
+
+"MemberRequests.AddToGroup" = "Add to Group";
+"MemberRequests.AddToChannel" = "Add to Channel";
+"MemberRequests.Dismiss" = "Dismiss";
+
+"MemberRequests.UserAddedToGroup" = "%@ has been added to the group.";
+"MemberRequests.UserAddedToChannel" = "%@ has been added to the channel.";
+
+"MemberRequests.NoRequests" = "No Member Requests";
+"MemberRequests.NoRequestsDescriptionGroup" = "You have no pending requests to join the group.";
+"MemberRequests.NoRequestsDescriptionChannel" = "You have no pending requests to join the channel.";
+
+"Conversation.RequestsToJoin_1" = "%@ Request to Join";
+"Conversation.RequestsToJoin_2" = "%@ Requests to Join";
+"Conversation.RequestsToJoin_3_10" = "%@ Requests to Join";
+"Conversation.RequestsToJoin_many" = "%@ Requests to Join";
+"Conversation.RequestsToJoin_any" = "%@ Requests to Join";
+
+"MemberRequests.RequestToJoinGroup" = "Request to Join Group";
+"MemberRequests.RequestToJoinChannel" = "Request to Join Channel";
+
+"MemberRequests.RequestToJoinDescriptionGroup" = "This group accepts new members only after they are approved by its admins.";
+"MemberRequests.RequestToJoinDescriptionChannel" = "This channel accepts new subscribers only after they are approved by its admins.";
+
+"MemberRequests.RequestToJoinSent" = "Request to join Sent";
+"MemberRequests.RequestToJoinSentDescriptionGroup" = "You will be added to the group once it admins approve your request.";
+"MemberRequests.RequestToJoinSentDescriptionChannel" = "You will be added to the channel once it admins approve your request.";
+
+"Notification.JoinedGroupByRequest" = "Your request to join the group was approved";
+"Notification.JoinedChannelByRequest" = "Your request to join the channel was approved";

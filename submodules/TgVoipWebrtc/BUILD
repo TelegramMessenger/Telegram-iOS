@@ -8,6 +8,7 @@ objc_library(
         "Sources/**/*.mm",
         "Sources/**/*.h",
         "tgcalls/tgcalls/**/*.h",
+        "tgcalls/tgcalls/**/*.hpp",
         "tgcalls/tgcalls/**/*.cpp",
         "tgcalls/tgcalls/**/*.mm",
         "tgcalls/tgcalls/**/*.m",

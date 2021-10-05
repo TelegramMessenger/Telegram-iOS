@@ -4484,23 +4484,6 @@ public extension Api {
                     })
                 }
             
-                public static func getSearchResultsPositions(peer: Api.InputPeer, filter: Api.MessagesFilter, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SearchResultsPositions>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1855292323)
-                    peer.serialize(buffer, true)
-                    filter.serialize(buffer, true)
-                    serializeInt32(offsetId, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getSearchResultsPositions", parameters: [("peer", peer), ("filter", filter), ("offsetId", offsetId), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SearchResultsPositions? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.SearchResultsPositions?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.SearchResultsPositions
-                        }
-                        return result
-                    })
-                }
-            
                 public static func hideChatJoinRequest(flags: Int32, peer: Api.InputPeer, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(2145904661)

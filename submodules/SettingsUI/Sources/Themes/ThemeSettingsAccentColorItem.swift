@@ -385,7 +385,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                                 topColor = bubbleColor
                                 bottomColor = bubbleColor
                             } else {
-                                fillColor = UIColor(rgb: 0x007ee5)
+                                fillColor = UIColor(rgb: 0x007aff)
                                 strokeColor = fillColor
                                 topColor = UIColor(rgb: 0xe1ffc7)
                                 bottomColor = topColor

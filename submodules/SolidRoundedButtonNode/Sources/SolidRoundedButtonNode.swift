@@ -23,6 +23,7 @@ public enum SolidRoundedButtonFont {
 public final class SolidRoundedButtonNode: ASDisplayNode {
     private var theme: SolidRoundedButtonTheme
     private var font: SolidRoundedButtonFont
+    private var fontSize: CGFloat
     
     private let buttonBackgroundNode: ASDisplayNode
     private let buttonGlossNode: SolidRoundedButtonGlossNode
@@ -53,9 +54,10 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
     }
     
-    public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
+    public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
         self.font = font
+        self.fontSize = fontSize
         self.buttonHeight = height
         self.buttonCornerRadius = cornerRadius
         self.title = title
@@ -128,7 +130,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         self.buttonGlossNode.color = theme.foregroundColor
-        self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(17.0) : Font.regular(17.0), textColor: theme.foregroundColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
         
         if let width = self.validLayout {
@@ -150,7 +152,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         
         if self.title != self.titleNode.attributedText?.string {
-            self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(17.0) : Font.regular(17.0), textColor: self.theme.foregroundColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: self.theme.foregroundColor)
         }
         
         let iconSize = self.iconNode.image?.size ?? CGSize()

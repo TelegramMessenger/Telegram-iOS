@@ -14,6 +14,7 @@ import LocationResources
 import AppBundle
 import AvatarNode
 import LiveLocationTimerNode
+import SolidRoundedButtonNode
 
 final class LocationLiveListItem: ListViewItem {
     let presentationData: ItemListPresentationData
@@ -22,18 +23,33 @@ final class LocationLiveListItem: ListViewItem {
     let context: AccountContext
     let message: Message
     let distance: Double?
+    
+    let drivingTime: Double?
+    let transitTime: Double?
+    let walkingTime: Double?
+    
     let action: () -> Void
     let longTapAction: () -> Void
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, message: Message, distance: Double?, action: @escaping () -> Void, longTapAction: @escaping () -> Void = { }) {
+    let drivingAction: () -> Void
+    let transitAction: () -> Void
+    let walkingAction: () -> Void
+    
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, message: Message, distance: Double?, drivingTime: Double?, transitTime: Double?, walkingTime: Double?, action: @escaping () -> Void, longTapAction: @escaping () -> Void = { }, drivingAction: @escaping () -> Void, transitAction: @escaping () -> Void, walkingAction: @escaping () -> Void) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.context = context
         self.message = message
         self.distance = distance
+        self.drivingTime = drivingTime
+        self.transitTime = transitTime
+        self.walkingTime = walkingTime
         self.action = action
         self.longTapAction = longTapAction
+        self.drivingAction = drivingAction
+        self.transitAction = transitAction
+        self.walkingAction = walkingAction
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -84,6 +100,10 @@ final class LocationLiveListItemNode: ListViewItemNode {
     private let avatarNode: AvatarNode
     private var timerNode: ChatMessageLiveLocationTimerNode?
     
+    private var drivingButtonNode: SolidRoundedButtonNode?
+    private var transitButtonNode: SolidRoundedButtonNode?
+    private var walkingButtonNode: SolidRoundedButtonNode?
+    
     private var item: LocationLiveListItem?
     private var layoutParams: ListViewItemLayoutParams?
     
@@ -99,7 +119,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
         
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
-        
+    
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.backgroundNode)
@@ -185,7 +205,10 @@ final class LocationLiveListItemNode: ListViewItemNode {
             let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 54.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let titleSpacing: CGFloat = 1.0
-            let contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height)
+            var contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height)
+            if item.drivingTime != nil || item.transitTime != nil || item.walkingTime != nil {
+                contentSize.height += 46.0
+            }
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: UIEdgeInsets())
             
             return (nodeLayout, { [weak self] in
@@ -217,6 +240,43 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             strongSelf.addSubnode(subtitleNode)
                         }
                         
+                        let buttonTheme = SolidRoundedButtonTheme(theme: item.presentationData.theme)
+                        if strongSelf.drivingButtonNode == nil {
+                            strongSelf.drivingButtonNode = SolidRoundedButtonNode(icon: UIImage(bundleImageName: "Location/DirectionsDriving"), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
+                            strongSelf.drivingButtonNode?.alpha = 0.0
+                            strongSelf.drivingButtonNode?.allowsGroupOpacity = true
+                            strongSelf.drivingButtonNode?.pressed = { [weak self] in
+                                if let item = self?.item {
+                                    item.drivingAction()
+                                }
+                            }
+                            strongSelf.drivingButtonNode.flatMap { strongSelf.addSubnode($0) }
+                            
+                            strongSelf.transitButtonNode = SolidRoundedButtonNode(icon: UIImage(bundleImageName: "Location/DirectionsTransit"), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
+                            strongSelf.transitButtonNode?.alpha = 0.0
+                            strongSelf.transitButtonNode?.allowsGroupOpacity = true
+                            strongSelf.transitButtonNode?.pressed = { [weak self] in
+                                if let item = self?.item {
+                                    item.transitAction()
+                                }
+                            }
+                            strongSelf.transitButtonNode.flatMap { strongSelf.addSubnode($0) }
+                            
+                            strongSelf.walkingButtonNode = SolidRoundedButtonNode(icon: UIImage(bundleImageName: "Location/DirectionsWalking"), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
+                            strongSelf.walkingButtonNode?.alpha = 0.0
+                            strongSelf.walkingButtonNode?.allowsGroupOpacity = true
+                            strongSelf.walkingButtonNode?.pressed = { [weak self] in
+                                if let item = self?.item {
+                                    item.walkingAction()
+                                }
+                            }
+                            strongSelf.walkingButtonNode.flatMap { strongSelf.addSubnode($0) }
+                        } else if let _ = updatedTheme {
+                            strongSelf.drivingButtonNode?.updateTheme(buttonTheme)
+                            strongSelf.transitButtonNode?.updateTheme(buttonTheme)
+                            strongSelf.walkingButtonNode?.updateTheme(buttonTheme)
+                        }
+                        
                         let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size)
                         titleNode.frame = titleFrame
                         
@@ -231,7 +291,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(peer), overrideImage: nil, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: false)
                         }
                         
-                        strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
+                        strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 8.0), size: CGSize(width: avatarSize, height: avatarSize))
 
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentSize.width, height: contentSize.height))
                         strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: contentSize.width, height: contentSize.height + topHighlightInset))
@@ -255,11 +315,48 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             }
                             let timerSize = CGSize(width: 28.0, height: 28.0)
                             timerNode.update(backgroundColor: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4), foregroundColor: item.presentationData.theme.list.itemAccentColor, textColor: item.presentationData.theme.list.itemAccentColor, beginTimestamp: Double(item.message.timestamp), timeout: Double(liveBroadcastingTimeout), strings: item.presentationData.strings)
-                            timerNode.frame = CGRect(origin: CGPoint(x: contentSize.width - 16.0 - timerSize.width, y: floorToScreenPixels((contentSize.height - timerSize.height) / 2.0)), size: timerSize)
+                            timerNode.frame = CGRect(origin: CGPoint(x: contentSize.width - 16.0 - timerSize.width, y: 14.0), size: timerSize)
                         } else if let timerNode = strongSelf.timerNode {
                             strongSelf.timerNode = nil
                             timerNode.removeFromSupernode()
                         }
+                        
+                        if let drivingTime = item.drivingTime {
+                            strongSelf.drivingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: drivingTime, format: { $0 })
+                            
+                            if currentItem?.drivingTime == nil {
+                                strongSelf.drivingButtonNode?.alpha = 1.0
+                                strongSelf.drivingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
+                        }
+                        
+                        if let transitTime = item.transitTime {
+                            strongSelf.transitButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: transitTime, format: { $0 })
+                            
+                            if currentItem?.transitTime == nil {
+                                strongSelf.transitButtonNode?.alpha = 1.0
+                                strongSelf.transitButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
+                        }
+                        
+                        if let walkingTime = item.walkingTime {
+                            strongSelf.walkingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: walkingTime, format: { $0 })
+                            
+                            if currentItem?.walkingTime == nil {
+                                strongSelf.walkingButtonNode?.alpha = 1.0
+                                strongSelf.walkingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
+                        }
+                        
+                        let directionsWidth: CGFloat = 93.0
+                        let directionsSpacing: CGFloat = 8.0
+                        let drivingHeight = strongSelf.drivingButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
+                        let transitHeight = strongSelf.transitButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
+                        let walkingHeight = strongSelf.walkingButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
+                                                
+                        strongSelf.drivingButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: drivingHeight))
+                        strongSelf.transitButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset + directionsWidth + directionsSpacing, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: transitHeight))
+                        strongSelf.walkingButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset + directionsWidth + directionsSpacing + directionsWidth + directionsSpacing, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: walkingHeight))
                     }
                 })
             })
