@@ -50,6 +50,7 @@ private final class RoundedRectangle: Component {
                 updated = true
             }
 
+            let diameterUpdated = self.currentDiameter != diameter
             if self.currentDiameter != diameter || updated {
                 self.currentDiameter = diameter
                 self.currentColor = component.color
@@ -64,6 +65,8 @@ private final class RoundedRectangle: Component {
             }
 
             transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: -shadowInset, y: -shadowInset), size: CGSize(width: availableSize.width + shadowInset * 2.0, height: availableSize.height + shadowInset * 2.0)))
+
+            let _ = diameterUpdated
 
             return availableSize
         }
@@ -390,7 +393,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 }
                 strongSelf.draggingScrollView = nil
 
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
                 transition.updateSublayerTransformOffset(layer: strongSelf.dateIndicator.layer, offset: CGPoint(x: 0.0, y: 0.0))
 
                 strongSelf.isDragging = false
@@ -506,8 +509,15 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         }
 
         let lineIndicatorSize = CGSize(width: self.isDragging ? 6.0 : 3.0, height: scrollIndicatorHeight)
+        let mappedTransition: Transition
+        switch transition {
+        case .immediate:
+            mappedTransition = .immediate
+        case let .animated(duration, _):
+            mappedTransition = Transition(animation: .curve(duration: duration, curve: .easeInOut))
+        }
         let _ = self.lineIndicator.update(
-            transition: .immediate,
+            transition: mappedTransition,
             component: AnyComponent(RoundedRectangle(
                 color: UIColor(white: 0.0, alpha: 0.3)
             )),
@@ -539,6 +549,9 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     }
 
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.dateIndicator.alpha <= 0.01 {
+            return nil
+        }
         if self.dateIndicator.frame.contains(point) {
             return super.hitTest(point, with: event)
         }
