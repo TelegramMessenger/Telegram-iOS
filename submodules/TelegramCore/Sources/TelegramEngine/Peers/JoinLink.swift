@@ -22,7 +22,8 @@ func apiUpdatesGroups(_ updates: Api.Updates) -> [Api.Chat] {
 }
 
 public enum ExternalJoiningChatState {
-    case invite(title: String, about: String?, photoRepresentation: TelegramMediaImageRepresentation?, participantsCount: Int32, participants: [Peer]?)
+    case invite(title: String, photoRepresentation: TelegramMediaImageRepresentation?, participantsCount: Int32, participants: [Peer]?)
+    case request(title: String, about: String?, photoRepresentation: TelegramMediaImageRepresentation?, participantsCount: Int32, isGroup: Bool)
     case alreadyJoined(PeerId)
     case invalidHash
     case peek(PeerId, Int32)
@@ -67,9 +68,13 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
     |> mapToSignal { (result) -> Signal<ExternalJoiningChatState, NoError> in
         if let result = result {
             switch result {
-                case let .chatInvite(_, title, about, invitePhoto, participantsCount, participants):
+                case let .chatInvite(flags, title, about, invitePhoto, participantsCount, participants):
                     let photo = telegramMediaImageFromApiPhoto(invitePhoto).flatMap({ smallestImageRepresentation($0.representations) })
-                    return .single(.invite(title: title, about: about, photoRepresentation: photo, participantsCount: participantsCount, participants: participants?.map({TelegramUser(user: $0)})))
+                    if (flags & (1 << 6)) != 0 {
+                        return .single(.request(title: title, about: about, photoRepresentation: photo, participantsCount: participantsCount, isGroup: (flags & (1 << 1)) == 0))
+                    } else {
+                        return .single(.invite(title: title, photoRepresentation: photo, participantsCount: participantsCount, participants: participants?.map({TelegramUser(user: $0)})))
+                    }
                 case let .chatInviteAlready(chat):
                     if let peer = parseTelegramGroupOrChannel(chat: chat) {
                         return account.postbox.transaction({ (transaction) -> ExternalJoiningChatState in

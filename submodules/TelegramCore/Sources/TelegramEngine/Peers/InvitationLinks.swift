@@ -4,7 +4,7 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-func _internal_updateInvitationRequest(account: Account, peerId: PeerId, userId: PeerId, approve: Bool) -> Signal<Never, NoError> {
+private func _internal_updateInvitationRequest(account: Account, peerId: PeerId, userId: PeerId, approve: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Signal<Never, NoError> in
         if let peer = transaction.getPeer(peerId), let user = transaction.getPeer(userId), let inputPeer = apiInputPeer(peer), let inputUser = apiInputUser(user) {
             var flags: Int32 = 0
@@ -716,6 +716,7 @@ private final class PeerInvitationImportersContextImpl {
     private let link: String?
     private let disposable = MetaDisposable()
     private let updateDisposable = MetaDisposable()
+    private let actionDisposables = DisposableSet()
     private var isLoadingMore: Bool = false
     private var hasLoadedOnce: Bool = false
     private var canLoadMore: Bool = true
@@ -736,9 +737,9 @@ private final class PeerInvitationImportersContextImpl {
         self.count = count
         
         self.isLoadingMore = true
-        self.disposable.set((account.postbox.transaction { transaction -> (peers: [PeerInvitationImportersState.Importer], canLoadMore: Bool)? in
+        self.disposable.set((account.postbox.transaction { transaction -> (peers: [PeerInvitationImportersState.Importer], count: Int32, canLoadMore: Bool)? in
             let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: invite?.link ?? "requests")))?.get(CachedPeerInvitationImporters.self)
-            if let cachedResult = cachedResult, Int(cachedResult.count) == count {
+            if let cachedResult = cachedResult, (Int(cachedResult.count) == count || invite == nil) {
                 var result: [PeerInvitationImportersState.Importer] = []
                 for peerId in cachedResult.peerIds {
                     if let peer = transaction.getPeer(peerId), let date = cachedResult.dates[peerId] {
@@ -747,18 +748,19 @@ private final class PeerInvitationImportersContextImpl {
                         return nil
                     }
                 }
-                return (result, Int(cachedResult.count) > result.count)
+                return (result, cachedResult.count, Int(cachedResult.count) > result.count || invite == nil)
             } else {
                 return nil
             }
         }
-        |> deliverOn(self.queue)).start(next: { [weak self] cachedPeersAndCanLoadMore in
+        |> deliverOn(self.queue)).start(next: { [weak self] cachedPeersCountAndCanLoadMore in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.isLoadingMore = false
-            if let (cachedPeers, canLoadMore) = cachedPeersAndCanLoadMore {
+            if let (cachedPeers, cachedCount, canLoadMore) = cachedPeersCountAndCanLoadMore {
                 strongSelf.results = cachedPeers
+                strongSelf.count = cachedCount
                 strongSelf.hasLoadedOnce = true
                 strongSelf.canLoadMore = canLoadMore
                 strongSelf.loadedFromCache = true
@@ -772,6 +774,7 @@ private final class PeerInvitationImportersContextImpl {
     deinit {
         self.disposable.dispose()
         self.updateDisposable.dispose()
+        self.actionDisposables.dispose()
     }
     
     func loadMore() {
@@ -881,7 +884,9 @@ private final class PeerInvitationImportersContextImpl {
         self.updateState()
     }
     
-    func remove(_ peerId: EnginePeer.Id) {
+    func update(_ peerId: EnginePeer.Id, action: PeerInvitationImportersContext.UpdateAction) {
+        self.actionDisposables.add(_internal_updateInvitationRequest(account: self.account, peerId: self.peerId, userId: peerId, approve: action == .approve).start())
+        
         var results = self.results
         results.removeAll(where: { $0.peer.peerId == peerId})
         self.results = results
@@ -911,6 +916,11 @@ private final class PeerInvitationImportersContextImpl {
 }
 
 public final class PeerInvitationImportersContext {
+    public enum UpdateAction {
+        case approve
+        case deny
+    }
+    
     private let queue: Queue = Queue()
     private let impl: QueueLocalObject<PeerInvitationImportersContextImpl>
     
@@ -939,9 +949,9 @@ public final class PeerInvitationImportersContext {
         }
     }
     
-    public func remove(_ peerId: EnginePeer.Id) {
+    public func update(_ peerId: EnginePeer.Id, action: UpdateAction) {
         self.impl.with { impl in
-            impl.remove(peerId)
+            impl.update(peerId, action: action)
         }
     }
 }
