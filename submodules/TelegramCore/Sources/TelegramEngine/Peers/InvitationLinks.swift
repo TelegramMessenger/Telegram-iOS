@@ -896,7 +896,6 @@ private final class PeerInvitationImportersContextImpl {
         
         var results = self.results
         results.removeAll(where: { $0.peer.peerId == peerId })
-        count -= 1
         self.results = results
         self.count = max(0, self.count - 1)
         self.updateState()
