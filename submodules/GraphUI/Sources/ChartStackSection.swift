@@ -68,10 +68,10 @@ class ChartStackSection: UIView, ChartThemeContainer {
         backButton.addTarget(self, action: #selector(self.didTapBackButton), for: .touchUpInside)
         backButton.setTitle("Zoom Out", for: .normal)
         backButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .regular)
-        backButton.setTitleColor(UIColor(rgb: 0x007ee5), for: .normal)
+        backButton.setTitleColor(UIColor(rgb: 0x007aff), for: .normal)
         backButton.setImage(UIImage(bundleImageName: "Chart/arrow_left"), for: .normal)
         backButton.imageEdgeInsets = UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 3.0)
-        backButton.imageView?.tintColor = UIColor(rgb: 0x007ee5)
+        backButton.imageView?.tintColor = UIColor(rgb: 0x007aff)
         
         backButton.setVisible(false, animated: false)
     }
