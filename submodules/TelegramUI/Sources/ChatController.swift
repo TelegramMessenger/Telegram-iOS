@@ -4790,7 +4790,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let callsDataUpdated = strongSelf.presentationInterfaceState.callsAvailable != callsAvailable || strongSelf.presentationInterfaceState.callsPrivate != callsPrivate
             
-                if let inviteRequestsPending = inviteRequestsPending, inviteRequestsPending >= 0, strongSelf.inviteRequestsContext == nil {
+                var canManageInvitations = false
+                if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canInviteUsers) == true) {
+                    canManageInvitations = true
+                } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+                    if case .creator = group.role {
+                        canManageInvitations = true
+                    } else if case let .admin(rights, _) = group.role, rights.rights.contains(.canInviteUsers) {
+                        canManageInvitations = true
+                    }
+                }
+                
+                if canManageInvitations, let inviteRequestsPending = inviteRequestsPending, inviteRequestsPending >= 0, strongSelf.inviteRequestsContext == nil {
                     let inviteRequestsContext = strongSelf.context.engine.peers.peerInvitationImporters(peerId: peerId, invite: nil)
                     strongSelf.inviteRequestsContext = inviteRequestsContext
                     
