@@ -81,6 +81,9 @@ func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, ex
             if let _ = usageLimit {
                 flags |= (1 << 1)
             }
+            if let _ = requestNeeded {
+                flags |= (1 << 3)
+            }
             return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: expireDate, usageLimit: usageLimit))
             |> mapError { _ in return CreatePeerExportedInvitationError.generic }
             |> map { result -> ExportedInvitation? in

@@ -32,7 +32,7 @@ public struct ExportedInvitation: Codable, Equatable {
 
         self.link = try container.decode(String.self, forKey: "l")
         self.isPermanent = try container.decode(Bool.self, forKey: "permanent")
-        self.requestApproval = (try? container.decode(Bool.self, forKey: "requestApproval")) ?? false
+        self.requestApproval = try container.decodeIfPresent(Bool.self, forKey: "requestApproval") ?? false
         self.isRevoked = try container.decode(Bool.self, forKey: "revoked")
         self.adminId = PeerId(try container.decode(Int64.self, forKey: "adminId"))
         self.date = try container.decode(Int32.self, forKey: "date")
