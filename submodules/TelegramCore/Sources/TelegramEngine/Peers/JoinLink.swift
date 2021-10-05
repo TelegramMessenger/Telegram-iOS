@@ -22,7 +22,7 @@ func apiUpdatesGroups(_ updates: Api.Updates) -> [Api.Chat] {
 }
 
 public enum ExternalJoiningChatState {
-    public struct InviteFlags {
+    public struct InviteFlags : Equatable {
         public let isChannel: Bool
         public let isBroadcast: Bool
         public let isPublic: Bool
@@ -31,7 +31,6 @@ public enum ExternalJoiningChatState {
     }
     
     case invite(flags: InviteFlags, title: String, about: String?, photoRepresentation: TelegramMediaImageRepresentation?, participantsCount: Int32, participants: [Peer]?)
-
     case alreadyJoined(PeerId)
     case invalidHash
     case peek(PeerId, Int32)

@@ -650,6 +650,10 @@ public struct PeerInvitationImportersState: Equatable {
     public var hasLoadedOnce: Bool
     public var canLoadMore: Bool
     public var count: Int32
+    
+    public var waitingCount: Int {
+        return importers.filter { $0.approvedBy == nil }.count
+    }
 }
 
 final class CachedPeerInvitationImporters: Codable {
@@ -891,7 +895,8 @@ private final class PeerInvitationImportersContextImpl {
         self.actionDisposables.add(_internal_updateInvitationRequest(account: self.account, peerId: self.peerId, userId: peerId, approve: action == .approve).start())
         
         var results = self.results
-        results.removeAll(where: { $0.peer.peerId == peerId})
+        results.removeAll(where: { $0.peer.peerId == peerId })
+        count -= 1
         self.results = results
         self.count = max(0, self.count - 1)
         self.updateState()
