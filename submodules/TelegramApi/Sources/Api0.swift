@@ -472,6 +472,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1271602504] = { return Api.auth.ExportedAuthorization.parse_exportedAuthorization($0) }
     dict[2103482845] = { return Api.SecurePlainData.parse_securePlainPhone($0) }
     dict[569137759] = { return Api.SecurePlainData.parse_securePlainEmail($0) }
+    dict[2137295719] = { return Api.SearchResultsPosition.parse_searchResultPosition($0) }
     dict[-1269012015] = { return Api.messages.AffectedHistory.parse_affectedHistory($0) }
     dict[1244130093] = { return Api.StatsGraph.parse_statsGraphAsync($0) }
     dict[-1092839390] = { return Api.StatsGraph.parse_statsGraphError($0) }
@@ -562,6 +563,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1078612597] = { return Api.ChannelLocation.parse_channelLocationEmpty($0) }
     dict[547062491] = { return Api.ChannelLocation.parse_channelLocation($0) }
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
+    dict[1404185519] = { return Api.messages.SearchResultsPositions.parse_searchResultsPositions($0) }
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[904138920] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultArchive($0) }
     dict[-478701471] = { return Api.account.ResetPasswordResult.parse_resetPasswordFailedWait($0) }
@@ -836,7 +838,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1781355374] = { return Api.MessageAction.parse_messageActionChannelCreate($0) }
     dict[-519864430] = { return Api.MessageAction.parse_messageActionChatMigrateTo($0) }
     dict[-365344535] = { return Api.MessageAction.parse_messageActionChannelMigrateFrom($0) }
-    dict[-339958837] = { return Api.MessageAction.parse_messageActionChatJoinedByRequest($0) }
     dict[-1799538451] = { return Api.MessageAction.parse_messageActionPinMessage($0) }
     dict[-1615153660] = { return Api.MessageAction.parse_messageActionHistoryClear($0) }
     dict[-1834538890] = { return Api.MessageAction.parse_messageActionGameScore($0) }
@@ -855,6 +856,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1441072131] = { return Api.MessageAction.parse_messageActionSetMessagesTTL($0) }
     dict[-1281329567] = { return Api.MessageAction.parse_messageActionGroupCallScheduled($0) }
     dict[-1434950843] = { return Api.MessageAction.parse_messageActionSetChatTheme($0) }
+    dict[-339958837] = { return Api.MessageAction.parse_messageActionChatJoinedByRequest($0) }
     dict[1399245077] = { return Api.PhoneCall.parse_phoneCallEmpty($0) }
     dict[-987599081] = { return Api.PhoneCall.parse_phoneCallWaiting($0) }
     dict[347139340] = { return Api.PhoneCall.parse_phoneCallRequested($0) }
@@ -1236,6 +1238,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecurePlainData:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.SearchResultsPosition:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.AffectedHistory:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StatsGraph:
@@ -1335,6 +1339,8 @@ public struct Api {
             case let _1 as Api.ChannelLocation:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessageRange:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.SearchResultsPositions:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.StickerSetInstallResult:
                 _1.serialize(buffer, boxed)
