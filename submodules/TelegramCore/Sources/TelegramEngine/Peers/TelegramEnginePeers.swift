@@ -450,10 +450,6 @@ public extension TelegramEngine {
             return PeerExportedInvitationsContext(account: self.account, peerId: peerId, adminId: adminId, revoked: revoked, forceUpdate: forceUpdate)
         }
         
-        public func updateInvitationRequest(peerId: PeerId, userId: PeerId, approve: Bool) -> Signal<Never, NoError> {
-            return _internal_updateInvitationRequest(account: self.account, peerId: peerId, userId: userId, approve: approve)
-        }
-        
         public func revokePersistentPeerExportedInvitation(peerId: PeerId) -> Signal<ExportedInvitation?, NoError> {
             return _internal_revokePersistentPeerExportedInvitation(account: self.account, peerId: peerId)
         }

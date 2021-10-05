@@ -22,7 +22,6 @@ func apiUpdatesGroups(_ updates: Api.Updates) -> [Api.Chat] {
 }
 
 public enum ExternalJoiningChatState {
-    
     public struct InviteFlags : Equatable {
         public let isChannel: Bool
         public let isBroadcast: Bool
