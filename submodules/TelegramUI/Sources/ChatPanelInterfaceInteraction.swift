@@ -132,6 +132,7 @@ final class ChatPanelInterfaceInteraction {
     let presentInviteMembers: () -> Void
     let presentGigagroupHelp: () -> Void
     let updateShowCommands: ((Bool) -> Bool) -> Void
+    let openInviteRequests: () -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -218,6 +219,7 @@ final class ChatPanelInterfaceInteraction {
         presentGigagroupHelp: @escaping () -> Void,
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
         updateShowCommands: @escaping ((Bool) -> Bool) -> Void,
+        openInviteRequests: @escaping () -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
@@ -303,6 +305,7 @@ final class ChatPanelInterfaceInteraction {
         self.presentInviteMembers = presentInviteMembers
         self.presentGigagroupHelp = presentGigagroupHelp
         self.updateShowCommands = updateShowCommands
+        self.openInviteRequests = openInviteRequests
         self.statuses = statuses
     }
 }

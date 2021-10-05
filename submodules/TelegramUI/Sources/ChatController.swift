@@ -484,6 +484,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
     private var nextChannelToReadDisposable: Disposable?
     
+    private var inviteRequestsContext: PeerInvitationImportersContext?
+    private var inviteRequestsDisposable = MetaDisposable()
+    
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
@@ -4160,6 +4163,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.addMemberDisposable.dispose()
         self.importStateDisposable?.dispose()
         self.nextChannelToReadDisposable?.dispose()
+        self.inviteRequestsDisposable.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -4729,6 +4733,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var callsPrivate: Bool = false
                 var slowmodeState: ChatSlowmodeState?
                 var activeGroupCallInfo: ChatActiveGroupCallInfo?
+                var inviteRequestsPending: Int32?
                 if let cachedData = cachedData as? CachedChannelData {
                     pinnedMessageId = cachedData.pinnedMessageId
                     if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode, let timeout = cachedData.slowModeTimeout {
@@ -4741,6 +4746,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let activeCall = cachedData.activeCall {
                         activeGroupCallInfo = ChatActiveGroupCallInfo(activeCall: activeCall)
                     }
+                    inviteRequestsPending = cachedData.inviteRequestsPending
                 } else if let cachedData = cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
                     callsAvailable = cachedData.voiceCallsAvailable
@@ -4751,6 +4757,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let activeCall = cachedData.activeCall {
                         activeGroupCallInfo = ChatActiveGroupCallInfo(activeCall: activeCall)
                     }
+                    inviteRequestsPending = cachedData.inviteRequestsPending
                 } else if let _ = cachedData as? CachedSecretChatData {
                 }
                 
@@ -4782,7 +4789,63 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 let callsDataUpdated = strongSelf.presentationInterfaceState.callsAvailable != callsAvailable || strongSelf.presentationInterfaceState.callsPrivate != callsPrivate
-                
+            
+                if let inviteRequestsPending = inviteRequestsPending, inviteRequestsPending >= 0, strongSelf.inviteRequestsContext == nil {
+                    let inviteRequestsContext = strongSelf.context.engine.peers.peerInvitationImporters(peerId: peerId, invite: nil)
+                    strongSelf.inviteRequestsContext = inviteRequestsContext
+                    
+                    strongSelf.inviteRequestsDisposable.set((inviteRequestsContext.state
+                    |> deliverOnMainQueue).start(next: { [weak self] requestsState in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+                            return state
+                            .updatedTitlePanelContext({ context in
+                                if requestsState.count > 0 {
+                                    let peers: [EnginePeer] = Array(requestsState.importers.compactMap({ $0.peer.peer.flatMap({ EnginePeer($0) }) }).prefix(3))
+                                    if !context.contains(where: {
+                                        switch $0 {
+                                            case .inviteRequests(peers, requestsState.count):
+                                                return true
+                                            default:
+                                                return false
+                                        }
+                                    }) {
+                                        var updatedContexts = context.filter { c in
+                                            if case .inviteRequests = c {
+                                                return false
+                                            } else {
+                                                return true
+                                            }
+                                        }
+                                        updatedContexts.append(.inviteRequests(peers, requestsState.count))
+                                        return updatedContexts.sorted()
+                                    } else {
+                                        return context
+                                    }
+                                } else {
+                                    if let index = context.firstIndex(where: {
+                                        switch $0 {
+                                            case .inviteRequests:
+                                                return true
+                                            default:
+                                                return false
+                                        }
+                                    }) {
+                                        var updatedContexts = context
+                                        updatedContexts.remove(at: index)
+                                        return updatedContexts
+                                    } else {
+                                        return context
+                                    }
+                                }
+                            })
+                            .updatedSlowmodeState(slowmodeState)
+                        })
+                    }))
+                }
+            
                 if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage != pinnedMessage || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState || strongSelf.presentationInterfaceState.activeGroupCallInfo != activeGroupCallInfo {
                     strongSelf.updateChatPresentationInterfaceState(animated: strongSelf.willAppear, interactive: strongSelf.willAppear, { state in
                         return state
@@ -7268,6 +7331,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.updateChatPresentationInterfaceState(interactive: true, {
                     return $0.updatedShowCommands(f($0.showCommands))
                 })
+            }
+        }, openInviteRequests: { [weak self] in
+            if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                let controller = inviteRequestsController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, existingContext: strongSelf.inviteRequestsContext)
+                controller.navigationPresentation = .modal
+                strongSelf.push(controller)
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         

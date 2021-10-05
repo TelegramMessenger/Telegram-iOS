@@ -16,10 +16,13 @@ private enum Constants {
 
 private class LeftAlignedIconButton: UIButton {
     override func titleRect(forContentRect contentRect: CGRect) -> CGRect {
-        let titleRect = super.titleRect(forContentRect: contentRect)
+        var titleRect = super.titleRect(forContentRect: contentRect)
         let imageSize = currentImage?.size ?? .zero
-        let availableWidth = contentRect.width - imageEdgeInsets.right - imageSize.width - titleRect.width
-        return titleRect.offsetBy(dx: round(availableWidth / 2) - imageEdgeInsets.left, dy: 0)
+        titleRect.origin.x = imageSize.width + 2.0
+//
+//        let availableWidth = contentRect.width - imageEdgeInsets.right - imageSize.width - titleRect.width
+//        return titleRect.offsetBy(dx: round(availableWidth / 2) - imageEdgeInsets.left, dy: 0)
+        return titleRect
     }
 }
 

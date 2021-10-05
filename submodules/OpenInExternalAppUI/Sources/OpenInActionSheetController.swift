@@ -54,12 +54,12 @@ public final class OpenInActionSheetController: ActionSheetController {
             switch action {
             case let .openUrl(url):
                 openUrl(url)
-            case let .openLocation(latitude, longitude, withDirections):
+            case let .openLocation(latitude, longitude, directions):
                 let placemark = MKPlacemark(coordinate: CLLocationCoordinate2DMake(latitude, longitude), addressDictionary: [:])
                 let mapItem = MKMapItem(placemark: placemark)
                 
-                if withDirections {
-                    let options = [ MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving ]
+                if let directions = directions {
+                    let options = [ MKLaunchOptionsDirectionsModeKey: directions.launchOptions ]
                     MKMapItem.openMaps(with: [MKMapItem.forCurrentLocation(), mapItem], launchOptions: options)
                 } else {
                     mapItem.openInMaps(launchOptions: nil)
