@@ -708,6 +708,15 @@ public final class Transaction {
         assert(!self.disposed)
         return self.postbox?.messageHistoryTable.findRandomMessage(peerId: peerId, namespace: namespace, tag: tag, ignoreIds: ignoreIds)
     }
+
+    public func firstMessageInRange(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, timestampMax: Int32, timestampMin: Int32) -> Message? {
+        assert(!self.disposed)
+        if let message = self.postbox?.messageHistoryTable.firstMessageInRange(peerId: peerId, namespace: namespace, tag: tag, timestampMax: timestampMax, timestampMin: timestampMin) {
+            return self.postbox?.renderIntermediateMessage(message)
+        } else {
+            return nil
+        }
+    }
     
     public func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
         assert(!self.disposed)

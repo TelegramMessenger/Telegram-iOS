@@ -60,6 +60,7 @@ import ActionSheetPeerItem
 import TelegramCallsUI
 import PeerInfoAvatarListNode
 import PasswordSetupUI
+import CalendarMessageScreen
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -2747,6 +2748,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             case .search:
                 strongSelf.headerNode.navigationButtonContainer.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                 strongSelf.activateSearch()
+            case .calendar:
+                strongSelf.openCalendarSearch()
             case .editPhoto, .editVideo:
                 break
             }
@@ -5942,6 +5945,29 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             transition.updateAlpha(node: navigationBar, alpha: 1.0)
         }
     }
+
+    private func openCalendarSearch() {
+        var initialTimestamp = Int32(Date().timeIntervalSince1970)
+
+        if let pane = self.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode, let timestamp = pane.currentTopTimestamp() {
+            initialTimestamp = timestamp
+        }
+
+        self.controller?.push(CalendarMessageScreen(context: self.context, peerId: self.peerId, initialTimestamp: initialTimestamp, navigateToDay: { [weak self] c, timestamp in
+            guard let strongSelf = self else {
+                c.dismiss()
+                return
+            }
+            guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
+                c.dismiss()
+                return
+            }
+
+            pane.scrollToTimestamp(timestamp: timestamp)
+
+            c.dismiss()
+        }))
+    }
     
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
@@ -6276,6 +6302,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         switch currentPaneKey {
                         case .files, .music, .links, .members:
                             navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
+                        case .media:
+                            navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .calendar, isForExpandedView: true))
                         default:
                             break
                         }
