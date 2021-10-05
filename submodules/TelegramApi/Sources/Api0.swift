@@ -291,7 +291,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-592373577] = { return Api.GroupCallParticipantVideoSourceGroup.parse_groupCallParticipantVideoSourceGroup($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
     dict[-1072953408] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
-    dict[682146919] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
+    dict[900251559] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
     dict[803602899] = { return Api.ChannelParticipant.parse_channelParticipantCreator($0) }
     dict[885242707] = { return Api.ChannelParticipant.parse_channelParticipantAdmin($0) }
     dict[1844969806] = { return Api.ChannelParticipant.parse_channelParticipantBanned($0) }
@@ -472,6 +472,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1271602504] = { return Api.auth.ExportedAuthorization.parse_exportedAuthorization($0) }
     dict[2103482845] = { return Api.SecurePlainData.parse_securePlainPhone($0) }
     dict[569137759] = { return Api.SecurePlainData.parse_securePlainEmail($0) }
+    dict[2137295719] = { return Api.SearchResultsPosition.parse_searchResultPosition($0) }
     dict[-1269012015] = { return Api.messages.AffectedHistory.parse_affectedHistory($0) }
     dict[1244130093] = { return Api.StatsGraph.parse_statsGraphAsync($0) }
     dict[-1092839390] = { return Api.StatsGraph.parse_statsGraphError($0) }
@@ -562,6 +563,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1078612597] = { return Api.ChannelLocation.parse_channelLocationEmpty($0) }
     dict[547062491] = { return Api.ChannelLocation.parse_channelLocation($0) }
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
+    dict[1404185519] = { return Api.messages.SearchResultsPositions.parse_searchResultsPositions($0) }
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[904138920] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultArchive($0) }
     dict[-478701471] = { return Api.account.ResetPasswordResult.parse_resetPasswordFailedWait($0) }
@@ -1235,6 +1237,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecurePlainData:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.SearchResultsPosition:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.AffectedHistory:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StatsGraph:
@@ -1334,6 +1338,8 @@ public struct Api {
             case let _1 as Api.ChannelLocation:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessageRange:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.SearchResultsPositions:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.StickerSetInstallResult:
                 _1.serialize(buffer, boxed)

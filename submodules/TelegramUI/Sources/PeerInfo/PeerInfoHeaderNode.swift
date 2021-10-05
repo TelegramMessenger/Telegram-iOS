@@ -983,6 +983,9 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                     text = presentationData.strings.Settings_EditPhoto
                 case .editVideo:
                     text = presentationData.strings.Settings_EditVideo
+                case .calendar:
+                text = ""
+                icon = PresentationResourcesRootController.navigationCalendarIcon(presentationData.theme)
             }
             self.accessibilityLabel = text
             
@@ -1023,6 +1026,7 @@ enum PeerInfoHeaderNavigationButtonKey {
     case search
     case editPhoto
     case editVideo
+    case calendar
 }
 
 struct PeerInfoHeaderNavigationButtonSpec: Equatable {

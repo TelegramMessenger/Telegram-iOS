@@ -565,9 +565,11 @@ private final class VisualMediaItemNode: ASDisplayNode {
 }
 
 private final class VisualMediaItem {
+    let index: Int
     let id: MessageId
     let timestamp: Int32
     let message: Message?
+    let isLocal: Bool
 
     enum StableId: Hashable {
         case message(UInt32)
@@ -582,16 +584,109 @@ private final class VisualMediaItem {
         }
     }
     
-    init(message: Message) {
+    init(index: Int, message: Message, isLocal: Bool) {
+        self.index = index
         self.message = message
         self.id = message.id
         self.timestamp = message.timestamp
+        self.isLocal = isLocal
     }
 
-    init(id: MessageId, timestamp: Int32) {
+    init(index: Int, id: MessageId, timestamp: Int32) {
+        self.index = index
         self.id = id
         self.timestamp = timestamp
         self.message = nil
+        self.isLocal = false
+    }
+}
+
+private struct VisualMediaItemCollection {
+    var items: [VisualMediaItem]
+    var totalCount: Int
+
+    func item(at index: Int) -> VisualMediaItem? {
+        func binarySearch<A, T: Comparable>(_ inputArr: [A], extract: (A) -> T, searchItem: T) -> Int? {
+            var lowerIndex = 0
+            var upperIndex = inputArr.count - 1
+
+            if lowerIndex > upperIndex {
+                return nil
+            }
+
+            while true {
+                let currentIndex = (lowerIndex + upperIndex) / 2
+                let value = extract(inputArr[currentIndex])
+
+                if value == searchItem {
+                    return currentIndex
+                } else if lowerIndex > upperIndex {
+                    return nil
+                } else {
+                    if (value > searchItem) {
+                        upperIndex = currentIndex - 1
+                    } else {
+                        lowerIndex = currentIndex + 1
+                    }
+                }
+            }
+        }
+
+        if let itemIndex = binarySearch(self.items, extract: \.index, searchItem: index) {
+            return self.items[itemIndex]
+        }
+        return nil
+    }
+
+    func closestHole(at index: Int) -> (anchor: MessageId, direction: SparseMessageList.LoadHoleDirection)? {
+        var minDistance: Int?
+        for i in 0 ..< self.items.count {
+            if self.items[i].isLocal {
+                continue
+            }
+            if let minDistanceValue = minDistance {
+                if abs(self.items[i].index - index) < abs(self.items[minDistanceValue].index - index) {
+                    minDistance = i
+                }
+            } else {
+                minDistance = i
+            }
+        }
+        if let minDistance = minDistance {
+            let distance = index - self.items[minDistance].index
+            if abs(distance) <= 2 {
+                return (self.items[minDistance].id, .around)
+            } else if distance < 0 {
+                return (self.items[minDistance].id, .earlier)
+            } else {
+                return (self.items[minDistance].id, .later)
+            }
+        }
+        return nil
+    }
+
+    func closestItem(at index: Int) -> VisualMediaItem? {
+        if let item = self.item(at: index) {
+            return item
+        }
+        var minDistance: Int?
+        for i in 0 ..< self.items.count {
+            if self.items[i].isLocal {
+                continue
+            }
+            if let minDistanceValue = minDistance {
+                if abs(self.items[i].index - index) < abs(self.items[minDistanceValue].index - index) {
+                    minDistance = i
+                }
+            } else {
+                minDistance = i
+            }
+        }
+        if let minDistance = minDistance {
+            return self.items[minDistance]
+        } else {
+            return nil
+        }
     }
 }
 
@@ -752,7 +847,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         
     private let listDisposable = MetaDisposable()
     private var hiddenMediaDisposable: Disposable?
-    private var mediaItems: [VisualMediaItem] = []
+    private var mediaItems = VisualMediaItemCollection(items: [], totalCount: 0)
     private var itemsLayout: ItemsLayout?
     private var visibleMediaItems: [VisualMediaItem.StableId: VisualMediaItemNode] = [:]
     
@@ -851,7 +946,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     
     func ensureMessageIsVisible(id: MessageId) {
         let activeRect = self.scrollNode.bounds
-        for item in self.mediaItems {
+        for item in self.mediaItems.items {
             if let message = item.message, message.id == id {
                 if let itemNode = self.visibleMediaItems[item.stableId] {
                     if !activeRect.contains(itemNode.frame) {
@@ -880,15 +975,13 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     private func updateHistory(list: SparseMessageList.State) {
-        //self.currentView = view
-
-        self.mediaItems.removeAll()
+        self.mediaItems = VisualMediaItemCollection(items: [], totalCount: list.totalCount)
         for item in list.items {
             switch item.content {
-            case let .message(message):
-                self.mediaItems.append(VisualMediaItem(message: message))
+            case let .message(message, isLocal):
+                self.mediaItems.items.append(VisualMediaItem(index: item.index, message: message, isLocal: isLocal))
             case let .placeholder(id, timestamp):
-                self.mediaItems.append(VisualMediaItem(id: id, timestamp: timestamp))
+                self.mediaItems.items.append(VisualMediaItem(index: item.index, id: id, timestamp: timestamp))
             }
         }
         self.itemsLayout = nil
@@ -915,7 +1008,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     func findLoadedMessage(id: MessageId) -> Message? {
-        for item in self.mediaItems {
+        for item in self.mediaItems.items {
             if let message = item.message, message.id == id {
                 return item.message
             }
@@ -980,7 +1073,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
-        for item in self.mediaItems {
+        for item in self.mediaItems.items {
             if let message = item.message, message.id == messageId {
                 if let itemNode = self.visibleMediaItems[item.stableId] {
                     return itemNode.transitionNode()
@@ -1016,7 +1109,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         } else {
             switch self.contentType {
             case .photoOrVideo, .gifs:
-                itemsLayout = .grid(ItemsLayout.Grid(containerWidth: availableWidth, itemCount: self.mediaItems.count, bottomInset: bottomInset))
+                itemsLayout = .grid(ItemsLayout.Grid(containerWidth: availableWidth, itemCount: self.mediaItems.totalCount, bottomInset: bottomInset))
             }
             self.itemsLayout = itemsLayout
         }
@@ -1104,7 +1197,9 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 let itemFrame = itemsLayout.frame(forItemAt: i, sideInset: currentParams.sideInset)
 
                 if headerItem == nil && itemFrame.maxY > headerItemMinY {
-                    headerItem = self.mediaItems[i].timestamp
+                    if let item = self.mediaItems.closestItem(at: i) {
+                        headerItem = item.timestamp
+                    }
                     break
                 }
             }
@@ -1128,6 +1223,52 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             transition: transition
         )
     }
+
+    func currentTopTimestamp() -> Int32? {
+        guard let currentParams = self.currentParams, let itemsLayout = self.itemsLayout else {
+            return nil
+        }
+
+        let headerItemMinY = self.scrollNode.view.bounds.minY + 20.0
+        let activeRect = self.scrollNode.view.bounds
+        let visibleRect = activeRect.insetBy(dx: 0.0, dy: -400.0)
+
+        let (minVisibleIndex, maxVisibleIndex) = itemsLayout.visibleRange(rect: visibleRect)
+
+        var headerItem: Int32?
+
+        if minVisibleIndex <= maxVisibleIndex {
+            for i in minVisibleIndex ... maxVisibleIndex {
+                let itemFrame = itemsLayout.frame(forItemAt: i, sideInset: currentParams.sideInset)
+
+                if headerItem == nil && itemFrame.maxY > headerItemMinY {
+                    if let item = self.mediaItems.closestItem(at: i) {
+                        headerItem = item.timestamp
+                    }
+                    break
+                }
+            }
+        }
+
+        return headerItem
+    }
+
+    func scrollToTimestamp(timestamp: Int32) {
+        guard let currentParams = self.currentParams else {
+            return
+        }
+        guard let itemsLayout = self.itemsLayout else {
+            return
+        }
+        for item in self.mediaItems.items {
+            if item.timestamp <= timestamp {
+                let frame = itemsLayout.frame(forItemAt: item.index, sideInset: currentParams.sideInset)
+                self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: frame.minY), animated: false)
+
+                break
+            }
+        }
+    }
     
     private func updateVisibleItems(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, theme: PresentationTheme, strings: PresentationStrings, synchronousLoad: Bool) {
         guard let itemsLayout = self.itemsLayout else {
@@ -1140,20 +1281,40 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         let (minActuallyVisibleIndex, maxActuallyVisibleIndex) = itemsLayout.visibleRange(rect: activeRect)
         let (minVisibleIndex, maxVisibleIndex) = itemsLayout.visibleRange(rect: visibleRect)
 
-        var requestPlaceholderIds: [MessageId] = []
+        var requestHole: (anchor: MessageId, direction: SparseMessageList.LoadHoleDirection)?
         
         var validIds = Set<VisualMediaItem.StableId>()
         if minVisibleIndex <= maxVisibleIndex {
-            for i in minVisibleIndex ... maxVisibleIndex {
-                let stableId = self.mediaItems[i].stableId
+            for itemIndex in minVisibleIndex ... maxVisibleIndex {
+                let maybeItem = self.mediaItems.item(at: itemIndex)
+                var findHole = false
+                if let item = maybeItem {
+                    if item.message == nil {
+                        findHole = true
+                    }
+                } else {
+                    findHole = true
+                }
+                if findHole {
+                    if let hole = self.mediaItems.closestHole(at: itemIndex) {
+                        if requestHole == nil {
+                            requestHole = hole
+                        }
+                    }
+                }
+
+                guard let item = maybeItem else {
+                    continue
+                }
+                let stableId = item.stableId
                 validIds.insert(stableId)
 
-                if self.mediaItems[i].message == nil && !self.requestedPlaceholderIds.contains(self.mediaItems[i].id) {
-                    requestPlaceholderIds.append(self.mediaItems[i].id)
-                    self.requestedPlaceholderIds.insert(self.mediaItems[i].id)
+                if item.message == nil && !self.requestedPlaceholderIds.contains(item.id) {
+                    //requestPlaceholderIds.append(item.id)
+                    self.requestedPlaceholderIds.insert(item.id)
                 }
                 
-                let itemFrame = itemsLayout.frame(forItemAt: i, sideInset: sideInset)
+                let itemFrame = itemsLayout.frame(forItemAt: itemIndex, sideInset: sideInset)
                 
                 let itemNode: VisualMediaItemNode
                 if let current = self.visibleMediaItems[stableId] {
@@ -1166,10 +1327,10 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 itemNode.frame = itemFrame
 
                 var itemSynchronousLoad = false
-                if i >= minActuallyVisibleIndex && i <= maxActuallyVisibleIndex {
+                if itemIndex >= minActuallyVisibleIndex && itemIndex <= maxActuallyVisibleIndex {
                     itemSynchronousLoad = synchronousLoad
                 }
-                itemNode.update(size: itemFrame.size, item: self.mediaItems[i], theme: theme, synchronousLoad: itemSynchronousLoad)
+                itemNode.update(size: itemFrame.size, item: item, theme: theme, synchronousLoad: itemSynchronousLoad)
                 itemNode.updateIsVisible(itemFrame.intersects(activeRect))
             }
         }
@@ -1185,8 +1346,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             }
         }
         
-        if !requestPlaceholderIds.isEmpty {
-            self.listSource.loadPlaceholders(ids: requestPlaceholderIds)
+        if let requestHole = requestHole {
+            self.listSource.loadHole(anchor: requestHole.anchor, direction: requestHole.direction)
         }
     }
     

@@ -319,7 +319,11 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     }
 
     private let dateIndicator: ComponentHostView<Empty>
+
     private let lineIndicator: ComponentHostView<Empty>
+    private var indicatorPosition: CGFloat?
+    private var scrollIndicatorHeight: CGFloat?
+
     private var dragGesture: DragGesture?
     public private(set) var isDragging: Bool = false
 
@@ -370,6 +374,8 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
                 strongSelf.isDragging = true
 
+                strongSelf.updateLineIndicator(transition: transition)
+
                 if let scrollView = strongSelf.beginScrolling?() {
                     strongSelf.draggingScrollView = scrollView
                     strongSelf.scrollingInitialOffset = scrollView.contentOffset.y
@@ -388,6 +394,9 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 transition.updateSublayerTransformOffset(layer: strongSelf.dateIndicator.layer, offset: CGPoint(x: 0.0, y: 0.0))
 
                 strongSelf.isDragging = false
+
+                strongSelf.updateLineIndicator(transition: transition)
+
                 strongSelf.updateActivityTimer()
             },
             moved: { [weak self] relativeOffset in
@@ -470,7 +479,8 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         let dateIndicatorTopPosition = topIndicatorInset
         let dateIndicatorBottomPosition = containerSize.height - bottomIndicatorInset - indicatorSize.height
 
-        let indicatorPosition = indicatorTopPosition * (1.0 - indicatorPositionFraction) + indicatorBottomPosition * indicatorPositionFraction
+        self.indicatorPosition = indicatorTopPosition * (1.0 - indicatorPositionFraction) + indicatorBottomPosition * indicatorPositionFraction
+        self.scrollIndicatorHeight = scrollIndicatorHeight
 
         let dateIndicatorPosition = dateIndicatorTopPosition * (1.0 - indicatorPositionFraction) + dateIndicatorBottomPosition * indicatorPositionFraction
 
@@ -487,7 +497,15 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             self.lineIndicator.alpha = 1.0
         }
 
-        let lineIndicatorSize = CGSize(width: 3.0, height: scrollIndicatorHeight)
+        self.updateLineIndicator(transition: transition)
+    }
+
+    private func updateLineIndicator(transition: ContainedViewLayoutTransition) {
+        guard let indicatorPosition = self.indicatorPosition, let scrollIndicatorHeight = self.scrollIndicatorHeight else {
+            return
+        }
+
+        let lineIndicatorSize = CGSize(width: self.isDragging ? 6.0 : 3.0, height: scrollIndicatorHeight)
         let _ = self.lineIndicator.update(
             transition: .immediate,
             component: AnyComponent(RoundedRectangle(
@@ -497,7 +515,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             containerSize: lineIndicatorSize
         )
 
-        transition.updateFrame(view: self.lineIndicator, frame: CGRect(origin: CGPoint(x: containerSize.width - 3.0 - lineIndicatorSize.width, y: indicatorPosition), size: lineIndicatorSize))
+        transition.updateFrame(view: self.lineIndicator, frame: CGRect(origin: CGPoint(x: self.bounds.size.width - 3.0 - lineIndicatorSize.width, y: indicatorPosition), size: lineIndicatorSize))
     }
 
     private func updateActivityTimer() {
@@ -508,7 +526,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             transition.updateAlpha(layer: self.dateIndicator.layer, alpha: 1.0)
             transition.updateAlpha(layer: self.lineIndicator.layer, alpha: 1.0)
         } else {
-            self.activityTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+            self.activityTimer = SwiftSignalKit.Timer(timeout: 2.0, repeat: false, completion: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -522,7 +540,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.dateIndicator.frame.contains(point) {
-            return self.view
+            return super.hitTest(point, with: event)
         }
 
         return nil
