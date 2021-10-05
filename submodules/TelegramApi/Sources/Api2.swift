@@ -7617,7 +7617,7 @@ public extension Api {
     }
     public enum ChannelParticipant: TypeConstructorDescription {
         case channelParticipant(userId: Int64, date: Int32)
-        case channelParticipantSelf(userId: Int64, inviterId: Int64, date: Int32)
+        case channelParticipantSelf(flags: Int32, userId: Int64, inviterId: Int64, date: Int32)
         case channelParticipantCreator(flags: Int32, userId: Int64, adminRights: Api.ChatAdminRights, rank: String?)
         case channelParticipantAdmin(flags: Int32, userId: Int64, inviterId: Int64?, promotedBy: Int64, date: Int32, adminRights: Api.ChatAdminRights, rank: String?)
         case channelParticipantBanned(flags: Int32, peer: Api.Peer, kickedBy: Int64, date: Int32, bannedRights: Api.ChatBannedRights)
@@ -7632,10 +7632,11 @@ public extension Api {
                     serializeInt64(userId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
-                case .channelParticipantSelf(let userId, let inviterId, let date):
+                case .channelParticipantSelf(let flags, let userId, let inviterId, let date):
                     if boxed {
-                        buffer.appendInt32(682146919)
+                        buffer.appendInt32(900251559)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(userId, buffer: buffer, boxed: false)
                     serializeInt64(inviterId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
@@ -7684,8 +7685,8 @@ public extension Api {
         switch self {
                 case .channelParticipant(let userId, let date):
                 return ("channelParticipant", [("userId", userId), ("date", date)])
-                case .channelParticipantSelf(let userId, let inviterId, let date):
-                return ("channelParticipantSelf", [("userId", userId), ("inviterId", inviterId), ("date", date)])
+                case .channelParticipantSelf(let flags, let userId, let inviterId, let date):
+                return ("channelParticipantSelf", [("flags", flags), ("userId", userId), ("inviterId", inviterId), ("date", date)])
                 case .channelParticipantCreator(let flags, let userId, let adminRights, let rank):
                 return ("channelParticipantCreator", [("flags", flags), ("userId", userId), ("adminRights", adminRights), ("rank", rank)])
                 case .channelParticipantAdmin(let flags, let userId, let inviterId, let promotedBy, let date, let adminRights, let rank):
@@ -7712,17 +7713,20 @@ public extension Api {
             }
         }
         public static func parse_channelParticipantSelf(_ reader: BufferReader) -> ChannelParticipant? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChannelParticipant.channelParticipantSelf(userId: _1!, inviterId: _2!, date: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.ChannelParticipant.channelParticipantSelf(flags: _1!, userId: _2!, inviterId: _3!, date: _4!)
             }
             else {
                 return nil
@@ -12203,6 +12207,48 @@ public extension Api {
         }
     
     }
+    public enum SearchResultsPosition: TypeConstructorDescription {
+        case searchResultPosition(msgId: Int32, date: Int32, offset: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .searchResultPosition(let msgId, let date, let offset):
+                    if boxed {
+                        buffer.appendInt32(2137295719)
+                    }
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .searchResultPosition(let msgId, let date, let offset):
+                return ("searchResultPosition", [("msgId", msgId), ("date", date), ("offset", offset)])
+    }
+    }
+    
+        public static func parse_searchResultPosition(_ reader: BufferReader) -> SearchResultsPosition? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.SearchResultsPosition.searchResultPosition(msgId: _1!, date: _2!, offset: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum StatsGraph: TypeConstructorDescription {
         case statsGraphAsync(token: String)
         case statsGraphError(error: String)
@@ -14820,17 +14866,18 @@ public extension Api {
     
     }
     public enum ChatInviteImporter: TypeConstructorDescription {
-        case chatInviteImporter(flags: Int32, userId: Int64, date: Int32, approvedBy: Int64?)
+        case chatInviteImporter(flags: Int32, userId: Int64, date: Int32, about: String?, approvedBy: Int64?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .chatInviteImporter(let flags, let userId, let date, let approvedBy):
+                case .chatInviteImporter(let flags, let userId, let date, let about, let approvedBy):
                     if boxed {
-                        buffer.appendInt32(-1574303204)
+                        buffer.appendInt32(-1940201511)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(userId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(about!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt64(approvedBy!, buffer: buffer, boxed: false)}
                     break
     }
@@ -14838,8 +14885,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .chatInviteImporter(let flags, let userId, let date, let approvedBy):
-                return ("chatInviteImporter", [("flags", flags), ("userId", userId), ("date", date), ("approvedBy", approvedBy)])
+                case .chatInviteImporter(let flags, let userId, let date, let about, let approvedBy):
+                return ("chatInviteImporter", [("flags", flags), ("userId", userId), ("date", date), ("about", about), ("approvedBy", approvedBy)])
     }
     }
     
@@ -14850,14 +14897,17 @@ public extension Api {
             _2 = reader.readInt64()
             var _3: Int32?
             _3 = reader.readInt32()
-            var _4: Int64?
-            if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt64() }
+            var _4: String?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = parseString(reader) }
+            var _5: Int64?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.ChatInviteImporter.chatInviteImporter(flags: _1!, userId: _2!, date: _3!, approvedBy: _4)
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.ChatInviteImporter.chatInviteImporter(flags: _1!, userId: _2!, date: _3!, about: _4, approvedBy: _5)
             }
             else {
                 return nil
@@ -21047,6 +21097,7 @@ public extension Api {
         case messageActionSetMessagesTTL(period: Int32)
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionSetChatTheme(emoticon: String)
+        case messageActionChatJoinedByRequest
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -21264,6 +21315,12 @@ public extension Api {
                     }
                     serializeString(emoticon, buffer: buffer, boxed: false)
                     break
+                case .messageActionChatJoinedByRequest:
+                    if boxed {
+                        buffer.appendInt32(-339958837)
+                    }
+                    
+                    break
     }
     }
     
@@ -21327,6 +21384,8 @@ public extension Api {
                 return ("messageActionGroupCallScheduled", [("call", call), ("scheduleDate", scheduleDate)])
                 case .messageActionSetChatTheme(let emoticon):
                 return ("messageActionSetChatTheme", [("emoticon", emoticon)])
+                case .messageActionChatJoinedByRequest:
+                return ("messageActionChatJoinedByRequest", [])
     }
     }
     
@@ -21690,6 +21749,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_messageActionChatJoinedByRequest(_ reader: BufferReader) -> MessageAction? {
+            return Api.MessageAction.messageActionChatJoinedByRequest
         }
     
     }
