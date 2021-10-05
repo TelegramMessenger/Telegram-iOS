@@ -35,7 +35,7 @@ const CGFloat TGClipboardPreviewEdgeInset = 8.0f;
 
 @implementation TGClipboardPreviewItemView
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images allowGrouping:(bool)allowGrouping
 {
     self = [super initWithType:TGMenuSheetItemTypeDefault];
     if (self != nil)
@@ -61,7 +61,9 @@ const CGFloat TGClipboardPreviewEdgeInset = 8.0f;
         [_collectionView registerClass:[TGClipboardPreviewCell class] forCellWithReuseIdentifier:TGClipboardPreviewCellIdentifier];
         [self addSubview:_collectionView];
         
-        _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:false selectionLimit:100];
+        _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:allowGrouping selectionLimit:100];
+        if (allowGrouping)
+            _selectionContext.grouping = true;
         
         for (UIImage *image in _images)
         {

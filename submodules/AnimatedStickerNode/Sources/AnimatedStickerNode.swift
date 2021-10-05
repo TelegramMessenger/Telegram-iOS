@@ -976,14 +976,16 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var isSetUpForPlayback = false
         
     public func play(firstFrame: Bool = false, fromIndex: Int? = nil) {
-        switch self.playbackMode {
-        case .once:
-            self.isPlaying = true
-        case .count:
-            self.currentLoopCount = 0
-            self.isPlaying = true
-        default:
-            break
+        if !firstFrame {
+            switch self.playbackMode {
+            case .once:
+                self.isPlaying = true
+            case .count:
+                self.currentLoopCount = 0
+                self.isPlaying = true
+            default:
+                break
+            }
         }
         if self.isSetUpForPlayback {
             let directData = self.directData

@@ -58,6 +58,11 @@ static Class TGMediaAssetImageSignalsClass = nil;
     return [TGMediaAssetImageSignalsClass imageDataForAsset:asset allowNetworkAccess:allowNetworkAccess];
 }
 
++ (SSignal *)imageDataForAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)allowNetworkAccess convertToJpeg:(bool)convertToJpeg
+{
+    return [TGMediaAssetImageSignalsClass imageDataForAsset:asset allowNetworkAccess:allowNetworkAccess convertToJpeg:convertToJpeg];
+}
+
 + (SSignal *)imageMetadataForAsset:(TGMediaAsset *)asset
 {
     return [TGMediaAssetImageSignalsClass imageMetadataForAsset:asset];

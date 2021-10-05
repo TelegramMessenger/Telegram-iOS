@@ -8070,6 +8070,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             interfaceState = interfaceState.withUpdatedHistoryScrollState(scrollState)
         }
         interfaceState = interfaceState.withUpdatedInputLanguage(self.chatDisplayNode.currentTextInputLanguage)
+        if interfaceState.composeInputState.inputText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: "")))
+        }
         let _ = ChatInterfaceState.update(engine: self.context.engine, peerId: peerId, threadId: threadId, { _ in
             return interfaceState
         }).start()
@@ -9295,7 +9298,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, canSendPolls: canSendPolls, updatedPresentationData: strongSelf.updatedPresentationData, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText.string, openGallery: {
                 self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals, silentPosting, scheduleTime in
                     if !inputText.string.isEmpty {
-                        //strongSelf.clearInputText()
+                        strongSelf.clearInputText()
                     }
                     if editMediaOptions != nil {
                         self?.editMessageMediaWithLegacySignals(signals)
@@ -9318,16 +9321,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil)
                             }
                             if !inputText.string.isEmpty {
-                                //strongSelf.clearInputText()
+                                strongSelf.clearInputText()
                             }
                         }
                     }, recognizedQRCode: { [weak self] code in
                         if let strongSelf = self {
                             if let (host, port, username, password, secret) = parseProxyUrl(code) {
                                 strongSelf.openResolved(ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret))
-                            }/* else if let url = URL(string: code), let parsedWalletUrl = parseWalletUrl(url) {
-                                //strongSelf.openResolved(ResolvedUrl.wallet(address: parsedWalletUrl.address, amount: parsedWalletUrl.amount, comment: parsedWalletUrl.comment))
-                            }*/
+                            }
                         }
                     }, presentSchedulePicker: { [weak self] done in
                         if let strongSelf = self {
@@ -9385,6 +9386,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentMultipleFilesDisabled, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            }, presentJpegConversionAlert: { completion in
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.MediaPicker_JpegConversionText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.MediaPicker_KeepHeic, action: {
+                    completion(false)
+                }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.MediaPicker_ConvertToJpeg, action: {
+                    completion(true)
+                })], actionLayout: .vertical), in: .window(.root))
             }, presentSchedulePicker: { [weak self] done in
                 if let strongSelf = self {
                     strongSelf.presentScheduleTimePicker(style: .media, completion: { [weak self] time in
@@ -9408,7 +9415,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 if !inputText.string.isEmpty {
-                    //strongSelf.clearInputText()
+                    strongSelf.clearInputText()
                 }
                 if editMediaOptions != nil {
                     strongSelf.editMessageMediaWithLegacySignals(signals!)
@@ -11592,6 +11599,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
                 
                 let commit: ([EnqueueMessage]) -> Void = { result in
+                    strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }).updatedSearch(nil) })
+                    
                     var displayPeers: [Peer] = []
                     for peer in peers {
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: result)

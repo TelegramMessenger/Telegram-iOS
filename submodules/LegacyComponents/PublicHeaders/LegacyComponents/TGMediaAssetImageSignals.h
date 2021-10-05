@@ -48,6 +48,7 @@ typedef enum
 
 + (SSignal *)imageDataForAsset:(TGMediaAsset *)asset;
 + (SSignal *)imageDataForAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)allowNetworkAccess;
++ (SSignal *)imageDataForAsset:(TGMediaAsset *)asset allowNetworkAccess:(bool)allowNetworkAccess convertToJpeg:(bool)convertToJpeg;
 
 + (SSignal *)imageMetadataForAsset:(TGMediaAsset *)asset;
 + (SSignal *)fileAttributesForAsset:(TGMediaAsset *)asset;

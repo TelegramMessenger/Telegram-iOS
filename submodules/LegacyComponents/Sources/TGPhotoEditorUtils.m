@@ -24,6 +24,10 @@ CGSize TGPhotoThumbnailSizeForCurrentScreen()
     
     if ([UIScreen mainScreen].scale >= 2.0f - FLT_EPSILON)
     {
+        if (widescreenWidth >= 926.0f - FLT_EPSILON)
+        {
+            return CGSizeMake(141.0f + TGScreenPixel, 141.0 + TGScreenPixel);
+        }
         if (widescreenWidth >= 896.0f - FLT_EPSILON)
         {
             return CGSizeMake(137.0f - TGScreenPixel, 137.0f - TGScreenPixel);
