@@ -20,6 +20,8 @@ public final class JoinLinkPreviewController: ViewController {
     
     private let context: AccountContext
     private let link: String
+    private var isRequest = false
+    private var isGroup = false
     private let navigateToPeer: (EnginePeer.Id, ChatPeekTimeout?) -> Void
     private let parentNavigationController: NavigationController?
     private var resolvedState: ExternalJoiningChatState?
@@ -76,9 +78,15 @@ public final class JoinLinkPreviewController: ViewController {
             if let strongSelf = self {
                 strongSelf.resolvedState = result
                 switch result {
-                    case let .invite(title, photoRepresentation, participantsCount, participants):
-                        let data = JoinLinkPreviewData(isGroup: participants != nil, isJoined: false)
-                        strongSelf.controllerNode.setPeer(image: photoRepresentation, title: title, memberCount: participantsCount, members: participants?.map({ EnginePeer($0) }) ?? [], data: data)
+                    case let .invite(flags, title, about, photoRepresentation, participantsCount, participants):
+                        if flags.requestNeeded {
+                            strongSelf.isRequest = true
+                            strongSelf.isGroup = !flags.isBroadcast
+                            strongSelf.controllerNode.setRequestPeer(image: photoRepresentation, title: title, about: about, memberCount: participantsCount, isGroup: !flags.isBroadcast)
+                        } else {
+                            let data = JoinLinkPreviewData(isGroup: participants != nil, isJoined: false)
+                            strongSelf.controllerNode.setInvitePeer(image: photoRepresentation, title: title, memberCount: participantsCount, members: participants?.map({ EnginePeer($0) }) ?? [], data: data)
+                        }
                     case let .alreadyJoined(peerId):
                         strongSelf.navigateToPeer(peerId, nil)
                         strongSelf.dismiss()
@@ -121,10 +129,14 @@ public final class JoinLinkPreviewController: ViewController {
     private func join() {
         self.disposable.set((self.context.engine.peers.joinChatInteractively(with: self.link) |> deliverOnMainQueue).start(next: { [weak self] peerId in
             if let strongSelf = self {
-                if let peerId = peerId {
-                    strongSelf.navigateToPeer(peerId, nil)
-                    strongSelf.dismiss()
+                if strongSelf.isRequest {
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(text: strongSelf.isGroup ? strongSelf.presentationData.strings.MemberRequests_RequestToJoinSentDescriptionGroup : strongSelf.presentationData.strings.MemberRequests_RequestToJoinSentDescriptionChannel ), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                } else {
+                    if let peerId = peerId {
+                        strongSelf.navigateToPeer(peerId, nil)
+                    }
                 }
+                strongSelf.dismiss()
             }
         }, error: { [weak self] error in
             if let strongSelf = self {

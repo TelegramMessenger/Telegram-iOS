@@ -60,7 +60,9 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
     controller.shouldShowFileTipIfNeeded = showFileTooltip
     controller.requestSearchController = presentWebSearch
     
-    controller.editingContext.setInitialCaption(initialCaption, entities: [])
+    if !initialCaption.isEmpty {
+        controller.editingContext.setForcedCaption(initialCaption, entities: [])
+    }
 }
 
 public func legacyAssetPicker(context: AccountContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool, selectionLimit: Int) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {

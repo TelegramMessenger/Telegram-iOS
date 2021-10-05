@@ -344,7 +344,11 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
             if let invite = item.invite {
                 let count = invite.count ?? 0
                 if count > 0 {
-                    subtitleText = item.presentationData.strings.InviteLink_PeopleJoinedShort(count)
+                    if invite.requestApproval {
+                        subtitleText = item.presentationData.strings.MemberRequests_PeopleRequestedShort(count)
+                    } else {
+                        subtitleText = item.presentationData.strings.InviteLink_PeopleJoinedShort(count)
+                    }
                 } else {
                     if let usageLimit = invite.usageLimit, count == 0 && !availability.isZero {
                         subtitleText = item.presentationData.strings.InviteLink_PeopleCanJoin(usageLimit)

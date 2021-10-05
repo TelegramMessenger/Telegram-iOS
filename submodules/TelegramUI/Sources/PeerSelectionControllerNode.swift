@@ -300,7 +300,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
         }, editMessageMedia: { _, _ in
-        }, updateShowCommands: { _ in }, statuses: nil)
+        }, updateShowCommands: { _ in
+        }, openInviteRequests: {
+        }, statuses: nil)
         
         self.readyValue.set(self.chatListNode.ready)
     }

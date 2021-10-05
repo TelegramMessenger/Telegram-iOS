@@ -40,7 +40,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                             break loop
                         }
                     }
-                case .chatInfo, .requestInProgress, .toastAlert:
+                case .chatInfo, .requestInProgress, .toastAlert, .inviteRequests:
                     selectedContext = context
                     break loop
             }
@@ -117,6 +117,16 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                     let panel = ChatToastAlertPanelNode()
                     panel.text = text
                     panel.interfaceInteraction = interfaceInteraction
+                    return panel
+                }
+            case let .inviteRequests(peers, count):
+                if let currentPanel = currentPanel as? ChatInviteRequestsTitlePanelNode {
+                    currentPanel.update(peers: peers, count: count)
+                    return currentPanel
+                } else {
+                    let panel = ChatInviteRequestsTitlePanelNode(context: context)
+                    panel.interfaceInteraction = interfaceInteraction
+                    panel.update(peers: peers, count: count)
                     return panel
                 }
         }

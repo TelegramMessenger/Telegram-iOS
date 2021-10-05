@@ -120,7 +120,7 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
     })
 }
 
-public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
     let defaultVideoPreset = defaultVideoPresetForContext(context)
     UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
     
@@ -227,23 +227,48 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
         carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles, silentPosting, scheduleTime, isFromPicker in
             if let controller = controller, let carouselItem = carouselItem {
                 let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
-                let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: saveEditedPhotos)
-                if slowModeEnabled, let signals = signals, signals.count > 1 {
+                
+                var hasHeic = false
+                var allItems = carouselItem.selectionContext.selectedItems() ?? []
+                if let currentItem = currentItem {
+                    allItems.append(currentItem)
+                }
+                for item in allItems {
+                    if let asset = item as? TGMediaAsset, asset.uniformTypeIdentifier.contains("heic") {
+                        hasHeic = true
+                        break
+                    }
+                }
+                
+                if slowModeEnabled, allItems.count > 1 {
                     presentCantSendMultipleFiles()
                 } else {
-                    sendMessagesWithSignals(signals, silentPosting, scheduleTime, isFromPicker ? nil : { [weak carouselItem] uniqueId in
-                        if let carouselItem = carouselItem {
-                            return carouselItem.getItemSnapshot(uniqueId)
-                        }
-                        return nil
-                    }, { [weak controller] in
-                        controller?.dismiss(animated: true)
-                    })
+                    let process: (Bool) -> Void = { convert in
+                        let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, convertToJpeg: convert, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: saveEditedPhotos)
+                        sendMessagesWithSignals(signals, silentPosting, scheduleTime, isFromPicker ? nil : { [weak carouselItem] uniqueId in
+                            if let carouselItem = carouselItem {
+                                return carouselItem.getItemSnapshot(uniqueId)
+                            }
+                            return nil
+                        }, { [weak controller] in
+                            controller?.dismiss(animated: true)
+                        })
+                    }
+                    if hasHeic && asFiles {
+                        presentJpegConversionAlert({ convert in
+                            process(convert)
+                        })
+                    } else {
+                        process(false)
+                    }
+                   
                 }
             }
         };
         carouselItem.allowCaptions = true
-        carouselItem.editingContext.setInitialCaption(initialCaption, entities: [])
+        if !initialCaption.isEmpty {
+            carouselItem.editingContext.setForcedCaption(initialCaption, entities: [])
+        }
         itemViews.append(carouselItem)
         
         let galleryItem = TGMenuSheetButtonItemView(title: editing ? presentationData.strings.Conversation_EditingMessageMediaChange : presentationData.strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: { [weak controller] in
@@ -454,7 +479,7 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLoca
         })
     }
 
-    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, hasCaption: true, hasTimer: hasTimer, hasSilentPosting: hasSilentPosting, hasSchedule: hasSchedule, reminder: peer.id == context.account.peerId, recipientName: recipientName, suggestionContext: suggestionContext, stickersContext: paintStickersContext, presentScheduleController: { done in
+    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, allowGrouping: allowGrouping, hasCaption: true, hasTimer: hasTimer, hasSilentPosting: hasSilentPosting, hasSchedule: hasSchedule, reminder: peer.id == context.account.peerId, recipientName: recipientName, suggestionContext: suggestionContext, stickersContext: paintStickersContext, presentScheduleController: { done in
         presentSchedulePicker { time in
             done?(time)
         }
