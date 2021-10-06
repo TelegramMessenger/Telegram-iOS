@@ -1244,6 +1244,50 @@ public struct messages {
         }
     
     }
+    public enum SearchResultsPositions: TypeConstructorDescription {
+        case searchResultsPositions(count: Int32, positions: [Api.SearchResultsPosition])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .searchResultsPositions(let count, let positions):
+                    if boxed {
+                        buffer.appendInt32(1404185519)
+                    }
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(positions.count))
+                    for item in positions {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .searchResultsPositions(let count, let positions):
+                return ("searchResultsPositions", [("count", count), ("positions", positions)])
+    }
+    }
+    
+        public static func parse_searchResultsPositions(_ reader: BufferReader) -> SearchResultsPositions? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.SearchResultsPosition]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SearchResultsPosition.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.SearchResultsPositions.searchResultsPositions(count: _1!, positions: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum StickerSetInstallResult: TypeConstructorDescription {
         case stickerSetInstallResultSuccess
         case stickerSetInstallResultArchive(sets: [Api.StickerSetCovered])

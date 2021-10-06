@@ -158,6 +158,7 @@ struct FetchMessageHistoryHoleResult: Equatable {
     var strictRemovedIndices: IndexSet
     var actualPeerId: PeerId?
     var actualThreadId: Int64?
+    var ids: [MessageId]
 }
 
 func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
@@ -183,7 +184,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
         }
         |> mapToSignal { (inputPeer, hash) -> Signal<FetchMessageHistoryHoleResult?, NoError> in
             guard let inputPeer = inputPeer else {
-                return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil))
+                return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil, ids: []))
             }
             
             print("fetchMessageHistoryHole for \(peerInput) direction \(direction) space \(space)")
@@ -501,6 +502,23 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             return nil
                         }
                     }
+                    let fullIds = storeMessages.compactMap { message -> MessageId? in
+                        switch message.id {
+                        case let .Id(id):
+                            switch space {
+                            case let .tag(tag):
+                                if !message.tags.contains(tag) {
+                                    return nil
+                                } else {
+                                    return id
+                                }
+                            case .everywhere:
+                                return id
+                            }
+                        case .Partial:
+                            return nil
+                        }
+                    }
                     if ids.count == 0 || implicitelyFillHole {
                         filledRange = minMaxRange
                         strictFilledIndices = IndexSet()
@@ -561,7 +579,8 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         removedIndices: IndexSet(integersIn: Int(filledRange.lowerBound) ... Int(filledRange.upperBound)),
                         strictRemovedIndices: strictFilledIndices,
                         actualPeerId: storeMessages.first?.id.peerId,
-                        actualThreadId: storeMessages.first?.threadId
+                        actualThreadId: storeMessages.first?.threadId,
+                        ids: fullIds
                     )
                 })
             }

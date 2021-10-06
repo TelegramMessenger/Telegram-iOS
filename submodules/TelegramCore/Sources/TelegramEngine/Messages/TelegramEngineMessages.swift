@@ -241,5 +241,9 @@ public extension TelegramEngine {
                 }
             }
         }
+
+        public func sparseMessageList(peerId: EnginePeer.Id, tag: EngineMessage.Tags) -> SparseMessageList {
+            return SparseMessageList(account: self.account, peerId: peerId, messageTag: tag)
+        }
     }
 }
