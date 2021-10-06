@@ -1,5 +1,6 @@
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 
 private var backArrowImageCache: [Int32: UIImage] = [:]
 
@@ -146,7 +147,23 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         self.updateColor(color: color, transition: .immediate)
     }
 
+    
+    public override func didLoad() {
+        super.didLoad()
+        
+        if self.scheduledUpdate {
+            self.scheduledUpdate = false
+            self.updateBackgroundBlur(forceKeepBlur: false)
+        }
+    }
+    
+    private var scheduledUpdate = false
+    
     private func updateBackgroundBlur(forceKeepBlur: Bool) {
+        guard self.isNodeLoaded else {
+            self.scheduledUpdate = true
+            return
+        }
         if self.enableBlur && !sharedIsReduceTransparencyEnabled && ((self._color.alpha > .ulpOfOne && self._color.alpha < 0.95) || forceKeepBlur) {
             if self.effectView == nil {
                 let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))

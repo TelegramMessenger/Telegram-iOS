@@ -20124,13 +20124,13 @@ public extension Api {
     
     }
     public enum ExportedChatInvite: TypeConstructorDescription {
-        case chatInviteExported(flags: Int32, link: String, adminId: Int64, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, usage: Int32?, approved: Int32?)
+        case chatInviteExported(flags: Int32, link: String, adminId: Int64, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, usage: Int32?, requested: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let approved):
+                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested):
                     if boxed {
-                        buffer.appendInt32(19682803)
+                        buffer.appendInt32(-1283792928)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(link, buffer: buffer, boxed: false)
@@ -20140,15 +20140,15 @@ public extension Api {
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(expireDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(usageLimit!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(usage!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 7) != 0 {serializeInt32(approved!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 7) != 0 {serializeInt32(requested!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let approved):
-                return ("chatInviteExported", [("flags", flags), ("link", link), ("adminId", adminId), ("date", date), ("startDate", startDate), ("expireDate", expireDate), ("usageLimit", usageLimit), ("usage", usage), ("approved", approved)])
+                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested):
+                return ("chatInviteExported", [("flags", flags), ("link", link), ("adminId", adminId), ("date", date), ("startDate", startDate), ("expireDate", expireDate), ("usageLimit", usageLimit), ("usage", usage), ("requested", requested)])
     }
     }
     
@@ -20181,7 +20181,7 @@ public extension Api {
             let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 7) == 0) || _9 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.ExportedChatInvite.chatInviteExported(flags: _1!, link: _2!, adminId: _3!, date: _4!, startDate: _5, expireDate: _6, usageLimit: _7, usage: _8, approved: _9)
+                return Api.ExportedChatInvite.chatInviteExported(flags: _1!, link: _2!, adminId: _3!, date: _4!, startDate: _5, expireDate: _6, usageLimit: _7, usage: _8, requested: _9)
             }
             else {
                 return nil
