@@ -8,7 +8,7 @@ public enum JoinLinkError {
     case generic
     case tooMuchJoined
     case tooMuchUsers
-    case requestAlreadySent
+    case requestSent
 }
 
 func apiUpdatesGroups(_ updates: Api.Updates) -> [Api.Chat] {
@@ -46,7 +46,7 @@ func _internal_joinChatInteractively(with hash: String, account: Account) -> Sig
             case "USERS_TOO_MUCH":
                 return .tooMuchUsers
             case "INVITE_REQUEST_SENT":
-                return .requestAlreadySent
+                return .requestSent
             default:
                 return .generic
         }
