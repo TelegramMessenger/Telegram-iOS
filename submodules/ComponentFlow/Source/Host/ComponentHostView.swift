@@ -54,7 +54,7 @@ public final class ComponentHostView<EnvironmentType>: UIView {
             } as () -> Environment<EnvironmentType>, updateEnvironment: false, containerSize: containerSize)
         }
 
-        let updatedSize = component._update(view: componentView, availableSize: containerSize, transition: transition)
+        let updatedSize = component._update(view: componentView, availableSize: containerSize, environment: context.erasedEnvironment, transition: transition)
         transition.setFrame(view: componentView, frame: CGRect(origin: CGPoint(), size: updatedSize))
 
         self.isUpdating = false

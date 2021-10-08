@@ -92,6 +92,12 @@ public struct PresentationResourcesRootController {
             })
         })
     }
+
+    public static func navigationMoreCircledIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationMoreCircledIcon.rawValue, { theme in
+            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.rootController.navigationBar.accentTextColor)
+        })
+    }
     
     public static func navigationAddIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationAddIcon.rawValue, { theme in

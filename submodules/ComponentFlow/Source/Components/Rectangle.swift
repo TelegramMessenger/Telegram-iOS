@@ -25,7 +25,7 @@ public final class Rectangle: Component {
         return true
     }
     
-    public func update(view: UIView, availableSize: CGSize, transition: Transition) -> CGSize {
+    public func update(view: UIView, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
         var size = availableSize
         if let width = self.width {
             size.width = min(size.width, width)
