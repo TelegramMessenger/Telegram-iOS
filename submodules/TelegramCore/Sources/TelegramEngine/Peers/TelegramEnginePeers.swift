@@ -454,8 +454,8 @@ public extension TelegramEngine {
             return _internal_revokePersistentPeerExportedInvitation(account: self.account, peerId: peerId)
         }
 
-        public func peerInvitationImporters(peerId: PeerId, invite: ExportedInvitation?) -> PeerInvitationImportersContext {
-            return PeerInvitationImportersContext(account: self.account, peerId: peerId, invite: invite)
+        public func peerInvitationImporters(peerId: PeerId, subject: PeerInvitationImportersContext.Subject) -> PeerInvitationImportersContext {
+            return PeerInvitationImportersContext(account: self.account, peerId: peerId, subject: subject)
         }
 
         public func notificationExceptionsList() -> Signal<NotificationExceptionsList, NoError> {

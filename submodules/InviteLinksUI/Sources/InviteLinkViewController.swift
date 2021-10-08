@@ -341,6 +341,7 @@ public final class InviteLinkViewController: ViewController {
         private let invite: ExportedInvitation
         
         private let importersContext: PeerInvitationImportersContext
+        private let requestsContext: PeerInvitationImportersContext?
         
         private var interaction: InviteLinkViewInteraction?
         
@@ -376,7 +377,12 @@ public final class InviteLinkViewController: ViewController {
             self.presentationDataPromise = Promise(self.presentationData)
             self.controller = controller
             
-            self.importersContext = importersContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, invite: invite)
+            self.importersContext = importersContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: invite, requested: false))
+            if invite.requestApproval {
+                self.requestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: invite, requested: true))
+            } else {
+                self.requestsContext = nil
+            }
             
             self.dimNode = ASDisplayNode()
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -572,36 +578,32 @@ public final class InviteLinkViewController: ViewController {
             let previousCount = Atomic<Int32?>(value: nil)
             let previousLoading = Atomic<Bool?>(value: nil)
             
+            let requestsState: Signal<PeerInvitationImportersState, NoError>
+            if let requestsContext = self.requestsContext {
+                requestsState = requestsContext.state
+            } else {
+                requestsState = .single(PeerInvitationImportersState.Empty)
+            }
+            
             let creatorPeer = context.account.postbox.loadedPeerWithId(invite.adminId)
-            self.disposable = (combineLatest(self.presentationDataPromise.get(), self.importersContext.state, creatorPeer)
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, creatorPeer in
+            self.disposable = (combineLatest(self.presentationDataPromise.get(), self.importersContext.state, requestsState, creatorPeer)
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, requestsState, creatorPeer in
                 if let strongSelf = self {
                     var entries: [InviteLinkViewEntry] = []
                     
                     entries.append(.link(presentationData.theme, invite))
                     entries.append(.creatorHeader(presentationData.theme, presentationData.strings.InviteLink_CreatedBy.uppercased()))
                     entries.append(.creator(presentationData.theme, presentationData.dateTimeFormat, EnginePeer(creatorPeer), invite.date))
-                    
-                    if !state.importers.isEmpty || (state.isLoadingMore && state.count > 0) {
-                        let subtitle: String
-                        let subtitleExpired: Bool
-                        if let usageLimit = invite.usageLimit {
-                            let remaining = max(0, usageLimit - state.count)
-                            subtitle = presentationData.strings.InviteLink_PeopleRemaining(remaining).uppercased()
-                            subtitleExpired = remaining <= 0
-                        } else {
-                            subtitle = ""
-                            subtitleExpired = false
-                        }
-                        
-                        entries.append(.importerHeader(presentationData.theme, presentationData.strings.InviteLink_PeopleJoined(Int32(state.count)).uppercased(), subtitle, subtitleExpired))
+                                        
+                    if !requestsState.importers.isEmpty || (state.isLoadingMore && requestsState.count > 0) {
+                        entries.append(.importerHeader(presentationData.theme, presentationData.strings.MemberRequests_PeopleRequested(Int32(requestsState.count)).uppercased(), "", false))
                     }
                     
                     let count: Int32
                     let loading: Bool
                     
                     var index: Int32 = 0
-                    if state.importers.isEmpty && state.isLoadingMore {
+                    if requestsState.importers.isEmpty && requestsState.isLoadingMore {
                         count = min(4, state.count)
                         loading = true
                         let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
@@ -609,15 +611,52 @@ public final class InviteLinkViewController: ViewController {
                             entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
                         }
                     } else {
-                        count = min(4, Int32(state.importers.count))
+                        count = min(4, Int32(requestsState.importers.count))
                         loading = false
-                        for importer in state.importers {
+                        for importer in requestsState.importers {
                             if let peer = importer.peer.peer {
                                 entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
                             }
                             index += 1
                         }
                     }
+                    
+                    //                    if !state.importers.isEmpty || (state.isLoadingMore && state.count > 0) {
+                    //                        let subtitle: String
+                    //                        let subtitleExpired: Bool
+                    //                        if let usageLimit = invite.usageLimit {
+                    //                            let remaining = max(0, usageLimit - state.count)
+                    //                            subtitle = presentationData.strings.InviteLink_PeopleRemaining(remaining).uppercased()
+                    //                            subtitleExpired = remaining <= 0
+                    //                        } else {
+                    //                            subtitle = ""
+                    //                            subtitleExpired = false
+                    //                        }
+                    //
+                    //                        entries.append(.importerHeader(presentationData.theme, presentationData.strings.InviteLink_PeopleJoined(Int32(state.count)).uppercased(), subtitle, subtitleExpired))
+                    //                    }
+                    
+//                    let count: Int32
+//                    let loading: Bool
+//
+//                    var index: Int32 = 0
+//                    if state.importers.isEmpty && state.isLoadingMore {
+//                        count = min(4, state.count)
+//                        loading = true
+//                        let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+//                        for i in 0 ..< count {
+//                            entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
+//                        }
+//                    } else {
+//                        count = min(4, Int32(state.importers.count))
+//                        loading = false
+//                        for importer in state.importers {
+//                            if let peer = importer.peer.peer {
+//                                entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
+//                            }
+//                            index += 1
+//                        }
+//                    }
                     
                     let previousCount = previousCount.swap(count)
                     let previousLoading = previousLoading.swap(loading)

@@ -338,23 +338,32 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
             
             let inviteLink = item.invite?.link.replacingOccurrences(of: "https://", with: "") ?? ""
             var titleText = inviteLink
-            
+
             var subtitleText: String = ""
             var timerValue: TimerNode.Value?
             if let invite = item.invite {
                 let count = invite.count ?? 0
+                let requestedCount = invite.requestedCount ?? 0
+                
                 if count > 0 {
-                    if invite.requestApproval {
-                        subtitleText = item.presentationData.strings.MemberRequests_PeopleRequestedShort(count)
-                    } else {
-                        subtitleText = item.presentationData.strings.InviteLink_PeopleJoinedShort(count)
-                    }
+                    subtitleText = item.presentationData.strings.InviteLink_PeopleJoinedShort(count)
                 } else {
                     if let usageLimit = invite.usageLimit, count == 0 && !availability.isZero {
                         subtitleText = item.presentationData.strings.InviteLink_PeopleCanJoin(usageLimit)
                     } else {
-                        subtitleText = availability.isZero ? item.presentationData.strings.InviteLink_PeopleJoinedShortNoneExpired : item.presentationData.strings.InviteLink_PeopleJoinedShortNone
+                        if availability.isZero {
+                            subtitleText = item.presentationData.strings.InviteLink_PeopleJoinedShortNoneExpired
+                        } else if requestedCount == 0 {
+                            subtitleText = item.presentationData.strings.InviteLink_PeopleJoinedShortNone
+                        }
                     }
+                }
+                
+                if requestedCount > 0 {
+                    if !subtitleText.isEmpty {
+                        subtitleText += ", "
+                    }
+                    subtitleText += item.presentationData.strings.MemberRequests_PeopleRequestedShort(requestedCount)
                 }
                 
                 if invite.isRevoked {

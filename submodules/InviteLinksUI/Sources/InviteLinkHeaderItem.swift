@@ -16,13 +16,15 @@ class InviteLinkHeaderItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let theme: PresentationTheme
     let text: String
+    let animationName: String
     let sectionId: ItemListSectionId
     let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, text: String, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
+    init(context: AccountContext, theme: PresentationTheme, text: String, animationName: String, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
         self.context = context
         self.theme = theme
         self.text = text
+        self.animationName = animationName
         self.sectionId = sectionId
         self.linkAction = linkAction
     }
@@ -117,7 +119,7 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     if strongSelf.item == nil {
-                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Invite"), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.animationName), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                         strongSelf.animationNode.visibility = true
                     }
                     strongSelf.item = item
