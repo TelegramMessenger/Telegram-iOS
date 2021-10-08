@@ -19396,17 +19396,18 @@ public extension Api {
     
     }
     public enum SponsoredMessage: TypeConstructorDescription {
-        case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer, startParam: String?, message: String, entities: [Api.MessageEntity]?)
+        case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer, channelPost: Int32?, startParam: String?, message: String, entities: [Api.MessageEntity]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sponsoredMessage(let flags, let randomId, let fromId, let startParam, let message, let entities):
+                case .sponsoredMessage(let flags, let randomId, let fromId, let channelPost, let startParam, let message, let entities):
                     if boxed {
-                        buffer.appendInt32(708589599)
+                        buffer.appendInt32(-783162982)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
                     fromId.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(channelPost!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
                     serializeString(message, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
@@ -19420,8 +19421,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sponsoredMessage(let flags, let randomId, let fromId, let startParam, let message, let entities):
-                return ("sponsoredMessage", [("flags", flags), ("randomId", randomId), ("fromId", fromId), ("startParam", startParam), ("message", message), ("entities", entities)])
+                case .sponsoredMessage(let flags, let randomId, let fromId, let channelPost, let startParam, let message, let entities):
+                return ("sponsoredMessage", [("flags", flags), ("randomId", randomId), ("fromId", fromId), ("channelPost", channelPost), ("startParam", startParam), ("message", message), ("entities", entities)])
     }
     }
     
@@ -19434,22 +19435,25 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _4: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
             var _5: String?
-            _5 = parseString(reader)
-            var _6: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: [Api.MessageEntity]?
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, fromId: _3!, startParam: _4, message: _5!, entities: _6)
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, fromId: _3!, channelPost: _4, startParam: _5, message: _6!, entities: _7)
             }
             else {
                 return nil
@@ -21079,6 +21083,7 @@ public extension Api {
         case messageActionChannelCreate(title: String)
         case messageActionChatMigrateTo(channelId: Int64)
         case messageActionChannelMigrateFrom(title: String, chatId: Int64)
+        case messageActionChatJoinedByRequest
         case messageActionPinMessage
         case messageActionHistoryClear
         case messageActionGameScore(gameId: Int64, score: Int32)
@@ -21097,7 +21102,6 @@ public extension Api {
         case messageActionSetMessagesTTL(period: Int32)
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionSetChatTheme(emoticon: String)
-        case messageActionChatJoinedByRequest
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -21176,6 +21180,12 @@ public extension Api {
                     }
                     serializeString(title, buffer: buffer, boxed: false)
                     serializeInt64(chatId, buffer: buffer, boxed: false)
+                    break
+                case .messageActionChatJoinedByRequest:
+                    if boxed {
+                        buffer.appendInt32(-339958837)
+                    }
+                    
                     break
                 case .messageActionPinMessage:
                     if boxed {
@@ -21315,12 +21325,6 @@ public extension Api {
                     }
                     serializeString(emoticon, buffer: buffer, boxed: false)
                     break
-                case .messageActionChatJoinedByRequest:
-                    if boxed {
-                        buffer.appendInt32(-339958837)
-                    }
-                    
-                    break
     }
     }
     
@@ -21348,6 +21352,8 @@ public extension Api {
                 return ("messageActionChatMigrateTo", [("channelId", channelId)])
                 case .messageActionChannelMigrateFrom(let title, let chatId):
                 return ("messageActionChannelMigrateFrom", [("title", title), ("chatId", chatId)])
+                case .messageActionChatJoinedByRequest:
+                return ("messageActionChatJoinedByRequest", [])
                 case .messageActionPinMessage:
                 return ("messageActionPinMessage", [])
                 case .messageActionHistoryClear:
@@ -21384,8 +21390,6 @@ public extension Api {
                 return ("messageActionGroupCallScheduled", [("call", call), ("scheduleDate", scheduleDate)])
                 case .messageActionSetChatTheme(let emoticon):
                 return ("messageActionSetChatTheme", [("emoticon", emoticon)])
-                case .messageActionChatJoinedByRequest:
-                return ("messageActionChatJoinedByRequest", [])
     }
     }
     
@@ -21505,6 +21509,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_messageActionChatJoinedByRequest(_ reader: BufferReader) -> MessageAction? {
+            return Api.MessageAction.messageActionChatJoinedByRequest
         }
         public static func parse_messageActionPinMessage(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionPinMessage
@@ -21749,9 +21756,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-        public static func parse_messageActionChatJoinedByRequest(_ reader: BufferReader) -> MessageAction? {
-            return Api.MessageAction.messageActionChatJoinedByRequest
         }
     
     }

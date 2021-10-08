@@ -662,10 +662,10 @@ final class CachedPeerInvitationImporters: Codable {
     let dates: [PeerId: Int32]
     let count: Int32
     
-    static func key(peerId: PeerId, link: String) -> ValueBoxKey {
+    static func key(peerId: PeerId, link: String, requested: Bool) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
-        key.setInt32(8, value: Int32(HashFunctions.murMurHash32(link)))
+        key.setInt32(8, value: Int32(HashFunctions.murMurHash32(link + (requested ? "_requested" : ""))))
         return key
     }
     
@@ -722,6 +722,7 @@ private final class PeerInvitationImportersContextImpl {
     private let account: Account
     private let peerId: PeerId
     private let link: String?
+    private let requested: Bool
     private let disposable = MetaDisposable()
     private let updateDisposable = MetaDisposable()
     private let actionDisposables = DisposableSet()
@@ -735,18 +736,26 @@ private final class PeerInvitationImportersContextImpl {
     
     let state = Promise<PeerInvitationImportersState>()
     
-    init(queue: Queue, account: Account, peerId: PeerId, invite: ExportedInvitation?) {
+    init(queue: Queue, account: Account, peerId: PeerId, subject: PeerInvitationImportersContext.Subject) {
         self.queue = queue
         self.account = account
         self.peerId = peerId
+        
+        var invite: ExportedInvitation?
+        var requested = false
+        if case let .invite(subjectInvite, subjectRequested) = subject {
+            invite = subjectInvite
+            requested = subjectRequested
+        }
         self.link = invite?.link
+        self.requested = requested
         
         let count = invite?.count ?? 0
         self.count = count
         
         self.isLoadingMore = true
         self.disposable.set((account.postbox.transaction { transaction -> (peers: [PeerInvitationImportersState.Importer], count: Int32, canLoadMore: Bool)? in
-            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: invite?.link ?? "requests")))?.get(CachedPeerInvitationImporters.self)
+            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: invite?.link ?? "requests", requested: self.requested)))?.get(CachedPeerInvitationImporters.self)
             if let cachedResult = cachedResult, (Int(cachedResult.count) == count || invite == nil) {
                 var result: [PeerInvitationImportersState.Importer] = []
                 for peerId in cachedResult.peerIds {
@@ -811,6 +820,9 @@ private final class PeerInvitationImportersContextImpl {
                 
                 var flags: Int32 = 0
                 if let _ = link {
+                    if self.requested {
+                        flags |= (1 << 0)
+                    }
                     flags |= (1 << 1)
                 } else {
                     flags |= (1 << 0)
@@ -854,7 +866,7 @@ private final class PeerInvitationImportersContextImpl {
                             }
                             if populateCache {
                                 if let entry = CodableEntry(CachedPeerInvitationImporters(importers: resultImporters, count: count)) {
-                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests")), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: self.requested)), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
                                 }
                             }
                             return (resultImporters, count)
@@ -916,7 +928,7 @@ private final class PeerInvitationImportersContextImpl {
         let link = self.link
         self.updateDisposable.set(self.account.postbox.transaction({ transaction in
             if let entry = CodableEntry(CachedPeerInvitationImporters(importers: resultImporters, count: count)) {
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests")), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: self.requested)), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
             }
         }).start())
     }
@@ -927,6 +939,11 @@ private final class PeerInvitationImportersContextImpl {
 }
 
 public final class PeerInvitationImportersContext {
+    public enum Subject {
+        case invite(invite: ExportedInvitation, requested: Bool)
+        case requests
+    }
+    
     public enum UpdateAction {
         case approve
         case deny
@@ -947,10 +964,10 @@ public final class PeerInvitationImportersContext {
         }
     }
     
-    init(account: Account, peerId: PeerId, invite: ExportedInvitation?) {
+    init(account: Account, peerId: PeerId, subject: Subject) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return PeerInvitationImportersContextImpl(queue: queue, account: account, peerId: peerId, invite: invite)
+            return PeerInvitationImportersContextImpl(queue: queue, account: account, peerId: peerId, subject: subject)
         })
     }
     

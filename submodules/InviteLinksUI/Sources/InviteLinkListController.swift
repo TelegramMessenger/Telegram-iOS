@@ -756,7 +756,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
     |> distinctUntilChanged
     |> deliverOnMainQueue
     |> map { invite -> PeerInvitationImportersContext? in
-        return invite.flatMap { context.engine.peers.peerInvitationImporters(peerId: peerId, invite: $0) }
+        return invite.flatMap { context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: $0, requested: false)) }
     } |> afterNext { context in
         if let context = context {
             importersState.set(context.state |> map(Optional.init))

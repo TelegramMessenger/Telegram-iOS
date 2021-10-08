@@ -166,7 +166,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
     
     var getControllerImpl: (() -> ViewController?)?
     
-    let importersContext = existingContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, invite: nil)
+    let importersContext = existingContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests)
     
     let arguments = InviteRequestsControllerArguments(context: context, openLinks: {
         let controller = inviteLinkListController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, admin: nil)

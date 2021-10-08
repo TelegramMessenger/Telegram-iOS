@@ -4802,7 +4802,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 if canManageInvitations, let inviteRequestsPending = inviteRequestsPending, inviteRequestsPending >= 0, strongSelf.inviteRequestsContext == nil {
-                    let inviteRequestsContext = strongSelf.context.engine.peers.peerInvitationImporters(peerId: peerId, invite: nil)
+                    let inviteRequestsContext = strongSelf.context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests)
                     strongSelf.inviteRequestsContext = inviteRequestsContext
                     
                     strongSelf.inviteRequestsDisposable.set((inviteRequestsContext.state
