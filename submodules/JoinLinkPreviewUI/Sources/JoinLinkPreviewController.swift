@@ -157,6 +157,8 @@ public final class JoinLinkPreviewController: ViewController {
                         }
                     case .tooMuchUsers:
                         strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_UsersTooMuchError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    case .requestSent:
+                        break
                     case .generic:
                         break
                 }

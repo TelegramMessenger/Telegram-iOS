@@ -655,6 +655,8 @@ public struct PeerInvitationImportersState: Equatable {
     public var waitingCount: Int {
         return importers.filter { $0.approvedBy == nil }.count
     }
+    
+    public static var Empty = PeerInvitationImportersState(importers: [], isLoadingMore: false, hasLoadedOnce: true, canLoadMore: false, count: 0)
 }
 
 final class CachedPeerInvitationImporters: Codable {
@@ -723,6 +725,7 @@ private final class PeerInvitationImportersContextImpl {
     private let peerId: PeerId
     private let link: String?
     private let requested: Bool
+    private let query: String?
     private let disposable = MetaDisposable()
     private let updateDisposable = MetaDisposable()
     private let actionDisposables = DisposableSet()
@@ -743,18 +746,26 @@ private final class PeerInvitationImportersContextImpl {
         
         var invite: ExportedInvitation?
         var requested = false
-        if case let .invite(subjectInvite, subjectRequested) = subject {
-            invite = subjectInvite
-            requested = subjectRequested
+        var query: String?
+        switch subject {
+            case let .invite(subjectInvite, subjectRequested):
+                invite = subjectInvite
+                requested = subjectRequested
+            case let .requests(maybeQuery):
+                query = maybeQuery
         }
         self.link = invite?.link
         self.requested = requested
+        self.query = query
         
         let count = invite?.count ?? 0
         self.count = count
         
         self.isLoadingMore = true
         self.disposable.set((account.postbox.transaction { transaction -> (peers: [PeerInvitationImportersState.Importer], count: Int32, canLoadMore: Bool)? in
+            guard query == nil else {
+                return nil
+            }
             let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: invite?.link ?? "requests", requested: self.requested)))?.get(CachedPeerInvitationImporters.self)
             if let cachedResult = cachedResult, (Int(cachedResult.count) == count || invite == nil) {
                 var result: [PeerInvitationImportersState.Importer] = []
@@ -803,6 +814,7 @@ private final class PeerInvitationImportersContextImpl {
         let peerId = self.peerId
         let link = self.link
         let populateCache = self.populateCache
+        let query = self.query
         
         var lastResult = self.results.last
         if self.loadedFromCache {
@@ -828,7 +840,11 @@ private final class PeerInvitationImportersContextImpl {
                     flags |= (1 << 0)
                 }
                 
-                let signal = account.network.request(Api.functions.messages.getChatInviteImporters(flags: flags, peer: inputPeer, link: link, offsetDate: offsetDate, offsetUser: offsetUser, limit: lastResult == nil ? 10 : 50))
+                if let _ = query {
+                    flags |= (1 << 2)
+                }
+                                
+                let signal = account.network.request(Api.functions.messages.getChatInviteImporters(flags: flags, peer: inputPeer, link: link, q: query, offsetDate: offsetDate, offsetUser: offsetUser, limit: lastResult == nil ? 10 : 50))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.ChatInviteImporters?, NoError> in
                     return .single(nil)
@@ -864,7 +880,7 @@ private final class PeerInvitationImportersContextImpl {
                                     resultImporters.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date, about: about, approvedBy: approvedBy))
                                 }
                             }
-                            if populateCache {
+                            if populateCache && query == nil {
                                 if let entry = CodableEntry(CachedPeerInvitationImporters(importers: resultImporters, count: count)) {
                                     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: self.requested)), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
                                 }
@@ -918,7 +934,7 @@ private final class PeerInvitationImportersContextImpl {
     }
     
     private func updateCache() {
-        guard self.hasLoadedOnce && !self.isLoadingMore else {
+        guard self.hasLoadedOnce && !self.isLoadingMore && self.query == nil else {
             return
         }
         
@@ -941,7 +957,7 @@ private final class PeerInvitationImportersContextImpl {
 public final class PeerInvitationImportersContext {
     public enum Subject {
         case invite(invite: ExportedInvitation, requested: Bool)
-        case requests
+        case requests(query: String?)
     }
     
     public enum UpdateAction {

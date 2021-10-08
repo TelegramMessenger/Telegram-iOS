@@ -277,11 +277,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
           
             if let importer = item.importer, let peer = importer.peer.peer.flatMap({ EnginePeer($0) }) {
                 titleText = peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.nameDisplayOrder)
-                if case .user = peer {
-                    subtitleText = " "
-                } else {
-                    subtitleText = ""
-                }
+                subtitleText = importer.about ?? ""
                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                 dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: importer.date, relativeTo: timestamp, dateTimeFormat: item.dateTimeFormat)
             } else {
@@ -305,8 +301,10 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
             let titleSpacing: CGFloat = 1.0
             
             let minHeight: CGFloat = titleLayout.size.height + verticalInset * 2.0
-            let rawHeight: CGFloat = verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height + 24.0
-            
+            var rawHeight: CGFloat = verticalInset * 2.0 + titleLayout.size.height + titleSpacing + 41.0
+            if !subtitleLayout.size.height.isZero {
+                rawHeight += subtitleLayout.size.height + 5.0
+            }
             var insets: UIEdgeInsets
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
@@ -452,10 +450,10 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.dismissButton.setTitle(item.presentationData.strings.MemberRequests_Dismiss, with: Font.bold(15.0), with: item.presentationData.theme.list.itemAccentColor, for: .normal)
                     
                     let addHeight = strongSelf.addButton.updateLayout(width: 138.0, transition: .immediate)
-                    strongSelf.addButton.frame = CGRect(x: leftInset, y: verticalInset + titleLayout.size.height + 7.0, width: 138.0, height: addHeight)
+                    strongSelf.addButton.frame = CGRect(x: leftInset, y: contentSize.height - addHeight - 12.0, width: 138.0, height: addHeight)
                     
                     let dismissSize = strongSelf.dismissButton.measure(layout.size)
-                    strongSelf.dismissButton.frame = CGRect(origin: CGPoint(x: leftInset + 138.0 + 24.0, y: verticalInset + titleLayout.size.height + 14.0), size: dismissSize)
+                    strongSelf.dismissButton.frame = CGRect(origin: CGPoint(x: leftInset + 138.0 + 24.0, y: verticalInset + contentSize.height - addHeight - 14.0), size: dismissSize)
                     
                     if item.importer == nil {
                         let shimmerNode: ShimmerEffectNode

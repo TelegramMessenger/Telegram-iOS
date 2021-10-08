@@ -4371,16 +4371,17 @@ public extension Api {
                     })
                 }
             
-                public static func getChatInviteImporters(flags: Int32, peer: Api.InputPeer, link: String?, offsetDate: Int32, offsetUser: Api.InputUser, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatInviteImporters>) {
+                public static func getChatInviteImporters(flags: Int32, peer: Api.InputPeer, link: String?, q: String?, offsetDate: Int32, offsetUser: Api.InputUser, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.ChatInviteImporters>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1742901790)
+                    buffer.appendInt32(-553329330)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(link!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(q!, buffer: buffer, boxed: false)}
                     serializeInt32(offsetDate, buffer: buffer, boxed: false)
                     offsetUser.serialize(buffer, true)
                     serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getChatInviteImporters", parameters: [("flags", flags), ("peer", peer), ("link", link), ("offsetDate", offsetDate), ("offsetUser", offsetUser), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ChatInviteImporters? in
+                    return (FunctionDescription(name: "messages.getChatInviteImporters", parameters: [("flags", flags), ("peer", peer), ("link", link), ("q", q), ("offsetDate", offsetDate), ("offsetUser", offsetUser), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.ChatInviteImporters? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.ChatInviteImporters?
                         if let signature = reader.readInt32() {

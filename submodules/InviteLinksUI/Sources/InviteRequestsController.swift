@@ -100,7 +100,7 @@ private enum InviteRequestsEntry: ItemListNodeEntry {
         let arguments = arguments as! InviteRequestsControllerArguments
         switch self {
             case let .header(theme, text):
-                return InviteLinkHeaderItem(context: arguments.context, theme: theme, text: text, sectionId: self.section, linkAction: { _ in
+                return InviteLinkHeaderItem(context: arguments.context, theme: theme, text: text, animationName: "Requests", sectionId: self.section, linkAction: { _ in
                     arguments.openLinks()
                 })
             case let .requestsHeader(_, text):
@@ -166,7 +166,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
     
     var getControllerImpl: (() -> ViewController?)?
     
-    let importersContext = existingContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests)
+    let importersContext = existingContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: nil))
     
     let arguments = InviteRequestsControllerArguments(context: context, openLinks: {
         let controller = inviteLinkListController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, admin: nil)
