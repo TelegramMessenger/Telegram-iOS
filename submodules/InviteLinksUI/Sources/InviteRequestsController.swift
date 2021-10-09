@@ -176,8 +176,22 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
     }, approveRequest: { peer in
         importersContext.update(peer.id, action: .approve)
                 
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .invitedToVoiceChat(context: context, peer: peer, text: presentationData.strings.MemberRequests_UserAddedToChannel(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+        let _ = (context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+        )
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let string: String
+            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                string = presentationData.strings.MemberRequests_UserAddedToChannel(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+            } else {
+                string = presentationData.strings.MemberRequests_UserAddedToGroup(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+            }
+            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .invitedToVoiceChat(context: context, peer: peer, text: string), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+        })
     }, denyRequest: { peer in
         importersContext.update(peer.id, action: .deny)
     }, peerContextAction: { peer, node, gesture in

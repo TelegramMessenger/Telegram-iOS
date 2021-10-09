@@ -273,7 +273,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
             
             let cancelSize = CGSize(width: 44.0, height: 44.0)
-            let cancelFrame = CGRect(origin: CGPoint(x: backgroundFrame.width - cancelSize.width - 3.0, y: backgroundFrame.minY + 6.0), size: cancelSize)
+            let cancelFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - cancelSize.width - 3.0, y: backgroundFrame.minY + 6.0), size: cancelSize)
             transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
             
             if let animateContentNodeOffsetFromBackgroundOffset = self.animateContentNodeOffsetFromBackgroundOffset {
@@ -337,8 +337,8 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             
             let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
             let dimPosition = self.dimNode.layer.position
-            self.dimNode.layer.animatePosition(from: dimPosition, to: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-            self.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            self.dimNode.layer.animatePosition(from: dimPosition, to: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
+            self.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
                 offsetCompleted = true
                 internalCompletion()
             })

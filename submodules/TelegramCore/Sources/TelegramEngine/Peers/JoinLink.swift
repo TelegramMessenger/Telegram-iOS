@@ -9,6 +9,7 @@ public enum JoinLinkError {
     case tooMuchJoined
     case tooMuchUsers
     case requestSent
+    case flood
 }
 
 func apiUpdatesGroups(_ updates: Api.Updates) -> [Api.Chat] {
@@ -38,7 +39,7 @@ public enum ExternalJoiningChatState {
 }
 
 func _internal_joinChatInteractively(with hash: String, account: Account) -> Signal <PeerId?, JoinLinkError> {
-    return account.network.request(Api.functions.messages.importChatInvite(hash: hash))
+    return account.network.request(Api.functions.messages.importChatInvite(hash: hash), automaticFloodWait: false)
     |> mapError { error -> JoinLinkError in
         switch error.errorDescription {
             case "CHANNELS_TOO_MUCH":
@@ -48,7 +49,11 @@ func _internal_joinChatInteractively(with hash: String, account: Account) -> Sig
             case "INVITE_REQUEST_SENT":
                 return .requestSent
             default:
-                return .generic
+                if error.description.hasPrefix("FLOOD_WAIT") {
+                    return .flood
+                } else {
+                    return .generic
+                }
         }
     }
     |> mapToSignal { updates -> Signal<PeerId?, JoinLinkError> in
