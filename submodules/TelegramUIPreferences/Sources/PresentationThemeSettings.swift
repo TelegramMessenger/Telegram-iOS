@@ -94,7 +94,7 @@ public struct PresentationLocalTheme: PostboxCoding, Equatable {
     }
 }
 
-public struct PresentationCloudTheme: PostboxCoding, Equatable {
+public struct PresentationCloudTheme: Codable, Equatable {
     public let theme: TelegramTheme
     public let resolvedWallpaper: TelegramWallpaper?
     public let creatorAccountId: AccountRecordId?
@@ -104,25 +104,21 @@ public struct PresentationCloudTheme: PostboxCoding, Equatable {
         self.resolvedWallpaper = resolvedWallpaper
         self.creatorAccountId = creatorAccountId
     }
-    
-    public init(decoder: PostboxDecoder) {
-        self.theme = decoder.decode(TelegramThemeNativeCodable.self, forKey: "theme")!.value
-        self.resolvedWallpaper = decoder.decode(TelegramWallpaperNativeCodable.self, forKey: "wallpaper")?.value
-        self.creatorAccountId = decoder.decodeOptionalInt64ForKey("account").flatMap { AccountRecordId(rawValue: $0) }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.theme = (try container.decode(TelegramThemeNativeCodable.self, forKey: "theme")).value
+        self.resolvedWallpaper = (try container.decodeIfPresent(TelegramWallpaperNativeCodable.self, forKey: "wallpaper"))?.value
+        self.creatorAccountId = (try container.decodeIfPresent(Int64.self, forKey: "account")).flatMap(AccountRecordId.init(rawValue:))
     }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encode(TelegramThemeNativeCodable(self.theme), forKey: "theme")
-        if let resolvedWallpaper = self.resolvedWallpaper {
-            encoder.encode(TelegramWallpaperNativeCodable(resolvedWallpaper), forKey: "wallpaper")
-        } else {
-            encoder.encodeNil(forKey: "wallpaper")
-        }
-        if let accountId = self.creatorAccountId {
-            encoder.encodeInt64(accountId.int64, forKey: "account")
-        } else {
-            encoder.encodeNil(forKey: "account")
-        }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(TelegramThemeNativeCodable(self.theme), forKey: "theme")
+        try container.encodeIfPresent(self.resolvedWallpaper.flatMap(TelegramWallpaperNativeCodable.init), forKey: "wallpaper")
+        try container.encodeIfPresent(self.creatorAccountId?.int64, forKey: "account")
     }
     
     public static func ==(lhs: PresentationCloudTheme, rhs: PresentationCloudTheme) -> Bool {
@@ -152,7 +148,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
                     self = .builtin(.dayClassic)
                 }
             case 2:
-                if let cloudTheme = decoder.decodeObjectForKey("cloudTheme", decoder: { PresentationCloudTheme(decoder: $0) }) as? PresentationCloudTheme {
+            if let cloudTheme = decoder.decode(PresentationCloudTheme.self, forKey: "cloudTheme") {
                     self = .cloud(cloudTheme)
                 } else {
                     self = .builtin(.dayClassic)
@@ -173,7 +169,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
                 encoder.encodeObject(theme, forKey: "localTheme")
             case let .cloud(theme):
                 encoder.encodeInt32(2, forKey: "v")
-                encoder.encodeObject(theme, forKey: "cloudTheme")
+                encoder.encode(theme, forKey: "cloudTheme")
         }
     }
     
