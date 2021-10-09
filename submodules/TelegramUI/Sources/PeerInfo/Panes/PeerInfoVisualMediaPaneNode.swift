@@ -743,6 +743,10 @@ private func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> 
     switch type {
     case .photoOrVideo:
         return .photoOrVideo
+    case .photo:
+        return .photo
+    case .video:
+        return .video
     case .gifs:
         return .gif
     }
@@ -758,11 +762,27 @@ private enum ItemsLayout {
         let rowCount: Int
         let contentHeight: CGFloat
         
-        init(containerWidth: CGFloat, itemCount: Int, bottomInset: CGFloat) {
+        init(containerWidth: CGFloat, zoomLevel: PeerInfoVisualMediaPaneNode.ZoomLevel, itemCount: Int, bottomInset: CGFloat) {
             self.containerWidth = containerWidth
             self.itemCount = itemCount
             self.itemSpacing = 1.0
-            self.itemsInRow = max(3, min(6, Int(containerWidth / 140.0)))
+            let minItemsInRow: Int
+            let maxItemsInRow: Int
+            switch zoomLevel {
+            case .level2:
+                minItemsInRow = 2
+                maxItemsInRow = 4
+            case .level3:
+                minItemsInRow = 3
+                maxItemsInRow = 6
+            case .level4:
+                minItemsInRow = 4
+                maxItemsInRow = 8
+            case .level5:
+                minItemsInRow = 5
+                maxItemsInRow = 10
+            }
+            self.itemsInRow = max(minItemsInRow, min(maxItemsInRow, Int(containerWidth / 140.0)))
             self.itemSize = floor(containerWidth / CGFloat(itemsInRow))
             
             self.rowCount = itemCount / self.itemsInRow + (itemCount % self.itemsInRow == 0 ? 0 : 1)
@@ -817,13 +837,48 @@ private enum ItemsLayout {
 final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate {
     enum ContentType {
         case photoOrVideo
+        case photo
+        case video
         case gifs
+    }
+
+    enum ZoomLevel {
+        case level2
+        case level3
+        case level4
+        case level5
+
+        func incremented() -> ZoomLevel {
+            switch self {
+            case .level2:
+                return .level3
+            case .level3:
+                return .level4
+            case .level4:
+                return .level5
+            case .level5:
+                return .level5
+            }
+        }
+
+        func decremented() -> ZoomLevel {
+            switch self {
+            case .level2:
+                return .level2
+            case .level3:
+                return .level2
+            case .level4:
+                return .level3
+            case .level5:
+                return .level4
+            }
+        }
     }
     
     private let context: AccountContext
     private let peerId: PeerId
     private let chatControllerInteraction: ChatControllerInteraction
-    private let contentType: ContentType
+    private(set) var contentType: ContentType
     
     weak var parentController: ViewController?
 
@@ -860,8 +915,10 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     
     private var animationTimer: SwiftSignalKit.Timer?
 
-    private let listSource: SparseMessageList
+    private var listSource: SparseMessageList
     private var requestedPlaceholderIds = Set<MessageId>()
+
+    private(set) var zoomLevel: ZoomLevel = .level3
     
     init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType) {
         self.context = context
@@ -908,7 +965,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.addSubnode(self.scrollNode)
         self.addSubnode(self.scrollingArea)
         
-        self.requestHistoryAroundVisiblePosition()
+        self.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: false)
         
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
             guard let strongSelf = self else {
@@ -943,6 +1000,37 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.hiddenMediaDisposable?.dispose()
         self.animationTimer?.invalidate()
     }
+
+    func updateContentType(contentType: ContentType) {
+        if self.contentType == contentType {
+            return
+        }
+        self.contentType = contentType
+
+        self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, tag: tagMaskForType(self.contentType))
+        self.isRequestingView = false
+        self.requestHistoryAroundVisiblePosition(synchronous: true, reloadAtTop: true)
+    }
+
+    func updateZoomLevel(level: ZoomLevel) {
+        if self.zoomLevel == level {
+            return
+        }
+        self.zoomLevel = level
+
+        self.itemsLayout = nil
+        if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
+            if let copyView = self.scrollNode.view.snapshotView(afterScreenUpdates: false) {
+                copyView.backgroundColor = self.context.sharedContext.currentPresentationData.with({ $0 }).theme.list.plainBackgroundColor
+                self.view.addSubview(copyView)
+                copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyView] _ in
+                    copyView?.removeFromSuperview()
+                })
+            }
+
+            self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .immediate)
+        }
+    }
     
     func ensureMessageIsVisible(id: MessageId) {
         let activeRect = self.scrollNode.bounds
@@ -959,22 +1047,26 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         }
     }
     
-    private func requestHistoryAroundVisiblePosition() {
+    private func requestHistoryAroundVisiblePosition(synchronous: Bool, reloadAtTop: Bool) {
         if self.isRequestingView {
             return
         }
         self.isRequestingView = true
+        var firstTime = true
         self.listDisposable.set((self.listSource.state
         |> deliverOnMainQueue).start(next: { [weak self] list in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.updateHistory(list: list)
+            let currentSynchronous = synchronous && firstTime
+            let currentReloadAtTop = reloadAtTop && firstTime
+            firstTime = false
+            strongSelf.updateHistory(list: list, synchronous: currentSynchronous, reloadAtTop: currentReloadAtTop)
             strongSelf.isRequestingView = false
         }))
     }
     
-    private func updateHistory(list: SparseMessageList.State) {
+    private func updateHistory(list: SparseMessageList.State, synchronous: Bool, reloadAtTop: Bool) {
         self.mediaItems = VisualMediaItemCollection(items: [], totalCount: list.totalCount)
         for item in list.items {
             switch item.content {
@@ -990,7 +1082,21 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.isFirstHistoryView = false
 
         if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
-            self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: wasFirstHistoryView, transition: .immediate)
+            if synchronous {
+                if let copyView = self.scrollNode.view.snapshotView(afterScreenUpdates: false) {
+                    copyView.backgroundColor = self.context.sharedContext.currentPresentationData.with({ $0 }).theme.list.plainBackgroundColor
+                    self.view.addSubview(copyView)
+                    copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyView] _ in
+                        copyView?.removeFromSuperview()
+                    })
+                }
+            }
+            self.ignoreScrolling = true
+            if reloadAtTop {
+                self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: 0.0), animated: false)
+            }
+            self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: wasFirstHistoryView || synchronous, transition: .immediate)
+            self.ignoreScrolling = false
             if !self.didSetReady {
                 self.didSetReady = true
                 self.ready.set(.single(true))
@@ -1108,8 +1214,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             itemsLayout = current
         } else {
             switch self.contentType {
-            case .photoOrVideo, .gifs:
-                itemsLayout = .grid(ItemsLayout.Grid(containerWidth: availableWidth, itemCount: self.mediaItems.totalCount, bottomInset: bottomInset))
+            case .photoOrVideo, .photo, .video, .gifs:
+                itemsLayout = .grid(ItemsLayout.Grid(containerWidth: availableWidth, zoomLevel: self.zoomLevel, itemCount: self.mediaItems.totalCount, bottomInset: bottomInset))
             }
             self.itemsLayout = itemsLayout
         }
@@ -1140,8 +1246,12 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
 
     private var previousDidScrollTimestamp: Double = 0.0
+    private var ignoreScrolling: Bool = false
     
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {        
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if self.ignoreScrolling {
+            return
+        }
         if let (size, sideInset, bottomInset, visibleHeight, _, _, presentationData) = self.currentParams {
             self.updateVisibleItems(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, theme: presentationData.theme, strings: presentationData.strings, synchronousLoad: false)
             

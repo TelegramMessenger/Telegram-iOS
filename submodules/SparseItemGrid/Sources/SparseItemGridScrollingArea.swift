@@ -37,7 +37,7 @@ private final class RoundedRectangle: Component {
             preconditionFailure()
         }
 
-        func update(component: RoundedRectangle, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: RoundedRectangle, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let shadowInset: CGFloat = 0.0
             let diameter = min(availableSize.width, availableSize.height)
 
@@ -76,8 +76,8 @@ private final class RoundedRectangle: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
+    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
 
@@ -113,7 +113,7 @@ private final class ShadowRoundedRectangle: Component {
             preconditionFailure()
         }
 
-        func update(component: ShadowRoundedRectangle, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: ShadowRoundedRectangle, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let shadowInset: CGFloat = 10.0
             let diameter = min(availableSize.width, availableSize.height)
 
@@ -150,8 +150,8 @@ private final class ShadowRoundedRectangle: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
+    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
 

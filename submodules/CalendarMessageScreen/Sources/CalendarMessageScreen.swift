@@ -142,7 +142,38 @@ private class Scroller: UIScrollView {
     }
 }
 
+private final class ImageCache: Equatable {
+    static func ==(lhs: ImageCache, rhs: ImageCache) -> Bool {
+        return lhs === rhs
+    }
+
+    private struct FilledCircle: Hashable {
+        var diameter: CGFloat
+        var color: UInt32
+    }
+
+    private var items: [AnyHashable: UIImage] = [:]
+
+    func filledCircle(diameter: CGFloat, color: UIColor) -> UIImage {
+        let key = AnyHashable(FilledCircle(diameter: diameter, color: color.argb))
+        if let image = self.items[key] {
+            return image
+        }
+        let image = generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+
+            context.setFillColor(color.cgColor)
+
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+        })!.stretchableImage(withLeftCapWidth: Int(diameter) / 2, topCapHeight: Int(diameter) / 2)
+        self.items[key] = image
+        return image
+    }
+}
+
 private final class DayComponent: Component {
+    typealias EnvironmentType = ImageCache
+
     let title: String
     let isCurrent: Bool
     let isEnabled: Bool
@@ -198,9 +229,6 @@ private final class DayComponent: Component {
         private let titleNode: ImmediateTextNode
         private var mediaPreviewNode: MediaPreviewNode?
 
-        private var currentTheme: PresentationTheme?
-        private var currentDiameter: CGFloat?
-        private var currentIsCurrent: Bool?
         private var action: (() -> Void)?
         private var currentMedia: DayMedia?
 
@@ -227,40 +255,24 @@ private final class DayComponent: Component {
             self.action?()
         }
 
-        func update(component: DayComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        func update(component: DayComponent, availableSize: CGSize, environment: Environment<ImageCache>, transition: Transition) -> CGSize {
             self.action = component.action
 
             let shadowInset: CGFloat = 0.0
             let diameter = min(availableSize.width, availableSize.height)
 
-            var updated = false
-            if self.currentTheme !== component.theme || self.currentIsCurrent != component.isCurrent {
-                updated = true
-            }
-
-            if self.currentDiameter != diameter || updated {
-                self.currentDiameter = diameter
-                self.currentTheme = component.theme
-                self.currentIsCurrent = component.isCurrent
-
-                if component.isCurrent || component.media != nil {
-                    self.highlightNode.image = generateImage(CGSize(width: diameter + shadowInset * 2.0, height: diameter + shadowInset * 2.0), rotatedContext: { size, context in
-                        context.clear(CGRect(origin: CGPoint(), size: size))
-
-                        if component.media != nil {
-                            context.setFillColor(UIColor(white: 0.0, alpha: 0.2).cgColor)
-                        } else {
-                            context.setFillColor(component.theme.list.itemAccentColor.cgColor)
-                        }
-
-                        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowInset, y: shadowInset), size: CGSize(width: size.width - shadowInset * 2.0, height: size.height - shadowInset * 2.0)))
-                    })?.stretchableImage(withLeftCapWidth: Int(diameter + shadowInset * 2.0) / 2, topCapHeight: Int(diameter + shadowInset * 2.0) / 2)
-                } else {
-                    self.highlightNode.image = nil
-                }
+            let imageCache = environment[ImageCache.self]
+            if component.media != nil {
+                self.highlightNode.image = imageCache.value.filledCircle(diameter: diameter, color: UIColor(white: 0.0, alpha: 0.2))
+            } else if component.isCurrent {
+                self.highlightNode.image = imageCache.value.filledCircle(diameter: diameter, color: component.theme.list.itemAccentColor)
+            } else {
+                self.highlightNode.image = nil
             }
 
             if self.currentMedia != component.media {
+                self.currentMedia = component.media
+
                 if let mediaPreviewNode = self.mediaPreviewNode {
                     self.mediaPreviewNode = nil
                     mediaPreviewNode.removeFromSupernode()
@@ -308,12 +320,14 @@ private final class DayComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
+    func update(view: View, availableSize: CGSize, environment: Environment<ImageCache>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
 
 private final class MonthComponent: CombinedComponent {
+    typealias EnvironmentType = ImageCache
+
     let context: AccountContext
     let model: MonthModel
     let foregroundColor: UIColor
@@ -359,7 +373,7 @@ private final class MonthComponent: CombinedComponent {
     static var body: Body {
         let title = Child(Text.self)
         let weekdayTitles = ChildMap(environment: Empty.self, keyedBy: Int.self)
-        let days = ChildMap(environment: Empty.self, keyedBy: Int.self)
+        let days = ChildMap(environment: ImageCache.self, keyedBy: Int.self)
 
         return { context in
             let sideInset: CGFloat = 14.0
@@ -423,6 +437,9 @@ private final class MonthComponent: CombinedComponent {
                             navigateToDay(dayTimestamp)
                         }
                     )),
+                    environment: {
+                        context.environment[ImageCache.self]
+                    },
                     availableSize: CGSize(width: weekdaySize, height: weekdaySize),
                     transition: .immediate
                 )
@@ -545,7 +562,9 @@ public final class CalendarMessageScreen: ViewController {
 
         private var initialMonthIndex: Int = 0
         private var months: [MonthModel] = []
-        private var monthViews: [Int: ComponentHostView<Empty>] = [:]
+        private var monthViews: [Int: ComponentHostView<ImageCache>] = [:]
+
+        private let imageCache = ImageCache()
 
         private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
         private var scrollLayout: (width: CGFloat, contentHeight: CGFloat, frames: [Int: CGRect])?
@@ -642,6 +661,10 @@ public final class CalendarMessageScreen: ViewController {
         }
 
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            if let indicator = scrollView.value(forKey: "_verticalScrollIndicator") as? UIView {
+                indicator.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
+            }
+
             self.updateMonthViews()
         }
 
@@ -656,7 +679,8 @@ public final class CalendarMessageScreen: ViewController {
             var contentHeight: CGFloat = layout.intrinsicInsets.bottom
             var frames: [Int: CGRect] = [:]
 
-            let measureView = ComponentHostView<Empty>()
+            let measureView = ComponentHostView<ImageCache>()
+            let imageCache = ImageCache()
             for i in 0 ..< self.months.count {
                 let monthSize = measureView.update(
                     transition: .immediate,
@@ -669,7 +693,9 @@ public final class CalendarMessageScreen: ViewController {
                         navigateToDay: { _ in
                         }
                     )),
-                    environment: {},
+                    environment: {
+                        imageCache
+                    },
                     containerSize: CGSize(width: layout.size.width, height: 10000.0
                 ))
                 let monthFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: monthSize)
@@ -684,7 +710,7 @@ public final class CalendarMessageScreen: ViewController {
 
             self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationHeight))
             self.scrollView.contentSize = CGSize(width: layout.size.width, height: contentHeight)
-            self.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: layout.intrinsicInsets.bottom, left: 0.0, bottom: 0.0, right: 0.0)
+            self.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: layout.intrinsicInsets.bottom, left: 0.0, bottom: 0.0, right: layout.size.width - 3.0 - 6.0)
 
             return true
         }
@@ -706,7 +732,7 @@ public final class CalendarMessageScreen: ViewController {
                 }
                 validMonths.insert(i)
 
-                let monthView: ComponentHostView<Empty>
+                let monthView: ComponentHostView<ImageCache>
                 if let current = self.monthViews[i] {
                     monthView = current
                 } else {
@@ -730,7 +756,9 @@ public final class CalendarMessageScreen: ViewController {
                             strongSelf.navigateToDay(timestamp)
                         }
                     )),
-                    environment: {},
+                    environment: {
+                        self.imageCache
+                    },
                     containerSize: CGSize(width: width, height: 10000.0
                 ))
                 monthView.frame = monthFrame

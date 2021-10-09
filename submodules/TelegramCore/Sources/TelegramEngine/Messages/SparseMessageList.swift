@@ -108,25 +108,20 @@ public final class SparseMessageList {
                 |> map { result -> SparseItems in
                     switch result {
                     case let .searchResultsPositions(totalCount, positions):
-                        struct Position {
+                        struct Position: Equatable {
                             var id: Int32
                             var date: Int32
                             var offset: Int
                         }
-                        let positions: [Position] = positions.sorted(by: { lhs, rhs in
-                            switch lhs {
-                            case let .searchResultPosition(lhsId, _, _):
-                                switch rhs {
-                                case let .searchResultPosition(rhsId, _, _):
-                                    return lhsId > rhsId
-                                }
-                            }
-                        }).map { position -> Position in
+                        var positions: [Position] = positions.map { position -> Position in
                             switch position {
                             case let .searchResultPosition(id, date, offset):
                                 return Position(id: id, date: date, offset: Int(offset))
                             }
                         }
+                        positions.sort(by: { lhs, rhs in
+                            return lhs.id > rhs.id
+                        })
 
                         var result = SparseItems(items: [])
                         for i in 0 ..< positions.count {

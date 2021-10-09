@@ -916,6 +916,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
 }
 
 final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
+    let contextSourceNode: ContextReferenceContentNode
     private let regularTextNode: ImmediateTextNode
     private let whiteTextNode: ImmediateTextNode
     private let iconNode: ASImageNode
@@ -935,6 +936,8 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
     var action: (() -> Void)?
     
     init() {
+        self.contextSourceNode = ContextReferenceContentNode()
+
         self.regularTextNode = ImmediateTextNode()
         self.whiteTextNode = ImmediateTextNode()
         self.whiteTextNode.isHidden = true
@@ -948,9 +951,11 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.isAccessibilityElement = true
         self.accessibilityTraits = .button
         
-        self.addSubnode(self.regularTextNode)
-        self.addSubnode(self.whiteTextNode)
-        self.addSubnode(self.iconNode)
+        self.contextSourceNode.addSubnode(self.regularTextNode)
+        self.contextSourceNode.addSubnode(self.whiteTextNode)
+        self.contextSourceNode.addSubnode(self.iconNode)
+
+        self.addSubnode(self.contextSourceNode)
         
         self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
     }
@@ -983,9 +988,9 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                     text = presentationData.strings.Settings_EditPhoto
                 case .editVideo:
                     text = presentationData.strings.Settings_EditVideo
-                case .calendar:
-                text = ""
-                icon = PresentationResourcesRootController.navigationCalendarIcon(presentationData.theme)
+                case .more:
+                    text = ""
+                    icon = PresentationResourcesRootController.navigationMoreCircledIcon(presentationData.theme)
             }
             self.accessibilityLabel = text
             
@@ -1010,9 +1015,13 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         if let image = self.iconNode.image {
             self.iconNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - image.size.height) / 2.0)), size: image.size)
             
-            return CGSize(width: image.size.width + inset * 2.0, height: height)
+            let size = CGSize(width: image.size.width + inset * 2.0, height: height)
+            self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
+            return size
         } else {
-            return CGSize(width: textSize.width + inset * 2.0, height: height)
+            let size = CGSize(width: textSize.width + inset * 2.0, height: height)
+            self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
+            return size
         }
     }
 }
@@ -1026,7 +1035,7 @@ enum PeerInfoHeaderNavigationButtonKey {
     case search
     case editPhoto
     case editVideo
-    case calendar
+    case more
 }
 
 struct PeerInfoHeaderNavigationButtonSpec: Equatable {
@@ -1049,7 +1058,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
         }
     }
     
-    var performAction: ((PeerInfoHeaderNavigationButtonKey) -> Void)?
+    var performAction: ((PeerInfoHeaderNavigationButtonKey, ContextReferenceContentNode?) -> Void)?
     
     override init() {
         super.init()
@@ -1075,7 +1084,10 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
                     self.addSubnode(buttonNode)
                     buttonNode.isWhite = self.isWhite
                     buttonNode.action = { [weak self] in
-                        self?.performAction?(spec.key)
+                        guard let strongSelf = self, let buttonNode = strongSelf.buttonNodes[spec.key] else {
+                            return
+                        }
+                        strongSelf.performAction?(spec.key, buttonNode.contextSourceNode)
                     }
                 }
                 let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)
