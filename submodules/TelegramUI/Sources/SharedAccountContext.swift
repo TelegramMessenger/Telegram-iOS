@@ -516,11 +516,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 for accountRecord in addedAccounts {
                     if let account = accountRecord.1 {
                         if existingAccountPeerKeys.contains(AccountPeerKey(peerId: account.peerId, isTestingEnvironment: account.testingEnvironment)) {
-                            let _ = accountManager.transaction({ transaction in
-                                transaction.updateRecord(accountRecord.0, { _ in
-                                    return nil
-                                })
-                            }).start()
+                            // MARK: - Postufgram code {}
+                            // removed logic here
                         } else {
                             existingAccountPeerKeys.insert(AccountPeerKey(peerId: account.peerId, isTestingEnvironment: account.testingEnvironment))
                             if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == account.id }) {
