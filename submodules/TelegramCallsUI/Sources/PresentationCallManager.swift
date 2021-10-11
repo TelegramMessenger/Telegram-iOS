@@ -180,14 +180,21 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             }
         }
         
-        self.ringingStatesDisposable = (combineLatest(ringingStatesByAccount, enableCallKit, enabledMicrophoneAccess)
-        |> mapToSignal { ringingStatesByAccount, enableCallKit, enabledMicrophoneAccess -> Signal<([(AccountContext, Peer, CallSessionRingingState, Bool, NetworkType)], Bool), NoError> in
+        self.ringingStatesDisposable = (combineLatest(ringingStatesByAccount, enableCallKit, enabledMicrophoneAccess, accountManager.currentAccountRecord(allocateIfNotExists: false))
+        |> mapToSignal { ringingStatesByAccount, enableCallKit, enabledMicrophoneAccess, currentAccountRecord -> Signal<([(AccountContext, Peer, CallSessionRingingState, Bool, NetworkType)], Bool), NoError> in
             if ringingStatesByAccount.isEmpty {
                 return .single(([], enableCallKit && enabledMicrophoneAccess))
             } else {
                 return combineLatest(ringingStatesByAccount.map { context, state, networkType -> Signal<(AccountContext, Peer, CallSessionRingingState, Bool, NetworkType)?, NoError> in
                     return context.account.postbox.transaction { transaction -> (AccountContext, Peer, CallSessionRingingState, Bool, NetworkType)? in
                         if let peer = transaction.getPeer(state.peerId) {
+                            // MARK: Postufgram Code: {
+                            if context.account.isHidden,
+                               let currentAccountRecordId = currentAccountRecord?.0,
+                               currentAccountRecordId != context.account.id {
+                                return nil
+                            }
+                            // MARK: Postufgram Code: }
                             return (context, peer, state, transaction.isPeerContact(peerId: state.peerId), networkType)
                         } else {
                             return nil
