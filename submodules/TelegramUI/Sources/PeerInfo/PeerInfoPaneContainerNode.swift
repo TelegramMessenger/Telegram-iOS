@@ -13,6 +13,8 @@ protocol PeerInfoPaneNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
     
     var parentController: ViewController? { get set }
+
+    var status: Signal<PeerInfoStatusData?, NoError> { get }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
@@ -383,12 +385,17 @@ private final class PeerInfoPendingPane {
         peerId: PeerId,
         key: PeerInfoPaneKey,
         hasBecomeReady: @escaping (PeerInfoPaneKey) -> Void,
-        parentController: ViewController?
+        parentController: ViewController?,
+        openMediaCalendar: @escaping () -> Void
     ) {
         let paneNode: PeerInfoPaneNode
         switch key {
         case .media:
-            paneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .photoOrVideo)
+            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .photoOrVideo)
+            paneNode = visualPaneNode
+            visualPaneNode.openCurrentDate = {
+                openMediaCalendar()
+            }
         case .files:
             paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .file)
         case .links:
@@ -398,7 +405,11 @@ private final class PeerInfoPendingPane {
         case .music:
             paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .music)
         case .gifs:
-            paneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .gifs)
+            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .gifs)
+            paneNode = visualPaneNode
+            visualPaneNode.openCurrentDate = {
+                openMediaCalendar()
+            }
         case .groupsInCommon:
             paneNode = PeerInfoGroupsInCommonPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction, groupsInCommonContext: data.groupsInCommon!)
         case .members:
@@ -465,6 +476,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     
     var currentPaneUpdated: ((Bool) -> Void)?
     var requestExpandTabs: (() -> Bool)?
+
+    var openMediaCalendar: (() -> Void)?
     
     private var currentAvailablePanes: [PeerInfoPaneKey]?
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
@@ -763,7 +776,10 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                             apply()
                         }
                     },
-                    parentController: self.parentController
+                    parentController: self.parentController,
+                    openMediaCalendar: { [weak self] in
+                        self?.openMediaCalendar?()
+                    }
                 )
                 self.pendingPanes[key] = pane
                 pane.pane.node.frame = paneFrame

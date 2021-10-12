@@ -36,7 +36,7 @@ public final class MeshAnimationCache {
             let item = Item()
             self.items[resource.id] = item
 
-            let path = self.mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "mesh-animation", keepDuration: .shortLived)
+            let path = self.mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "mesh-animation", keepDuration: .general)
             if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
                 let animation = MeshAnimation.read(buffer: MeshReadBuffer(data: data))
                 item.readyPath = path
@@ -68,7 +68,7 @@ public final class MeshAnimationCache {
                 if let animation = generateMeshAnimation(data: jsonData) {
                     let buffer = MeshWriteBuffer()
                     animation.write(buffer: buffer)
-                    mediaBox.storeCachedResourceRepresentation(resource, representationId: "mesh-animation", keepDuration: .shortLived, data: buffer.makeData(), completion: { path in
+                    mediaBox.storeCachedResourceRepresentation(resource, representationId: "mesh-animation", keepDuration: .general, data: buffer.makeData(), completion: { path in
                         subscriber.putNext((animation, path))
                         subscriber.putCompletion()
                     })

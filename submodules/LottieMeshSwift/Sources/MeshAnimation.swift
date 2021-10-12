@@ -546,7 +546,7 @@ private func generateSegments(geometry: CapturedGeometryNode, superAlpha: CGFloa
             case let .color(color, alpha):
                 triangleFill = .color(TriangleFill.Color(color).multiplied(alpha: Float(geometry.alpha * alpha * superAlpha)))
             case let .gradient(colors, positions, start, end, type):
-                triangleFill = .gradient(TriangleFill.Gradient(colors: colors.map(TriangleFill.Color.init), colorLocations: positions.map(Float.init), start: start, end: end, isRadial: type == .radial))
+                triangleFill = .gradient(TriangleFill.Gradient(colors: colors.map { TriangleFill.Color($0).multiplied(alpha: Float(geometry.alpha * superAlpha)) }, colorLocations: positions.map(Float.init), start: start, end: end, isRadial: type == .radial))
             }
 
             let mappedFillRule: LottieMeshFillRule

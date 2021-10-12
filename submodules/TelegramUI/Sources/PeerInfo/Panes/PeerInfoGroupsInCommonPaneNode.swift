@@ -77,6 +77,10 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     var isReady: Signal<Bool, NoError> {
         return self.ready.get()
     }
+
+    var status: Signal<PeerInfoStatusData?, NoError> {
+        return .single(nil)
+    }
         
     private var disposable: Disposable?
     
