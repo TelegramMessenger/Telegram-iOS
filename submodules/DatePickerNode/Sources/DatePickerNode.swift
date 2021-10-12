@@ -1119,8 +1119,10 @@ private final class TimePickerNode: ASDisplayNode {
         self.date = date
         self.selection = .none
         
+        let backgroundColor = theme.backgroundColor.mixedWith(theme.segmentedControlTheme.backgroundColor.withAlphaComponent(1.0), alpha: theme.segmentedControlTheme.backgroundColor.alpha)
+        
         self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.backgroundNode.backgroundColor = backgroundColor
         self.backgroundNode.cornerRadius = 9.0
         
         self.borderNode = ASDisplayNode()
@@ -1144,14 +1146,14 @@ private final class TimePickerNode: ASDisplayNode {
         self.inputNode = TimeInputNode()
         
         self.hoursTopMaskNode = ASDisplayNode()
-        self.hoursTopMaskNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.hoursTopMaskNode.backgroundColor = backgroundColor
         self.hoursBottomMaskNode = ASDisplayNode()
-        self.hoursBottomMaskNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.hoursBottomMaskNode.backgroundColor = backgroundColor
         
         self.minutesTopMaskNode = ASDisplayNode()
-        self.minutesTopMaskNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.minutesTopMaskNode.backgroundColor = backgroundColor
         self.minutesBottomMaskNode = ASDisplayNode()
-        self.minutesBottomMaskNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.minutesBottomMaskNode.backgroundColor = backgroundColor
         
         let isPM: Bool
         if let date = date {
@@ -1225,10 +1227,12 @@ private final class TimePickerNode: ASDisplayNode {
                         return "\(i)"
                     }
                 case .regular:
-                    if i < 10 {
+                    if i == 0 {
+                        return "12"
+                    } else if i < 10 {
                         return "0\(i)"
                     } else {
-                        return "\(1 + i)"
+                        return "\(i)"
                     }
             }
         }
@@ -1633,7 +1637,7 @@ private final class TimePickerNode: ASDisplayNode {
                 } else if hours > 12 {
                     h12Hours = hours - 12
                 }
-                self.hoursNode.selectRow(Int(h12Hours - 1), animated: false)
+                self.hoursNode.selectRow(Int(h12Hours), animated: false)
                 self.minutesNode.selectRow(Int(minutes), animated: false)
         }
     }
