@@ -232,7 +232,7 @@ public final class MediaBox {
             case .shortLived:
                 cacheString = "short-cache"
         }
-        return "\(self.basePath)/\(cacheString)/\(fileNameForId(id))_\(representationId)"
+        return "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representationId)"
     }
     
     public func cachedRepresentationCompletePath(_ id: MediaResourceId, representation: CachedMediaResourceRepresentation) -> String {
@@ -784,6 +784,14 @@ public final class MediaBox {
         self.dataQueue.async {
             let path = self.cachedRepresentationPathsForId(resource.id, representationId: representation.uniqueId, keepDuration: representation.keepDuration).complete
             let _ = try? data.write(to: URL(fileURLWithPath: path))
+        }
+    }
+
+    public func storeCachedResourceRepresentation(_ resource: MediaResource, representationId: String, keepDuration: CachedMediaRepresentationKeepDuration, data: Data, completion: @escaping (String) -> Void = { _ in }) {
+        self.dataQueue.async {
+            let path = self.cachedRepresentationPathsForId(resource.id, representationId: representationId, keepDuration: keepDuration).complete
+            let _ = try? data.write(to: URL(fileURLWithPath: path))
+            completion(path)
         }
     }
     

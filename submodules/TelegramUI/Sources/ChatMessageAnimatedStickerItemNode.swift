@@ -24,6 +24,7 @@ import ShimmerEffect
 import WallpaperBackgroundNode
 import LocalMediaResources
 import AppBundle
+import LottieMeshSwift
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -172,6 +173,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var isPlaying = false
     
     private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
+    private var overlayMeshAnimationNode: ChatMessageTransitionNode.DecorationItemNode?
     private var enqueuedAdditionalAnimations: [(Int, Double)] = []
     private var additionalAnimationsCommitTimer: SwiftSignalKit.Timer?
   
@@ -560,6 +562,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 self.additionalAnimationNodes.removeAll()
+
+                if let overlayMeshAnimationNode = self.overlayMeshAnimationNode {
+                    self.overlayMeshAnimationNode = nil
+                    if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
+                        transitionNode.remove(decorationNode: overlayMeshAnimationNode)
+                    }
+                }
             }
             
             if self.isPlaying != isPlaying {
@@ -1397,6 +1406,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         guard let item = self.item else {
             return
         }
+        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() else {
+            return
+        }
         
         let textEmoji = item.message.text.strippedEmoji
         var additionalTextEmoji = textEmoji
@@ -1411,51 +1423,83 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return
         }
         let source = AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: nil)
-        guard let animationSize = self.animationSize, let animationNode = self.animationNode, self.additionalAnimationNodes.count < 4 else {
+        guard let animationSize = self.animationSize, let animationNode = self.animationNode else {
             return
         }
-        
+        if self.additionalAnimationNodes.count >= 4 {
+            return
+        }
         if let animationNode = animationNode as? AnimatedStickerNode {
             let _ = animationNode.playIfNeeded()
         }
         
         let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
-                    
-        let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
-        let additionalAnimationNode = AnimatedStickerNode()
-        additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2.0), height: Int(animationSize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
-        var animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
-            .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
-        animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
-        additionalAnimationNode.frame = animationFrame
-        if incomingMessage {
-            additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-        }
 
-        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() else {
-            return
-        }
-        let decorationNode = transitionNode.add(decorationNode: additionalAnimationNode, itemNode: self)
-        additionalAnimationNode.completed = { [weak self, weak decorationNode, weak transitionNode] _ in
-            guard let decorationNode = decorationNode else {
-                return
+        if #available(iOS 13.0, *), item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers, let meshAnimation = item.context.meshAnimationCache.get(resource: file.resource) {
+            var overlayMeshAnimationNode: ChatMessageTransitionNode.DecorationItemNode?
+            if let current = self.overlayMeshAnimationNode {
+                overlayMeshAnimationNode = current
+            } else {
+                if let animationView = MeshRenderer() {
+                    let animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
+                        .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
+                    animationView.frame = animationFrame
+
+                    animationView.allAnimationsCompleted = { [weak transitionNode, weak animationView, weak self] in
+                        guard let strongSelf = self, let animationView = animationView else {
+                            return
+                        }
+                        guard let overlayMeshAnimationNode = strongSelf.overlayMeshAnimationNode else {
+                            return
+                        }
+                        if overlayMeshAnimationNode.contentView !== animationView {
+                            return
+                        }
+                        strongSelf.overlayMeshAnimationNode = nil
+                        transitionNode?.remove(decorationNode: overlayMeshAnimationNode)
+                    }
+
+                    overlayMeshAnimationNode = transitionNode.add(decorationView: animationView, itemNode: self)
+                    self.overlayMeshAnimationNode = overlayMeshAnimationNode
+                }
             }
-            self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
-            transitionNode?.remove(decorationNode: decorationNode)
-        }
-        additionalAnimationNode.isPlayingChanged = { [weak self, weak decorationNode, weak transitionNode] isPlaying in
-            if !isPlaying {
+            if let meshRenderer = overlayMeshAnimationNode?.contentView as? MeshRenderer {
+                meshRenderer.add(mesh: meshAnimation, offset: CGPoint(x: CGFloat.random(in: -30.0 ... 30.0), y: CGFloat.random(in: -30.0 ... 30.0)))
+            }
+        } else {
+            let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+            let additionalAnimationNode = AnimatedStickerNode()
+            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2.0), height: Int(animationSize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+            var animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
+                .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
+            animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
+            additionalAnimationNode.frame = animationFrame
+            if incomingMessage {
+                additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+            }
+
+            let decorationNode = transitionNode.add(decorationView: additionalAnimationNode.view, itemNode: self)
+            additionalAnimationNode.completed = { [weak self, weak decorationNode, weak transitionNode] _ in
                 guard let decorationNode = decorationNode else {
                     return
                 }
                 self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
                 transitionNode?.remove(decorationNode: decorationNode)
             }
+            additionalAnimationNode.isPlayingChanged = { [weak self, weak decorationNode, weak transitionNode] isPlaying in
+                if !isPlaying {
+                    guard let decorationNode = decorationNode else {
+                        return
+                    }
+                    self?.additionalAnimationNodes.removeAll(where: { $0 === decorationNode })
+                    transitionNode?.remove(decorationNode: decorationNode)
+                }
+            }
+
+            self.additionalAnimationNodes.append(decorationNode)
+
+            additionalAnimationNode.play()
         }
-        
-        self.additionalAnimationNodes.append(decorationNode)
-        
-        additionalAnimationNode.play()
     }
     
     private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> InternalBubbleTapAction? {

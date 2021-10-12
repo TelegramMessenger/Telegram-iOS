@@ -10,6 +10,7 @@ import AsyncDisplayKit
 import Display
 import DeviceLocationManager
 import TemporaryCachedPeerDataManager
+import MeshAnimationCache
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -736,6 +737,7 @@ public protocol AccountContext: AnyObject {
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
+    var meshAnimationCache: MeshAnimationCache { get }
     
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?
