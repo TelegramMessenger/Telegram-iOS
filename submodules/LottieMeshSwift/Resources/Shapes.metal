@@ -3,7 +3,6 @@ using namespace metal;
 
 typedef struct {
     packed_float2 position;
-    packed_float2 localPosition;
 } Vertex;
 
 typedef struct {
@@ -26,13 +25,15 @@ float2 screenSpaceToRelative(float2 point, float2 viewSize) {
 vertex Varyings vertexPassthrough(
     constant Vertex *verticies[[buffer(0)]],
     constant float2 &offset[[buffer(1)]],
-    unsigned int vid[[vertex_id]]
+    unsigned int vid[[vertex_id]],
+    constant float4x4 &transformMatrix[[buffer(2)]]
 ) {
     Varyings out;
     constant Vertex &v = verticies[vid];
     float2 viewSize(512.0f, 512.0f);
-    out.position = float4(screenSpaceToRelative(float2(v.position) + offset, viewSize), 0.0, 1.0);
-    out.localPosition = float2(v.localPosition);
+    float4 transformedVertex = transformMatrix * float4(v.position, 0.0, 1.0);
+    out.position = float4(screenSpaceToRelative(float2(transformedVertex.x, transformedVertex.y) + offset, viewSize), 0.0, 1.0);
+    out.localPosition = float2(v.position);
 
     return out;
 }
@@ -78,31 +79,3 @@ radialGradientFunc(7)
 radialGradientFunc(8)
 radialGradientFunc(9)
 radialGradientFunc(10)
-
-/*fragment half4 fragmentRadialGradient3(
-    Varyings in[[stage_in]],
-    constant float2 &start[[buffer(1)]],
-    constant float2 &end[[buffer(2)]]
-) {
-    float centerDistance = distance(in.localPosition, start);
-    float endDistance = distance(start, end);
-    float dist = min(1.0, centerDistance / endDistance);
-
-    float4 colors[4] = {
-        float4(1.0, 1.0, 1.0, 1.0),
-        float4(1.0, 0.0, 0.0, 1.0),
-        float4(0.0, 0.0, 1.0, 1.0),
-        float4(0.0, 1.0, 0.0, 1.0)
-    };
-    float steps[4] = {
-        0.0,
-        0.33,
-        0.66,
-        1.0
-    };
-
-    float4 out = mixGradientColors<4>(dist, colors, steps);
-
-    return half4(out);
-}
-*/
