@@ -458,11 +458,7 @@ public final class MeshRenderer: MTKView {
                 let baseVertexIndex = Int32(startVertexIndex)
 
                 segment.triangles.withUnsafeBytes { triangles in
-                    let trianglesBase = triangles.baseAddress!.assumingMemoryBound(to: Int32.self)
-                    let indexBase = indexData.advanced(by: nextIndexIndex)
-                    for i in 0 ..< triangles.count / 4 {
-                        indexBase[i] = trianglesBase[i] + baseVertexIndex
-                    }
+                    let _ = memcpy(indexData.advanced(by: nextIndexIndex), triangles.baseAddress!, triangles.count)
                 }
                 nextIndexIndex += segment.triangles.count / 4
 
@@ -527,6 +523,8 @@ public final class MeshRenderer: MTKView {
                 transformBytes[15] = Float(transform.m44)
 
                 renderEncoder.setVertexBytes(&transformBytes, length: transformBytes.count * 4, index: 2)
+                var baseVertexIndexBytes: Int32 = Int32(baseVertexIndex)
+                renderEncoder.setVertexBytes(&baseVertexIndexBytes, length: 4, index: 3)
 
                 renderEncoder.setVertexBuffer(mesh.vertexBuffer, offset: 0, index: 0)
                 renderEncoder.drawIndexedPrimitives(type: .triangle, indexCount: iCount, indexType: .uint32, indexBuffer: mesh.indexBuffer, indexBufferOffset: iStart * 4)

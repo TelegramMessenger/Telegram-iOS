@@ -26,10 +26,11 @@ vertex Varyings vertexPassthrough(
     constant Vertex *verticies[[buffer(0)]],
     constant float2 &offset[[buffer(1)]],
     unsigned int vid[[vertex_id]],
-    constant float4x4 &transformMatrix[[buffer(2)]]
+    constant float4x4 &transformMatrix[[buffer(2)]],
+    constant int &indexOffset[[buffer(3)]]
 ) {
     Varyings out;
-    constant Vertex &v = verticies[vid];
+    constant Vertex &v = verticies[vid + indexOffset];
     float2 viewSize(512.0f, 512.0f);
     float4 transformedVertex = transformMatrix * float4(v.position, 0.0, 1.0);
     out.position = float4(screenSpaceToRelative(float2(transformedVertex.x, transformedVertex.y) + offset, viewSize), 0.0, 1.0);
