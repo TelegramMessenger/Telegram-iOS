@@ -643,8 +643,8 @@ public struct PresentationThemeSettings: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        if let themeData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "t"), let theme = PostboxDecoder(buffer: MemoryBuffer(data: themeData.data)).decodeRootObjectWithHash(hash: themeData.typeHash) as? PresentationThemeReference {
-            self.theme = theme
+        if let themeData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "t") {
+            self.theme = PresentationThemeReference(decoder: PostboxDecoder(buffer: MemoryBuffer(data: themeData.data)))
         } else {
             self.theme = .builtin(.dayClassic)
         }
