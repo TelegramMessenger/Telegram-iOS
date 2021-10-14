@@ -175,7 +175,7 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
             
     final class DecorationItemNode: ASDisplayNode {
         let itemNode: ChatMessageItemView
-        private let contentNode: ASDisplayNode
+        let contentView: UIView
         private let getContentAreaInScreenSpace: () -> CGRect
         
         private let scrollingContainer: ASDisplayNode
@@ -184,9 +184,9 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         
         fileprivate weak var overlayController: OverlayTransitionContainerController?
         
-        init(itemNode: ChatMessageItemView, contentNode: ASDisplayNode, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+        init(itemNode: ChatMessageItemView, contentView: UIView, getContentAreaInScreenSpace: @escaping () -> CGRect) {
             self.itemNode = itemNode
-            self.contentNode = contentNode
+            self.contentView = contentView
             self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
             
             self.clippingNode = ASDisplayNode()
@@ -200,7 +200,7 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
             self.addSubnode(self.clippingNode)
             self.clippingNode.addSubnode(self.scrollingContainer)
             self.scrollingContainer.addSubnode(self.containerNode)
-            self.containerNode.addSubnode(self.contentNode)
+            self.containerNode.view.addSubview(self.contentView)
         }
         
         func updateLayout(size: CGSize) {
@@ -637,8 +637,8 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         self.listNode.setCurrentSendAnimationCorrelationId(correlationId)
     }
     
-    func add(decorationNode: ASDisplayNode, itemNode: ChatMessageItemView) -> DecorationItemNode {
-        let decorationItemNode = DecorationItemNode(itemNode: itemNode, contentNode: decorationNode, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
+    func add(decorationView: UIView, itemNode: ChatMessageItemView) -> DecorationItemNode {
+        let decorationItemNode = DecorationItemNode(itemNode: itemNode, contentView: decorationView, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
         decorationItemNode.updateLayout(size: self.bounds.size)
        
         self.decorationItemNodes.append(decorationItemNode)

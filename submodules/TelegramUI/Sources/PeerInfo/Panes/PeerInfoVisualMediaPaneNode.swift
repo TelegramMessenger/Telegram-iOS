@@ -14,6 +14,7 @@ import UniversalMediaPlayer
 import ListMessageItem
 import ChatMessageInteractiveMediaBadge
 import SparseItemGrid
+import ShimmerEffect
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext
@@ -144,6 +145,10 @@ private final class VisualMediaItemNode: ASDisplayNode {
     private var frameSequenceThumbnailNode: FrameSequenceThumbnailNode?
     
     private let containerNode: ContextControllerSourceNode
+
+    private var placeholderNode: ShimmerEffectNode?
+    private var absoluteLocation: (CGRect, CGSize)?
+    
     private let imageNode: TransformImageNode
     private var statusNode: RadialStatusNode
     private let mediaBadgeNode: ChatMessageInteractiveMediaBadge
@@ -171,6 +176,9 @@ private final class VisualMediaItemNode: ASDisplayNode {
         
         self.mediaBadgeNode = ChatMessageInteractiveMediaBadge()
         self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 50.0, height: 50.0))
+
+        let shimmerNode = ShimmerEffectNode()
+        self.placeholderNode = shimmerNode
         
         super.init()
         
@@ -202,6 +210,15 @@ private final class VisualMediaItemNode: ASDisplayNode {
         
         self.mediaBadgeNode.pressed = { [weak self] in
             self?.progressPressed()
+        }
+    }
+
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        //var rect = rect
+        //rect.origin.y += self.insets.top
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.placeholderNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
         }
     }
     
@@ -270,13 +287,13 @@ private final class VisualMediaItemNode: ASDisplayNode {
         self.containerNode.cancelGesture()
     }
     
-    func update(size: CGSize, item: VisualMediaItem, theme: PresentationTheme, synchronousLoad: Bool) {
+    func update(size: CGSize, item: VisualMediaItem?, theme: PresentationTheme, synchronousLoad: Bool) {
         if item === self.item?.0 && size == self.item?.2 {
             return
         }
         self.theme = theme
         var media: Media?
-        if let message = item.message {
+        if let item = item, let message = item.message {
             for value in message.media {
                 if let image = value as? TelegramMediaImage {
                     media = image
@@ -287,8 +304,20 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 }
             }
         }
+
+        if let shimmerNode = self.placeholderNode {
+            shimmerNode.frame = CGRect(origin: CGPoint(), size: size)
+            if let (rect, size) = self.absoluteLocation {
+                shimmerNode.updateAbsoluteRect(rect, within: size)
+            }
+
+            var shapes: [ShimmerEffectNode.Shape] = []
+            shapes.append(.rect(rect: CGRect(origin: CGPoint(), size: size)))
+
+            shimmerNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: size)
+        }
         
-        if let message = item.message, let file = media as? TelegramMediaFile, file.isAnimated {
+        if let item = item, let message = item.message, let file = media as? TelegramMediaFile, file.isAnimated {
             if self.videoLayerFrameManager == nil {
                 let sampleBufferLayer: SampleBufferLayer
                 if let current = self.sampleBufferLayer {
@@ -310,10 +339,22 @@ private final class VisualMediaItemNode: ASDisplayNode {
             self.videoLayerFrameManager = nil
         }
         
-        if let message = item.message, let media = media, (self.item?.1 == nil || !media.isEqual(to: self.item!.1!)) {
+        if let item = item, let message = item.message, let media = media, (self.item?.1 == nil || !media.isEqual(to: self.item!.1!)) {
             var mediaDimensions: CGSize?
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
                 mediaDimensions = largestSize.cgSize
+
+                if let placeholderNode = self.placeholderNode, placeholderNode.supernode == nil {
+                    self.containerNode.insertSubnode(placeholderNode, at: 0)
+                }
+                self.imageNode.imageUpdated = { [weak self] image in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if image != nil {
+                        strongSelf.placeholderNode?.removeFromSupernode()
+                    }
+                }
                
                 self.imageNode.setSignal(mediaGridMessagePhoto(account: context.account, photoReference: .message(message: MessageReference(message), media: image), fullRepresentationSize: CGSize(width: 300.0, height: 300.0), synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad, dispatchOnDisplayLink: true)
                 
@@ -324,6 +365,18 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 self.mediaBadgeNode.isHidden = true
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
+                if let placeholderNode = self.placeholderNode, placeholderNode.supernode == nil {
+                    self.containerNode.insertSubnode(placeholderNode, at: 0)
+                }
+                self.imageNode.imageUpdated = { [weak self] image in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if image != nil {
+                        strongSelf.placeholderNode?.removeFromSupernode()
+                    }
+                }
+
                 mediaDimensions = file.dimensions?.cgSize
                 self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(message), media: file), synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: true), attemptSynchronously: synchronousLoad)
                 
@@ -405,6 +458,10 @@ private final class VisualMediaItemNode: ASDisplayNode {
             self.item = (item, media, size, mediaDimensions)
             
             self.updateHiddenMedia()
+        } else {
+            if let placeholderNode = self.placeholderNode, placeholderNode.supernode == nil {
+                self.containerNode.insertSubnode(placeholderNode, at: 0)
+            }
         }
         
         let progressDiameter: CGFloat = 40.0
@@ -574,6 +631,7 @@ private final class VisualMediaItem {
     enum StableId: Hashable {
         case message(UInt32)
         case placeholder(MessageId)
+        case hole(UInt32)
     }
 
     var stableId: StableId {
@@ -879,6 +937,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private let peerId: PeerId
     private let chatControllerInteraction: ChatControllerInteraction
     private(set) var contentType: ContentType
+    private var contentTypePromise: ValuePromise<ContentType>
     
     weak var parentController: ViewController?
 
@@ -898,6 +957,11 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private var didSetReady: Bool = false
     var isReady: Signal<Bool, NoError> {
         return self.ready.get()
+    }
+
+    private let statusPromise = Promise<PeerInfoStatusData?>(nil)
+    var status: Signal<PeerInfoStatusData?, NoError> {
+        self.statusPromise.get()
     }
         
     private let listDisposable = MetaDisposable()
@@ -919,12 +983,15 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private var requestedPlaceholderIds = Set<MessageId>()
 
     private(set) var zoomLevel: ZoomLevel = .level3
+
+    var openCurrentDate: (() -> Void)?
     
     init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType) {
         self.context = context
         self.peerId = peerId
         self.chatControllerInteraction = chatControllerInteraction
         self.contentType = contentType
+        self.contentTypePromise = ValuePromise<ContentType>(contentType)
 
         self.scrollingArea = SparseItemGridScrollingArea()
         self.scrollNode = ASScrollNode()
@@ -938,6 +1005,13 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 return nil
             }
             return strongSelf.scrollNode.view
+        }
+
+        self.scrollingArea.openCurrentDate = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.openCurrentDate?()
         }
         
         self._itemInteraction = VisualMediaItemInteraction(
@@ -993,6 +1067,102 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         }, queue: .mainQueue())
         self.animationTimer = animationTimer
         animationTimer.start()
+
+        self.statusPromise.set((self.contentTypePromise.get()
+        |> distinctUntilChanged
+        |> mapToSignal { contentType -> Signal<(ContentType, [MessageTags: Int32]), NoError> in
+            var summaries: [MessageTags] = []
+            switch contentType {
+            case .photoOrVideo:
+                summaries.append(.photo)
+                summaries.append(.video)
+            case .photo:
+                summaries.append(.photo)
+            case .video:
+                summaries.append(.video)
+            case .gifs:
+                summaries.append(.gif)
+            }
+            return context.account.postbox.combinedView(keys: summaries.map { tag in
+                return PostboxViewKey.historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)
+            })
+            |> map { views -> (ContentType, [MessageTags: Int32]) in
+                switch contentType {
+                case .photoOrVideo:
+                    summaries.append(.photo)
+                    summaries.append(.video)
+                case .photo:
+                    summaries.append(.photo)
+                case .video:
+                    summaries.append(.video)
+                case .gifs:
+                    summaries.append(.gif)
+                }
+                var result: [MessageTags: Int32] = [:]
+                for tag in summaries {
+                    if let view = views.views[PostboxViewKey.historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)] as? MessageHistoryTagSummaryView {
+                        result[tag] = view.count ?? 0
+                    } else {
+                        result[tag] = 0
+                    }
+                }
+                return (contentType, result)
+            }
+        }
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            if lhs.0 != rhs.0 {
+                return false
+            }
+            if lhs.1 != rhs.1 {
+                return false
+            }
+            return true
+        })
+        |> map { contentType, dict -> PeerInfoStatusData? in
+            switch contentType {
+            case .photoOrVideo:
+                let photoCount: Int32 = dict[.photo] ?? 0
+                let videoCount: Int32 = dict[.video] ?? 0
+
+                //TODO:localize
+                if photoCount != 0 && videoCount != 0 {
+                    return PeerInfoStatusData(text: "\(photoCount) photos, \(videoCount) videos", isActivity: false)
+                } else if photoCount != 0 {
+                    return PeerInfoStatusData(text: "\(photoCount) photos", isActivity: false)
+                } else if videoCount != 0 {
+                    return PeerInfoStatusData(text: "\(photoCount) videos", isActivity: false)
+                } else {
+                    return nil
+                }
+            case .photo:
+                let photoCount: Int32 = dict[.photo] ?? 0
+
+                //TODO:localize
+                if photoCount != 0 {
+                    return PeerInfoStatusData(text: "\(photoCount) photos", isActivity: false)
+                } else {
+                    return nil
+                }
+            case .video:
+                let videoCount: Int32 = dict[.video] ?? 0
+
+                //TODO:localize
+                if videoCount != 0 {
+                    return PeerInfoStatusData(text: "\(videoCount) videos", isActivity: false)
+                } else {
+                    return nil
+                }
+            case .gifs:
+                let gifCount: Int32 = dict[.gif] ?? 0
+
+                //TODO:localize
+                if gifCount != 0 {
+                    return PeerInfoStatusData(text: "\(gifCount) gifs", isActivity: false)
+                } else {
+                    return nil
+                }
+            }
+        }))
     }
     
     deinit {
@@ -1006,6 +1176,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             return
         }
         self.contentType = contentType
+        self.contentTypePromise.set(contentType)
 
         self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, tag: tagMaskForType(self.contentType))
         self.isRequestingView = false
@@ -1018,17 +1189,66 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         }
         self.zoomLevel = level
 
-        self.itemsLayout = nil
         if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
-            if let copyView = self.scrollNode.view.snapshotView(afterScreenUpdates: false) {
-                copyView.backgroundColor = self.context.sharedContext.currentPresentationData.with({ $0 }).theme.list.plainBackgroundColor
+
+            var currentTopVisibleItemFrame: CGRect?
+            if let itemsLayout = self.itemsLayout {
+                let headerItemMinY = self.scrollNode.view.bounds.minY + 1.0
+                let (minVisibleIndex, maxVisibleIndex) = itemsLayout.visibleRange(rect: self.scrollNode.view.bounds)
+
+                if minVisibleIndex <= maxVisibleIndex {
+                    for i in minVisibleIndex ... maxVisibleIndex {
+                        let itemFrame = itemsLayout.frame(forItemAt: i, sideInset: sideInset)
+
+                        if currentTopVisibleItemFrame == nil && itemFrame.maxY > headerItemMinY {
+                            currentTopVisibleItemFrame = self.scrollNode.view.convert(itemFrame, to: self.view)
+                            break
+                        }
+                    }
+                }
+            }
+
+            self.itemsLayout = nil
+
+            let copyView = self.scrollNode.view.snapshotView(afterScreenUpdates: false)
+
+            self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: false, transition: .immediate)
+
+            var updatedTopVisibleItemFrame: CGRect?
+            if let itemsLayout = self.itemsLayout {
+                let headerItemMinY = self.scrollNode.view.bounds.minY + 1.0
+                let (updatedMinVisibleIndex, updatedMaxVisibleIndex) = itemsLayout.visibleRange(rect: self.scrollNode.view.bounds)
+
+                if updatedMinVisibleIndex <= updatedMaxVisibleIndex {
+                    for i in updatedMinVisibleIndex ... updatedMaxVisibleIndex {
+                        let itemFrame = itemsLayout.frame(forItemAt: i, sideInset: sideInset)
+
+                        if updatedTopVisibleItemFrame == nil && itemFrame.maxY > headerItemMinY {
+                            updatedTopVisibleItemFrame = self.scrollNode.view.convert(itemFrame, to: self.view)
+                            break
+                        }
+                    }
+                }
+            }
+
+            if let copyView = copyView, let currentTopVisibleItemFrame = currentTopVisibleItemFrame, let updatedTopVisibleItemFrame = updatedTopVisibleItemFrame {
                 self.view.addSubview(copyView)
                 copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyView] _ in
                     copyView?.removeFromSuperview()
                 })
-            }
 
-            self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .immediate)
+                let additionalOffset = CGPoint(x: updatedTopVisibleItemFrame.minX - currentTopVisibleItemFrame.minX, y: updatedTopVisibleItemFrame.minY - currentTopVisibleItemFrame.minY)
+                self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: self.scrollNode.view.contentOffset.y + additionalOffset.y), animated: false)
+
+                let widthFactor = updatedTopVisibleItemFrame.width / currentTopVisibleItemFrame.width
+                copyView.layer.animateScale(from: 1.0, to: widthFactor, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in })
+                let copyOffset = CGPoint(x: -self.scrollNode.bounds.width * (1.0 - widthFactor) * 0.5, y: -self.scrollNode.bounds.height * (1.0 - widthFactor) * 0.5)//.offsetBy(dx: additionalOffset.x, dy: additionalOffset.y)
+                copyView.layer.animatePosition(from: CGPoint(), to: copyOffset, duration: 0.2, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
+
+                self.scrollNode.layer.animateScale(from: 1.0 / widthFactor, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: true)
+                let originalOffset = CGPoint(x: -self.scrollNode.bounds.width * (1.0 - 1.0 / widthFactor) * 0.5, y: -self.scrollNode.bounds.height * (1.0 - 1.0 / widthFactor) * 0.5)//.offsetBy(dx: additionalOffset.x, dy: additionalOffset.y)
+                self.scrollNode.layer.animatePosition(from: originalOffset, to: CGPoint(), duration: 0.2, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: true, additive: true)
+            }
         }
     }
     
@@ -1328,7 +1548,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             containerInsets: UIEdgeInsets(top: 0.0, left: currentParams.sideInset, bottom: currentParams.bottomInset, right: currentParams.sideInset),
             contentHeight: itemsLayout.contentHeight,
             contentOffset: self.scrollNode.view.contentOffset.y,
-            isScrolling: self.scrollNode.view.isDragging || self.scrollNode.view.isDecelerating,
+            isScrolling: self.scrollNode.view.isDragging || self.scrollNode.view.isDecelerating || self.decelerationAnimator != nil,
             dateString: dateString,
             transition: transition
         )
@@ -1413,16 +1633,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                     }
                 }
 
-                guard let item = maybeItem else {
-                    continue
+                let stableId: VisualMediaItem.StableId
+                if let item = maybeItem {
+                    stableId = item.stableId
+                } else {
+                    stableId = .hole(UInt32(itemIndex))
                 }
-                let stableId = item.stableId
-                validIds.insert(stableId)
 
-                if item.message == nil && !self.requestedPlaceholderIds.contains(item.id) {
-                    //requestPlaceholderIds.append(item.id)
-                    self.requestedPlaceholderIds.insert(item.id)
-                }
+                validIds.insert(stableId)
                 
                 let itemFrame = itemsLayout.frame(forItemAt: itemIndex, sideInset: sideInset)
                 
@@ -1435,12 +1653,13 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                     self.scrollNode.addSubnode(itemNode)
                 }
                 itemNode.frame = itemFrame
+                itemNode.updateAbsoluteRect(itemFrame.offsetBy(dx: 0.0, dy: -activeRect.origin.y), within: activeRect.size)
 
                 var itemSynchronousLoad = false
                 if itemIndex >= minActuallyVisibleIndex && itemIndex <= maxActuallyVisibleIndex {
                     itemSynchronousLoad = synchronousLoad
                 }
-                itemNode.update(size: itemFrame.size, item: item, theme: theme, synchronousLoad: itemSynchronousLoad)
+                itemNode.update(size: itemFrame.size, item: maybeItem, theme: theme, synchronousLoad: itemSynchronousLoad)
                 itemNode.updateIsVisible(itemFrame.intersects(activeRect))
             }
         }

@@ -1490,7 +1490,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
     return result
 }
 
-private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
+final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private weak var controller: PeerInfoScreenImpl?
     
     private let context: AccountContext
@@ -1514,6 +1514,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let paneContainerNode: PeerInfoPaneContainerNode
     private var ignoreScrolling: Bool = false
     private var hapticFeedback: HapticFeedback?
+
+    private var customStatusData: PeerInfoStatusData?
+    private let customStatusPromise = Promise<PeerInfoStatusData?>(nil)
+    private var customStatusDisposable: Disposable?
+
+    private var refreshMessageTagStatsDisposable: Disposable?
     
     private var searchDisplayController: SearchDisplayController?
     
@@ -2246,6 +2252,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let strongSelf = self else {
                 return
             }
+
+            if let pane = strongSelf.paneContainerNode.currentPane?.node {
+                strongSelf.customStatusPromise.set(pane.status)
+            } else {
+                strongSelf.customStatusPromise.set(.single(nil))
+            }
+
             if let (layout, navigationHeight) = strongSelf.validLayout {
                 if strongSelf.headerNode.isAvatarExpanded {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
@@ -2289,6 +2302,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             } else {
                 return false
             }
+        }
+
+        self.paneContainerNode.openMediaCalendar = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.openMediaCalendar()
         }
         
         self.paneContainerNode.requestPerformPeerMemberAction = { [weak self] member, action in
@@ -2868,6 +2888,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             
             self.context.prefetchManager?.prepareNextGreetingSticker()
         }
+
+        self.customStatusDisposable = (self.customStatusPromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.customStatusData = value
+            if let (layout, navigationHeight) = strongSelf.validLayout {
+                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+            }
+        })
+
+        self.refreshMessageTagStatsDisposable = context.engine.messages.refreshMessageTagStats(peerId: peerId, tags: [.video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file]).start()
     }
     
     deinit {
@@ -2887,6 +2920,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.supportPeerDisposable.dispose()
         self.tipsPeerDisposable.dispose()
         self.shareStatusDisposable?.dispose()
+        self.customStatusDisposable?.dispose()
+        self.refreshMessageTagStatsDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -5958,28 +5993,32 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
 
         var items: [ContextMenuItem] = []
         //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Zoom In", icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak pane] _, a in
+
+        let canZoomIn = pane.zoomLevel.decremented() != pane.zoomLevel
+        let canZoomOut = pane.zoomLevel.incremented() != pane.zoomLevel
+
+        items.append(.action(ContextMenuActionItem(text: "Zoom In", textColor: canZoomIn ? .primary : .disabled, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ZoomIn"), color: canZoomIn ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
+        }, action: canZoomIn ? { [weak pane] _, a in
             a(.default)
 
             guard let pane = pane else {
                 return
             }
             pane.updateZoomLevel(level: pane.zoomLevel.decremented())
-        })))
-        items.append(.action(ContextMenuActionItem(text: "Zoom Out", icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak pane] _, a in
+        } : nil)))
+        items.append(.action(ContextMenuActionItem(text: "Zoom Out", textColor : canZoomOut ? .primary : .disabled, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ZoomOut"), color: canZoomOut ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
+        }, action: canZoomOut ? { [weak pane] _, a in
             a(.default)
 
             guard let pane = pane else {
                 return
             }
             pane.updateZoomLevel(level: pane.zoomLevel.incremented())
-        })))
+        } : nil)))
         items.append(.action(ContextMenuActionItem(text: "Show Calendar", icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Search/Calendar"), color: theme.contextMenu.primaryColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
             a(.default)
 
@@ -6112,7 +6151,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         var contentHeight: CGFloat = 0.0
         
-        let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, transition: transition, additive: additive)
+        let headerHeight = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : self.scrollNode.view.contentOffset.y, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.customStatusData ?? self.data?.status, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, transition: transition, additive: additive)
         let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: headerHeight))
         if additive {
             transition.updateFrameAdditive(node: self.headerNode, frame: headerFrame)
@@ -6361,7 +6400,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 
         if let (layout, navigationHeight) = self.validLayout {
             if !additive {
-                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, transition: transition, additive: additive)
+                let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.customStatusData ?? self.data?.status, isSecretChat: self.peerId.namespace == Namespaces.Peer.SecretChat, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, transition: transition, additive: additive)
             }
             
             let paneAreaExpansionDistance: CGFloat = 32.0

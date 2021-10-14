@@ -95,7 +95,7 @@ public struct PresentationResourcesRootController {
 
     public static func navigationMoreCircledIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationMoreCircledIcon.rawValue, { theme in
-            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.rootController.navigationBar.accentTextColor)
+            generateTintedImage(image: UIImage(bundleImageName: "Chat List/NavigationMore"), color: theme.rootController.navigationBar.accentTextColor)
         })
     }
     

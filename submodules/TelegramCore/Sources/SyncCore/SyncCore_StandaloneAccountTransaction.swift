@@ -44,7 +44,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
         upgradedMessageHoles: upgradedMessageHoles,
         messageThreadHoles: messageThreadHoles,
         existingMessageTags: MessageTags.all,
-        messageTagsWithSummary: [.unseenPersonalMessage, .pinned],
+        messageTagsWithSummary: [.unseenPersonalMessage, .pinned, .video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file],
         existingGlobalMessageTags: GlobalMessageTags.all,
         peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat],
         peerSummaryCounterTags: { peer, isContact in

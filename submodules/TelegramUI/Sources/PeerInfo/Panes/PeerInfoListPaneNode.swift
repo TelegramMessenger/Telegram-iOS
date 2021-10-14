@@ -49,6 +49,11 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private var mediaAccessoryPanelContainer: PassthroughContainerNode
     private var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     private var dismissingPanel: ASDisplayNode?
+
+    private let statusPromise = Promise<PeerInfoStatusData?>(nil)
+    var status: Signal<PeerInfoStatusData?, NoError> {
+        self.statusPromise.get()
+    }
     
     init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, tagMask: MessageTags) {
         self.context = context
@@ -130,6 +135,28 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 }
             })
         }
+
+        self.statusPromise.set(context.account.postbox.combinedView(keys: [PostboxViewKey.historyTagSummaryView(tag: tagMask, peerId: peerId, namespace: Namespaces.Message.Cloud)])
+        |> map { views -> PeerInfoStatusData? in
+            let count: Int32 = (views.views[PostboxViewKey.historyTagSummaryView(tag: tagMask, peerId: peerId, namespace: Namespaces.Message.Cloud)] as? MessageHistoryTagSummaryView)?.count ?? 0
+            if count == 0 {
+                return nil
+            }
+
+            //TODO:localize
+            switch tagMask {
+            case MessageTags.file:
+                return PeerInfoStatusData(text: "\(count) files", isActivity: false)
+            case MessageTags.music:
+                return PeerInfoStatusData(text: "\(count) music files", isActivity: false)
+            case MessageTags.voiceOrInstantVideo:
+                return PeerInfoStatusData(text: "\(count) voice messages", isActivity: false)
+            case MessageTags.webPage:
+                return PeerInfoStatusData(text: "\(count) links", isActivity: false)
+            default:
+                return nil
+            }
+        })
     }
     
     deinit {

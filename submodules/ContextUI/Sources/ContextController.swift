@@ -28,6 +28,7 @@ public enum ContextMenuActionItemTextLayout {
 public enum ContextMenuActionItemTextColor {
     case primary
     case destructive
+    case disabled
 }
 
 public enum ContextMenuActionResult {
@@ -74,9 +75,9 @@ public final class ContextMenuActionItem {
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
-    public let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void
+    public let action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?
     
-    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, textFont: ContextMenuActionItemFont = .regular, badge: ContextMenuActionBadge? = nil, icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, textFont: ContextMenuActionItemFont = .regular, badge: ContextMenuActionBadge? = nil, icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?) {
         self.text = text
         self.textColor = textColor
         self.textFont = textFont

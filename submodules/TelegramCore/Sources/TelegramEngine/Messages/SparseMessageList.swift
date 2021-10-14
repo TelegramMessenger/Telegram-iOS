@@ -72,7 +72,7 @@ public final class SparseMessageList {
 
         private var topSectionItemRequestCount: Int = 100
         private var topSection: TopSection?
-        private var topItemsDisposable: Disposable?
+        private var topItemsDisposable = MetaDisposable()
 
         private var sparseItems: SparseItems?
         private var sparseItemsDisposable: Disposable?
@@ -83,6 +83,7 @@ public final class SparseMessageList {
         }
         private let loadHoleDisposable = MetaDisposable()
         private var loadingHole: LoadingHole?
+        private var scheduledLoadingHole: LoadingHole?
 
         private var loadingPlaceholders: [MessageId: Disposable] = [:]
         private var loadedPlaceholders: [MessageId: Message] = [:]
@@ -104,7 +105,10 @@ public final class SparseMessageList {
                 guard let inputPeer = inputPeer else {
                     return .single(SparseItems(items: []))
                 }
-                return account.network.request(Api.functions.messages.getSearchResultsPositions(peer: inputPeer, filter: .inputMessagesFilterPhotoVideo, offsetId: 0, limit: 1000))
+                guard let messageFilter = messageFilterForTagMask(messageTag) else {
+                    return .single(SparseItems(items: []))
+                }
+                return account.network.request(Api.functions.messages.getSearchResultsPositions(peer: inputPeer, filter: messageFilter, offsetId: 0, limit: 1000))
                 |> map { result -> SparseItems in
                     switch result {
                     case let .searchResultsPositions(totalCount, positions):
@@ -159,13 +163,13 @@ public final class SparseMessageList {
         }
 
         deinit {
-            self.topItemsDisposable?.dispose()
+            self.topItemsDisposable.dispose()
             self.sparseItemsDisposable?.dispose()
             self.loadHoleDisposable.dispose()
         }
 
         private func resetTopSection() {
-            self.topItemsDisposable = (self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .upperBound, count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: self.messageTag, appendMessagesFromTheSameGroup: false, namespaces: .not(Set(Namespaces.Message.allScheduled)), orderStatistics: [])
+            self.topItemsDisposable.set((self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .upperBound, count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: self.messageTag, appendMessagesFromTheSameGroup: false, namespaces: .not(Set(Namespaces.Message.allScheduled)), orderStatistics: [])
             |> deliverOn(self.queue)).start(next: { [weak self] view, updateType, _ in
                 guard let strongSelf = self else {
                     return
@@ -176,7 +180,7 @@ public final class SparseMessageList {
                 default:
                     strongSelf.updateTopSection(view: view)
                 }
-            })
+            }))
         }
 
         func loadMoreFromTopSection() {
@@ -338,6 +342,12 @@ public final class SparseMessageList {
             if self.loadingHole == loadingHole {
                 return
             }
+
+            if self.loadingHole != nil {
+                self.scheduledLoadingHole = loadingHole
+                return
+            }
+
             self.loadingHole = loadingHole
             let mappedDirection: MessageHistoryViewRelativeHoleDirection
             switch direction {
@@ -480,6 +490,11 @@ public final class SparseMessageList {
 
                 if strongSelf.loadingHole == loadingHole {
                     strongSelf.loadingHole = nil
+
+                    if let scheduledLoadingHole = strongSelf.scheduledLoadingHole {
+                        strongSelf.scheduledLoadingHole = nil
+                        strongSelf.loadHole(anchor: scheduledLoadingHole.anchor, direction: scheduledLoadingHole.direction)
+                    }
                 }
             }))
         }

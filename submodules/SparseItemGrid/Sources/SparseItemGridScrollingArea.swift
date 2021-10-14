@@ -336,6 +336,11 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private var activityTimer: SwiftSignalKit.Timer?
 
     public var beginScrolling: (() -> UIScrollView?)?
+    public var openCurrentDate: (() -> Void)?
+
+    private var offsetBarTimer: SwiftSignalKit.Timer?
+    private var beganAtDateIndicator = false
+    private let hapticFeedback = HapticFeedback()
 
     private struct ProjectionData {
         var minY: CGFloat
@@ -354,6 +359,9 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
         super.init()
 
+        self.dateIndicator.isUserInteractionEnabled = false
+        self.lineIndicator.isUserInteractionEnabled = false
+
         self.view.addSubview(self.dateIndicator)
         self.view.addSubview(self.lineIndicator)
 
@@ -362,8 +370,11 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 guard let strongSelf = self else {
                     return false
                 }
-                if !strongSelf.dateIndicator.frame.contains(point) {
-                    return false
+
+                if strongSelf.dateIndicator.frame.contains(point) {
+                    strongSelf.beganAtDateIndicator = true
+                } else {
+                    strongSelf.beganAtDateIndicator = false
                 }
 
                 return true
@@ -372,12 +383,18 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 guard let strongSelf = self else {
                     return
                 }
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.1, curve: .easeInOut)
-                transition.updateSublayerTransformOffset(layer: strongSelf.dateIndicator.layer, offset: CGPoint(x: -80.0, y: 0.0))
+
+                let offsetBarTimer = SwiftSignalKit.Timer(timeout: 0.2, repeat: false, completion: {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.performOffsetBarTimerEvent()
+                }, queue: .mainQueue())
+                strongSelf.offsetBarTimer?.invalidate()
+                strongSelf.offsetBarTimer = offsetBarTimer
+                offsetBarTimer.start()
 
                 strongSelf.isDragging = true
-
-                strongSelf.updateLineIndicator(transition: transition)
 
                 if let scrollView = strongSelf.beginScrolling?() {
                     strongSelf.draggingScrollView = scrollView
@@ -392,6 +409,13 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                     return
                 }
                 strongSelf.draggingScrollView = nil
+
+                if strongSelf.offsetBarTimer != nil {
+                    strongSelf.offsetBarTimer?.invalidate()
+                    strongSelf.offsetBarTimer = nil
+
+                    strongSelf.openCurrentDate?()
+                }
 
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
                 transition.updateSublayerTransformOffset(layer: strongSelf.dateIndicator.layer, offset: CGPoint(x: 0.0, y: 0.0))
@@ -413,6 +437,12 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                     return
                 }
 
+                if strongSelf.offsetBarTimer != nil {
+                    strongSelf.offsetBarTimer?.invalidate()
+                    strongSelf.offsetBarTimer = nil
+                    strongSelf.performOffsetBarTimerEvent()
+                }
+
                 let indicatorArea = projectionData.maxY - projectionData.minY
                 let scrollFraction = projectionData.scrollableHeight / indicatorArea
 
@@ -432,6 +462,15 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         self.dragGesture = dragGesture
 
         self.view.addGestureRecognizer(dragGesture)
+    }
+
+    private func performOffsetBarTimerEvent() {
+        self.hapticFeedback.impact()
+        self.offsetBarTimer = nil
+
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.1, curve: .easeInOut)
+        transition.updateSublayerTransformOffset(layer: self.dateIndicator.layer, offset: self.beganAtDateIndicator ? CGPoint(x: -80.0, y: 0.0) : CGPoint(x: -3.0, y: 0.0))
+        self.updateLineIndicator(transition: transition)
     }
 
     public func update(
@@ -553,6 +592,13 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             return nil
         }
         if self.dateIndicator.frame.contains(point) {
+            return super.hitTest(point, with: event)
+        }
+
+        if self.lineIndicator.alpha <= 0.01 {
+            return nil
+        }
+        if self.lineIndicator.frame.insetBy(dx: -4.0, dy: -2.0).contains(point) {
             return super.hitTest(point, with: event)
         }
 
