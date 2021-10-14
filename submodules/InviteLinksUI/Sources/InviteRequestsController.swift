@@ -151,21 +151,29 @@ private func inviteRequestsControllerEntries(presentationData: PresentationData,
     return entries
 }
 
+private struct InviteRequestsControllerState: Equatable {
+    var searchingMembers: Bool
+}
+
 public func inviteRequestsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, existingContext: PeerInvitationImportersContext? = nil) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
     var navigateToProfileImpl: ((EnginePeer) -> Void)?
-    
+    var dismissInputImpl: (() -> Void)?
     var dismissTooltipsImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
+    let statePromise = ValuePromise(InviteRequestsControllerState(searchingMembers: false), ignoreRepeated: true)
+    let stateValue = Atomic(value: InviteRequestsControllerState(searchingMembers: false))
+    let updateState: ((InviteRequestsControllerState) -> InviteRequestsControllerState) -> Void = { f in
+        statePromise.set(stateValue.modify { f($0) })
+    }
+    
     let updateDisposable = MetaDisposable()
     actionsDisposable.add(updateDisposable)
-    
-    var getControllerImpl: (() -> ViewController?)?
-    
+        
     let importersContext = existingContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: nil))
     
     let arguments = InviteRequestsControllerArguments(context: context, openLinks: {
@@ -195,7 +203,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
     }, denyRequest: { peer in
         importersContext.update(peer.id, action: .deny)
     }, peerContextAction: { peer, node, gesture in
-        guard let node = node as? ContextReferenceContentNode, let controller = getControllerImpl?() else {
+        guard let node = node as? ContextExtractedContentContainingNode else {
             return
         }
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -206,11 +214,15 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         }, action: { _, f in
             f(.dismissWithoutContent)
             
-            dismissTooltipsImpl?()
-                        
         })))
         
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+        let dismissPromise = ValuePromise<Bool>(false)
+        let source = InviteRequestsContextExtractedContentSource(sourceNode: node, keepInPlace: false, blurBackground: true, centerVertically: true, shouldBeDismissed: dismissPromise.get())
+//        sourceNode.requestDismiss = {
+//            dismissPromise.set(true)
+//        }
+        
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(source), items: .single(ContextController.Items(items: items)), gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     })
     
@@ -222,9 +234,10 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         context.engine.data.subscribe(
             TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
         ),
-        importersContext.state
+        importersContext.state,
+        statePromise.get()
     )
-    |> map { presentationData, peer, importersState -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, peer, importersState, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var isGroup = true
         if case let .channel(channel) = peer, case .broadcast = channel.info {
             isGroup = false
@@ -241,9 +254,43 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         let crossfade = !previousEntries.isEmpty && entries.isEmpty
         let animateChanges = (!previousEntries.isEmpty && !entries.isEmpty) && previousEntries.count != entries.count
         
+        let rightNavigationButton: ItemListNavigationButton?
+        if !importersState.importers.isEmpty {
+            rightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
+                updateState { state in
+                    var updatedState = state
+                    updatedState.searchingMembers = true
+                    return updatedState
+                }
+            })
+        } else {
+            rightNavigationButton = nil
+        }
+        
+        var searchItem: ItemListControllerSearch?
+        if state.searchingMembers && !importersState.importers.isEmpty {
+            searchItem = InviteRequestsSearchItem(context: context, peerId: peerId, cancel: {
+                updateState { state in
+                    var updatedState = state
+                    updatedState.searchingMembers = false
+                    return updatedState
+                }
+            }, openPeer: { peer in
+                arguments.openPeer(peer)
+            }, approveRequest: { peer in
+                arguments.approveRequest(peer)
+            }, denyRequest: { peer in
+                arguments.denyRequest(peer)
+            }, pushController: { c in
+                pushControllerImpl?(c)
+            }, dismissInput: {
+                dismissInputImpl?()
+            })
+        }
+        
         let title: ItemListControllerTitle = .text(presentationData.strings.MemberRequests_Title)
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: crossfade, animateChanges: animateChanges)
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
@@ -283,8 +330,8 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
             navigationController.pushViewController(controller)
         }
     }
-    getControllerImpl = { [weak controller] in
-        return controller
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
     }
     dismissTooltipsImpl = { [weak controller] in
         controller?.window?.forEachController({ controller in
@@ -300,4 +347,32 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         })
     }
     return controller
+}
+
+
+private final class InviteRequestsContextExtractedContentSource: ContextExtractedContentSource {
+    var keepInPlace: Bool
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool
+
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    var centerVertically: Bool
+    var shouldBeDismissed: Signal<Bool, NoError>
+    
+    init(sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool, centerVertically: Bool, shouldBeDismissed: Signal<Bool, NoError>) {
+        self.sourceNode = sourceNode
+        self.keepInPlace = keepInPlace
+        self.blurBackground = blurBackground
+        self.centerVertically = centerVertically
+        self.shouldBeDismissed = shouldBeDismissed
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
 }

@@ -4,6 +4,11 @@ import TelegramApi
 import MtProtoKit
 
 
+public enum JoinLinkInfoError {
+    case generic
+    case flood
+}
+
 public enum JoinLinkError {
     case generic
     case tooMuchJoined
@@ -49,7 +54,7 @@ func _internal_joinChatInteractively(with hash: String, account: Account) -> Sig
             case "INVITE_REQUEST_SENT":
                 return .requestSent
             default:
-                if error.description.hasPrefix("FLOOD_WAIT") {
+                if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                     return .flood
                 } else {
                     return .generic
@@ -74,13 +79,17 @@ func _internal_joinChatInteractively(with hash: String, account: Account) -> Sig
     }
 }
 
-func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<ExternalJoiningChatState, NoError> {
-    return account.network.request(Api.functions.messages.checkChatInvite(hash: hash))
+func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<ExternalJoiningChatState, JoinLinkInfoError> {
+    return account.network.request(Api.functions.messages.checkChatInvite(hash: hash), automaticFloodWait: false)
     |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.ChatInvite?, NoError> in
-        return .single(nil)
+    |> `catch` { error -> Signal<Api.ChatInvite?, JoinLinkInfoError> in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .fail(.flood)
+        } else {
+            return .single(nil)
+        }
     }
-    |> mapToSignal { (result) -> Signal<ExternalJoiningChatState, NoError> in
+    |> mapToSignal { result -> Signal<ExternalJoiningChatState, JoinLinkInfoError> in
         if let result = result {
             switch result {
                 case let .chatInvite(flags, title, about, invitePhoto, participantsCount, participants):
@@ -96,6 +105,7 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
                             
                             return .alreadyJoined(peer.id)
                         })
+                        |> castError(JoinLinkInfoError.self)
                     }
                     return .single(.invalidHash)
                 case let .chatInvitePeek(chat, expires):
@@ -107,6 +117,7 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
                             
                             return .peek(peer.id, expires)
                         })
+                        |> castError(JoinLinkInfoError.self)
                     }
                     return .single(.invalidHash)
             }

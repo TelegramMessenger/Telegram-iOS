@@ -9,6 +9,7 @@ import AccountContext
 import SelectablePeerNode
 import ShareController
 import SolidRoundedButtonNode
+import ActivityIndicator
 
 private let avatarFont = avatarPlaceholderFont(size: 42.0)
 
@@ -248,5 +249,53 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     }
     
     func updateSelectedPeers() {
+    }
+}
+
+public enum ShareLoadingState {
+    case preparing
+    case progress(Float)
+    case done
+}
+
+public final class JoinLinkPreviewLoadingContainerNode: ASDisplayNode, ShareContentContainerNode {
+    private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    
+    private let theme: PresentationTheme
+    private let activityIndicator: ActivityIndicator
+    
+    public init(theme: PresentationTheme) {
+        self.theme = theme
+        self.activityIndicator = ActivityIndicator(type: .custom(theme.actionSheet.controlAccentColor, 22.0, 2.0, false))
+        
+        super.init()
+        
+        self.addSubnode(self.activityIndicator)
+    }
+    
+    public func activate() {
+    }
+    
+    public func deactivate() {
+    }
+    
+    public func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?) {
+    }
+    
+    public func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
+        self.contentOffsetUpdated = f
+    }
+    
+    public func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        let nodeHeight: CGFloat = 125.0
+        
+        let indicatorSize = self.activityIndicator.calculateSizeThatFits(size)
+        let indicatorFrame = CGRect(origin: CGPoint(x: floor((size.width - indicatorSize.width) / 2.0), y: size.height - nodeHeight + floor((nodeHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
+        transition.updateFrame(node: self.activityIndicator, frame: indicatorFrame)
+        
+        self.contentOffsetUpdated?(-size.height + nodeHeight, transition)
+    }
+    
+    public func updateSelectedPeers() {
     }
 }

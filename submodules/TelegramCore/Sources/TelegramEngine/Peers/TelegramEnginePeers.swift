@@ -486,7 +486,7 @@ public extension TelegramEngine {
             return _internal_joinChatInteractively(with: hash, account: self.account)
         }
 
-        public func joinLinkInformation(_ hash: String) -> Signal<ExternalJoiningChatState, NoError> {
+        public func joinLinkInformation(_ hash: String) -> Signal<ExternalJoiningChatState, JoinLinkInfoError> {
             return _internal_joinLinkInformation(hash, account: self.account)
         }
 

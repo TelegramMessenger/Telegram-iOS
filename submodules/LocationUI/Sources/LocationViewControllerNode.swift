@@ -47,7 +47,7 @@ private enum LocationViewEntryId: Hashable {
 }
 
 private enum LocationViewEntry: Comparable, Identifiable {
-    case info(PresentationTheme, TelegramMediaMap, String?, Double?, Double?)
+    case info(PresentationTheme, TelegramMediaMap, String?, Double?, Double?, Double?, Double?)
     case toggleLiveLocation(PresentationTheme, String, String, Double?, Double?)
     case liveLocation(PresentationTheme, PresentationDateTimeFormat, PresentationPersonNameOrder, Message, Double?, Double?, Double?, Double?, Int)
     
@@ -64,8 +64,8 @@ private enum LocationViewEntry: Comparable, Identifiable {
     
     static func ==(lhs: LocationViewEntry, rhs: LocationViewEntry) -> Bool {
         switch lhs {
-            case let .info(lhsTheme, lhsLocation, lhsAddress, lhsDistance, lhsTime):
-                if case let .info(rhsTheme, rhsLocation, rhsAddress, rhsDistance, rhsTime) = rhs, lhsTheme === rhsTheme, lhsLocation.venue?.id == rhsLocation.venue?.id, lhsAddress == rhsAddress, lhsDistance == rhsDistance, lhsTime == rhsTime {
+            case let .info(lhsTheme, lhsLocation, lhsAddress, lhsDistance, lhsDrivingTime, lhsTransitTime, lhsWalkingTime):
+                if case let .info(rhsTheme, rhsLocation, rhsAddress, rhsDistance, rhsDrivingTime, rhsTransitTime, rhsWalkingTime) = rhs, lhsTheme === rhsTheme, lhsLocation.venue?.id == rhsLocation.venue?.id, lhsAddress == rhsAddress, lhsDistance == rhsDistance, lhsDrivingTime == rhsDrivingTime, lhsTransitTime == rhsTransitTime, lhsWalkingTime == rhsWalkingTime {
                     return true
                 } else {
                     return false
@@ -113,7 +113,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
     
     func item(context: AccountContext, presentationData: PresentationData, interaction: LocationViewInteraction?) -> ListViewItem {
         switch self {
-            case let .info(_, location, address, distance, time):
+            case let .info(_, location, address, distance, drivingTime, transitTime, walkingTime):
                 let addressString: String?
                 if let address = address {
                     addressString = address
@@ -126,14 +126,14 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 } else {
                     distanceString = nil
                 }
-                var eta: String?
-                if let time = time, time < 60.0 * 60.0 * 10.0 {
-                    eta = stringForEstimatedDuration(strings: presentationData.strings, time: time, format: { presentationData.strings.Map_DirectionsDriveEta($0).string })
-                }
-                return LocationInfoListItem(presentationData: ItemListPresentationData(presentationData), engine: context.engine, location: location, address: addressString, distance: distanceString, eta: eta, action: {
+                return LocationInfoListItem(presentationData: ItemListPresentationData(presentationData), engine: context.engine, location: location, address: addressString, distance: distanceString, drivingTime: drivingTime, transitTime: transitTime, walkingTime: walkingTime, action: {
                     interaction?.goToCoordinate(location.coordinate)
-                }, getDirections: {
+                }, drivingAction: {
                     interaction?.requestDirections(location, nil, .driving)
+                }, transitAction: {
+                    interaction?.requestDirections(location, nil, .transit)
+                }, walkingAction: {
+                    interaction?.requestDirections(location, nil, .walking)
                 })
             case let .toggleLiveLocation(_, title, subtitle, beginTimstamp, timeout):
                 let beginTimeAndTimeout: (Double, Double)?
@@ -286,12 +286,12 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             throttledUserLocation(self.headerNode.mapNode.userLocation)
         )
         
-        var eta: Signal<Double?, NoError> = .single(nil)
+        var eta: Signal<(Double?, Double?, Double?)?, NoError> = .single(nil)
         var address: Signal<String?, NoError> = .single(nil)
         
         if let location = getLocation(from: subject), location.liveBroadcastingTimeout == nil {
             eta = .single(nil)
-            |> then(getExpectedTravelTime(coordinate: location.coordinate, transportType: .automobile))
+            |> then(combineLatest(queue: Queue.mainQueue(), getExpectedTravelTime(coordinate: location.coordinate, transportType: .automobile), getExpectedTravelTime(coordinate: location.coordinate, transportType: .transit), getExpectedTravelTime(coordinate: location.coordinate, transportType: .walking)) |> map(Optional.init))
             
             if let venue = location.venue, let venueAddress = venue.address, !venueAddress.isEmpty {
                 address = .single(venueAddress)
@@ -359,7 +359,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
                     let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
                     
-                    entries.append(.info(presentationData.theme, location, address, distance, eta))
+                    entries.append(.info(presentationData.theme, location, address, distance, eta?.0, eta?.1, eta?.2))
                     
                     annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, location: location, forcedSelection: true))
                 } else {
@@ -814,7 +814,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         }
         
         let overlap: CGFloat = 6.0
-        var topInset: CGFloat = layout.size.height - layout.intrinsicInsets.bottom - 126.0 - overlap
+        var topInset: CGFloat = layout.size.height - layout.intrinsicInsets.bottom - 100.0 - overlap
         if let location = getLocation(from: self.subject), location.liveBroadcastingTimeout != nil {
             topInset += 66.0
         }

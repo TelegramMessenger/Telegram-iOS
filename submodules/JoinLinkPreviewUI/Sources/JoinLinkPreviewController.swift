@@ -66,7 +66,7 @@ public final class JoinLinkPreviewController: ViewController {
         }
         self.displayNodeDidLoad()
         
-        let signal: Signal<ExternalJoiningChatState, NoError>
+        let signal: Signal<ExternalJoiningChatState, JoinLinkInfoError>
         if let resolvedState = self.resolvedState {
             signal = .single(resolvedState)
         } else {
@@ -98,6 +98,16 @@ public final class JoinLinkPreviewController: ViewController {
                         strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLinks_InviteLinkExpired), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
                         strongSelf.dismiss()
                 }
+            }
+        }, error: { [weak self] error in
+            if let strongSelf = self {
+                switch error {
+                    case .flood:
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_FloodError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    default:
+                        break
+                }
+                strongSelf.dismiss()
             }
         }))
         self.ready.set(self.controllerNode.ready.get())

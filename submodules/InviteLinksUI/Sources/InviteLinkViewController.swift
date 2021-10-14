@@ -52,6 +52,8 @@ private enum InviteLinkViewEntryId: Hashable {
     case link
     case creatorHeader
     case creator
+    case requestHeader
+    case request(EnginePeer.Id)
     case importerHeader
     case importer(EnginePeer.Id)
 }
@@ -60,6 +62,8 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
     case link(PresentationTheme, ExportedInvitation)
     case creatorHeader(PresentationTheme, String)
     case creator(PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32)
+    case requestHeader(PresentationTheme, String, String, Bool)
+    case request(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32, Bool)
     case importerHeader(PresentationTheme, String, String, Bool)
     case importer(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32, Bool)
     
@@ -71,6 +75,10 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 return .creatorHeader
             case .creator:
                 return .creator
+            case .requestHeader:
+                return .requestHeader
+            case let .request(_, _, _, peer, _, _):
+                return .request(peer.id)
             case .importerHeader:
                 return .importerHeader
             case let .importer(_, _, _, peer, _, _):
@@ -98,6 +106,18 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
+            case let .requestHeader(lhsTheme, lhsTitle, lhsSubtitle, lhsExpired):
+                if case let .requestHeader(rhsTheme, rhsTitle, rhsSubtitle, rhsExpired) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsExpired == rhsExpired {
+                    return true
+                } else {
+                    return false
+                }
+            case let .request(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsPeer, lhsDate, lhsLoading):
+                if case let .request(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate, rhsLoading) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsDate == rhsDate, lhsLoading == rhsLoading {
+                    return true
+                } else {
+                    return false
+                }
             case let .importerHeader(lhsTheme, lhsTitle, lhsSubtitle, lhsExpired):
                 if case let .importerHeader(rhsTheme, rhsTitle, rhsSubtitle, rhsExpired) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsExpired == rhsExpired {
                     return true
@@ -119,33 +139,49 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 switch rhs {
                     case .link:
                         return false
-                    case .creatorHeader, .creator, .importerHeader, .importer:
+                    case .creatorHeader, .creator, .requestHeader, .request, .importerHeader, .importer:
                         return true
                 }
             case .creatorHeader:
                 switch rhs {
                     case .link, .creatorHeader:
                         return false
-                    case .creator, .importerHeader, .importer:
+                    case .creator, .requestHeader, .request, .importerHeader, .importer:
                         return true
                 }
             case .creator:
                 switch rhs {
                     case .link, .creatorHeader, .creator:
                         return false
-                    case .importerHeader, .importer:
+                    case .requestHeader, .request, .importerHeader, .importer:
                         return true
             }
+            case .requestHeader:
+                switch rhs {
+                    case .link, .creatorHeader, .creator, .requestHeader:
+                        return false
+                    case .request, .importerHeader, .importer:
+                        return true
+                }
+            case let .request(lhsIndex, _, _, _, _, _):
+                switch rhs {
+                    case .link, .creatorHeader, .creator, .requestHeader:
+                        return false
+                    case let .request(rhsIndex, _, _, _, _, _):
+                        return lhsIndex < rhsIndex
+                    case .importerHeader, .importer:
+                        return true
+                }
             case .importerHeader:
                 switch rhs {
-                    case .link, .creatorHeader, .importerHeader:
+                    case .link, .creatorHeader, .creator, .requestHeader, .request, .importerHeader:
                         return false
-                    case .creator, .importer:
+                    case .importer:
                         return true
                 }
             case let .importer(lhsIndex, _, _, _, _, _):
                 switch rhs {
-                    case .link, .creatorHeader, .creator, .importerHeader:
+                    case .link, .creatorHeader, .creator, .importerHeader, .request, .requestHeader:
                         return false
                     case let .importer(rhsIndex, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -175,7 +211,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, tag: nil)
-            case let .importerHeader(_, title, subtitle, expired):
+            case let .importerHeader(_, title, subtitle, expired), let .requestHeader(_, title, subtitle, expired):
                 let additionalText: SectionHeaderAdditionalText
                 if !subtitle.isEmpty {
                     if expired {
@@ -187,7 +223,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     additionalText = .none
                 }
                 return SectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title, additionalText: additionalText)
-            case let .importer(_, _, dateTimeFormat, peer, date, loading):
+            case let .importer(_, _, dateTimeFormat, peer, date, loading), let .request(_, _, dateTimeFormat, peer, date, loading):
                 let dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
@@ -637,14 +673,47 @@ public final class InviteLinkViewController: ViewController {
                     entries.append(.creator(presentationData.theme, presentationData.dateTimeFormat, EnginePeer(creatorPeer), invite.date))
                                         
                     if !requestsState.importers.isEmpty || (state.isLoadingMore && requestsState.count > 0) {
-                        entries.append(.importerHeader(presentationData.theme, presentationData.strings.MemberRequests_PeopleRequested(Int32(requestsState.count)).uppercased(), "", false))
+                        entries.append(.requestHeader(presentationData.theme, presentationData.strings.MemberRequests_PeopleRequested(Int32(requestsState.count)).uppercased(), "", false))
                     }
                     
-                    let count: Int32
-                    let loading: Bool
-                    
+                    var count: Int32
+                    var loading: Bool
                     var index: Int32 = 0
                     if requestsState.importers.isEmpty && requestsState.isLoadingMore {
+                        count = min(4, state.count)
+                        loading = true
+                        let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                        for i in 0 ..< count {
+                            entries.append(.request(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
+                        }
+                    } else {
+                        count = min(4, Int32(requestsState.importers.count))
+                        loading = false
+                        for importer in requestsState.importers {
+                            if let peer = importer.peer.peer {
+                                entries.append(.request(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
+                            }
+                            index += 1
+                        }
+                    }
+                    
+                    if !state.importers.isEmpty || (state.isLoadingMore && state.count > 0) {
+                        let subtitle: String
+                        let subtitleExpired: Bool
+                        if let usageLimit = invite.usageLimit {
+                            let remaining = max(0, usageLimit - state.count)
+                            subtitle = presentationData.strings.InviteLink_PeopleRemaining(remaining).uppercased()
+                            subtitleExpired = remaining <= 0
+                        } else {
+                            subtitle = ""
+                            subtitleExpired = false
+                        }
+
+                        entries.append(.importerHeader(presentationData.theme, presentationData.strings.InviteLink_PeopleJoined(Int32(state.count)).uppercased(), subtitle, subtitleExpired))
+                    }
+                    
+                    index = 0
+                    if state.importers.isEmpty && state.isLoadingMore {
                         count = min(4, state.count)
                         loading = true
                         let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
@@ -652,52 +721,15 @@ public final class InviteLinkViewController: ViewController {
                             entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
                         }
                     } else {
-                        count = min(4, Int32(requestsState.importers.count))
+                        count = min(4, Int32(state.importers.count))
                         loading = false
-                        for importer in requestsState.importers {
+                        for importer in state.importers {
                             if let peer = importer.peer.peer {
                                 entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
                             }
                             index += 1
                         }
                     }
-                    
-                    //                    if !state.importers.isEmpty || (state.isLoadingMore && state.count > 0) {
-                    //                        let subtitle: String
-                    //                        let subtitleExpired: Bool
-                    //                        if let usageLimit = invite.usageLimit {
-                    //                            let remaining = max(0, usageLimit - state.count)
-                    //                            subtitle = presentationData.strings.InviteLink_PeopleRemaining(remaining).uppercased()
-                    //                            subtitleExpired = remaining <= 0
-                    //                        } else {
-                    //                            subtitle = ""
-                    //                            subtitleExpired = false
-                    //                        }
-                    //
-                    //                        entries.append(.importerHeader(presentationData.theme, presentationData.strings.InviteLink_PeopleJoined(Int32(state.count)).uppercased(), subtitle, subtitleExpired))
-                    //                    }
-                    
-//                    let count: Int32
-//                    let loading: Bool
-//
-//                    var index: Int32 = 0
-//                    if state.importers.isEmpty && state.isLoadingMore {
-//                        count = min(4, state.count)
-//                        loading = true
-//                        let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-//                        for i in 0 ..< count {
-//                            entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
-//                        }
-//                    } else {
-//                        count = min(4, Int32(state.importers.count))
-//                        loading = false
-//                        for importer in state.importers {
-//                            if let peer = importer.peer.peer {
-//                                entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
-//                            }
-//                            index += 1
-//                        }
-//                    }
                     
                     let previousCount = previousCount.swap(count)
                     let previousLoading = previousLoading.swap(loading)

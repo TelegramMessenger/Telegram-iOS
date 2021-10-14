@@ -120,14 +120,16 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
                     return panel
                 }
             case let .inviteRequests(peers, count):
-                if let currentPanel = currentPanel as? ChatInviteRequestsTitlePanelNode {
-                    currentPanel.update(peers: peers, count: count)
-                    return currentPanel
-                } else {
-                    let panel = ChatInviteRequestsTitlePanelNode(context: context)
-                    panel.interfaceInteraction = interfaceInteraction
-                    panel.update(peers: peers, count: count)
-                    return panel
+                if let peerId = chatPresentationInterfaceState.renderedPeer?.peerId {
+                    if let currentPanel = currentPanel as? ChatInviteRequestsTitlePanelNode {
+                        currentPanel.update(peerId: peerId, peers: peers, count: count)
+                        return currentPanel
+                    } else {
+                        let panel = ChatInviteRequestsTitlePanelNode(context: context)
+                        panel.interfaceInteraction = interfaceInteraction
+                        panel.update(peerId: peerId, peers: peers, count: count)
+                        return panel
+                    }
                 }
         }
     }

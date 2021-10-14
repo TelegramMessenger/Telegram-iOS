@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import LocalizedPeerData
 import TelegramStringFormatting
+import TelegramNotices
 import AnimatedAvatarSetNode
 import AccountContext
 
@@ -119,6 +120,10 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
     
     private var theme: PresentationTheme?
     
+    private var peerId: PeerId?
+    private var peers: [EnginePeer] = []
+    private var count: Int32 = 0
+    
     init(context: AccountContext) {
         self.context = context
         
@@ -142,9 +147,11 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.addSubnode(self.avatarsNode)
     }
     
-    private var requestsCount: Int32 = 0
-    func update(peers: [EnginePeer], count: Int32) {
-        self.requestsCount = count
+
+    func update(peerId: PeerId, peers: [EnginePeer], count: Int32) {
+        self.peerId = peerId
+        self.peers = peers
+        self.count = count
         
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         self.avatarsContent = self.avatarsContext.update(peers: peers, animated: false)
@@ -176,7 +183,7 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.button = view
         }
         
-        self.button?.setTitle(interfaceState.strings.Conversation_RequestsToJoin(self.requestsCount), for: [])
+        self.button?.setTitle(interfaceState.strings.Conversation_RequestsToJoin(self.count), for: [])
         
         let maxInset = max(contentRightInset, leftInset)
         let buttonWidth = floor(width - maxInset * 2.0)
@@ -198,7 +205,12 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
     }
     
     @objc func closePressed() {
-//        self.interfaceInteraction?.dismissReportPeer()
+        guard let peerId = self.peerId else {
+            return
+        }
+
+        let ids = peers.map { $0.id.toInt64() }
+        let _ = ApplicationSpecificNotice.setDismissedInvitationRequests(accountManager: context.sharedContext.accountManager, peerId: peerId, values: ids).start()
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

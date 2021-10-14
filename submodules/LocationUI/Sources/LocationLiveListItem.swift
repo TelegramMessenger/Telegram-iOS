@@ -242,7 +242,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                         
                         let buttonTheme = SolidRoundedButtonTheme(theme: item.presentationData.theme)
                         if strongSelf.drivingButtonNode == nil {
-                            strongSelf.drivingButtonNode = SolidRoundedButtonNode(icon: UIImage(bundleImageName: "Location/DirectionsDriving"), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
+                            strongSelf.drivingButtonNode = SolidRoundedButtonNode(icon: generateTintedImage(image: UIImage(bundleImageName: "Location/DirectionsDriving"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
                             strongSelf.drivingButtonNode?.alpha = 0.0
                             strongSelf.drivingButtonNode?.allowsGroupOpacity = true
                             strongSelf.drivingButtonNode?.pressed = { [weak self] in
@@ -252,7 +252,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             }
                             strongSelf.drivingButtonNode.flatMap { strongSelf.addSubnode($0) }
                             
-                            strongSelf.transitButtonNode = SolidRoundedButtonNode(icon: UIImage(bundleImageName: "Location/DirectionsTransit"), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
+                            strongSelf.transitButtonNode = SolidRoundedButtonNode(icon: generateTintedImage(image: UIImage(bundleImageName: "Location/DirectionsTransit"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
                             strongSelf.transitButtonNode?.alpha = 0.0
                             strongSelf.transitButtonNode?.allowsGroupOpacity = true
                             strongSelf.transitButtonNode?.pressed = { [weak self] in
@@ -262,7 +262,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             }
                             strongSelf.transitButtonNode.flatMap { strongSelf.addSubnode($0) }
                             
-                            strongSelf.walkingButtonNode = SolidRoundedButtonNode(icon: UIImage(bundleImageName: "Location/DirectionsWalking"), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
+                            strongSelf.walkingButtonNode = SolidRoundedButtonNode(icon: generateTintedImage(image: UIImage(bundleImageName: "Location/DirectionsWalking"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
                             strongSelf.walkingButtonNode?.alpha = 0.0
                             strongSelf.walkingButtonNode?.allowsGroupOpacity = true
                             strongSelf.walkingButtonNode?.pressed = { [weak self] in
@@ -273,8 +273,13 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             strongSelf.walkingButtonNode.flatMap { strongSelf.addSubnode($0) }
                         } else if let _ = updatedTheme {
                             strongSelf.drivingButtonNode?.updateTheme(buttonTheme)
+                            strongSelf.drivingButtonNode?.icon = generateTintedImage(image: UIImage(bundleImageName: "Location/DirectionsDriving"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                            
                             strongSelf.transitButtonNode?.updateTheme(buttonTheme)
+                            strongSelf.transitButtonNode?.icon = generateTintedImage(image: UIImage(bundleImageName: "Location/DirectionsTransit"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                            
                             strongSelf.walkingButtonNode?.updateTheme(buttonTheme)
+                            strongSelf.walkingButtonNode?.icon = generateTintedImage(image: UIImage(bundleImageName: "Location/DirectionsWalking"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                         }
                         
                         let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size)

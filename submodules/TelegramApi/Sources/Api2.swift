@@ -4827,6 +4827,7 @@ public extension Api {
         case updateBotStopped(userId: Int64, date: Int32, stopped: Api.Bool, qts: Int32)
         case updateGroupCallConnection(flags: Int32, params: Api.DataJSON)
         case updateBotCommands(peer: Api.Peer, botId: Int64, commands: [Api.BotCommand])
+        case updatePendingJoinRequests(peer: Api.Peer, requestsPending: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -5641,6 +5642,13 @@ public extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+                case .updatePendingJoinRequests(let peer, let requestsPending):
+                    if boxed {
+                        buffer.appendInt32(-82532135)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(requestsPending, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -5832,6 +5840,8 @@ public extension Api {
                 return ("updateGroupCallConnection", [("flags", flags), ("params", params)])
                 case .updateBotCommands(let peer, let botId, let commands):
                 return ("updateBotCommands", [("peer", peer), ("botId", botId), ("commands", commands)])
+                case .updatePendingJoinRequests(let peer, let requestsPending):
+                return ("updatePendingJoinRequests", [("peer", peer), ("requestsPending", requestsPending)])
     }
     }
     
@@ -7486,6 +7496,22 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateBotCommands(peer: _1!, botId: _2!, commands: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updatePendingJoinRequests(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updatePendingJoinRequests(peer: _1!, requestsPending: _2!)
             }
             else {
                 return nil
@@ -11428,6 +11454,7 @@ public extension Api {
         case channelAdminLogEventActionExportedInviteEdit(prevInvite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite)
         case channelAdminLogEventActionParticipantVolume(participant: Api.GroupCallParticipant)
         case channelAdminLogEventActionChangeHistoryTTL(prevValue: Int32, newValue: Int32)
+        case channelAdminLogEventActionParticipantJoinByRequest(invite: Api.ExportedChatInvite, approvedBy: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11637,6 +11664,13 @@ public extension Api {
                     serializeInt32(prevValue, buffer: buffer, boxed: false)
                     serializeInt32(newValue, buffer: buffer, boxed: false)
                     break
+                case .channelAdminLogEventActionParticipantJoinByRequest(let invite, let approvedBy):
+                    if boxed {
+                        buffer.appendInt32(-1347021750)
+                    }
+                    invite.serialize(buffer, true)
+                    serializeInt64(approvedBy, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -11706,6 +11740,8 @@ public extension Api {
                 return ("channelAdminLogEventActionParticipantVolume", [("participant", participant)])
                 case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeHistoryTTL", [("prevValue", prevValue), ("newValue", newValue)])
+                case .channelAdminLogEventActionParticipantJoinByRequest(let invite, let approvedBy):
+                return ("channelAdminLogEventActionParticipantJoinByRequest", [("invite", invite), ("approvedBy", approvedBy)])
     }
     }
     
@@ -12146,6 +12182,22 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeHistoryTTL(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionParticipantJoinByRequest(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ExportedChatInvite?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+            }
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionParticipantJoinByRequest(invite: _1!, approvedBy: _2!)
             }
             else {
                 return nil
