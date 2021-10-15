@@ -17,9 +17,11 @@ public protocol ContextActionNodeProtocol: ASDisplayNode {
 }
 
 final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
-    private let action: ContextMenuActionItem
+    private var presentationData: PresentationData
+    private var action: ContextMenuActionItem
     private let getController: () -> ContextControllerProtocol?
     private let actionSelected: (ContextMenuActionResult) -> Void
+    private let requestLayout: () -> Void
     
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
@@ -38,10 +40,12 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         return true
     }
     
-    init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
+    init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, requestLayout: @escaping () -> Void) {
+        self.presentationData = presentationData
         self.action = action
         self.getController = getController
         self.actionSelected = actionSelected
+        self.requestLayout = requestLayout
         
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
         
@@ -267,6 +271,8 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
     }
     
     func updateTheme(presentationData: PresentationData) {
+        self.presentationData = presentationData
+
         self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
         self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         
@@ -315,9 +321,45 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         guard let controller = self.getController() else {
             return
         }
-        self.action.action?(controller, { [weak self] result in
-            self?.actionSelected(result)
-        })
+        self.action.action?(ContextMenuActionItem.Action(
+            controller: controller,
+            dismissWithResult: { [weak self] result in
+                self?.actionSelected(result)
+            },
+            updateAction: { [weak self] updatedAction in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.action = updatedAction
+
+                let textColor: UIColor
+                switch strongSelf.action.textColor {
+                case .primary:
+                    textColor = strongSelf.presentationData.theme.contextMenu.primaryColor
+                case .destructive:
+                    textColor = strongSelf.presentationData.theme.contextMenu.destructiveColor
+                case .disabled:
+                    textColor = strongSelf.presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.4)
+                }
+
+                let textFont = Font.regular(strongSelf.presentationData.listsFontSize.baseDisplaySize)
+                let titleFont: UIFont
+                switch strongSelf.action.textFont {
+                case .regular:
+                    titleFont = textFont
+                case let .custom(customFont):
+                    titleFont = customFont
+                }
+
+                strongSelf.textNode.attributedText = NSAttributedString(string: strongSelf.action.text, font: titleFont, textColor: textColor)
+
+                if strongSelf.action.iconSource == nil {
+                    strongSelf.iconNode.image = strongSelf.action.icon(strongSelf.presentationData.theme)
+                }
+
+                strongSelf.requestLayout()
+            }
+        ))
     }
     
     func setIsHighlighted(_ value: Bool) {

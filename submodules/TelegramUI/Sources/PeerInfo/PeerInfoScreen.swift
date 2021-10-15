@@ -2310,6 +2310,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
             strongSelf.openMediaCalendar()
         }
+
+        self.paneContainerNode.paneDidScroll = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let mediaGalleryContextMenu = strongSelf.mediaGalleryContextMenu {
+                strongSelf.mediaGalleryContextMenu = nil
+                mediaGalleryContextMenu.dismiss()
+            }
+        }
         
         self.paneContainerNode.requestPerformPeerMemberAction = { [weak self] member, action in
             guard let strongSelf = self else {
@@ -5983,6 +5993,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
     }
 
+
+    private weak var mediaGalleryContextMenu: ContextController?
+
     private func displayMediaGalleryContextMenu(source: ContextReferenceContentNode) {
         guard let controller = self.controller else {
             return
@@ -5994,29 +6007,36 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         var items: [ContextMenuItem] = []
         //TODO:localize
 
-        let canZoomIn = pane.zoomLevel.decremented() != pane.zoomLevel
-        let canZoomOut = pane.zoomLevel.incremented() != pane.zoomLevel
-
-        items.append(.action(ContextMenuActionItem(text: "Zoom In", textColor: canZoomIn ? .primary : .disabled, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ZoomIn"), color: canZoomIn ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
-        }, action: canZoomIn ? { [weak pane] _, a in
-            a(.default)
-
-            guard let pane = pane else {
-                return
+        var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
+        let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
+            var canZoom: Bool = true
+            if !"".isEmpty {
+                canZoom = false
             }
-            pane.updateZoomLevel(level: pane.zoomLevel.decremented())
-        } : nil)))
-        items.append(.action(ContextMenuActionItem(text: "Zoom Out", textColor : canZoomOut ? .primary : .disabled, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ZoomOut"), color: canZoomOut ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
-        }, action: canZoomOut ? { [weak pane] _, a in
-            a(.default)
+            /*if isZoomIn {
+                canZoom = pane?.availableZoomLevels().increment != nil
+            } else {
+                canZoom = pane?.availableZoomLevels().decrement != nil
+            }*/
+            return ContextMenuActionItem(text: isZoomIn ? "Zoom In" : "ZoomOut", textColor: canZoom ? .primary : .disabled, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
+            }, action: canZoom ? { action in
+                guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
+                    return
+                }
+                pane.updateZoomLevel(level: zoomLevel)
+                if let recurseGenerateAction = recurseGenerateAction {
+                    action.updateAction(recurseGenerateAction(isZoomIn))
+                }
+            } : nil)
+        }
+        recurseGenerateAction = { isZoomIn in
+            return generateAction(isZoomIn)
+        }
 
-            guard let pane = pane else {
-                return
-            }
-            pane.updateZoomLevel(level: pane.zoomLevel.incremented())
-        } : nil)))
+        items.append(.action(generateAction(true)))
+        items.append(.action(generateAction(false)))
+
         items.append(.action(ContextMenuActionItem(text: "Show Calendar", icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
         }, action: { [weak self] _, a in
@@ -6090,6 +6110,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             pane.updateContentType(contentType: updatedContentType)
         })))
         let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(items: items)), gesture: nil)
+        contextController.passthroughTouchEvents = true
+        self.mediaGalleryContextMenu = contextController
         controller.presentInGlobalOverlay(contextController)
     }
 

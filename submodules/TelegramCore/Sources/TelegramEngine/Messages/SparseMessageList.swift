@@ -83,7 +83,6 @@ public final class SparseMessageList {
         }
         private let loadHoleDisposable = MetaDisposable()
         private var loadingHole: LoadingHole?
-        private var scheduledLoadingHole: LoadingHole?
 
         private var loadingPlaceholders: [MessageId: Disposable] = [:]
         private var loadedPlaceholders: [MessageId: Message] = [:]
@@ -169,7 +168,13 @@ public final class SparseMessageList {
         }
 
         private func resetTopSection() {
-            self.topItemsDisposable.set((self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .upperBound, count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: self.messageTag, appendMessagesFromTheSameGroup: false, namespaces: .not(Set(Namespaces.Message.allScheduled)), orderStatistics: [])
+            let count: Int
+            #if DEBUG
+            count = 20
+            #else
+            count = 200
+            #endif
+            self.topItemsDisposable.set((self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .upperBound, count: count, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: self.messageTag, appendMessagesFromTheSameGroup: false, namespaces: .not(Set(Namespaces.Message.allScheduled)), orderStatistics: [])
             |> deliverOn(self.queue)).start(next: { [weak self] view, updateType, _ in
                 guard let strongSelf = self else {
                     return
@@ -337,14 +342,15 @@ public final class SparseMessageList {
             })
         }
 
-        func loadHole(anchor: MessageId, direction: LoadHoleDirection) {
+        func loadHole(anchor: MessageId, direction: LoadHoleDirection, completion: @escaping () -> Void) {
             let loadingHole = LoadingHole(anchor: anchor, direction: direction)
             if self.loadingHole == loadingHole {
+                completion()
                 return
             }
 
             if self.loadingHole != nil {
-                self.scheduledLoadingHole = loadingHole
+                completion()
                 return
             }
 
@@ -370,6 +376,7 @@ public final class SparseMessageList {
             }
             |> deliverOn(self.queue)).start(next: { [weak self] messages in
                 guard let strongSelf = self else {
+                    completion()
                     return
                 }
 
@@ -490,12 +497,9 @@ public final class SparseMessageList {
 
                 if strongSelf.loadingHole == loadingHole {
                     strongSelf.loadingHole = nil
-
-                    if let scheduledLoadingHole = strongSelf.scheduledLoadingHole {
-                        strongSelf.scheduledLoadingHole = nil
-                        strongSelf.loadHole(anchor: scheduledLoadingHole.anchor, direction: scheduledLoadingHole.direction)
-                    }
                 }
+
+                completion()
             }))
         }
 
@@ -634,9 +638,9 @@ public final class SparseMessageList {
         }
     }*/
 
-    public func loadHole(anchor: MessageId, direction: LoadHoleDirection) {
+    public func loadHole(anchor: MessageId, direction: LoadHoleDirection, completion: @escaping () -> Void) {
         self.impl.with { impl in
-            impl.loadHole(anchor: anchor, direction: direction)
+            impl.loadHole(anchor: anchor, direction: direction, completion: completion)
         }
     }
 }

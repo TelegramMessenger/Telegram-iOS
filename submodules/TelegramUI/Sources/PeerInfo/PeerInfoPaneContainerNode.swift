@@ -386,7 +386,8 @@ private final class PeerInfoPendingPane {
         key: PeerInfoPaneKey,
         hasBecomeReady: @escaping (PeerInfoPaneKey) -> Void,
         parentController: ViewController?,
-        openMediaCalendar: @escaping () -> Void
+        openMediaCalendar: @escaping () -> Void,
+        paneDidScroll: @escaping () -> Void
     ) {
         let paneNode: PeerInfoPaneNode
         switch key {
@@ -395,6 +396,9 @@ private final class PeerInfoPendingPane {
             paneNode = visualPaneNode
             visualPaneNode.openCurrentDate = {
                 openMediaCalendar()
+            }
+            visualPaneNode.paneDidScroll = {
+                paneDidScroll()
             }
         case .files:
             paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .file)
@@ -409,6 +413,9 @@ private final class PeerInfoPendingPane {
             paneNode = visualPaneNode
             visualPaneNode.openCurrentDate = {
                 openMediaCalendar()
+            }
+            visualPaneNode.paneDidScroll = {
+                paneDidScroll()
             }
         case .groupsInCommon:
             paneNode = PeerInfoGroupsInCommonPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction, groupsInCommonContext: data.groupsInCommon!)
@@ -478,6 +485,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     var requestExpandTabs: (() -> Bool)?
 
     var openMediaCalendar: (() -> Void)?
+    var paneDidScroll: (() -> Void)?
     
     private var currentAvailablePanes: [PeerInfoPaneKey]?
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
@@ -779,6 +787,9 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                     parentController: self.parentController,
                     openMediaCalendar: { [weak self] in
                         self?.openMediaCalendar?()
+                    },
+                    paneDidScroll: { [weak self] in
+                        self?.paneDidScroll?()
                     }
                 )
                 self.pendingPanes[key] = pane
