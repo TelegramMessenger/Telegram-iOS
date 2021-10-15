@@ -153,7 +153,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                     strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: new, stickerPacks: [new], parentNavigationController: strongSelf.getNavigationController()), .window(.root), nil)
                                     return true
                                 }
-                            case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite):
+                        case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite), let .participantJoinByRequest(invite, _):
                                 if !invite.link.hasSuffix("...") {
                                     if invite.isPermanent {
                                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
@@ -248,7 +248,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
             return false
         }, openPeer: { [weak self] peerId, _, message in
-            if let peerId = peerId {
+            if let peerId = peerId, peerId != context.account.peerId {
                 self?.openPeer(peerId: peerId, peer: message?.peers[peerId])
             }
         }, openPeerMention: { [weak self] name in

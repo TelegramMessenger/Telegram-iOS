@@ -191,6 +191,7 @@ private struct ApplicationSpecificNoticeKeys {
     private static let inlineBotLocationRequestNamespace: Int32 = 5
     private static let psaAcknowledgementNamespace: Int32 = 6
     private static let botGameNoticeNamespace: Int32 = 7
+    private static let peerInviteRequestsNamespace: Int32 = 8
     
     static func inlineBotLocationRequestNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: inlineBotLocationRequestNamespace), key: noticeKey(peerId: peerId, key: 0))
@@ -318,6 +319,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func interactiveEmojiSyncTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.interactiveEmojiSyncTip.key)
+    }
+    
+    static func dismissedInvitationRequestsNotice(peerId: PeerId) -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: peerInviteRequestsNamespace), key: noticeKey(peerId: peerId, key: 0))
     }
 }
 
@@ -1013,6 +1018,25 @@ public struct ApplicationSpecificNotice {
             }
             
             return Int(previousValue)
+        }
+    }
+    
+    public static func dismissedInvitationRequests(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<[Int64]?, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedInvitationRequestsNotice(peerId: peerId))
+        |> map { view -> [Int64]? in
+            if let value = view.value?.get(ApplicationSpecificInt64ArrayNotice.self) {
+                return value.values
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public static func setDismissedInvitationRequests(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId, values: [Int64]) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificInt64ArrayNotice(values: values)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedInvitationRequestsNotice(peerId: peerId), entry)
+            }
         }
     }
     

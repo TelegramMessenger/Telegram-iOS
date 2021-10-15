@@ -54,6 +54,20 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
     }
     
+    public var icon: UIImage? {
+        didSet {
+            self.iconNode.image = icon
+        }
+    }
+    
+    public var iconSpacing: CGFloat = 8.0 {
+        didSet {
+            if let width = self.validLayout {
+                _ = self.updateLayout(width: width, transition: .immediate)
+            }
+        }
+    }
+    
     public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
         self.font = font
@@ -66,9 +80,6 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.buttonBackgroundNode.clipsToBounds = true
         self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         self.buttonBackgroundNode.cornerRadius = cornerRadius
-        if #available(iOS 13.0, *) {
-            self.buttonBackgroundNode.layer.cornerCurve = .continuous
-        }
         
         self.buttonGlossNode = SolidRoundedButtonGlossNode(color: theme.foregroundColor, cornerRadius: cornerRadius)
         
@@ -122,6 +133,14 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
     }
     
+    public override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.buttonBackgroundNode.layer.cornerCurve = .continuous
+        }
+    }
+    
     public func updateTheme(_ theme: SolidRoundedButtonTheme) {
         guard theme !== self.theme else {
             return
@@ -158,7 +177,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         let iconSize = self.iconNode.image?.size ?? CGSize()
         let titleSize = self.titleNode.updateLayout(buttonSize)
         
-        let iconSpacing: CGFloat = 8.0
+        let iconSpacing: CGFloat = self.iconSpacing
         
         var contentWidth: CGFloat = titleSize.width
         if !iconSize.width.isZero {

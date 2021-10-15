@@ -1,17 +1,8 @@
 {
   "images" : [
     {
-      "idiom" : "universal",
-      "scale" : "1x"
-    },
-    {
-      "idiom" : "universal",
-      "scale" : "2x"
-    },
-    {
-      "filename" : "walking.png",
-      "idiom" : "universal",
-      "scale" : "3x"
+      "filename" : "walk_24.pdf",
+      "idiom" : "universal"
     }
   ],
   "info" : {

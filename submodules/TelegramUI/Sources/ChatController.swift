@@ -4801,60 +4801,75 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                if canManageInvitations, let inviteRequestsPending = inviteRequestsPending, inviteRequestsPending >= 0, strongSelf.inviteRequestsContext == nil {
-                    let inviteRequestsContext = strongSelf.context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: nil))
-                    strongSelf.inviteRequestsContext = inviteRequestsContext
-                    
-                    strongSelf.inviteRequestsDisposable.set((inviteRequestsContext.state
-                    |> deliverOnMainQueue).start(next: { [weak self] requestsState in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
-                            return state
-                            .updatedTitlePanelContext({ context in
-                                if requestsState.count > 0 {
+                if canManageInvitations, let inviteRequestsPending = inviteRequestsPending, inviteRequestsPending >= 0 {
+                    if strongSelf.inviteRequestsContext == nil {
+                        let inviteRequestsContext = strongSelf.context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: nil))
+                        strongSelf.inviteRequestsContext = inviteRequestsContext
+                                                
+                        strongSelf.inviteRequestsDisposable.set((combineLatest(queue: Queue.mainQueue(), inviteRequestsContext.state, ApplicationSpecificNotice.dismissedInvitationRequests(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId))).start(next: { [weak self] requestsState, dismissedInvitationRequests in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
+                                return state
+                                .updatedTitlePanelContext({ context in
                                     let peers: [EnginePeer] = Array(requestsState.importers.compactMap({ $0.peer.peer.flatMap({ EnginePeer($0) }) }).prefix(3))
-                                    if !context.contains(where: {
-                                        switch $0 {
-                                            case .inviteRequests(peers, requestsState.count):
-                                                return true
-                                            default:
-                                                return false
-                                        }
-                                    }) {
-                                        var updatedContexts = context.filter { c in
-                                            if case .inviteRequests = c {
-                                                return false
-                                            } else {
-                                                return true
+                                    
+                                    var peersDismissed = false
+                                    if let dismissedInvitationRequests = dismissedInvitationRequests, Set(peers.map({ $0.id.toInt64() })) == Set(dismissedInvitationRequests) {
+                                        peersDismissed = true
+                                    }
+                                    
+                                    if requestsState.count > 0 && !peersDismissed {
+                                        if !context.contains(where: {
+                                            switch $0 {
+                                                case .inviteRequests(peers, requestsState.count):
+                                                    return true
+                                                default:
+                                                    return false
                                             }
+                                        }) {
+                                            var updatedContexts = context.filter { c in
+                                                if case .inviteRequests = c {
+                                                    return false
+                                                } else {
+                                                    return true
+                                                }
+                                            }
+                                            updatedContexts.append(.inviteRequests(peers, requestsState.count))
+                                            return updatedContexts.sorted()
+                                        } else {
+                                            return context
                                         }
-                                        updatedContexts.append(.inviteRequests(peers, requestsState.count))
-                                        return updatedContexts.sorted()
                                     } else {
-                                        return context
-                                    }
-                                } else {
-                                    if let index = context.firstIndex(where: {
-                                        switch $0 {
-                                            case .inviteRequests:
-                                                return true
-                                            default:
-                                                return false
+                                        if let index = context.firstIndex(where: {
+                                            switch $0 {
+                                                case .inviteRequests:
+                                                    return true
+                                                default:
+                                                    return false
+                                            }
+                                        }) {
+                                            var updatedContexts = context
+                                            updatedContexts.remove(at: index)
+                                            return updatedContexts
+                                        } else {
+                                            return context
                                         }
-                                    }) {
-                                        var updatedContexts = context
-                                        updatedContexts.remove(at: index)
-                                        return updatedContexts
-                                    } else {
-                                        return context
                                     }
-                                }
+                                })
+                                .updatedSlowmodeState(slowmodeState)
                             })
-                            .updatedSlowmodeState(slowmodeState)
+                        }))
+                    } else if let inviteRequestsContext = strongSelf.inviteRequestsContext {
+                        let _ = (inviteRequestsContext.state
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak inviteRequestsContext] state in
+                            if state.count != inviteRequestsPending {
+                                inviteRequestsContext?.loadMore()
+                            }
                         })
-                    }))
+                    }
                 }
             
                 if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage != pinnedMessage || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState || strongSelf.presentationInterfaceState.activeGroupCallInfo != activeGroupCallInfo {
@@ -5094,7 +5109,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators), updateSizeAndInsets)
-                    }, updateExtraNavigationBarBackgroundHeight: { value in
+                    }, updateExtraNavigationBarBackgroundHeight: { value, _ in
                         strongSelf.additionalNavigationBarBackgroundHeight = value
                     })
                     
@@ -8247,9 +8262,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
+        var navigationBarTransition = transition
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
-        }, updateExtraNavigationBarBackgroundHeight: { value in
+        }, updateExtraNavigationBarBackgroundHeight: { value, extraNavigationTransition in
+            navigationBarTransition = extraNavigationTransition
             self.additionalNavigationBarBackgroundHeight = value
         })
         
@@ -8269,7 +8286,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.suspendNavigationBarLayout = false
         if let suspendedNavigationBarLayout = self.suspendedNavigationBarLayout {
             self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
-            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
+            self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: navigationBarTransition)
         }
     }
     

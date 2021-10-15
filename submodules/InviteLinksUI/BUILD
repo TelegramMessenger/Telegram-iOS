@@ -55,6 +55,7 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/LocalizedPeerData:LocalizedPeerData",
+        "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
     ],
     visibility = [
         "//visibility:public",

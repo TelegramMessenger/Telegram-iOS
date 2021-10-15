@@ -6923,3 +6923,8 @@ Sorry for the inconvenience.";
 "InviteLink.InviteLinkForwardTooltip.TwoChats.One" = "Invite link forwarded to **%@** and **%@**";
 "InviteLink.InviteLinkForwardTooltip.ManyChats.One" = "Invite link forwarded to **%@** and %@ others";
 "InviteLink.InviteLinkForwardTooltip.SavedMessages.One" = "Invite link forwarded to **Saved Messages**";
+
+"Conversation.RequestToJoinChannel" = "REQUEST TO JOIN";
+"Conversation.RequestToJoinGroup" = "REQUEST TO JOIN";
+
+"Channel.AdminLog.JoinedViaRequest" = "%1$@ joined via invite link %2$@, approved by %3$@";

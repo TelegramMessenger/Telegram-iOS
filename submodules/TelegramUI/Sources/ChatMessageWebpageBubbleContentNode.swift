@@ -283,6 +283,10 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else if let type = webpage.type {
                     switch type {
+                        case "telegram_channel_request":
+                            actionTitle = item.presentationData.strings.Conversation_RequestToJoinChannel
+                        case "telegram_chat_request", "telegram_megagroup_request":
+                            actionTitle = item.presentationData.strings.Conversation_RequestToJoinGroup
                         case "telegram_channel":
                             actionTitle = item.presentationData.strings.Conversation_ViewChannel
                         case "telegram_chat", "telegram_megagroup":

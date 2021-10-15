@@ -124,7 +124,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
         self.wrappingScrollNode.addSubnode(self.cancelButton)
         
-        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: false))
+        self.transitionToContentNode(JoinLinkPreviewLoadingContainerNode(theme: self.presentationData.theme))
                 
         self.ready.set(.single(true))
         self.didSetReady = true
@@ -184,7 +184,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                     contentNode.layer.add(animation, forKey: "opacity")
                     
-                    self.animateContentNodeOffsetFromBackgroundOffset = self.contentBackgroundNode.frame.minY
+                    self.animateContentNodeOffsetFromBackgroundOffset = self.backgroundNode.frame.minY
                     self.scheduleInteractiveTransition(transition)
                     
                     contentNode.activate()
@@ -392,20 +392,6 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         })
         self.setNeedsLayout()
-    }
-    
-    func transitionToProgress(signal: Signal<Void, NoError>) {        
-        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: false), fastOut: true)
-        let timestamp = CACurrentMediaTime()
-        self.disposable.set(signal.start(completed: { [weak self] in
-            let minDelay = 0.6
-            let delay = max(0.0, (timestamp + minDelay) - CACurrentMediaTime())
-            Queue.mainQueue().after(delay, {
-                if let strongSelf = self {
-                    strongSelf.cancel?()
-                }
-            })
-        }))
     }
     
     func setInvitePeer(image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [EnginePeer], data: JoinLinkPreviewData) {

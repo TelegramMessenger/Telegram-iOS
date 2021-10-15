@@ -70,6 +70,8 @@ final class InviteRequestsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         
         super.init()
         
+        self.isUserInteractionEnabled = false
+        
         self.addSubnode(self.animationNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
