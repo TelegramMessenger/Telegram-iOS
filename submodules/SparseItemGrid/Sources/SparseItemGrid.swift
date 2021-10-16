@@ -607,7 +607,7 @@ public final class SparseItemGrid: ASDisplayNode {
         }
 
         private func updateScrollingArea() {
-            guard let layout = self.layout, let items = self.items else {
+            guard let layout = self.layout, let items = self.items, !items.items.isEmpty else {
                 return
             }
 
