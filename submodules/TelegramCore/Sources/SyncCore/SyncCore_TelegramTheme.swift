@@ -103,6 +103,7 @@ public struct TelegramThemeNativeCodable: Codable {
         let id = try container.decode(Int64.self, forKey: "id")
         let accessHash = try container.decode(Int64.self, forKey: "accessHash")
         let slug = try container.decode(String.self, forKey: "slug")
+        let emoticon = try container.decodeIfPresent(String.self, forKey: "emoticon")
         let title = try container.decode(String.self, forKey: "title")
 
         let file: TelegramMediaFile?
@@ -112,8 +113,12 @@ public struct TelegramThemeNativeCodable: Codable {
             file = nil
         }
 
-        let settings = try container.decodeIfPresent(TelegramThemeSettings.self, forKey: "settings")
-
+        let legacySettings = try container.decodeIfPresent(TelegramThemeSettings.self, forKey: "settings")
+        var settings = try container.decodeIfPresent([TelegramThemeSettings].self, forKey: "settingsArray")
+        if settings == nil, let legacySettings = legacySettings {
+            settings = [legacySettings]
+        }
+        
         let isCreator = try container.decode(Int32.self, forKey: "isCreator") != 0
         let isDefault = try container.decode(Int32.self, forKey: "isDefault") != 0
         let installCount = try container.decodeIfPresent(Int32.self, forKey: "installCount")
@@ -122,6 +127,7 @@ public struct TelegramThemeNativeCodable: Codable {
             id: id,
             accessHash: accessHash,
             slug: slug,
+            emoticon: emoticon,
             title: title,
             file: file,
             settings: settings,
@@ -137,6 +143,7 @@ public struct TelegramThemeNativeCodable: Codable {
         try container.encode(self.value.id, forKey: "id")
         try container.encode(self.value.accessHash, forKey: "accessHash")
         try container.encode(self.value.slug, forKey: "slug")
+        try container.encodeIfPresent(self.value.emoticon, forKey: "emoticon")
         try container.encode(self.value.title, forKey: "title")
 
         if let file = self.value.file {
@@ -145,7 +152,7 @@ public struct TelegramThemeNativeCodable: Codable {
             try container.encodeNil(forKey: "file")
         }
 
-        try container.encodeIfPresent(self.value.settings, forKey: "settings")
+        try container.encodeIfPresent(self.value.settings, forKey: "settingsArray")
 
         try container.encode((self.value.isCreator ? 1 : 0) as Int32, forKey: "isCreator")
         try container.encode((self.value.isDefault ? 1 : 0) as Int32, forKey: "isDefault")
@@ -158,17 +165,19 @@ public final class TelegramTheme: Equatable {
     public let id: Int64
     public let accessHash: Int64
     public let slug: String
+    public let emoticon: String?
     public let title: String
     public let file: TelegramMediaFile?
-    public let settings: TelegramThemeSettings?
+    public let settings: [TelegramThemeSettings]?
     public let isCreator: Bool
     public let isDefault: Bool
     public let installCount: Int32?
     
-    public init(id: Int64, accessHash: Int64, slug: String, title: String, file: TelegramMediaFile?, settings: TelegramThemeSettings?, isCreator: Bool, isDefault: Bool, installCount: Int32?) {
+    public init(id: Int64, accessHash: Int64, slug: String, emoticon: String?, title: String, file: TelegramMediaFile?, settings: [TelegramThemeSettings]?, isCreator: Bool, isDefault: Bool, installCount: Int32?) {
         self.id = id
         self.accessHash = accessHash
         self.slug = slug
+        self.emoticon = emoticon
         self.title = title
         self.file = file
         self.settings = settings
@@ -185,6 +194,9 @@ public final class TelegramTheme: Equatable {
             return false
         }
         if lhs.slug != rhs.slug {
+            return false
+        }
+        if lhs.emoticon != rhs.emoticon {
             return false
         }
         if lhs.title != rhs.title {

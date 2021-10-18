@@ -598,8 +598,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1735736008] = { return Api.GroupCallParticipantVideo.parse_groupCallParticipantVideo($0) }
     dict[-58224696] = { return Api.PhoneCallProtocol.parse_phoneCallProtocol($0) }
     dict[-1237848657] = { return Api.StatsDateRangeDays.parse_statsDateRangeDays($0) }
-    dict[-535699004] = { return Api.account.ChatThemes.parse_chatThemesNotModified($0) }
-    dict[-28524867] = { return Api.account.ChatThemes.parse_chatThemes($0) }
     dict[-275956116] = { return Api.messages.AffectedFoundMessages.parse_affectedFoundMessages($0) }
     dict[795652779] = { return Api.BotCommandScope.parse_botCommandScopeDefault($0) }
     dict[1011811544] = { return Api.BotCommandScope.parse_botCommandScopeUsers($0) }
@@ -725,7 +723,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1421174295] = { return Api.WebPageAttribute.parse_webPageAttributeTheme($0) }
     dict[-958657434] = { return Api.messages.FeaturedStickers.parse_featuredStickersNotModified($0) }
     dict[-2067782896] = { return Api.messages.FeaturedStickers.parse_featuredStickers($0) }
-    dict[-318022605] = { return Api.ChatTheme.parse_chatTheme($0) }
     dict[-2048646399] = { return Api.PhoneCallDiscardReason.parse_phoneCallDiscardReasonMissed($0) }
     dict[-527056480] = { return Api.PhoneCallDiscardReason.parse_phoneCallDiscardReasonDisconnect($0) }
     dict[1471006352] = { return Api.PhoneCallDiscardReason.parse_phoneCallDiscardReasonHangup($0) }
@@ -872,7 +869,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1363483106] = { return Api.DialogPeer.parse_dialogPeerFolder($0) }
     dict[475467473] = { return Api.WebDocument.parse_webDocument($0) }
     dict[-104284986] = { return Api.WebDocument.parse_webDocumentNoProxy($0) }
-    dict[-402474788] = { return Api.Theme.parse_theme($0) }
+    dict[-1609668650] = { return Api.Theme.parse_theme($0) }
     dict[-1290580579] = { return Api.contacts.Found.parse_found($0) }
     dict[-368018716] = { return Api.ChannelAdminLogEventsFilter.parse_channelAdminLogEventsFilter($0) }
     dict[-94849324] = { return Api.ThemeSettings.parse_themeSettings($0) }
@@ -1388,8 +1385,6 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StatsDateRangeDays:
                 _1.serialize(buffer, boxed)
-            case let _1 as Api.account.ChatThemes:
-                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.AffectedFoundMessages:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotCommandScope:
@@ -1501,8 +1496,6 @@ public struct Api {
             case let _1 as Api.WebPageAttribute:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FeaturedStickers:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.ChatTheme:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PhoneCallDiscardReason:
                 _1.serialize(buffer, boxed)

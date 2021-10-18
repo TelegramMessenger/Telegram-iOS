@@ -47,6 +47,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     let emoticon: String?
     let emojiFile: TelegramMediaFile?
     let themeReference: PresentationThemeReference?
+    let nightMode: Bool
     var selected: Bool
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -65,6 +66,9 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
         }
         
         if lhs.themeReference?.index != rhs.themeReference?.index {
+            return false
+        }
+        if lhs.nightMode != rhs.nightMode {
             return false
         }
         if lhs.selected != rhs.selected {
@@ -87,7 +91,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, action: @escaping (String?) -> Void) -> ListViewItem {
-        return ThemeSettingsThemeIconItem(context: context, emoticon: self.emoticon, emojiFile: self.emojiFile, themeReference: self.themeReference, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, action: action)
+        return ThemeSettingsThemeIconItem(context: context, emoticon: self.emoticon, emojiFile: self.emojiFile, themeReference: self.themeReference, nightMode: self.nightMode, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, action: action)
     }
 }
 
@@ -97,17 +101,19 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
     let emoticon: String?
     let emojiFile: TelegramMediaFile?
     let themeReference: PresentationThemeReference?
+    let nightMode: Bool
     let selected: Bool
     let theme: PresentationTheme
     let strings: PresentationStrings
     let wallpaper: TelegramWallpaper?
     let action: (String?) -> Void
     
-    public init(context: AccountContext, emoticon: String?, emojiFile: TelegramMediaFile?, themeReference: PresentationThemeReference?, selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, action: @escaping (String?) -> Void) {
+    public init(context: AccountContext, emoticon: String?, emojiFile: TelegramMediaFile?, themeReference: PresentationThemeReference?, nightMode: Bool, selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, action: @escaping (String?) -> Void) {
         self.context = context
         self.emoticon = emoticon
         self.emojiFile = emojiFile
         self.themeReference = themeReference
+        self.nightMode = nightMode
         self.selected = selected
         self.theme = theme
         self.strings = strings
@@ -419,7 +425,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         
                     if updatedThemeReference || updatedWallpaper {
                         if let themeReference = item.themeReference {
-                            strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, emoticon: true))
+                            strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, nightMode: item.nightMode, emoticon: true))
                             strongSelf.imageNode.backgroundColor = nil
                         }
                     }
@@ -844,10 +850,12 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             let presentationData = strongSelf.presentationData
                 
             var entries: [ThemeSettingsThemeEntry] = []
-            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: nil, emojiFile: nil, themeReference: nil, selected: selectedEmoticon == nil, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: nil, emojiFile: nil, themeReference: nil, nightMode: false, selected: selectedEmoticon == nil, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             for theme in themes {
-                let emoticon = theme.emoji
-                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: theme.emoji, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: isDarkAppearance ? theme.darkTheme : theme.theme, resolvedWallpaper: nil, creatorAccountId: nil)), selected: selectedEmoticon == theme.emoji, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+                guard let emoticon = theme.emoticon else {
+                    continue
+                }
+                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             
             let action: (String?) -> Void = { [weak self] emoticon in
@@ -881,7 +889,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
             
             if isFirstTime {
                 for theme in themes {
-                    if let wallpaper = theme.theme.settings?.wallpaper, case let .file(file) = wallpaper {
+                    if let wallpaper = theme.settings?.first?.wallpaper, case let .file(file) = wallpaper {
                         let account = strongSelf.context.account
                         let accountManager = strongSelf.context.sharedContext.accountManager
                         let path = accountManager.mediaBox.cachedRepresentationCompletePath(file.file.resource.id, representation: CachedPreparedPatternWallpaperRepresentation())

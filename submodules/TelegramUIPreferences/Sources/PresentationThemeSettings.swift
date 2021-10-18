@@ -148,11 +148,13 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
                     self = .builtin(.dayClassic)
                 }
             case 2:
-            if let cloudTheme = decoder.decode(PresentationCloudTheme.self, forKey: "cloudTheme") {
+                if let cloudTheme = decoder.decode(PresentationCloudTheme.self, forKey: "cloudTheme") {
                     self = .cloud(cloudTheme)
                 } else {
                     self = .builtin(.dayClassic)
                 }
+            case 3:
+                self = .builtin(.dayClassic)
             default:
                 assertionFailure()
                 self = .builtin(.dayClassic)
@@ -227,12 +229,23 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
     
     public var generalThemeReference: PresentationThemeReference {
         let generalThemeReference: PresentationThemeReference
-        if case let .cloud(theme) = self, let settings = theme.theme.settings {
+        if case let .cloud(theme) = self, let settings = theme.theme.settings?.first {
             generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
         } else {
             generalThemeReference = self
         }
         return generalThemeReference
+    }
+    
+    public var emoticon: String? {
+        switch self {
+            case .builtin:
+                return "🏠"
+            case let .cloud(theme):
+                return theme.theme.emoticon
+            default:
+                return nil
+        }
     }
 }
 
@@ -336,10 +349,12 @@ public enum AutomaticThemeSwitchTrigger: Codable, Equatable {
 }
 
 public struct AutomaticThemeSwitchSetting: Codable, Equatable {
+    public var force: Bool
     public var trigger: AutomaticThemeSwitchTrigger
     public var theme: PresentationThemeReference
     
-    public init(trigger: AutomaticThemeSwitchTrigger, theme: PresentationThemeReference) {
+    public init(force: Bool, trigger: AutomaticThemeSwitchTrigger, theme: PresentationThemeReference) {
+        self.force = force
         self.trigger = trigger
         self.theme = theme
     }
@@ -347,6 +362,7 @@ public struct AutomaticThemeSwitchSetting: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
+        self.force = try container.decodeIfPresent(Bool.self, forKey: "force") ?? false
         self.trigger = try container.decode(AutomaticThemeSwitchTrigger.self, forKey: "trigger")
         if let themeData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "theme_v2") {
             self.theme = PresentationThemeReference(decoder: PostboxDecoder(buffer: MemoryBuffer(data: themeData.data)))
@@ -360,6 +376,7 @@ public struct AutomaticThemeSwitchSetting: Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
+        try container.encode(self.force, forKey: "force")
         try container.encode(self.trigger, forKey: "trigger")
 
         let themeData = PostboxEncoder().encodeObjectToRawData(self.theme)
@@ -620,7 +637,7 @@ public struct PresentationThemeSettings: Codable {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], useSystemFont: true, fontSize: .regular, listsFontSize: .regular, chatBubbleSettings: .default, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night)), largeEmoji: true, reduceMotion: false)
+        return PresentationThemeSettings(theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], useSystemFont: true, fontSize: .regular, listsFontSize: .regular, chatBubbleSettings: .default, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(force: false, trigger: .system, theme: .builtin(.night)), largeEmoji: true, reduceMotion: false)
     }
     
     public init(theme: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], useSystemFont: Bool, fontSize: PresentationFontSize, listsFontSize: PresentationFontSize, chatBubbleSettings: PresentationChatBubbleSettings, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, reduceMotion: Bool) {
@@ -667,7 +684,7 @@ public struct PresentationThemeSettings: Codable {
         self.listsFontSize = PresentationFontSize(rawValue: try container.decodeIfPresent(Int32.self, forKey: "lf") ?? PresentationFontSize.regular.rawValue) ?? fontSize
 
         self.chatBubbleSettings = try container.decodeIfPresent(PresentationChatBubbleSettings.self, forKey: "chatBubbleSettings") ?? PresentationChatBubbleSettings.default
-        self.automaticThemeSwitchSetting = try container.decodeIfPresent(AutomaticThemeSwitchSetting.self, forKey: "automaticThemeSwitchSetting") ?? AutomaticThemeSwitchSetting(trigger: .system, theme: .builtin(.night))
+        self.automaticThemeSwitchSetting = try container.decodeIfPresent(AutomaticThemeSwitchSetting.self, forKey: "automaticThemeSwitchSetting") ?? AutomaticThemeSwitchSetting(force: false, trigger: .system, theme: .builtin(.night))
 
         self.largeEmoji = try container.decodeIfPresent(Bool.self, forKey: "largeEmoji") ?? true
         self.reduceMotion = try container.decodeIfPresent(Bool.self, forKey: "reduceMotion") ?? false

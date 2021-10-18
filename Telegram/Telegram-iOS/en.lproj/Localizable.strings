@@ -6928,3 +6928,5 @@ Sorry for the inconvenience.";
 "Conversation.RequestToJoinGroup" = "REQUEST TO JOIN";
 
 "Channel.AdminLog.JoinedViaRequest" = "%1$@ joined via invite link %2$@, approved by %3$@";
+
+"Appearance.NightTheme" = "Night Mode";

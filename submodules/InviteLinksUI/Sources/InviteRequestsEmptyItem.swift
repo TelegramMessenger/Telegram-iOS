@@ -59,7 +59,7 @@ final class InviteRequestsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         self.item = item
         
         self.animationNode = AnimatedStickerNode()
-        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Invite"), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupRememberSuccess"), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         
         self.titleNode = ASTextNode()
@@ -89,10 +89,10 @@ final class InviteRequestsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         var insets = layout.insets(options: [])
         insets.top += navigationBarHeight
         
-        let imageSpacing: CGFloat = 20.0
+        let imageSpacing: CGFloat = 10.0
         let textSpacing: CGFloat = 8.0
     
-        let imageSize = CGSize(width: 96.0, height: 96.0)
+        let imageSize = CGSize(width: 112.0, height: 112.0)
         let imageHeight = layout.size.width < layout.size.height ? imageSize.height + imageSpacing : 0.0
         
         self.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: -10.0), size: imageSize)
@@ -106,7 +106,7 @@ final class InviteRequestsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         
         transition.updateAlpha(node: self.animationNode, alpha: imageHeight > 0.0 ? 1.0 : 0.0)
         transition.updateFrame(node: self.animationNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: topOffset), size: imageSize))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right) / 2.0), y: topOffset + imageHeight), size: titleSize))
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right) / 2.0), y: self.titleNode.frame.maxY + textSpacing), size: textSize))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + layout.intrinsicInsets.left + floor((layout.size.width - titleSize.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right) / 2.0), y: topOffset + imageHeight), size: titleSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + layout.intrinsicInsets.left + floor((layout.size.width - textSize.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right) / 2.0), y: self.titleNode.frame.maxY + textSpacing), size: textSize))
     }
 }

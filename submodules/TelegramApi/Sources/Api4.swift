@@ -1272,62 +1272,6 @@ public struct account {
         }
     
     }
-    public enum ChatThemes: TypeConstructorDescription {
-        case chatThemesNotModified
-        case chatThemes(hash: Int32, themes: [Api.ChatTheme])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .chatThemesNotModified:
-                    if boxed {
-                        buffer.appendInt32(-535699004)
-                    }
-                    
-                    break
-                case .chatThemes(let hash, let themes):
-                    if boxed {
-                        buffer.appendInt32(-28524867)
-                    }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(themes.count))
-                    for item in themes {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .chatThemesNotModified:
-                return ("chatThemesNotModified", [])
-                case .chatThemes(let hash, let themes):
-                return ("chatThemes", [("hash", hash), ("themes", themes)])
-    }
-    }
-    
-        public static func parse_chatThemesNotModified(_ reader: BufferReader) -> ChatThemes? {
-            return Api.account.ChatThemes.chatThemesNotModified
-        }
-        public static func parse_chatThemes(_ reader: BufferReader) -> ChatThemes? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.ChatTheme]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ChatTheme.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.ChatThemes.chatThemes(hash: _1!, themes: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
     public enum Authorizations: TypeConstructorDescription {
         case authorizations(authorizations: [Api.Authorization])
     
@@ -7568,14 +7512,18 @@ public extension Api {
                     })
                 }
             
-                public static func createTheme(flags: Int32, slug: String, title: String, document: Api.InputDocument?, settings: Api.InputThemeSettings?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Theme>) {
+                public static func createTheme(flags: Int32, slug: String, title: String, document: Api.InputDocument?, settings: [Api.InputThemeSettings]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Theme>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-2077048289)
+                    buffer.appendInt32(1697530880)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(slug, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 3) != 0 {settings!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(settings!.count))
+                    for item in settings! {
+                        item.serialize(buffer, true)
+                    }}
                     return (FunctionDescription(name: "account.createTheme", parameters: [("flags", flags), ("slug", slug), ("title", title), ("document", document), ("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Theme? in
                         let reader = BufferReader(buffer)
                         var result: Api.Theme?
@@ -7586,21 +7534,56 @@ public extension Api {
                     })
                 }
             
-                public static func updateTheme(flags: Int32, format: String, theme: Api.InputTheme, slug: String?, title: String?, document: Api.InputDocument?, settings: Api.InputThemeSettings?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Theme>) {
+                public static func updateTheme(flags: Int32, format: String, theme: Api.InputTheme, slug: String?, title: String?, document: Api.InputDocument?, settings: [Api.InputThemeSettings]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Theme>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1555261397)
+                    buffer.appendInt32(737414348)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(format, buffer: buffer, boxed: false)
                     theme.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(slug!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 3) != 0 {settings!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(settings!.count))
+                    for item in settings! {
+                        item.serialize(buffer, true)
+                    }}
                     return (FunctionDescription(name: "account.updateTheme", parameters: [("flags", flags), ("format", format), ("theme", theme), ("slug", slug), ("title", title), ("document", document), ("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Theme? in
                         let reader = BufferReader(buffer)
                         var result: Api.Theme?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Theme
+                        }
+                        return result
+                    })
+                }
+            
+                public static func installTheme(flags: Int32, theme: Api.InputTheme?, format: String?, baseTheme: Api.BaseTheme?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-953697477)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {theme!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(format!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {baseTheme!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "account.installTheme", parameters: [("flags", flags), ("theme", theme), ("format", format), ("baseTheme", baseTheme)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getChatThemes(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.Themes>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-700916087)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getChatThemes", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.Themes? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.Themes?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.Themes
                         }
                         return result
                     })
@@ -7612,22 +7595,6 @@ public extension Api {
                     theme.serialize(buffer, true)
                     unsave.serialize(buffer, true)
                     return (FunctionDescription(name: "account.saveTheme", parameters: [("theme", theme), ("unsave", unsave)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                public static func installTheme(flags: Int32, format: String?, theme: Api.InputTheme?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(2061776695)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(format!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {theme!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "account.installTheme", parameters: [("flags", flags), ("format", format), ("theme", theme)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -7782,20 +7749,6 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getChatThemes(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.ChatThemes>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-690545285)
-                    serializeInt32(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "account.getChatThemes", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.ChatThemes? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.account.ChatThemes?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.account.ChatThemes
                         }
                         return result
                     })

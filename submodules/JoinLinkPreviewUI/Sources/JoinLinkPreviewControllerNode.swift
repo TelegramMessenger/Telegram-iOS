@@ -115,8 +115,6 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
                 
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
                 
-
-        
         self.backgroundNode.addSubnode(self.effectNode)
         self.backgroundNode.addSubnode(self.contentBackgroundNode)
         
@@ -169,7 +167,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             if let (layout, navigationBarHeight, bottomGridInset) = self.containerLayout {
                 if let contentNode = contentNode, let previous = previous {
                     contentNode.frame = previous.frame
-                    contentNode.updateLayout(size: previous.bounds.size, bottomInset: bottomGridInset, transition: .immediate)
+                    contentNode.updateLayout(size: previous.bounds.size, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: .immediate)
                     
                     contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                         self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
@@ -238,7 +236,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if let contentNode = self.contentNode {
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: 0.0), size: gridSize))
-            contentNode.updateLayout(size: gridSize, bottomInset: 0.0, transition: transition)
+            contentNode.updateLayout(size: gridSize, isLandscape: layout.size.width > layout.size.height, bottomInset: 0.0, transition: transition)
         }
     }
     
