@@ -397,6 +397,8 @@ public final class MediaBox {
                 let paths = self.storePathsForId(resource.id)
                 if let _ = fileSize(paths.complete) {
                     subscriber.putNext(.single(.Local))
+                } else if let size = fileSize(paths.partial), size == resource.size {
+                    subscriber.putNext(.single(.Local))
                 } else {
                     subscriber.putNext(.single(.Remote) |> then(signal))
                 }
