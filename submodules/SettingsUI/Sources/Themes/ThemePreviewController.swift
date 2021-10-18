@@ -352,7 +352,9 @@ public final class ThemePreviewController: ViewController {
         |> mapToSignal { updatedTheme, existing -> Signal<(PresentationThemeReference, PresentationThemeAccentColor?, Bool, PresentationThemeReference, Bool)?, NoError> in
             if case let .cloud(info) = updatedTheme {
                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
-                let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
+                if info.theme.emoticon == nil {
+                    let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
+                }
             }
 
             let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
