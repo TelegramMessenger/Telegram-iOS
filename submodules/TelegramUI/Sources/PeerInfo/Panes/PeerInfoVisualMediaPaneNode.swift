@@ -15,6 +15,9 @@ import ListMessageItem
 import ChatMessageInteractiveMediaBadge
 import SparseItemGrid
 import ShimmerEffect
+import QuartzCore
+import DirectMediaImageCache
+import ComponentFlow
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext
@@ -133,7 +136,7 @@ private final class VisualMediaItemInteraction {
     }
 }
 
-private final class VisualMediaItemNode: ASDisplayNode {
+/*private final class VisualMediaItemNode: ASDisplayNode {
     private let context: AccountContext
     private let interaction: VisualMediaItemInteraction
     
@@ -214,8 +217,6 @@ private final class VisualMediaItemNode: ASDisplayNode {
     }
 
     func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
-        //var rect = rect
-        //rect.origin.y += self.insets.top
         self.absoluteLocation = (rect, containerSize)
         if let shimmerNode = self.placeholderNode {
             shimmerNode.updateAbsoluteRect(rect, within: containerSize)
@@ -620,10 +621,36 @@ private final class VisualMediaItemNode: ASDisplayNode {
         self.displayLink?.isPaused = !self.hasVisibility || self.isHidden
     }
 }
+*/
 
-private final class VisualMediaItem {
-    let index: Int
-    let id: MessageId
+private final class VisualMediaHoleAnchor: SparseItemGrid.HoleAnchor {
+    let messageId: MessageId
+    override var id: AnyHashable {
+        return AnyHashable(self.messageId)
+    }
+
+    let indexValue: Int
+    override var index: Int {
+        return self.indexValue
+    }
+
+    let timestamp: Int32
+    override var tag: Int32 {
+        return self.timestamp
+    }
+
+    init(index: Int, messageId: MessageId, timestamp: Int32) {
+        self.indexValue = index
+        self.messageId = messageId
+        self.timestamp = timestamp
+    }
+}
+
+private final class VisualMediaItem: SparseItemGrid.Item {
+    let indexValue: Int
+    override var index: Int {
+        return self.indexValue
+    }
     let timestamp: Int32
     let message: Message?
     let isLocal: Bool
@@ -638,28 +665,222 @@ private final class VisualMediaItem {
         if let message = self.message {
             return .message(message.stableId)
         } else {
-            return .placeholder(self.id)
+            preconditionFailure()
+            //return .placeholder(self.id)
         }
+    }
+
+    override var id: AnyHashable {
+        return AnyHashable(self.stableId)
+    }
+
+    override var tag: Int32 {
+        return self.timestamp
     }
     
     init(index: Int, message: Message, isLocal: Bool) {
-        self.index = index
+        self.indexValue = index
         self.message = message
-        self.id = message.id
         self.timestamp = message.timestamp
         self.isLocal = isLocal
     }
+}
 
-    init(index: Int, id: MessageId, timestamp: Int32) {
-        self.index = index
-        self.id = id
-        self.timestamp = timestamp
-        self.message = nil
-        self.isLocal = false
+private final class NullActionClass: NSObject, CAAction {
+    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
     }
 }
 
-private struct VisualMediaItemCollection {
+private let nullAction = NullActionClass()
+
+private final class ItemLayer: CALayer, SparseItemGridLayer {
+    var item: VisualMediaItem?
+    var shimmerLayer: SparseItemGrid.ShimmerLayer?
+    var disposable: Disposable?
+
+    override init() {
+        super.init()
+
+        self.contentsGravity = .resize
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        self.disposable?.dispose()
+    }
+
+    override func action(forKey event: String) -> CAAction? {
+        return nullAction
+    }
+
+    func bind(item: VisualMediaItem) {
+        self.item = item
+
+        /*if self.contents == nil, let message = item.message {
+            self.backgroundColor = UIColor(rgb: UInt32(clamping: UInt(bitPattern: String("\(message.id)").hashValue) & 0xffffffff)).cgColor
+        }*/
+
+        self.updateShimmerLayer()
+    }
+
+    func updateShimmerLayer() {
+        if self.contents == nil {
+            if self.shimmerLayer == nil {
+                let shimmerLayer = SparseItemGrid.ShimmerLayer()
+                self.shimmerLayer = shimmerLayer
+                shimmerLayer.frame = self.bounds
+                self.addSublayer(shimmerLayer)
+            }
+        } else if let shimmerLayer = self.shimmerLayer {
+            self.shimmerLayer = nil
+            shimmerLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak shimmerLayer] _ in
+                shimmerLayer?.removeFromSuperlayer()
+            })
+        }
+    }
+
+    func unbind() {
+        self.item = nil
+    }
+
+    func update(size: CGSize) {
+        if let shimmerLayer = self.shimmerLayer {
+            shimmerLayer.frame = CGRect(origin: CGPoint(), size: size)
+        }
+        /*var dimensions: CGSize?
+
+        if let item = self.item, let message = item.message {
+            for media in message.media {
+                if let image = media as? TelegramMediaImage, let representation = image.representations.last {
+                    dimensions = representation.dimensions.cgSize
+                } else if let file = media as? TelegramMediaFile {
+                    dimensions = file.dimensions?.cgSize ?? CGSize(width: 640.0, height: 480.0)
+                }
+            }
+        }
+
+        if let dimensions = dimensions {
+            let scaledSize = dimensions.aspectFilled(size)
+            let scaledRect = CGRect(origin: CGPoint(x: (size.width - scaledSize.width) / 2.0, y: (size.height - scaledSize.height) / 2.0), size: scaledSize)
+            self.contentsRect = CGRect(origin: CGPoint(x: scaledRect.minX / size.width, y: scaledRect.minY / size.height), size: CGSize(width: scaledRect.width / size.width, height: scaledRect.height / size.height))
+        } else {
+            self.contentsRect = CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0))
+        }*/
+    }
+}
+
+private final class SparseItemGridBindingImpl: SparseItemGridBinding {
+    private let context: AccountContext
+    private let directMediaImageCache: DirectMediaImageCache
+    private let strings: PresentationStrings
+
+    var loadHoleImpl: ((SparseItemGrid.HoleAnchor, SparseItemGrid.HoleLocation) -> Signal<Never, NoError>)?
+    var onTapImpl: ((VisualMediaItem) -> Void)?
+    var onTagTapImpl: (() -> Void)?
+    var didScrollImpl: (() -> Void)?
+
+    init(context: AccountContext, directMediaImageCache: DirectMediaImageCache) {
+        self.context = context
+        self.directMediaImageCache = directMediaImageCache
+        self.strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
+    }
+
+    func createLayer() -> SparseItemGridLayer {
+        return ItemLayer()
+    }
+
+    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridLayer]) {
+        for i in 0 ..< items.count {
+            guard let item = items[i] as? VisualMediaItem, let layer = layers[i] as? ItemLayer else {
+                continue
+            }
+            if layer.bounds.isEmpty {
+                continue
+            }
+
+            let imageWidthSpec: Int
+            if layer.bounds.width <= 50 {
+                imageWidthSpec = 64
+            } else if layer.bounds.width <= 100 {
+                imageWidthSpec = 150
+            } else if layer.bounds.width <= 140 {
+                imageWidthSpec = 200
+            } else {
+                imageWidthSpec = 280
+            }
+
+            if let message = item.message {
+                var selectedMedia: Media?
+                for media in message.media {
+                    if let image = media as? TelegramMediaImage {
+                        selectedMedia = image
+                        break
+                    } else if let file = media as? TelegramMediaFile {
+                        selectedMedia = file
+                        break
+                    }
+                }
+                if let selectedMedia = selectedMedia {
+                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec) {
+                        layer.contents = result.image?.cgImage
+                        if let loadSignal = result.loadSignal {
+                            layer.disposable = (loadSignal
+                            |> deliverOnMainQueue).start(next: { [weak layer] image in
+                                guard let layer = layer else {
+                                    return
+                                }
+                                layer.contents = image?.cgImage
+                                layer.updateShimmerLayer()
+                            })
+                        }
+                    }
+                }
+            }
+
+            layer.bind(item: item)
+        }
+    }
+
+    func unbindLayer(layer: SparseItemGridLayer) {
+        guard let layer = layer as? ItemLayer else {
+            return
+        }
+        layer.unbind()
+    }
+
+    func scrollerTextForTag(tag: Int32) -> String? {
+        let (year, month) = listMessageDateHeaderInfo(timestamp: tag)
+        return stringForMonth(strings: self.strings, month: month, ofYear: year)
+    }
+
+    func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError> {
+        if let loadHoleImpl = self.loadHoleImpl {
+            return loadHoleImpl(anchor, location)
+        } else {
+            return .never()
+        }
+    }
+
+    func onTap(item: SparseItemGrid.Item) {
+        guard let item = item as? VisualMediaItem else {
+            return
+        }
+        self.onTapImpl?(item)
+    }
+
+    func onTagTap() {
+        self.onTagTapImpl?()
+    }
+
+    func didScroll() {
+        self.didScrollImpl?()
+    }
+}
+
+/*private struct VisualMediaItemCollection {
     var items: [VisualMediaItem]
     var totalCount: Int
 
@@ -746,55 +967,6 @@ private struct VisualMediaItemCollection {
             return nil
         }
     }
-}
-
-/*private final class FloatingHeaderNode: ASDisplayNode {
-    private let backgroundNode: ASImageNode
-    private let labelNode: ImmediateTextNode
-    
-    private var currentParams: (constrainedWidth: CGFloat, year: Int32, month: Int32, theme: PresentationTheme)?
-    private var currentSize: CGSize?
-    
-    override init() {
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.displayWithoutProcessing = true
-        
-        self.labelNode = ImmediateTextNode()
-        self.labelNode.displaysAsynchronously = false
-        
-        super.init()
-        
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.labelNode)
-    }
-    
-    func update(constrainedWidth: CGFloat, year: Int32, month: Int32, theme: PresentationTheme, strings: PresentationStrings) -> CGSize {
-        if let currentParams = self.currentParams, let currentSize = self.currentSize {
-            if currentParams.constrainedWidth == constrainedWidth &&
-               currentParams.year == year &&
-               currentParams.month == month &&
-               currentParams.theme === theme {
-                return currentSize
-            }
-        }
-        
-        if self.currentParams?.theme !== theme {
-            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 27.0, color: mediaBadgeBackgroundColor)
-        }
-        
-        self.currentParams = (constrainedWidth, year, month, theme)
-        
-        self.labelNode.attributedText = NSAttributedString(string: stringForMonth(strings: strings, month: month, ofYear: year), font: Font.regular(14.0), textColor: .white)
-        let labelSize = self.labelNode.updateLayout(CGSize(width: constrainedWidth, height: .greatestFiniteMagnitude))
-        
-        let sideInset: CGFloat = 10.0
-        self.labelNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floor((27.0 - labelSize.height) / 2.0)), size: labelSize)
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: labelSize.width + sideInset * 2.0, height: 27.0))
-        
-        let size = CGSize(width: labelSize.width + sideInset * 2.0, height: 27.0)
-        return size
-    }
 }*/
 
 private func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> MessageTags {
@@ -810,7 +982,7 @@ private func tagMaskForType(_ type: PeerInfoVisualMediaPaneNode.ContentType) -> 
     }
 }
 
-private enum ItemsLayout {
+/*private enum ItemsLayout {
     final class Grid {
         let containerWidth: CGFloat
         let itemCount: Int
@@ -890,7 +1062,7 @@ private enum ItemsLayout {
             return grid.frame(forItemAt: index, sideInset: sideInset)
         }
     }
-}
+}*/
 
 final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate {
     enum ContentType {
@@ -900,36 +1072,11 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         case gifs
     }
 
-    enum ZoomLevel {
-        case level2
-        case level3
-        case level4
-        case level5
+    struct ZoomLevel {
+        fileprivate var value: SparseItemGrid.ZoomLevel
 
-        func incremented() -> ZoomLevel {
-            switch self {
-            case .level2:
-                return .level3
-            case .level3:
-                return .level4
-            case .level4:
-                return .level5
-            case .level5:
-                return .level5
-            }
-        }
-
-        func decremented() -> ZoomLevel {
-            switch self {
-            case .level2:
-                return .level2
-            case .level3:
-                return .level2
-            case .level4:
-                return .level3
-            case .level5:
-                return .level4
-            }
+        init(_ value: SparseItemGrid.ZoomLevel) {
+            self.value = value
         }
     }
     
@@ -942,7 +1089,11 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     weak var parentController: ViewController?
 
     private let scrollingArea: SparseItemGridScrollingArea
-    private let scrollNode: ASScrollNode
+    //private let scrollNode: ASScrollNode
+    private let itemGrid: SparseItemGrid
+    private let itemGridBinding: SparseItemGridBindingImpl
+    private let directMediaImageCache: DirectMediaImageCache
+    private var items: SparseItemGrid.Items?
 
     private var isDeceleratingAfterTracking = false
     
@@ -966,9 +1117,9 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         
     private let listDisposable = MetaDisposable()
     private var hiddenMediaDisposable: Disposable?
-    private var mediaItems = VisualMediaItemCollection(items: [], totalCount: 0)
-    private var itemsLayout: ItemsLayout?
-    private var visibleMediaItems: [VisualMediaItem.StableId: VisualMediaItemNode] = [:]
+    //private var mediaItems = VisualMediaItemCollection(items: [], totalCount: 0)
+    //private var itemsLayout: ItemsLayout?
+    //private var visibleMediaItems: [VisualMediaItem.StableId: VisualMediaItemNode] = [:]
     
     private var numberOfItemsToRequest: Int = 50
     //private var currentView: MessageHistoryView?
@@ -982,9 +1133,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private var listSource: SparseMessageList
     private var requestedPlaceholderIds = Set<MessageId>()
 
-    private(set) var zoomLevel: ZoomLevel = .level3
-
     var openCurrentDate: (() -> Void)?
+    var paneDidScroll: (() -> Void)?
     
     init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType) {
         self.context = context
@@ -994,13 +1144,47 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.contentTypePromise = ValuePromise<ContentType>(contentType)
 
         self.scrollingArea = SparseItemGridScrollingArea()
-        self.scrollNode = ASScrollNode()
+        //self.scrollNode = ASScrollNode()
+        self.itemGrid = SparseItemGrid()
+        self.directMediaImageCache = DirectMediaImageCache(account: context.account)
+        self.itemGridBinding = SparseItemGridBindingImpl(context: context, directMediaImageCache: self.directMediaImageCache)
 
         self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, tag: tagMaskForType(self.contentType))
         
         super.init()
 
-        self.scrollingArea.beginScrolling = { [weak self] in
+        self.itemGridBinding.loadHoleImpl = { [weak self] hole, location in
+            guard let strongSelf = self else {
+                return .never()
+            }
+            return strongSelf.loadHole(anchor: hole, at: location)
+        }
+
+        self.itemGridBinding.onTapImpl = { [weak self] item in
+            guard let strongSelf = self else {
+                return
+            }
+            guard let message = item.message else {
+                return
+            }
+            let _ = strongSelf.chatControllerInteraction.openMessage(message, .default)
+        }
+
+        self.itemGridBinding.onTagTapImpl = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.openCurrentDate?()
+        }
+
+        self.itemGridBinding.didScrollImpl = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.paneDidScroll?()
+        }
+
+        /*self.scrollingArea.beginScrolling = { [weak self] in
             guard let strongSelf = self else {
                 return nil
             }
@@ -1012,7 +1196,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 return
             }
             strongSelf.openCurrentDate?()
-        }
+        }*/
         
         self._itemInteraction = VisualMediaItemInteraction(
             openMessage: { [weak self] message in
@@ -1027,7 +1211,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         )
         self.itemInteraction.selectedMessageIds = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
         
-        self.scrollNode.view.delaysContentTouches = false
+        /*self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.view.canCancelContentTouches = true
         self.scrollNode.view.showsVerticalScrollIndicator = false
         if #available(iOS 11.0, *) {
@@ -1037,7 +1221,9 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.scrollNode.view.delegate = self
         
         self.addSubnode(self.scrollNode)
-        self.addSubnode(self.scrollingArea)
+        self.addSubnode(self.scrollingArea)*/
+
+        self.addSubnode(self.itemGrid)
         
         self.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: false)
         
@@ -1052,12 +1238,10 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 }
             }
             strongSelf.itemInteraction.hiddenMedia = hiddenMedia
-            for (_, itemNode) in strongSelf.visibleMediaItems {
-                itemNode.updateHiddenMedia()
-            }
+            strongSelf.updateHiddenMedia()
         })
         
-        let animationTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: true, completion: { [weak self] in
+        /*let animationTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: true, completion: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -1066,7 +1250,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             }
         }, queue: .mainQueue())
         self.animationTimer = animationTimer
-        animationTimer.start()
+        animationTimer.start()*/
 
         self.statusPromise.set((self.contentTypePromise.get()
         |> distinctUntilChanged
@@ -1171,6 +1355,29 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.animationTimer?.invalidate()
     }
 
+    func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError> {
+        guard let anchor = anchor as? VisualMediaHoleAnchor else {
+            return .never()
+        }
+        let mappedDirection: SparseMessageList.LoadHoleDirection
+        switch location {
+        case .around:
+            mappedDirection = .around
+        case .toLower:
+            mappedDirection = .later
+        case .toUpper:
+            mappedDirection = .earlier
+        }
+        let listSource = self.listSource
+        return Signal { subscriber in
+            listSource.loadHole(anchor: anchor.messageId, direction: mappedDirection, completion: {
+                subscriber.putCompletion()
+            })
+
+            return EmptyDisposable
+        }
+    }
+
     func updateContentType(contentType: ContentType) {
         if self.contentType == contentType {
             return
@@ -1184,12 +1391,9 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
 
     func updateZoomLevel(level: ZoomLevel) {
-        if self.zoomLevel == level {
-            return
-        }
-        self.zoomLevel = level
+        self.itemGrid.setZoomLevel(level: level.value)
 
-        if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
+        /*if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
 
             var currentTopVisibleItemFrame: CGRect?
             if let itemsLayout = self.itemsLayout {
@@ -1249,11 +1453,11 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 let originalOffset = CGPoint(x: -self.scrollNode.bounds.width * (1.0 - 1.0 / widthFactor) * 0.5, y: -self.scrollNode.bounds.height * (1.0 - 1.0 / widthFactor) * 0.5)//.offsetBy(dx: additionalOffset.x, dy: additionalOffset.y)
                 self.scrollNode.layer.animatePosition(from: originalOffset, to: CGPoint(), duration: 0.2, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: true, additive: true)
             }
-        }
+        }*/
     }
     
     func ensureMessageIsVisible(id: MessageId) {
-        let activeRect = self.scrollNode.bounds
+        /*let activeRect = self.scrollNode.bounds
         for item in self.mediaItems.items {
             if let message = item.message, message.id == id {
                 if let itemNode = self.visibleMediaItems[item.stableId] {
@@ -1264,7 +1468,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 }
                 break
             }
-        }
+        }*/
     }
     
     private func requestHistoryAroundVisiblePosition(synchronous: Bool, reloadAtTop: Bool) {
@@ -1287,7 +1491,29 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     private func updateHistory(list: SparseMessageList.State, synchronous: Bool, reloadAtTop: Bool) {
-        self.mediaItems = VisualMediaItemCollection(items: [], totalCount: list.totalCount)
+        var mappedItems: [SparseItemGrid.Item] = []
+        var mappeHoles: [SparseItemGrid.HoleAnchor] = []
+        for item in list.items {
+            switch item.content {
+            case let .message(message, isLocal):
+                mappedItems.append(VisualMediaItem(index: item.index, message: message, isLocal: isLocal))
+            case let .placeholder(id, timestamp):
+                mappeHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: id, timestamp: timestamp))
+            }
+        }
+
+        self.items = SparseItemGrid.Items(
+            items: mappedItems,
+            holeAnchors: mappeHoles,
+            count: list.totalCount,
+            itemBinding: self.itemGridBinding
+        )
+
+        if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
+            self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: false, transition: .immediate)
+        }
+
+        /*self.mediaItems = VisualMediaItemCollection(items: [], totalCount: list.totalCount)
         for item in list.items {
             switch item.content {
             case let .message(message, isLocal):
@@ -1317,24 +1543,32 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             }
             self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: wasFirstHistoryView || synchronous, transition: .immediate)
             self.ignoreScrolling = false
-            if !self.didSetReady {
-                self.didSetReady = true
-                self.ready.set(.single(true))
-            }
+        }*/
+
+        if !self.didSetReady {
+            self.didSetReady = true
+            self.ready.set(.single(true))
         }
     }
     
     func scrollToTop() -> Bool {
-        if self.scrollNode.view.contentOffset.y > 0.0 {
+        /*if self.scrollNode.view.contentOffset.y > 0.0 {
             self.scrollNode.view.setContentOffset(CGPoint(), animated: true)
             return true
         } else {
             return false
-        }
+        }*/
+        return false
     }
     
     func findLoadedMessage(id: MessageId) -> Message? {
-        for item in self.mediaItems.items {
+        guard let items = self.items else {
+            return nil
+        }
+        for item in items.items {
+            guard let item = item as? VisualMediaItem else {
+                continue
+            }
             if let message = item.message, message.id == id {
                 return item.message
             }
@@ -1343,14 +1577,24 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     func updateHiddenMedia() {
-        for (_, itemNode) in self.visibleMediaItems {
-            itemNode.updateHiddenMedia()
+        self.itemGrid.forEachVisibleItem { itemLayer in
+            guard let itemLayer = itemLayer as? ItemLayer else {
+                return
+            }
+            if let item = itemLayer.item, let message = item.message {
+                if self.itemInteraction.hiddenMedia[message.id] != nil {
+                    itemLayer.isHidden = true
+                } else {
+                    itemLayer.isHidden = false
+                }
+            } else {
+                itemLayer.isHidden = false
+            }
         }
     }
     
     func transferVelocity(_ velocity: CGFloat) {
-        if velocity > 0.0 {
-            //print("transferVelocity \(velocity)")
+        /*if velocity > 0.0 {
             self.decelerationAnimator?.isPaused = true
             let startTime = CACurrentMediaTime()
             var currentOffset = self.scrollNode.view.contentOffset
@@ -1362,7 +1606,6 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 }
                 let t = CACurrentMediaTime() - startTime
                 var currentVelocity = velocity * 15.0 * CGFloat(pow(Double(decelerationRate), 1000.0 * t))
-                //print("value at \(t) = \(currentVelocity)")
                 currentOffset.y += currentVelocity
                 let maxOffset = strongSelf.scrollNode.view.contentSize.height - strongSelf.scrollNode.bounds.height
                 if currentOffset.y >= maxOffset {
@@ -1389,80 +1632,70 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 }
             })
             self.decelerationAnimator?.isPaused = false
-        }
+        }*/
     }
     
     func cancelPreviewGestures() {
-        for (_, itemNode) in self.visibleMediaItems {
+        /*for (_, itemNode) in self.visibleMediaItems {
             itemNode.cancelPreviewGesture()
-        }
+        }*/
     }
     
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
-        for item in self.mediaItems.items {
-            if let message = item.message, message.id == messageId {
-                if let itemNode = self.visibleMediaItems[item.stableId] {
-                    return itemNode.transitionNode()
-                }
-                break
+        var foundItemLayer: SparseItemGridLayer?
+        self.itemGrid.forEachVisibleItem { itemLayer in
+            guard let itemLayer = itemLayer as? ItemLayer else {
+                return
             }
+            if let item = itemLayer.item, let message = item.message, message.id == messageId {
+                foundItemLayer = itemLayer
+            }
+        }
+        if let itemLayer = foundItemLayer {
+            let itemFrame = self.view.convert(self.itemGrid.frameForItem(layer: itemLayer), from: self.itemGrid.view)
+            let proxyNode = ASDisplayNode()
+            proxyNode.frame = itemFrame
+            proxyNode.contents = itemLayer.contents
+            proxyNode.isHidden = true
+            self.addSubnode(proxyNode)
+
+            let escapeNotification = EscapeNotification {
+                proxyNode.removeFromSupernode()
+            }
+
+            return (proxyNode, proxyNode.bounds, {
+                let view = UIView()
+                view.frame = proxyNode.frame
+                view.layer.contents = proxyNode.layer.contents
+                escapeNotification.keep()
+                return (view, nil)
+            })
         }
         return nil
     }
     
     func addToTransitionSurface(view: UIView) {
-        self.scrollNode.view.addSubview(view)
+        self.itemGrid.addToTransitionSurface(view: view)
     }
     
     func updateSelectedMessages(animated: Bool) {
-        self.itemInteraction.selectedMessageIds = self.chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
+        /*self.itemInteraction.selectedMessageIds = self.chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
         for (_, itemNode) in self.visibleMediaItems {
             itemNode.updateSelectionState(animated: animated)
-        }
+        }*/
     }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        let previousParams = self.currentParams
+        //let previousParams = self.currentParams
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
-        
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
-        
-        let availableWidth = size.width - sideInset * 2.0
-        
-        let itemsLayout: ItemsLayout
-        if let current = self.itemsLayout, previousParams?.size.width == size.width {
-            itemsLayout = current
-        } else {
-            switch self.contentType {
-            case .photoOrVideo, .photo, .video, .gifs:
-                itemsLayout = .grid(ItemsLayout.Grid(containerWidth: availableWidth, zoomLevel: self.zoomLevel, itemCount: self.mediaItems.totalCount, bottomInset: bottomInset))
-            }
-            self.itemsLayout = itemsLayout
-        }
-        
-        self.scrollNode.view.contentSize = CGSize(width: size.width, height: itemsLayout.contentHeight)
-        self.updateVisibleItems(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, theme: presentationData.theme, strings: presentationData.strings, synchronousLoad: synchronous)
 
-        transition.updateFrame(node: self.scrollingArea, frame: CGRect(origin: CGPoint(), size: size))
-        self.updateScrollingArea(transition: transition)
-        
-        if isScrollingLockedAtTop {
-            if self.scrollNode.view.contentOffset.y > .ulpOfOne {
-                transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size))
-            }
+        transition.updateFrame(node: self.itemGrid, frame: CGRect(origin: CGPoint(), size: size))
+        if let items = self.items {
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, items: items)
         }
-        self.scrollNode.view.isScrollEnabled = !isScrollingLockedAtTop
     }
     
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        self.decelerationAnimator?.isPaused = true
-        self.decelerationAnimator = nil
-        
-        for (_, itemNode) in self.visibleMediaItems {
-            itemNode.cancelPreviewGesture()
-        }
-        
-        self.updateHeaderFlashing(animated: true)
     }
 
     private var previousDidScrollTimestamp: Double = 0.0
@@ -1472,119 +1705,57 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         if self.ignoreScrolling {
             return
         }
-        if let (size, sideInset, bottomInset, visibleHeight, _, _, presentationData) = self.currentParams {
-            self.updateVisibleItems(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, theme: presentationData.theme, strings: presentationData.strings, synchronousLoad: false)
-            
-            /*if scrollView.contentOffset.y >= scrollView.contentSize.height - scrollView.bounds.height * 2.0, let currentView = self.currentView, currentView.earlierId != nil {
-                if !self.isRequestingView {
-                    self.numberOfItemsToRequest += 50
-                    self.requestHistoryAroundVisiblePosition()
-                }
-            }*/
-
-            self.updateScrollingArea(transition: .immediate)
-        }
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        if decelerate {
-            self.isDeceleratingAfterTracking = true
-            self.updateHeaderFlashing(animated: true)
-        } else {
-            self.isDeceleratingAfterTracking = false
-            self.resetHeaderFlashTimer(start: true)
-            self.updateHeaderFlashing(animated: true)
-        }
-
-        if !decelerate {
-            self.updateScrollingArea(transition: .animated(duration: 0.3, curve: .easeInOut))
-        }
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        self.isDeceleratingAfterTracking = false
-        self.resetHeaderFlashTimer(start: true)
-        self.updateHeaderFlashing(animated: true)
-
-        self.updateScrollingArea(transition: .animated(duration: 0.3, curve: .easeInOut))
     }
 
     private func updateScrollingArea(transition: ContainedViewLayoutTransition) {
-        guard let currentParams = self.currentParams, let itemsLayout = self.itemsLayout else {
-            return
-        }
-
-        let headerItemMinY = self.scrollNode.view.bounds.minY + 20.0
-        let activeRect = self.scrollNode.view.bounds
-        let visibleRect = activeRect.insetBy(dx: 0.0, dy: -400.0)
-
-        let (minVisibleIndex, maxVisibleIndex) = itemsLayout.visibleRange(rect: visibleRect)
-
-        var headerItem: Int32?
-
-        if minVisibleIndex <= maxVisibleIndex {
-            for i in minVisibleIndex ... maxVisibleIndex {
-                let itemFrame = itemsLayout.frame(forItemAt: i, sideInset: currentParams.sideInset)
-
-                if headerItem == nil && itemFrame.maxY > headerItemMinY {
-                    if let item = self.mediaItems.closestItem(at: i) {
-                        headerItem = item.timestamp
-                    }
-                    break
-                }
-            }
-        }
-
-        var dateString: String = ""
-
-        if let headerItem = headerItem {
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            let (year, month) = listMessageDateHeaderInfo(timestamp: headerItem)
-            dateString = stringForMonth(strings: presentationData.strings, month: month, ofYear: year)
-        }
-
-        self.scrollingArea.update(
-            containerSize: currentParams.size,
-            containerInsets: UIEdgeInsets(top: 0.0, left: currentParams.sideInset, bottom: currentParams.bottomInset, right: currentParams.sideInset),
-            contentHeight: itemsLayout.contentHeight,
-            contentOffset: self.scrollNode.view.contentOffset.y,
-            isScrolling: self.scrollNode.view.isDragging || self.scrollNode.view.isDecelerating || self.decelerationAnimator != nil,
-            dateString: dateString,
-            transition: transition
-        )
     }
 
     func currentTopTimestamp() -> Int32? {
-        guard let currentParams = self.currentParams, let itemsLayout = self.itemsLayout else {
-            return nil
-        }
-
-        let headerItemMinY = self.scrollNode.view.bounds.minY + 20.0
-        let activeRect = self.scrollNode.view.bounds
-        let visibleRect = activeRect.insetBy(dx: 0.0, dy: -400.0)
-
-        let (minVisibleIndex, maxVisibleIndex) = itemsLayout.visibleRange(rect: visibleRect)
-
-        var headerItem: Int32?
-
-        if minVisibleIndex <= maxVisibleIndex {
-            for i in minVisibleIndex ... maxVisibleIndex {
-                let itemFrame = itemsLayout.frame(forItemAt: i, sideInset: currentParams.sideInset)
-
-                if headerItem == nil && itemFrame.maxY > headerItemMinY {
-                    if let item = self.mediaItems.closestItem(at: i) {
-                        headerItem = item.timestamp
-                    }
-                    break
+        var timestamp: Int32?
+        self.itemGrid.forEachVisibleItem { itemLayer in
+            if timestamp != nil {
+                return
+            }
+            guard let itemLayer = itemLayer as? ItemLayer else {
+                return
+            }
+            if let item = itemLayer.item, let message = item.message {
+                if let timestampValue = timestamp {
+                    timestamp = max(timestampValue, message.timestamp)
+                } else {
+                    timestamp = message.timestamp
                 }
             }
         }
-
-        return headerItem
+        return timestamp
     }
 
     func scrollToTimestamp(timestamp: Int32) {
-        guard let currentParams = self.currentParams else {
+        if let items = self.items, !items.items.isEmpty {
+            var previousIndex: Int?
+            for item in items.items {
+                guard let item = item as? VisualMediaItem, let message = item.message else {
+                    continue
+                }
+                if message.timestamp <= timestamp {
+                    break
+                }
+                previousIndex = item.index
+            }
+            if previousIndex == nil {
+                previousIndex = (items.items[0] as? VisualMediaItem)?.index
+            }
+            if let index = previousIndex {
+                self.itemGrid.scrollToItem(at: index)
+            }
+        }
+        /*guard let currentParams = self.currentParams else {
             return
         }
         guard let itemsLayout = self.itemsLayout else {
@@ -1597,10 +1768,10 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
                 break
             }
-        }
+        }*/
     }
     
-    private func updateVisibleItems(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, theme: PresentationTheme, strings: PresentationStrings, synchronousLoad: Bool) {
+    /*private func updateVisibleItems(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, theme: PresentationTheme, strings: PresentationStrings, synchronousLoad: Bool) {
         guard let itemsLayout = self.itemsLayout else {
             return
         }
@@ -1678,72 +1849,23 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         if let requestHole = requestHole {
             self.listSource.loadHole(anchor: requestHole.anchor, direction: requestHole.direction)
         }
-    }
-    
-    private func resetHeaderFlashTimer(start: Bool, duration: Double = 0.3) {
-        /*if let flashHeaderDelayTimer = self.flashHeaderDelayTimer {
-            flashHeaderDelayTimer.invalidate()
-            self.flashHeaderDelayTimer = nil
-        }
-        
-        if start {
-            final class TimerProxy: NSObject {
-                private let action: () -> ()
-                
-                init(_ action: @escaping () -> ()) {
-                    self.action = action
-                    super.init()
-                }
-                
-                @objc func timerEvent() {
-                    self.action()
-                }
-            }
-            
-            let timer = Timer(timeInterval: duration, target: TimerProxy { [weak self] in
-                if let strongSelf = self {
-                    if let flashHeaderDelayTimer = strongSelf.flashHeaderDelayTimer {
-                        flashHeaderDelayTimer.invalidate()
-                        strongSelf.flashHeaderDelayTimer = nil
-                        strongSelf.updateHeaderFlashing(animated: true)
-                    }
-                }
-            }, selector: #selector(TimerProxy.timerEvent), userInfo: nil, repeats: false)
-            self.flashHeaderDelayTimer = timer
-            RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
-            self.updateHeaderFlashing(animated: true)
-        }*/
-    }
-    
-    private func headerIsFlashing() -> Bool {
-        return false
-        //return self.scrollNode.view.isDragging || self.isDeceleratingAfterTracking || self.flashHeaderDelayTimer != nil
-    }
-    
-    private func updateHeaderFlashing(animated: Bool) {
-        /*let flashing = self.headerIsFlashing()
-        let alpha: CGFloat = flashing ? 1.0 : 0.0
-        let previousAlpha = self.floatingHeaderNode.alpha
-        
-        if !previousAlpha.isEqual(to: alpha) {
-            self.floatingHeaderNode.alpha = alpha
-            if animated {
-                let duration: Double = flashing ? 0.3 : 0.4
-                self.floatingHeaderNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
-            }
-        }*/
-    }
+    }*/
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         guard let result = super.hitTest(point, with: event) else {
             return nil
         }
-        if self.decelerationAnimator != nil {
+        /*if self.decelerationAnimator != nil {
             self.decelerationAnimator?.isPaused = true
             self.decelerationAnimator = nil
             
             return self.scrollNode.view
-        }
+        }*/
         return result
+    }
+
+    func availableZoomLevels() -> (decrement: ZoomLevel?, increment: ZoomLevel?) {
+        let levels = self.itemGrid.availableZoomLevels()
+        return (levels.decrement.flatMap(ZoomLevel.init), levels.increment.flatMap(ZoomLevel.init))
     }
 }
