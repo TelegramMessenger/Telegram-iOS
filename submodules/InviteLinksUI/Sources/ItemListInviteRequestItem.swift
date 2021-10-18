@@ -278,7 +278,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                 let rect: CGRect
                 if isExtracted {
                     if extractedVerticalOffset > 0.0 {
-                        rect = CGRect(x: extractedRect.minX, y: extractedRect.minY + extractedVerticalOffset, width: extractedRect.width, height: extractedRect.height - extractedVerticalOffset)
+                        rect = CGRect(x: extractedRect.minX - 16.0, y: extractedRect.minY + extractedVerticalOffset, width: extractedRect.width, height: extractedRect.height - extractedVerticalOffset)
                     } else {
                         rect = extractedRect
                     }
@@ -312,7 +312,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.avatarNode.transform = CATransform3DIdentity
                         var avatarInitialRect = strongSelf.avatarNode.view.convert(strongSelf.avatarNode.bounds, to: strongSelf.offsetContainerNode.supernode?.view)
                         if strongSelf.avatarTransitionNode == nil {
-                            let targetRect = CGRect(x: extractedRect.minX, y: extractedRect.minY, width: extractedRect.width, height: extractedRect.width)
+                            let targetRect = CGRect(x: extractedRect.minX - 16.0, y: extractedRect.minY, width: extractedRect.width, height: extractedRect.width)
                             let initialScale = avatarInitialRect.width / targetRect.width
                             avatarInitialRect.origin.y += backgroundCornerRadius / 2.0 * initialScale
                             
@@ -408,8 +408,9 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.avatarListContainerNode = nil
                         strongSelf.avatarListNode = nil
                         
-                        avatarListContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak avatarListContainerNode] _ in
+                        avatarListContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak avatarListContainerNode, weak avatarListWrapperNode] _ in
                             avatarListContainerNode?.removeFromSupernode()
+                            avatarListWrapperNode?.removeFromSupernode()
                         })
                                                 
                         avatarListWrapperNode.layer.animate(from: 1.0 as NSNumber, to: targetScale as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2, removeOnCompletion: false)
@@ -430,7 +431,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     alphaTransition.updateAlpha(node: strongSelf.dismissButton, alpha: isExtracted ? 0.0 : 1.0, delay: isExtracted ? 0.0 : 0.1)
                     
                     let offsetInitialSublayerTransform = strongSelf.offsetContainerNode.layer.sublayerTransform
-                    strongSelf.offsetContainerNode.layer.sublayerTransform = CATransform3DMakeTranslation(isExtracted ? -43 : 0.0, isExtracted ? extractedVerticalOffset : 0.0, 0.0)
+                    strongSelf.offsetContainerNode.layer.sublayerTransform = CATransform3DMakeTranslation(isExtracted ? -48.0 : 0.0, isExtracted ? extractedVerticalOffset : 0.0, 0.0)
                     
                     let initialExtractedBackgroundPosition = strongSelf.extractedBackgroundImageNode.position
                     strongSelf.extractedBackgroundImageNode.layer.position = rect.center
@@ -470,13 +471,6 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     transition.updateAlpha(node: strongSelf.expandedSubtitleNode, alpha: isExtracted ? 1.0 : 0.0)
                     
                     transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? inset : 0.0, y: isExtracted ? extractedVerticalOffset : 0.0))
-                    
-//                    transition.updateAlpha(node: strongSelf.backgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
-//                        if !isExtracted {
-//                            self?.backgroundImageNode.image = nil
-//                            self?.extractedBackgroundImageNode.image = nil
-//                        }
-//                    })
                 }
             }
         }
@@ -570,8 +564,8 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                     
-                    let nonExtractedRect = CGRect(origin: CGPoint(x: 16.0, y: 0.0), size: CGSize(width: layout.contentSize.width - 32.0, height: layout.contentSize.height))
-                    var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: params.leftInset, dy: 0.0)
+                    let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
+                    var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: params.leftInset + 16.0, dy: 0.0)
                     var extractedHeight = extractedRect.height + expandedSubtitleLayout.size.height - subtitleLayout.size.height
                     var extractedVerticalOffset: CGFloat = 0.0
                     if item.importer?.peer.peer?.smallProfileImage != nil {
@@ -580,7 +574,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                         extractedHeight += extractedVerticalOffset
                     }
                     
-                    extractedRect.size.height = extractedHeight - 48.0
+                    extractedRect.size.height = extractedHeight - 46.0
                     
                     strongSelf.extractedVerticalOffset = extractedVerticalOffset
                     strongSelf.extractedRect = extractedRect

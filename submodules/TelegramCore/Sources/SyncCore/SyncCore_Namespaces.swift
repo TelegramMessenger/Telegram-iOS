@@ -352,7 +352,7 @@ private enum SharedDataKeyValues: Int32 {
     case themeSettings = 6
     case countriesList = 7
     case wallapersState = 8
-    case chatThemes = 9
+    case chatThemes = 10
 }
 
 public struct SharedDataKeys {

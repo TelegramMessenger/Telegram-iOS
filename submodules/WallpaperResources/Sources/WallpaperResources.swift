@@ -1297,7 +1297,7 @@ public func themeImage(account: Account, accountManager: AccountManager<Telegram
     }
 }
 
-public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, emoticon: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, emoticon: Bool = false, large: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let colorsSignal: Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Int32?), NoError>
 
     var reference: MediaResourceReference?
@@ -1308,9 +1308,11 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
     }
 
     let themeSignal: Signal<PresentationTheme?, NoError>
-    if case let .builtin(theme) = theme {
+    if case let .cloud(theme) = theme, let nightMode = nightMode {
+        themeSignal = .single(makePresentationTheme(cloudTheme: theme.theme, dark: nightMode))
+    } else if case let .builtin(theme) = theme {
         themeSignal = .single(makeDefaultPresentationTheme(reference: theme, serviceBackgroundColor: nil))
-    } else if case let .cloud(theme) = theme, let settings = theme.theme.settings {
+    } else if case let .cloud(theme) = theme, let settings = theme.theme.settings?.first {
         themeSignal = Signal { subscriber in
             let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
             subscriber.putNext(theme)
@@ -1480,58 +1482,122 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                 
                 let incomingColors = colors.1
                 if emoticon {
-                    let rect = CGRect(x: 8.0, y: 44.0, width: 48.0, height: 24.0)
-                    c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
-                    c.clip()
-                    
-                    if incomingColors.count >= 2 {
-                        let gradientColors = incomingColors.map { $0.cgColor } as CFArray
+                    if large {
+                        c.saveGState()
 
-                        var locations: [CGFloat] = []
-                        for i in 0 ..< incomingColors.count {
-                            let t = CGFloat(i) / CGFloat(incomingColors.count - 1)
-                            locations.append(t)
-                        }
-                        let colorSpace = CGColorSpaceCreateDeviceRGB()
-                        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-
-                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: rect.minY), end: CGPoint(x: 0.0, y: rect.maxY), options: CGGradientDrawingOptions())
-                    } else if !incomingColors.isEmpty {
-                        c.setFillColor(incomingColors[0].cgColor)
-                        c.fill(rect)
-                    }
+                        c.translateBy(x: 5.0, y: 25.0)
+                        c.translateBy(x: 114.0, y: 32.0)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -114.0, y: -32.0)
                         
-                    c.resetClip()
+                        let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
+                        if Set(incomingColors.map(\.rgb)).count > 1 {
+                            c.clip()
+
+                            var colors: [CGColor] = []
+                            var locations: [CGFloat] = []
+                            for i in 0 ..< incomingColors.count {
+                                let t = CGFloat(i) / CGFloat(incomingColors.count - 1)
+                                locations.append(t)
+                                colors.append(incomingColors[i].cgColor)
+                            }
+
+                            let colorSpace = CGColorSpaceCreateDeviceRGB()
+                            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as NSArray, locations: &locations)!
+                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 32.0), options: CGGradientDrawingOptions())
+                        } else {
+                            c.setFillColor(incomingColors[0].cgColor)
+                            c.fillPath()
+                        }
+                        
+                        c.restoreGState()
+                    } else {
+                        let rect = CGRect(x: 8.0, y: 44.0, width: 48.0, height: 24.0)
+                        c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
+                        c.clip()
+                        
+                        if incomingColors.count >= 2 {
+                            let gradientColors = incomingColors.map { $0.cgColor } as CFArray
+
+                            var locations: [CGFloat] = []
+                            for i in 0 ..< incomingColors.count {
+                                let t = CGFloat(i) / CGFloat(incomingColors.count - 1)
+                                locations.append(t)
+                            }
+                            let colorSpace = CGColorSpaceCreateDeviceRGB()
+                            let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: rect.minY), end: CGPoint(x: 0.0, y: rect.maxY), options: CGGradientDrawingOptions())
+                        } else if !incomingColors.isEmpty {
+                            c.setFillColor(incomingColors[0].cgColor)
+                            c.fill(rect)
+                        }
+                            
+                        c.resetClip()
+                    }
                 } else {
                     let incoming = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: incomingColors)
                     c.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
                 }
                 
-                c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
-                c.scaleBy(x: -1.0, y: 1.0)
-                c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                if !(emoticon && large) {
+                    c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                    c.scaleBy(x: -1.0, y: 1.0)
+                    c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                }
                 
                 let outgoingColors = colors.2
                 if emoticon {
-                    let rect = CGRect(x: 8.0, y: 72.0, width: 48.0, height: 24.0)
-                    c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
-                    c.clip()
-                    
-                    if outgoingColors.count >= 2 {
-                        let gradientColors = outgoingColors.map { $0.cgColor } as CFArray
+                    if large {
+                        c.saveGState()
 
-                        var locations: [CGFloat] = []
-                        for i in 0 ..< outgoingColors.count {
-                            let t = CGFloat(i) / CGFloat(outgoingColors.count - 1)
-                            locations.append(t)
+                        c.translateBy(x: drawingRect.width - 114.0 - 5.0, y: 65.0)
+                        c.translateBy(x: 114.0, y: 32.0)
+                        c.scaleBy(x: -1.0, y: -1.0)
+                        c.translateBy(x: 0, y: -32.0)
+                        
+                        let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
+                        if Set(outgoingColors.map(\.rgb)).count > 1 {
+                            c.clip()
+
+                            var colors: [CGColor] = []
+                            var locations: [CGFloat] = []
+                            for i in 0 ..< outgoingColors.count {
+                                let t = CGFloat(i) / CGFloat(outgoingColors.count - 1)
+                                locations.append(t)
+                                colors.append(outgoingColors[i].cgColor)
+                            }
+
+                            let colorSpace = CGColorSpaceCreateDeviceRGB()
+                            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as NSArray, locations: &locations)!
+                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 32.0), options: CGGradientDrawingOptions())
+                        } else {
+                            c.setFillColor(outgoingColors[0].cgColor)
+                            c.fillPath()
                         }
-                        let colorSpace = CGColorSpaceCreateDeviceRGB()
-                        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+                        
+                        c.restoreGState()
+                    } else {
+                        let rect = CGRect(x: 8.0, y: 72.0, width: 48.0, height: 24.0)
+                        c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
+                        c.clip()
+                        
+                        if outgoingColors.count >= 2 {
+                            let gradientColors = outgoingColors.map { $0.cgColor } as CFArray
 
-                        c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: rect.minY), end: CGPoint(x: 0.0, y: rect.maxY), options: CGGradientDrawingOptions())
-                    } else if !outgoingColors.isEmpty {
-                        c.setFillColor(outgoingColors[0].cgColor)
-                        c.fill(rect)
+                            var locations: [CGFloat] = []
+                            for i in 0 ..< outgoingColors.count {
+                                let t = CGFloat(i) / CGFloat(outgoingColors.count - 1)
+                                locations.append(t)
+                            }
+                            let colorSpace = CGColorSpaceCreateDeviceRGB()
+                            let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: rect.minY), end: CGPoint(x: 0.0, y: rect.maxY), options: CGGradientDrawingOptions())
+                        } else if !outgoingColors.isEmpty {
+                            c.setFillColor(outgoingColors[0].cgColor)
+                            c.fill(rect)
+                        }
                     }
                         
                     c.resetClip()

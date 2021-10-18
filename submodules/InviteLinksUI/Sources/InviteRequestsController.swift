@@ -176,12 +176,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         
     let importersContext = existingContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: nil))
     
-    let arguments = InviteRequestsControllerArguments(context: context, openLinks: {
-        let controller = inviteLinkListController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, admin: nil)
-        pushControllerImpl?(controller)
-    }, openPeer: { peer in
-        navigateToProfileImpl?(peer)
-    }, approveRequest: { peer in
+    let approveRequestImpl: (EnginePeer) -> Void = { peer in
         importersContext.update(peer.id, action: .approve)
                 
         let _ = (context.engine.data.get(
@@ -200,8 +195,21 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
             }
             presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .invitedToVoiceChat(context: context, peer: peer, text: string), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
         })
-    }, denyRequest: { peer in
+    }
+    
+    let denyRequestImpl: (EnginePeer) -> Void = { peer in
         importersContext.update(peer.id, action: .deny)
+    }
+    
+    let arguments = InviteRequestsControllerArguments(context: context, openLinks: {
+        let controller = inviteLinkListController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, admin: nil)
+        pushControllerImpl?(controller)
+    }, openPeer: { peer in
+        navigateToProfileImpl?(peer)
+    }, approveRequest: { peer in
+        approveRequestImpl(peer)
+    }, denyRequest: { peer in
+        denyRequestImpl(peer)
     }, peerContextAction: { peer, node, gesture in
         guard let node = node as? ContextExtractedContentContainingNode else {
             return
@@ -209,11 +217,20 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         var items: [ContextMenuItem] = []
 
-        items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextCopy, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor)
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MemberRequests_AddToGroup, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
         }, action: { _, f in
             f(.dismissWithoutContent)
             
+            approveRequestImpl(peer)
+        })))
+        
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MemberRequests_Dismiss, textColor: .destructive, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor)
+        }, action: { _, f in
+            f(.dismissWithoutContent)
+            
+            denyRequestImpl(peer)
         })))
         
         let dismissPromise = ValuePromise<Bool>(false)
@@ -290,7 +307,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         
         let title: ItemListControllerTitle = .text(presentationData.strings.MemberRequests_Title)
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: animateChanges, scrollEnabled: emptyStateItem == nil)
         
         return (controllerState, (listState, arguments))
     }

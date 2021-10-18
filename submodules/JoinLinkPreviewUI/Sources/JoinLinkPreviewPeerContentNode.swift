@@ -83,9 +83,9 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         self.titleNode = ASTextNode()
         self.countNode = ASTextNode()
         self.aboutNode = ASTextNode()
-        self.aboutNode.maximumNumberOfLines = 6
+        self.aboutNode.maximumNumberOfLines = 8
         self.descriptionNode = ASTextNode()
-        self.descriptionNode.maximumNumberOfLines = 0
+        self.descriptionNode.maximumNumberOfLines = 3
         self.descriptionNode.textAlignment = .center
         self.peersScrollNode = ASScrollNode()
         self.peersScrollNode.view.showsHorizontalScrollIndicator = false
@@ -160,6 +160,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         
         self.actionButtonNode.pressed = { [weak self] in
             self?.join?()
+            self?.actionButtonNode.transitionToProgress()
         }
         self.addSubnode(self.actionButtonNode)
     }
@@ -177,7 +178,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         self.contentOffsetUpdated = f
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var nodeHeight: CGFloat = (self.peerNodes.isEmpty ? 264.0 : 364.0)
         
         let paddedSize = CGSize(width: size.width - 60.0, height: size.height)
@@ -185,9 +186,20 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         var aboutSize: CGSize?
         var descriptionSize: CGSize?
         if self.aboutNode.supernode != nil {
+            if isLandscape {
+                self.aboutNode.maximumNumberOfLines = 3
+            } else {
+                self.aboutNode.maximumNumberOfLines = 8
+            }
             let measuredSize = self.aboutNode.measure(paddedSize)
             nodeHeight += measuredSize.height + 20.0
             aboutSize = measuredSize
+        }
+        
+        if isLandscape {
+            self.descriptionNode.removeFromSupernode()
+        } else if self.descriptionNode.supernode == nil {
+            self.addSubnode(self.descriptionNode)
         }
         if self.descriptionNode.supernode != nil {
             let measuredSize = self.descriptionNode.measure(paddedSize)
@@ -286,7 +298,7 @@ public final class JoinLinkPreviewLoadingContainerNode: ASDisplayNode, ShareCont
         self.contentOffsetUpdated = f
     }
     
-    public func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let nodeHeight: CGFloat = 125.0
         
         let indicatorSize = self.activityIndicator.calculateSizeThatFits(size)

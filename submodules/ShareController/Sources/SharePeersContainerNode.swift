@@ -310,7 +310,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     func deactivate() {
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let firstLayout = self.validLayout == nil
         self.validLayout = (size, bottomInset)
         

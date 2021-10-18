@@ -18829,52 +18829,6 @@ public extension Api {
         }
     
     }
-    public enum ChatTheme: TypeConstructorDescription {
-        case chatTheme(emoticon: String, theme: Api.Theme, darkTheme: Api.Theme)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .chatTheme(let emoticon, let theme, let darkTheme):
-                    if boxed {
-                        buffer.appendInt32(-318022605)
-                    }
-                    serializeString(emoticon, buffer: buffer, boxed: false)
-                    theme.serialize(buffer, true)
-                    darkTheme.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .chatTheme(let emoticon, let theme, let darkTheme):
-                return ("chatTheme", [("emoticon", emoticon), ("theme", theme), ("darkTheme", darkTheme)])
-    }
-    }
-    
-        public static func parse_chatTheme(_ reader: BufferReader) -> ChatTheme? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Api.Theme?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Theme
-            }
-            var _3: Api.Theme?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Theme
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ChatTheme.chatTheme(emoticon: _1!, theme: _2!, darkTheme: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
     public enum PhoneCallDiscardReason: TypeConstructorDescription {
         case phoneCallDiscardReasonMissed
         case phoneCallDiscardReasonDisconnect
@@ -22248,13 +22202,13 @@ public extension Api {
     
     }
     public enum Theme: TypeConstructorDescription {
-        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, settings: Api.ThemeSettings?, installsCount: Int32?)
+        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, settings: [Api.ThemeSettings]?, emoticon: String?, installsCount: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let installsCount):
+                case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let emoticon, let installsCount):
                     if boxed {
-                        buffer.appendInt32(-402474788)
+                        buffer.appendInt32(-1609668650)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -22262,7 +22216,12 @@ public extension Api {
                     serializeString(slug, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 3) != 0 {settings!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(settings!.count))
+                    for item in settings! {
+                        item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 6) != 0 {serializeString(emoticon!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt32(installsCount!, buffer: buffer, boxed: false)}
                     break
     }
@@ -22270,8 +22229,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let installsCount):
-                return ("theme", [("flags", flags), ("id", id), ("accessHash", accessHash), ("slug", slug), ("title", title), ("document", document), ("settings", settings), ("installsCount", installsCount)])
+                case .theme(let flags, let id, let accessHash, let slug, let title, let document, let settings, let emoticon, let installsCount):
+                return ("theme", [("flags", flags), ("id", id), ("accessHash", accessHash), ("slug", slug), ("title", title), ("document", document), ("settings", settings), ("emoticon", emoticon), ("installsCount", installsCount)])
     }
     }
     
@@ -22290,12 +22249,14 @@ public extension Api {
             if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
                 _6 = Api.parse(reader, signature: signature) as? Api.Document
             } }
-            var _7: Api.ThemeSettings?
-            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.ThemeSettings
+            var _7: [Api.ThemeSettings]?
+            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ThemeSettings.self)
             } }
-            var _8: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_8 = reader.readInt32() }
+            var _8: String?
+            if Int(_1!) & Int(1 << 6) != 0 {_8 = parseString(reader) }
+            var _9: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_9 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -22303,9 +22264,10 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 4) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6, settings: _7, installsCount: _8)
+            let _c8 = (Int(_1!) & Int(1 << 6) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 4) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6, settings: _7, emoticon: _8, installsCount: _9)
             }
             else {
                 return nil

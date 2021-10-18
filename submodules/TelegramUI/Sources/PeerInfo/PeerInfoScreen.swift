@@ -1270,10 +1270,11 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemMembers = 106
                 let ItemPermissions = 107
                 let ItemAdmins = 108
-                let ItemRemovedUsers = 109
-                let ItemLocationHeader = 110
-                let ItemLocation = 111
-                let ItemLocationSetup = 112
+                let ItemMemberRequests = 109
+                let ItemRemovedUsers = 110
+                let ItemLocationHeader = 111
+                let ItemLocation = 112
+                let ItemLocationSetup = 113
                 let ItemDeleteGroup = 114
                 
                 let isCreator = channel.flags.contains(.isCreator)
@@ -1392,6 +1393,12 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text(cachedData.participantsSummary.adminCount.flatMap { "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" } ?? ""), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
                             interaction.openParticipantsSection(.admins)
                         }))
+                        
+                        if let count = data.requests?.count, count > 0 {
+                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMemberRequests, label: .badge(presentationStringsFormattedNumber(count, presentationData.dateTimeFormat.groupingSeparator), presentationData.theme.list.itemAccentColor), text: presentationData.strings.GroupInfo_MemberRequests, icon: UIImage(bundleImageName: "Chat/Info/GroupRequestsIcon"), action: {
+                                interaction.openParticipantsSection(.memberRequests)
+                            }))
+                        }
 
                         items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRemovedUsers, label: .text(cachedData.participantsSummary.kickedCount.flatMap { $0 > 0 ? "\(presentationStringsFormattedNumber($0, presentationData.dateTimeFormat.groupingSeparator))" : "" } ?? ""), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
                             interaction.openParticipantsSection(.banned)
@@ -1411,6 +1418,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
             let ItemPreHistory = 103
             let ItemPermissions = 104
             let ItemAdmins = 105
+            let ItemMemberRequests = 106
             
             var canViewAdminsAndBanned = false
             
@@ -1477,6 +1485,12 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
                     interaction.openParticipantsSection(.admins)
                 }))
+                
+                if let count = data.requests?.count, count > 0 {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMemberRequests, label: .badge(presentationStringsFormattedNumber(count, presentationData.dateTimeFormat.groupingSeparator), presentationData.theme.list.itemAccentColor), text: presentationData.strings.GroupInfo_MemberRequests, icon: UIImage(bundleImageName: "Chat/Info/GroupRequestsIcon"), action: {
+                        interaction.openParticipantsSection(.memberRequests)
+                    }))
+                }
             }
         }
     }
@@ -6984,9 +6998,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
             presentationDataSignal = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, context.engine.themes.getChatThemes(accountManager: context.sharedContext.accountManager, onlyCached: false), themeEmoticon)
             |> map { presentationData, chatThemes, themeEmoticon -> PresentationData in
                 var presentationData = presentationData
-                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoji == themeEmoticon }) {
-                    let customTheme = presentationData.theme.overallDarkAppearance ? theme.darkTheme : theme.theme
-                    if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings) {
+                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoticon == themeEmoticon }) {
+                    if let theme = makePresentationTheme(cloudTheme: theme, dark: presentationData.theme.overallDarkAppearance) {
                         presentationData = presentationData.withUpdated(theme: theme)
                         presentationData = presentationData.withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
                     }

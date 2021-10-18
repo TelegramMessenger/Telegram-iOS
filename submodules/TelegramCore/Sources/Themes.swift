@@ -157,7 +157,7 @@ private func saveUnsaveTheme(account: Account, accountManager: AccountManager<Te
     } |> switchToLatest
 }
 
-private func installTheme(account: Account, theme: TelegramTheme?, autoNight: Bool) -> Signal<Never, NoError> {
+private func installTheme(account: Account, theme: TelegramTheme?, baseTheme: TelegramBaseTheme? = nil, autoNight: Bool) -> Signal<Never, NoError> {
     var flags: Int32 = 0
     if autoNight {
         flags |= 1 << 0
@@ -171,7 +171,16 @@ private func installTheme(account: Account, theme: TelegramTheme?, autoNight: Bo
         inputTheme = nil
     }
     
-    return account.network.request(Api.functions.account.installTheme(flags: flags, format: telegramThemeFormat, theme: inputTheme))
+    flags |= 1 << 2
+    
+    let inputBaseTheme: Api.BaseTheme?
+    if let baseTheme = baseTheme {
+        inputBaseTheme = baseTheme.apiBaseTheme
+    } else {
+        inputBaseTheme = nil
+    }
+    
+    return account.network.request(Api.functions.account.installTheme(flags: flags, theme: inputTheme, format: telegramThemeFormat, baseTheme: inputBaseTheme))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .complete()
     }
@@ -278,16 +287,16 @@ public enum CreateThemeResult {
     case progress(Float)
 }
 
-public func createTheme(account: Account, title: String, resource: MediaResource? = nil, thumbnailData: Data? = nil, settings: TelegramThemeSettings?) -> Signal<CreateThemeResult, CreateThemeError> {
+public func createTheme(account: Account, title: String, resource: MediaResource? = nil, thumbnailData: Data? = nil, settings: [TelegramThemeSettings]?) -> Signal<CreateThemeResult, CreateThemeError> {
     var flags: Int32 = 0
     
-    var inputSettings: Api.InputThemeSettings?
+    var inputSettings: [Api.InputThemeSettings]?
     if let _ = resource {
         flags |= 1 << 2
     }
     if let settings = settings {
         flags |= 1 << 3
-        inputSettings = settings.apiInputThemeSettings
+        inputSettings = settings.map { $0.apiInputThemeSettings }
     }
     
     if let resource = resource {
@@ -345,7 +354,7 @@ public func createTheme(account: Account, title: String, resource: MediaResource
             }
             |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
                 var theme = TelegramTheme(apiTheme: apiTheme)
-                theme = TelegramTheme(id: theme.id, accessHash: theme.accessHash, slug: theme.slug, title: theme.title, file: theme.file, settings: settings, isCreator: theme.isCreator, isDefault: theme.isDefault, installCount: theme.installCount)
+                theme = TelegramTheme(id: theme.id, accessHash: theme.accessHash, slug: theme.slug, emoticon: nil, title: theme.title, file: theme.file, settings: settings, isCreator: theme.isCreator, isDefault: theme.isDefault, installCount: theme.installCount)
 
                 return account.postbox.transaction { transaction -> CreateThemeResult in
                     let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
@@ -367,7 +376,7 @@ public func createTheme(account: Account, title: String, resource: MediaResource
     }
 }
 
-public func updateTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil, settings: TelegramThemeSettings?) -> Signal<CreateThemeResult, CreateThemeError> {
+public func updateTheme(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil, settings: [TelegramThemeSettings]?) -> Signal<CreateThemeResult, CreateThemeError> {
     guard title != nil || slug != nil || resource != nil else {
         return .complete()
     }
@@ -381,10 +390,10 @@ public func updateTheme(account: Account, accountManager: AccountManager<Telegra
     if let _ = resource {
         flags |= 1 << 2
     }
-    var inputSettings: Api.InputThemeSettings?
+    var inputSettings: [Api.InputThemeSettings]?
     if let settings = settings {
         flags |= 1 << 3
-        inputSettings = settings.apiInputThemeSettings
+        inputSettings = settings.map { $0.apiInputThemeSettings }
     }
     let uploadSignal: Signal<UploadThemeResult?, UploadThemeError>
     if let resource = resource {
@@ -425,7 +434,7 @@ public func updateTheme(account: Account, accountManager: AccountManager<Telegra
         }
         |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
             let theme = TelegramTheme(apiTheme: apiTheme)
-            let updatedTheme = TelegramTheme(id: theme.id, accessHash: theme.accessHash, slug: theme.slug, title: theme.title, file: theme.file, settings: settings, isCreator: theme.isCreator, isDefault: theme.isDefault, installCount: theme.installCount)
+            let updatedTheme = TelegramTheme(id: theme.id, accessHash: theme.accessHash, slug: theme.slug, emoticon: nil, title: theme.title, file: theme.file, settings: settings, isCreator: theme.isCreator, isDefault: theme.isDefault, installCount: theme.installCount)
 
             let _ = accountManager.transaction { transaction in
                 transaction.updateSharedData(SharedDataKeys.themeSettings, { current in

@@ -3909,12 +3909,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var presentationData = presentationData
                 var useDarkAppearance = presentationData.theme.overallDarkAppearance
                 
-                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoji == themeEmoticon }) {
+                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoticon == themeEmoticon }) {
                     if let darkAppearancePreview = darkAppearancePreview {
                         useDarkAppearance = darkAppearancePreview
                     }
-                    let customTheme = useDarkAppearance ? theme.darkTheme : theme.theme
-                    if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings) {
+                    if let theme = makePresentationTheme(cloudTheme: theme, dark: useDarkAppearance) {
                         theme.forceSync = true
                         presentationData = presentationData.withUpdated(theme: theme).withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
                         
