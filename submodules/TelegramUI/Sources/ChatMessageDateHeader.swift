@@ -498,7 +498,11 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
 
     @objc func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.controllerInteraction.openPeer(self.peerId, .info, nil)
+            if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, id, _, _, _) = self.messageReference?.content {
+                self.controllerInteraction.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
+            } else {
+                self.controllerInteraction.openPeer(self.peerId, .info, nil)
+            }
         }
     }
 }

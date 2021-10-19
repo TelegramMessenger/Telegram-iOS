@@ -95,8 +95,10 @@ public final class JoinLinkPreviewController: ViewController {
                         strongSelf.dismiss()
                     case .invalidHash:
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLinks_InviteLinkExpired), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
-                        strongSelf.dismiss()
+                        Queue.mainQueue().after(0.2) {
+                            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLinks_InviteLinkExpired), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
+                            strongSelf.dismiss()
+                        }
                 }
             }
         }, error: { [weak self] error in

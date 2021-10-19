@@ -93,7 +93,7 @@ enum ThemeSettingsColorOption: Equatable {
             case let .accentColor(color):
                 return color.color
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings {
+            if case let .cloud(theme) = reference, let settings = theme.theme.settings?.first {
                     return UIColor(argb: settings.accentColor)
                 } else {
                     return nil
@@ -115,7 +115,7 @@ enum ThemeSettingsColorOption: Equatable {
             case let .accentColor(color):
                 return color.plainBubbleColors
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings, !settings.messageColors.isEmpty {
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings?.first, !settings.messageColors.isEmpty {
                     return settings.messageColors
                 } else {
                     return []
@@ -128,7 +128,7 @@ enum ThemeSettingsColorOption: Equatable {
             case let .accentColor(color):
                 return color.customBubbleColors
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings, !settings.messageColors.isEmpty {
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings?.first, !settings.messageColors.isEmpty {
                     return settings.messageColors
                 } else {
                     return []

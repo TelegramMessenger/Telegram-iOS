@@ -9,6 +9,6 @@ public protocol ShareContentContainerNode: AnyObject {
     func deactivate()
     func setEnsurePeerVisibleOnLayout(_ peerId: EnginePeer.Id?)
     func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?)
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition)
+    func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition)
     func updateSelectedPeers()
 }

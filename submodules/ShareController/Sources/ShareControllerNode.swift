@@ -366,7 +366,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             if let (layout, navigationBarHeight, bottomGridInset) = self.containerLayout {
                 if let contentNode = contentNode, let previous = previous {
                     contentNode.frame = previous.frame
-                    contentNode.updateLayout(size: previous.bounds.size, bottomInset: bottomGridInset, transition: .immediate)
+                    contentNode.updateLayout(size: previous.bounds.size, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: .immediate)
                     
                     contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                         self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
@@ -472,7 +472,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         if let contentNode = self.contentNode {
             transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
-            contentNode.updateLayout(size: gridSize, bottomInset: bottomGridInset, transition: transition)
+            contentNode.updateLayout(size: gridSize, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: transition)
         }
     }
     

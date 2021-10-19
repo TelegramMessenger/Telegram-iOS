@@ -14,31 +14,33 @@ import WallpaperResources
 import AccountContext
 import AppBundle
 import ContextUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import ShimmerEffect
+import StickerResources
 
-private struct ThemeSettingsThemeEntry: Comparable, Identifiable {    
+private struct ThemeCarouselThemeEntry: Comparable, Identifiable {
     let index: Int
+    let emojiFile: TelegramMediaFile?
     let themeReference: PresentationThemeReference
-    let title: String
-    let accentColor: PresentationThemeAccentColor?
+    let nightMode: Bool
     var selected: Bool
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let wallpaper: TelegramWallpaper?
     
-    var stableId: Int64 {
-        return self.themeReference.generalThemeReference.index
+    var stableId: Int {
+        return index
     }
     
-    static func ==(lhs: ThemeSettingsThemeEntry, rhs: ThemeSettingsThemeEntry) -> Bool {
+    static func ==(lhs: ThemeCarouselThemeEntry, rhs: ThemeCarouselThemeEntry) -> Bool {
         if lhs.index != rhs.index {
             return false
         }
         if lhs.themeReference.index != rhs.themeReference.index {
             return false
         }
-        if lhs.accentColor != rhs.accentColor {
-            return false
-        }
-        if lhs.title != rhs.title {
+        if lhs.nightMode != rhs.nightMode {
             return false
         }
         if lhs.selected != rhs.selected {
@@ -47,40 +49,45 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
         if lhs.theme !== rhs.theme {
             return false
         }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.wallpaper != rhs.wallpaper {
             return false
         }
         return true
     }
     
-    static func <(lhs: ThemeSettingsThemeEntry, rhs: ThemeSettingsThemeEntry) -> Bool {
+    static func <(lhs: ThemeCarouselThemeEntry, rhs: ThemeCarouselThemeEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
     func item(context: AccountContext, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?) -> ListViewItem {
-        return ThemeSettingsThemeIconItem(context: context, themeReference: self.themeReference, accentColor: self.accentColor, selected: self.selected, title: self.title, theme: self.theme, wallpaper: self.wallpaper, action: action, contextAction: contextAction)
+        return ThemeCarouselThemeIconItem(context: context, emojiFile: self.emojiFile, themeReference: self.themeReference, nightMode: self.nightMode, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, action: action, contextAction: contextAction)
     }
 }
 
 
-private class ThemeSettingsThemeIconItem: ListViewItem {
+class ThemeCarouselThemeIconItem: ListViewItem {
     let context: AccountContext
+    let emojiFile: TelegramMediaFile?
     let themeReference: PresentationThemeReference
-    let accentColor: PresentationThemeAccentColor?
+    let nightMode: Bool
     let selected: Bool
-    let title: String
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let wallpaper: TelegramWallpaper?
     let action: (PresentationThemeReference) -> Void
     let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(context: AccountContext, themeReference: PresentationThemeReference, accentColor: PresentationThemeAccentColor?, selected: Bool, title: String, theme: PresentationTheme, wallpaper: TelegramWallpaper?, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?) {
+    public init(context: AccountContext, emojiFile: TelegramMediaFile?, themeReference: PresentationThemeReference, nightMode: Bool, selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.context = context
+        self.emojiFile = emojiFile
         self.themeReference = themeReference
-        self.accentColor = accentColor
+        self.nightMode = nightMode
         self.selected = selected
-        self.title = title
         self.theme = theme
+        self.strings = strings
         self.wallpaper = wallpaper
         self.action = action
         self.contextAction = contextAction
@@ -88,7 +95,7 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = ThemeSettingsThemeItemIconNode()
+            let node = ThemeCarouselThemeItemIconNode()
             let (nodeLayout, apply) = node.asyncLayout()(self, params)
             node.insets = nodeLayout.insets
             node.contentSize = nodeLayout.contentSize
@@ -105,8 +112,8 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            assert(node() is ThemeSettingsThemeItemIconNode)
-            if let nodeValue = node() as? ThemeSettingsThemeItemIconNode {
+            assert(node() is ThemeCarouselThemeItemIconNode)
+            if let nodeValue = node() as? ThemeCarouselThemeItemIconNode {
                 let layout = nodeValue.asyncLayout()
                 async {
                     let (nodeLayout, apply) = layout(self, params)
@@ -136,7 +143,7 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
     if let image = cachedBorderImages[key] {
         return image
     } else {
-        let image = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
+        let image = generateImage(CGSize(width: 18.0, height: 18.0), rotatedContext: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
             context.clear(bounds)
 
@@ -162,7 +169,7 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
                 context.setLineWidth(lineWidth)
                 context.strokeEllipse(in: bounds.insetBy(dx: 1.0 + lineWidth / 2.0, dy: 1.0 + lineWidth / 2.0))
             }
-        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 16)
+        })?.stretchableImage(withLeftCapWidth: 9, topCapHeight: 9)
         cachedBorderImages[key] = image
         return image
     }
@@ -193,72 +200,157 @@ private func createThemeImage(theme: PresentationTheme) -> Signal<(TransformImag
 }
 
 
-private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
-    private let containerNode: ContextControllerSourceNode
+private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
+    private let containerNode: ASDisplayNode
+    private let emojiContainerNode: ASDisplayNode
     private let imageNode: TransformImageNode
     private let overlayNode: ASImageNode
-    private let titleNode: TextNode
+    private let textNode: TextNode
+    private let emojiNode: TextNode
+    private let emojiImageNode: TransformImageNode
+    private var animatedStickerNode: AnimatedStickerNode?
+    private var placeholderNode: StickerShimmerEffectNode
     var snapshotView: UIView?
     
-    var item: ThemeSettingsThemeIconItem?
-
-    init() {
-        self.containerNode = ContextControllerSourceNode()
-
-        self.imageNode = TransformImageNode()
-        self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 98.0, height: 62.0))
-        self.imageNode.isLayerBacked = true
-
-        self.overlayNode = ASImageNode()
-        self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 100.0, height: 64.0))
-        self.overlayNode.isLayerBacked = true
-
-        self.titleNode = TextNode()
-        self.titleNode.isUserInteractionEnabled = false
-
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
-
-        self.addSubnode(self.containerNode)
-        self.containerNode.addSubnode(self.imageNode)
-        self.containerNode.addSubnode(self.overlayNode)
-        self.containerNode.addSubnode(self.titleNode)
-
-        self.containerNode.activated = { [weak self] gesture, _ in
-            guard let strongSelf = self, let item = strongSelf.item else {
-                gesture.cancel()
-                return
-            }
-            item.contextAction?(item.themeReference, strongSelf.containerNode, gesture)
+    var item: ThemeCarouselThemeIconItem?
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            self.visibilityStatus = self.visibility != .none
         }
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
-        self.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                self.animatedStickerNode?.visibility = self.visibilityStatus
+            }
+        }
     }
     
-    func asyncLayout() -> (ThemeSettingsThemeIconItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
-        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+    private let stickerFetchedDisposable = MetaDisposable()
+
+    init() {
+        self.containerNode = ASDisplayNode()
+        self.emojiContainerNode = ASDisplayNode()
+
+        self.imageNode = TransformImageNode()
+        self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 82.0, height: 108.0))
+        self.imageNode.isLayerBacked = true
+        self.imageNode.cornerRadius = 8.0
+        self.imageNode.clipsToBounds = true
+        
+        self.overlayNode = ASImageNode()
+        self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 84.0, height: 110.0))
+        self.overlayNode.isLayerBacked = true
+
+        self.textNode = TextNode()
+        self.textNode.isUserInteractionEnabled = false
+        self.textNode.displaysAsynchronously = false
+        
+        self.emojiNode = TextNode()
+        self.emojiNode.isUserInteractionEnabled = false
+        self.emojiNode.displaysAsynchronously = false
+        
+        self.emojiImageNode = TransformImageNode()
+        
+        self.placeholderNode = StickerShimmerEffectNode()
+
+        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.imageNode)
+        self.containerNode.addSubnode(self.overlayNode)
+        self.containerNode.addSubnode(self.textNode)
+        
+        self.addSubnode(self.emojiContainerNode)
+        self.emojiContainerNode.addSubnode(self.emojiNode)
+        self.emojiContainerNode.addSubnode(self.emojiImageNode)
+        self.emojiContainerNode.addSubnode(self.placeholderNode)
+        
+        var firstTime = true
+        self.emojiImageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+                if firstTime {
+                    strongSelf.emojiImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+            firstTime = false
+        }
+    }
+
+    deinit {
+        self.stickerFetchedDisposable.dispose()
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        if !animated {
+            self.placeholderNode.removeFromSupernode()
+        } else {
+            self.placeholderNode.alpha = 0.0
+            self.placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                self?.placeholderNode.removeFromSupernode()
+            })
+        }
+    }
+    
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        let emojiFrame = CGRect(origin: CGPoint(x: 33.0, y: 79.0), size: CGSize(width: 24.0, height: 24.0))
+        self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + emojiFrame.minX, y: rect.minY + emojiFrame.minY), size: emojiFrame.size), within: containerSize)
+    }
+    
+    override func selected() {
+        let wasSelected = self.item?.selected ?? false
+        super.selected()
+        
+        if let animatedStickerNode = self.animatedStickerNode {
+            Queue.mainQueue().after(0.1) {
+                if !wasSelected {
+                    animatedStickerNode.seekTo(.frameIndex(0))
+                    animatedStickerNode.play()
+                    
+                    let scale: CGFloat = 2.6
+                    animatedStickerNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
+                    animatedStickerNode.layer.animateSpring(from: 1.0 as NSNumber, to: scale as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                    
+                    animatedStickerNode.completed = { [weak animatedStickerNode, weak self] _ in
+                        guard let item = self?.item, item.selected else {
+                            return
+                        }
+                        animatedStickerNode?.transform = CATransform3DIdentity
+                        animatedStickerNode?.layer.animateSpring(from: scale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                    }
+                }
+            }
+        }
+        
+    }
+    
+    func asyncLayout() -> (ThemeCarouselThemeIconItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+        let makeEmojiLayout = TextNode.asyncLayout(self.emojiNode)
         let makeImageLayout = self.imageNode.asyncLayout()
         
         let currentItem = self.item
 
         return { [weak self] item, params in
             var updatedThemeReference = false
-            var updatedAccentColor = false
             var updatedTheme = false
+            var updatedNightMode = false
             var updatedWallpaper = false
             var updatedSelected = false
             
             if currentItem?.themeReference != item.themeReference {
                 updatedThemeReference = true
             }
+            if currentItem?.nightMode != item.nightMode {
+                updatedNightMode = true
+            }
             if currentItem?.wallpaper != item.wallpaper {
                 updatedWallpaper = true
-            }
-            if currentItem == nil || currentItem?.accentColor != item.accentColor {
-                updatedAccentColor = true
             }
             if currentItem?.theme !== item.theme {
                 updatedTheme = true
@@ -267,67 +359,111 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                 updatedSelected = true
             }
             
-            let title = NSAttributedString(string: item.title, font: item.selected ? selectedTextFont : textFont, textColor: item.selected ? item.theme.list.itemAccentColor : item.theme.list.itemPrimaryTextColor)
-            let (_, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+
+            var string: String?
+            if let _ = item.themeReference.emoticon {
+            } else {
+                string = "⚙️"
+            }
             
-            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 116.0, height: 116.0), insets: UIEdgeInsets())
+            let emojiTitle = NSAttributedString(string: string ?? "", font: Font.regular(20.0), textColor: .black)
+            let (_, emojiApply) = makeEmojiLayout(TextNodeLayoutArguments(attributedString: emojiTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            
+            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: 120.0, height: 90.0), insets: UIEdgeInsets())
             return (itemLayout, { animated in
                 if let strongSelf = self {
                     strongSelf.item = item
-                    
-                    if case let .cloud(theme) = item.themeReference, theme.theme.file == nil && theme.theme.settings == nil {
-                        if updatedTheme {
-                            strongSelf.imageNode.setSignal(createThemeImage(theme: item.theme))
+                        
+                    if updatedThemeReference || updatedWallpaper || updatedNightMode {
+                        var themeReference = item.themeReference
+                        if case .builtin = themeReference, item.nightMode {
+                            themeReference = .builtin(.night)
                         }
-                        strongSelf.containerNode.isGestureEnabled = false
-                    } else {
-                        if updatedThemeReference || updatedAccentColor || updatedWallpaper {
-                            strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: item.themeReference, color: item.accentColor, wallpaper: item.wallpaper))
-                        }
-                        strongSelf.containerNode.isGestureEnabled = true
+                        strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, nightMode: item.nightMode, emoticon: true))
+                        strongSelf.imageNode.backgroundColor = nil
                     }
+                    
                     if updatedTheme || updatedSelected {
-                        strongSelf.overlayNode.image = generateBorderImage(theme: item.theme, bordered: true, selected: item.selected)
+                        strongSelf.overlayNode.image = generateBorderImage(theme: item.theme, bordered: false, selected: item.selected)
                     }
                     
-                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.contentSize)
+                    if !item.selected && currentItem?.selected == true, let animatedStickerNode = strongSelf.animatedStickerNode {
+                        animatedStickerNode.transform = CATransform3DIdentity
+                        
+                        let initialScale: CGFloat = CGFloat((animatedStickerNode.value(forKeyPath: "layer.presentationLayer.transform.scale.x") as? NSNumber)?.floatValue ?? 1.0)
+                        animatedStickerNode.layer.animateSpring(from: initialScale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
+                    }
+                                        
+                    strongSelf.containerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(x: 15.0, y: -15.0), size: CGSize(width: 90.0, height: 120.0))
                     
-                    let _ = titleApply()
+                    strongSelf.emojiContainerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                    strongSelf.emojiContainerNode.frame = CGRect(origin: CGPoint(x: 15.0, y: -15.0), size: CGSize(width: 90.0, height: 120.0))
+                    
+                    let _ = emojiApply()
 
-                    let imageSize = CGSize(width: 98.0, height: 62.0)
-                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: imageSize)
-                    let applyLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(radius: 16.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: .clear))
+                    let imageSize = CGSize(width: 82.0, height: 108.0)
+                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: 4.0, y: 6.0), size: imageSize)
+                    let applyLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: .clear))
                     applyLayout()
                     
-                    strongSelf.overlayNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 13.0), size: CGSize(width: 100.0, height: 64.0))
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 88.0), size: CGSize(width: itemLayout.contentSize.width, height: 16.0))
+                    strongSelf.overlayNode.frame = strongSelf.imageNode.frame.insetBy(dx: -1.0, dy: -1.0)
+                    strongSelf.emojiNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 78.0), size: CGSize(width: 90.0, height: 30.0))
+                    strongSelf.emojiNode.isHidden = string == nil
+                    
+                    let emojiFrame = CGRect(origin: CGPoint(x: 33.0, y: 79.0), size: CGSize(width: 24.0, height: 24.0))
+                    if let file = item.emojiFile, currentItem == nil {
+                        let imageApply = strongSelf.emojiImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: emojiFrame.size, boundingSize: emojiFrame.size, intrinsicInsets: UIEdgeInsets()))
+                        imageApply()
+                        strongSelf.emojiImageNode.setSignal(chatMessageStickerPackThumbnail(postbox: item.context.account.postbox, resource: file.resource, animated: true, nilIfEmpty: true))
+                        strongSelf.emojiImageNode.frame = emojiFrame
+                        
+                        let animatedStickerNode: AnimatedStickerNode
+                        if let current = strongSelf.animatedStickerNode {
+                            animatedStickerNode = current
+                        } else {
+                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode.started = { [weak self] in
+                                self?.emojiImageNode.isHidden = true
+                            }
+                            strongSelf.animatedStickerNode = animatedStickerNode
+                            strongSelf.emojiContainerNode.insertSubnode(animatedStickerNode, belowSubnode: strongSelf.placeholderNode)
+                            let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 128, height: 128, playbackMode: .still(.start), mode: .direct(cachePathPrefix: pathPrefix))
+                            
+                            animatedStickerNode.anchorPoint = CGPoint(x: 0.5, y: 1.0)
+                        }
+                        animatedStickerNode.autoplay = true
+                        animatedStickerNode.visibility = strongSelf.visibilityStatus
+                        
+                        strongSelf.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
+                        
+                        let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
+                        strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, imageSize: thumbnailDimensions.cgSize)
+                        strongSelf.placeholderNode.frame = emojiFrame
+                    }
+                    
+                    if let animatedStickerNode = strongSelf.animatedStickerNode {
+                        animatedStickerNode.frame = emojiFrame
+                        animatedStickerNode.updateLayout(size: emojiFrame.size)
+                    }
                 }
             })
         }
     }
     
-    func prepareCrossfadeTransition() {
-        guard self.snapshotView == nil else {
-            return
-        }
-        
-        if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
-            self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
-            self.snapshotView = snapshotView
-        }
+    func crossfade() {
+//        if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
+//            snapshotView.transform = self.containerNode.view.transform
+//            snapshotView.frame = self.containerNode.view.frame
+//            self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
+//
+//            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatThemeScreen.themeCrossfadeDuration, delay: ChatThemeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+//                snapshotView?.removeFromSuperview()
+//            })
+//        }
     }
-    
-    func animateCrossfadeTransition() {
-        guard self.snapshotView?.layer.animationKeys()?.isEmpty ?? true else {
-            return
-        }
         
-        self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
-            self?.snapshotView?.removeFromSuperview()
-            self?.snapshotView = nil
-        })
-    }
-    
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
@@ -347,31 +483,31 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
 }
 
-class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
+class ThemeCarouselThemeItem: ListViewItem, ItemListItem {
     var sectionId: ItemListSectionId
 
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let themes: [PresentationThemeReference]
-    let allThemes: [PresentationThemeReference]
-    let displayUnsupported: Bool
+    let animatedEmojiStickers: [String: [StickerPackItem]]
     let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     let themeSpecificChatWallpapers: [Int64: TelegramWallpaper]
+    let nightMode: Bool
     let currentTheme: PresentationThemeReference
     let updatedTheme: (PresentationThemeReference) -> Void
     let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     let tag: ItemListItemTag?
 
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], allThemes: [PresentationThemeReference], displayUnsupported: Bool, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], animatedEmojiStickers: [String: [StickerPackItem]], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], nightMode: Bool, currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.themes = themes
-        self.allThemes = allThemes
-        self.displayUnsupported = displayUnsupported
+        self.animatedEmojiStickers = animatedEmojiStickers
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.themeSpecificChatWallpapers = themeSpecificChatWallpapers
+        self.nightMode = nightMode
         self.currentTheme = currentTheme
         self.updatedTheme = updatedTheme
         self.contextAction = contextAction
@@ -381,7 +517,7 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
 
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = ThemeSettingsThemeItemNode()
+            let node = ThemeCarouselThemeItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
 
             node.contentSize = layout.contentSize
@@ -397,7 +533,7 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
 
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            if let nodeValue = node() as? ThemeSettingsThemeItemNode {
+            if let nodeValue = node() as? ThemeCarouselThemeItemNode {
                 let makeLayout = nodeValue.asyncLayout()
 
                 async {
@@ -413,28 +549,28 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     }
 }
 
-private struct ThemeSettingsThemeItemNodeTransition {
+private struct ThemeCarouselThemeItemNodeTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let crossfade: Bool
-    let entries: [ThemeSettingsThemeEntry]
+    let entries: [ThemeCarouselThemeEntry]
 }
 
-private func preparedTransition(context: AccountContext, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, from fromEntries: [ThemeSettingsThemeEntry], to toEntries: [ThemeSettingsThemeEntry], crossfade: Bool) -> ThemeSettingsThemeItemNodeTransition {
+private func preparedTransition(context: AccountContext, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, from fromEntries: [ThemeCarouselThemeEntry], to toEntries: [ThemeCarouselThemeEntry], crossfade: Bool) -> ThemeCarouselThemeItemNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, action: action, contextAction: contextAction), directionHint: .Down) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, action: action, contextAction: contextAction), directionHint: nil) }
     
-    return ThemeSettingsThemeItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates, crossfade: crossfade, entries: toEntries)
+    return ThemeCarouselThemeItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates, crossfade: crossfade, entries: toEntries)
 }
 
 private func ensureThemeVisible(listNode: ListView, themeReference: PresentationThemeReference, animated: Bool) -> Bool {
-    var resultNode: ThemeSettingsThemeItemIconNode?
+    var resultNode: ThemeCarouselThemeItemIconNode?
     listNode.forEachItemNode { node in
-        if resultNode == nil, let node = node as? ThemeSettingsThemeItemIconNode {
+        if resultNode == nil, let node = node as? ThemeCarouselThemeItemIconNode {
             if node.item?.themeReference.index == themeReference.index {
                 resultNode = node
             }
@@ -448,7 +584,7 @@ private func ensureThemeVisible(listNode: ListView, themeReference: Presentation
     }
 }
 
-class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
+class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
     private let containerNode: ASDisplayNode
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -457,11 +593,11 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     private var snapshotView: UIView?
     
     private let listNode: ListView
-    private var entries: [ThemeSettingsThemeEntry]?
-    private var enqueuedTransitions: [ThemeSettingsThemeItemNodeTransition] = []
+    private var entries: [ThemeCarouselThemeEntry]?
+    private var enqueuedTransitions: [ThemeCarouselThemeItemNodeTransition] = []
     private var initialized = false
 
-    private var item: ThemeSettingsThemeItem?
+    private var item: ThemeCarouselThemeItem?
     private var layoutParams: ListViewItemLayoutParams?
 
     var tag: ItemListItemTag? {
@@ -496,7 +632,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         self.listNode.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     
-    private func enqueueTransition(_ transition: ThemeSettingsThemeItemNodeTransition) {
+    private func enqueueTransition(_ transition: ThemeCarouselThemeItemNodeTransition) {
         self.enqueuedTransitions.append(transition)
         
         if let _ = self.item {
@@ -521,7 +657,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         var scrollToItem: ListViewScrollToItem?
         if !self.initialized {
             if let index = transition.entries.firstIndex(where: { entry in
-                return entry.theme.index == item.currentTheme.index
+                return entry.themeReference.index == item.currentTheme.index
             }) {
                 scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-57.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
@@ -532,13 +668,13 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         })
     }
 
-    func asyncLayout() -> (_ item: ThemeSettingsThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ThemeCarouselThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         return { item, params, neighbors in
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
 
-            contentSize = CGSize(width: params.width, height: 116.0)
+            contentSize = CGSize(width: params.width, height: 133.0)
             insets = itemListNeighborsGroupedInsets(neighbors)
 
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -588,6 +724,8 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                             hasBottomCorners = true
                             strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
+                    
+                    strongSelf.bottomStripeNode.isHidden = true
 
                     strongSelf.containerNode.frame = CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: contentSize.height)
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
@@ -598,47 +736,29 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
 
                     var listInsets = UIEdgeInsets()
-                    listInsets.top += params.leftInset + 4.0
-                    listInsets.bottom += params.rightInset + 4.0
+                    listInsets.top += params.leftInset + 12.0
+                    listInsets.bottom += params.rightInset + 12.0
                     
                     strongSelf.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: contentSize.height, height: contentSize.width)
-                    strongSelf.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0 + 2.0)
+                    strongSelf.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0 - 2.0)
                     strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                     
-                    var themes: [Int64: PresentationThemeReference] = [:]
-                    for theme in item.allThemes {
-                        themes[theme.index] = theme
+                    var entries: [ThemeCarouselThemeEntry] = []
+                    var index: Int = 0
+                    
+                    var hasCurrentTheme = false
+                    for theme in item.themes {
+                        let selected = item.currentTheme.index == theme.index
+                        if selected {
+                            hasCurrentTheme = true
+                        }
+                        let emojiFile = theme.emoticon.flatMap { item.animatedEmojiStickers[$0]?.first?.file }
+                        entries.append(ThemeCarouselThemeEntry(index: index, emojiFile: emojiFile, themeReference: theme, nightMode: item.nightMode, selected: selected, theme: item.theme, strings: item.strings, wallpaper: nil))
+                        index += 1
                     }
                     
-                    var entries: [ThemeSettingsThemeEntry] = []
-                    var index: Int = 0
-                    for theme in item.themes {
-                        if case let .cloud(theme) = theme {
-                            if !item.displayUnsupported && theme.theme.file == nil {
-                                continue
-                            }
-                        }
-                        let title = themeDisplayName(strings: item.strings, reference: theme)
-                        let accentColor = item.themeSpecificAccentColors[theme.generalThemeReference.index]
-                        /*if let customThemeIndex = accentColor?.themeIndex {
-                            if let customTheme = themes[customThemeIndex] {
-                                theme = customTheme
-                            }
-                            accentColor = nil
-                        }*/
-
-                        var themeWallpaper: TelegramWallpaper?
-                        if case let .cloud(theme) = theme {
-                            themeWallpaper = theme.resolvedWallpaper ?? theme.theme.settings?.first?.wallpaper
-                        }
-
-                        let customWallpaper = item.themeSpecificChatWallpapers[theme.generalThemeReference.index]
-                        
-                        let wallpaper = accentColor?.wallpaper ?? customWallpaper ?? themeWallpaper
-
-                        let selected = item.currentTheme.index == theme.index || item.currentTheme.generalThemeReference == theme
-                        entries.append(ThemeSettingsThemeEntry(index: index, themeReference: theme, title: title, accentColor: accentColor, selected: selected, theme: item.theme, wallpaper: wallpaper))
-                        index += 1
+                    if !hasCurrentTheme {
+                        entries.append(ThemeCarouselThemeEntry(index: index, emojiFile: nil, themeReference: item.currentTheme, nightMode: false, selected: true, theme: item.theme, strings: item.strings, wallpaper: nil))
                     }
                     
                     let action: (PresentationThemeReference) -> Void = { [weak self] themeReference in
@@ -676,11 +796,11 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
             self.snapshotView = snapshotView
         }
         
-        self.listNode.forEachVisibleItemNode { node in
-            if let node = node as? ThemeSettingsThemeItemIconNode {
-                node.prepareCrossfadeTransition()
-            }
-        }
+//        self.listNode.forEachVisibleItemNode { node in
+//            if let node = node as? ThemeCarouselThemeItemIconNode {
+//                node.prepareCrossfadeTransition()
+//            }
+//        }
     }
     
     func animateCrossfadeTransition() {
@@ -695,7 +815,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         }
         
         self.listNode.forEachVisibleItemNode { node in
-            if let node = node as? ThemeSettingsThemeItemIconNode {
+            if let node = node as? ThemeCarouselThemeItemIconNode {
                 if let snapshotView = node.snapshotView {
                     views.append(snapshotView)
                     node.snapshotView = nil
