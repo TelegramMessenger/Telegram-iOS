@@ -11657,7 +11657,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return messageIds.compactMap(transaction.getMessage)
         }
         |> deliverOnMainQueue).start(next: { [weak self] messages in
-            self?.forwardMessages(messages: messages, options: options, resetCurrent: resetCurrent, asCopy: asCopy)
+            self?.forwardMessages(messages: messages, options: options, resetCurrent: resetCurrent, cloud: cloud, asCopy: asCopy)
         })
     }
     
