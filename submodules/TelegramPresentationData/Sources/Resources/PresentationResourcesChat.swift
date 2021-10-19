@@ -679,27 +679,9 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func sharedMediaFileDownloadStartIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.sharedMediaFileDownloadStartIcon.rawValue, { theme in
-            return generateImage(CGSize(width: 12.0, height: 12.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                
-                context.setStrokeColor(theme.list.itemAccentColor.cgColor)
-                context.setLineWidth(1.67)
-                context.setLineCap(.round)
-                context.setLineJoin(.round)
-                
-                context.translateBy(x: 2.0, y: 1.0)
-                
-                context.move(to: CGPoint(x: 4.0, y: 0.0))
-                context.addLine(to: CGPoint(x: 4.0, y: 10.0))
-                context.strokePath()
-                
-                context.move(to: CGPoint(x: 0.0, y: 6.0))
-                context.addLine(to: CGPoint(x: 4.0, y: 10.0))
-                context.addLine(to: CGPoint(x: 8.0, y: 6.0))
-                context.strokePath()
-            })
+    public static func sharedMediaFileDownloadStartIcon(_ theme: PresentationTheme, generate: () -> UIImage?) -> UIImage? {
+        return theme.image(PresentationResourceKey.sharedMediaFileDownloadStartIcon.rawValue, { _ in
+            return generate()
         })
     }
     

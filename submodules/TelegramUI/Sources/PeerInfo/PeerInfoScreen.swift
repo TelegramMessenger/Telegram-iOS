@@ -61,6 +61,7 @@ import TelegramCallsUI
 import PeerInfoAvatarListNode
 import PasswordSetupUI
 import CalendarMessageScreen
+import TooltipUI
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -5996,6 +5997,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
     private weak var mediaGalleryContextMenu: ContextController?
 
+    func displaySharedMediaFastScrollingTooltip() {
+        guard let buttonNode = self.headerNode.navigationButtonContainer.buttonNodes[.more] else {
+            return
+        }
+        guard let controller = self.controller else {
+            return
+        }
+        let buttonFrame = buttonNode.view.convert(buttonNode.bounds, to: self.view)
+        //TODO:localize
+        controller.present(TooltipScreen(account: self.context.account, text: "Tap on this icon for calendar view", style: .default, icon: .none, location: .point(buttonFrame.insetBy(dx: 0.0, dy: 5.0), .top), shouldDismissOnTouch: { point in
+            return .dismiss(consume: false)
+        }), in: .current)
+    }
+
     private func displayMediaGalleryContextMenu(source: ContextReferenceContentNode) {
         guard let controller = self.controller else {
             return
@@ -6080,8 +6095,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 updatedContentType = .photo
             case .video:
                 updatedContentType = .photoOrVideo
-            case .gifs:
-                updatedContentType = .gifs
+            default:
+                updatedContentType = pane.contentType
             }
             pane.updateContentType(contentType: updatedContentType)
         })))
@@ -6104,8 +6119,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 updatedContentType = .photoOrVideo
             case .video:
                 updatedContentType = .video
-            case .gifs:
-                updatedContentType = .gifs
+            default:
+                updatedContentType = pane.contentType
             }
             pane.updateContentType(contentType: updatedContentType)
         })))

@@ -7,7 +7,6 @@ import Intents
 import Postbox
 import PushKit
 import AsyncDisplayKit
-import CloudKit
 import TelegramUIPreferences
 import TelegramPresentationData
 import TelegramCallsUI

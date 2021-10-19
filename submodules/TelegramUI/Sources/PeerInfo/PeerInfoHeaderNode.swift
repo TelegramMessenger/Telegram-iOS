@@ -1044,7 +1044,7 @@ struct PeerInfoHeaderNavigationButtonSpec: Equatable {
 }
 
 final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
-    private var buttonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
+    private(set) var buttonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
     
     private var currentButtons: [PeerInfoHeaderNavigationButtonSpec] = []
     
