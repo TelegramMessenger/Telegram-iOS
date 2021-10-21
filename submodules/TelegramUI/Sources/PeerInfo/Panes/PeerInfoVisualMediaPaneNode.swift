@@ -909,7 +909,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
         return ItemView()
     }
 
-    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem]) {
+    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], synchronous: Bool) {
         for i in 0 ..< items.count {
             guard let item = items[i] as? VisualMediaItem else {
                 continue
@@ -964,16 +964,19 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                         if let image = result.image {
                             layer.contents = image.cgImage
                             layer.hasContents = true
+                            if !synchronous {
+                                layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
                         }
                         if let loadSignal = result.loadSignal {
-                            let shimmerColor = self.getShimmerColors().background
                             layer.disposable = (loadSignal
                             |> deliverOnMainQueue).start(next: { [weak layer] image in
                                 guard let layer = layer else {
                                     return
                                 }
                                 let copyLayer = ItemLayer()
-                                copyLayer.backgroundColor = UIColor(rgb: shimmerColor).cgColor
+                                copyLayer.contents = layer.contents
+                                copyLayer.contentsRect = layer.contentsRect
                                 copyLayer.frame = layer.bounds
                                 layer.addSublayer(copyLayer)
                                 copyLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyLayer] _ in
@@ -1560,7 +1563,17 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         )
 
         if let (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
+            var gridSnapshot: UIView?
+            if reloadAtTop {
+                gridSnapshot = self.itemGrid.view.snapshotView(afterScreenUpdates: false)
+            }
             self.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: false, transition: .immediate)
+            if let gridSnapshot = gridSnapshot {
+                self.view.addSubview(gridSnapshot)
+                gridSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak gridSnapshot] _ in
+                    gridSnapshot?.removeFromSuperview()
+                })
+            }
         }
 
         if !self.didSetReady {

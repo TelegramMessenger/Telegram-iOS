@@ -29,7 +29,7 @@ public protocol SparseItemGridDisplayItem: AnyObject {
 public protocol SparseItemGridBinding: AnyObject {
     func createLayer() -> SparseItemGridLayer?
     func createView() -> SparseItemGridView?
-    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem])
+    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], synchronous: Bool)
     func unbindLayer(layer: SparseItemGridLayer)
     func scrollerTextForTag(tag: Int32) -> String?
     func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError>
@@ -464,7 +464,7 @@ public final class SparseItemGrid: ASDisplayNode {
                 self.layout = Layout(containerLayout: containerLayout, zoomLevel: self.zoomLevel)
                 self.items = items
 
-                self.updateVisibleItems(resetScrolling: true, restoreScrollPosition: restoreScrollPosition)
+                self.updateVisibleItems(resetScrolling: true, synchronous: false, restoreScrollPosition: restoreScrollPosition)
             }
         }
 
@@ -474,7 +474,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
         @objc func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
-                self.updateVisibleItems(resetScrolling: false, restoreScrollPosition: nil)
+                self.updateVisibleItems(resetScrolling: false, synchronous: true, restoreScrollPosition: nil)
 
                 if let layout = self.layout, let items = self.items {
                     let offset = scrollView.contentOffset.y
@@ -660,7 +660,7 @@ public final class SparseItemGrid: ASDisplayNode {
             }
         }
 
-        private func updateVisibleItems(resetScrolling: Bool, restoreScrollPosition: (y: CGFloat, index: Int)?) {
+        private func updateVisibleItems(resetScrolling: Bool, synchronous: Bool, restoreScrollPosition: (y: CGFloat, index: Int)?) {
             guard let layout = self.layout, let items = self.items else {
                 return
             }
@@ -753,7 +753,7 @@ public final class SparseItemGrid: ASDisplayNode {
                 }
 
                 if !bindItems.isEmpty {
-                    items.itemBinding.bindLayers(items: bindItems, layers: bindLayers)
+                    items.itemBinding.bindLayers(items: bindItems, layers: bindLayers, synchronous: synchronous)
                 }
 
                 for item in updateLayers {

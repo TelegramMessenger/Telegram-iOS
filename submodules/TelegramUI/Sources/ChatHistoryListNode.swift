@@ -922,9 +922,34 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         let historyView = (strongSelf.opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView
                         let displayRange = strongSelf.displayedItemRange
                         if let filteredEntries = historyView?.filteredEntries, let visibleRange = displayRange.visibleRange {
-                            let firstEntry = filteredEntries[filteredEntries.count - 1 - visibleRange.firstIndex]
-                            
-                            strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount, highlight: false), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
+                            var anchorIndex: MessageIndex?
+                            loop: for index in visibleRange.firstIndex ..< filteredEntries.count {
+                                switch filteredEntries[filteredEntries.count - 1 - index] {
+                                case let .MessageEntry(message, _, _, _, _, _):
+                                    if message.adAttribute == nil {
+                                        anchorIndex = message.index
+                                        break loop
+                                    }
+                                case let .MessageGroupEntry(_, messages, _):
+                                    for (message, _, _, _) in messages {
+                                        if message.adAttribute == nil {
+                                            anchorIndex = message.index
+                                            break loop
+                                        }
+                                    }
+                                default:
+                                    break
+                                }
+                            }
+                            if anchorIndex == nil, let historyView = historyView {
+                                for entry in historyView.originalView.entries {
+                                    anchorIndex = entry.message.index
+                                    break
+                                }
+                            }
+                            if let anchorIndex = anchorIndex {
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(anchorIndex), anchorIndex: .message(anchorIndex), count: historyMessageCount, highlight: false), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
+                            }
                         } else {
                             if let subject = subject, case let .message(messageId, highlight, _) = subject {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: highlight), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)

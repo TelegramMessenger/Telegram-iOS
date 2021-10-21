@@ -1666,6 +1666,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let subtitleNodeContainer: ASDisplayNode
     let subtitleNodeRawContainer: ASDisplayNode
     let subtitleNode: MultiScaleTextNode
+    let panelSubtitleNode: MultiScaleTextNode
     let usernameNodeContainer: ASDisplayNode
     let usernameNodeRawContainer: ASDisplayNode
     let usernameNode: MultiScaleTextNode
@@ -1720,6 +1721,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.subtitleNodeRawContainer = ASDisplayNode()
         self.subtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.subtitleNode.displaysAsynchronously = false
+
+        self.panelSubtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
+        self.panelSubtitleNode.displaysAsynchronously = false
         
         self.usernameNodeContainer = ASDisplayNode()
         self.usernameNodeRawContainer = ASDisplayNode()
@@ -1770,6 +1774,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.titleNodeContainer.addSubnode(self.titleNode)
         self.regularContentNode.addSubnode(self.titleNodeContainer)
         self.subtitleNodeContainer.addSubnode(self.subtitleNode)
+        self.subtitleNodeContainer.addSubnode(self.panelSubtitleNode)
         self.regularContentNode.addSubnode(self.subtitleNodeContainer)
         self.regularContentNode.addSubnode(self.subtitleNodeRawContainer)
         self.usernameNodeContainer.addSubnode(self.usernameNode)
@@ -1899,7 +1904,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     }
     
     var initializedCredibilityIcon = false
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: PeerInfoStatusData?, isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
         self.state = state
         self.peer = peer
         self.avatarListNode.listContainerNode.peer = peer
@@ -2019,6 +2024,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var isVerified = false
         let titleString: NSAttributedString
         let subtitleString: NSAttributedString
+        var panelSubtitleString: NSAttributedString?
         let usernameString: NSAttributedString
         if let peer = peer, peer.isVerified {
             isVerified = true
@@ -2063,6 +2069,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 subtitleString = NSAttributedString(string: statusData.text, font: Font.regular(15.0), textColor: subtitleColor)
                 usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+
+                if let panelStatusData = panelStatusData {
+                    let subtitleColor: UIColor
+                    if panelStatusData.isActivity {
+                        subtitleColor = presentationData.theme.list.itemAccentColor
+                    } else {
+                        subtitleColor = presentationData.theme.list.itemSecondaryTextColor
+                    }
+                    panelSubtitleString = NSAttributedString(string: panelStatusData.text, font: Font.regular(15.0), textColor: subtitleColor)
+                }
             } else {
                 subtitleString = NSAttributedString(string: " ", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
                 usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
@@ -2089,6 +2105,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: subtitleString, constrainedSize: CGSize(width: titleConstrainedSize.width - 82.0, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
         self.subtitleNode.accessibilityLabel = subtitleString.string
+
+        let panelSubtitleNodeLayout = self.panelSubtitleNode.updateLayout(states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributedText: panelSubtitleString ?? subtitleString, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributedText: panelSubtitleString ?? subtitleString, constrainedSize: CGSize(width: titleConstrainedSize.width - 82.0, height: titleConstrainedSize.height))
+        ], mainState: TitleNodeStateRegular)
+        self.panelSubtitleNode.accessibilityLabel = (panelSubtitleString ?? subtitleString).string
         
         let usernameNodeLayout = self.usernameNode.updateLayout(states: [
             TitleNodeStateRegular: MultiScaleTextState(attributedText: usernameString, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height)),
@@ -2102,6 +2124,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let titleSize = titleNodeLayout[TitleNodeStateRegular]!.size
         let titleExpandedSize = titleNodeLayout[TitleNodeStateExpanded]!.size
         let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
+        let _ = panelSubtitleNodeLayout[TitleNodeStateRegular]!.size
         let usernameSize = usernameNodeLayout[TitleNodeStateRegular]!.size
         
         if let image = self.titleCredibilityIconNode.image {
@@ -2150,17 +2173,53 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let avatarMinScale: CGFloat = 0.7
         
         let apparentTitleLockOffset = (1.0 - titleCollapseFraction) * 0.0 + titleCollapseFraction * titleMaxLockOffset
+
+        let paneAreaExpansionDistance: CGFloat = 32.0
+        let effectiveAreaExpansionFraction: CGFloat
+        if state.isEditing {
+            effectiveAreaExpansionFraction = 0.0
+        } else if isSettings {
+            var paneAreaExpansionDelta = (self.frame.maxY - navigationHeight) - contentOffset
+            paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
+            effectiveAreaExpansionFraction = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
+        } else {
+            var paneAreaExpansionDelta = (paneContainerY - navigationHeight) - contentOffset
+            paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
+            effectiveAreaExpansionFraction = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
+        }
         
         self.titleNode.update(stateFractions: [
             TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
             TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
         ], transition: transition)
         
-        let subtitleAlpha: CGFloat = self.isSettings ? 1.0 - titleCollapseFraction : 1.0
+        let subtitleAlpha: CGFloat
+        var subtitleOffset: CGFloat = 0.0
+        let panelSubtitleAlpha: CGFloat
+        var panelSubtitleOffset: CGFloat = 0.0
+        if self.isSettings {
+            subtitleAlpha = 1.0 - titleCollapseFraction
+            panelSubtitleAlpha = 0.0
+        } else {
+            if (panelSubtitleString ?? subtitleString).string != subtitleString.string {
+                subtitleAlpha = 1.0 - effectiveAreaExpansionFraction
+                panelSubtitleAlpha = effectiveAreaExpansionFraction
+                subtitleOffset = -effectiveAreaExpansionFraction * 5.0
+                panelSubtitleOffset = (1.0 - effectiveAreaExpansionFraction) * 5.0
+            } else {
+                subtitleAlpha = 1.0
+                panelSubtitleAlpha = 0.0
+            }
+        }
         self.subtitleNode.update(stateFractions: [
             TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
             TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
         ], alpha: subtitleAlpha, transition: transition)
+
+        self.panelSubtitleNode.update(stateFractions: [
+            TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
+            TitleNodeStateExpanded: self.isAvatarExpanded ? 1.0 : 0.0
+        ], alpha: panelSubtitleAlpha, transition: transition)
         
         self.usernameNode.update(stateFractions: [
             TitleNodeStateRegular: self.isAvatarExpanded ? 0.0 : 1.0,
@@ -2315,7 +2374,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let rawSubtitleFrame = CGRect(origin: CGPoint(x: subtitleCenter.x - subtitleFrame.size.width / 2.0, y: subtitleCenter.y - subtitleFrame.size.height / 2.0), size: subtitleFrame.size)
                 self.subtitleNodeRawContainer.frame = rawSubtitleFrame
                 transition.updateFrameAdditiveToCenter(node: self.subtitleNodeContainer, frame: CGRect(origin: rawSubtitleFrame.center, size: CGSize()))
-                transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
+                transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: subtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
                 transition.updateFrame(node: self.usernameNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 transition.updateSublayerTransformScale(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScale(node: self.subtitleNodeContainer, scale: subtitleScale)
@@ -2353,7 +2413,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     usernameCenter.x = rawTitleFrame.center.x + (usernameCenter.x - rawTitleFrame.center.x) * subtitleScale
                     transition.updateFrameAdditiveToCenter(node: self.usernameNodeContainer, frame: CGRect(origin: usernameCenter, size: CGSize()).offsetBy(dx: 0.0, dy: titleOffset))
                 }
-                transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
+                transition.updateFrame(node: self.subtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: subtitleOffset), size: CGSize()))
+                transition.updateFrame(node: self.panelSubtitleNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelSubtitleOffset), size: CGSize()))
                 transition.updateFrame(node: self.usernameNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 transition.updateSublayerTransformScaleAdditive(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScaleAdditive(node: self.subtitleNodeContainer, scale: subtitleScale)
