@@ -143,7 +143,6 @@ private final class AuthorizationSequenceCountrySelectionNavigationContentNode: 
         self.addSubnode(self.searchBar)
         
         self.searchBar.cancel = { [weak self] in
-            //self?.searchBar.deactivate(clear: false)
             self?.cancel()
         }
         

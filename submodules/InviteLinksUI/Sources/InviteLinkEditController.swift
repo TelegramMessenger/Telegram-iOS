@@ -306,15 +306,15 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     }
 }
 
-private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, presentationData: PresentationData) -> [InviteLinksEditEntry] {
+private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, isGroup: Bool, isPublic: Bool, presentationData: PresentationData) -> [InviteLinksEditEntry] {
     var entries: [InviteLinksEditEntry] = []
     
     entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval))
     var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
     if state.requestApproval {
-        requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel
+        requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel
     } else {
-        requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+        requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
     }
     entries.append(.requestApprovalInfo(presentationData.theme, requestApprovalInfoText))
     
@@ -460,9 +460,14 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     
     let previousState = Atomic<InviteLinkEditControllerState?>(value: nil)
-    let signal = combineLatest(presentationData, statePromise.get())
+    let signal = combineLatest(
+        presentationData,
+        statePromise.get(),
+        context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+        ))
     |> deliverOnMainQueue
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, peer -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
@@ -501,8 +506,13 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                     }
                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 })
-            } else if let invite = invite {
-                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: invite.link, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
+            } else if let initialInvite = invite {
+                if initialInvite.expireDate == expireDate && initialInvite.usageLimit == usageLimit && initialInvite.requestApproval == requestNeeded {
+                    completion?(initialInvite)
+                    dismissImpl?()
+                    return
+                }
+                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: initialInvite.link, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)
@@ -524,8 +534,15 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
             animateChanges = true
         }
         
+        let isGroup: Bool
+        if case let .channel(channel) = peer, case .broadcast = channel.info {
+            isGroup = false
+        } else {
+            isGroup = true
+        }
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(invite == nil ? presentationData.strings.InviteLink_Create_Title : presentationData.strings.InviteLink_Create_EditTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, presentationData: presentationData), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, isGroup: isGroup, isPublic: !(peer?.addressName?.isEmpty ?? true), presentationData: presentationData), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }

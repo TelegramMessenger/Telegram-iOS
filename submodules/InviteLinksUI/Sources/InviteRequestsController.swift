@@ -160,6 +160,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
     var navigateToProfileImpl: ((EnginePeer) -> Void)?
+    var navigateToChatImpl: ((EnginePeer) -> Void)?
     var dismissInputImpl: (() -> Void)?
     var dismissTooltipsImpl: (() -> Void)?
     
@@ -214,33 +215,56 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         guard let node = node as? ContextExtractedContentContainingNode else {
             return
         }
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        var items: [ContextMenuItem] = []
+        
+        let _ = (context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+        )
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let addString: String
+            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                addString = presentationData.strings.MemberRequests_AddToChannel
+            } else {
+                addString = presentationData.strings.MemberRequests_AddToGroup
+            }
+            var items: [ContextMenuItem] = []
 
-        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MemberRequests_AddToGroup, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
-        }, action: { _, f in
-            f(.dismissWithoutContent)
+            items.append(.action(ContextMenuActionItem(text: addString, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.dismissWithoutContent)
+                
+                approveRequestImpl(peer)
+            })))
             
-            approveRequestImpl(peer)
-        })))
-        
-        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MemberRequests_Dismiss, textColor: .destructive, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor)
-        }, action: { _, f in
-            f(.dismissWithoutContent)
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ContactList_Context_SendMessage, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.dismissWithoutContent)
+                
+                navigateToChatImpl?(peer)
+            })))
             
-            denyRequestImpl(peer)
-        })))
-        
-        let dismissPromise = ValuePromise<Bool>(false)
-        let source = InviteRequestsContextExtractedContentSource(sourceNode: node, keepInPlace: false, blurBackground: true, centerVertically: true, shouldBeDismissed: dismissPromise.get())
-//        sourceNode.requestDismiss = {
-//            dismissPromise.set(true)
-//        }
-        
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(source), items: .single(ContextController.Items(items: items)), gesture: gesture)
-        presentInGlobalOverlayImpl?(contextController)
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.MemberRequests_Dismiss, textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor)
+            }, action: { _, f in
+                f(.dismissWithoutContent)
+                
+                denyRequestImpl(peer)
+            })))
+            
+            let dismissPromise = ValuePromise<Bool>(false)
+            let source = InviteRequestsContextExtractedContentSource(sourceNode: node, keepInPlace: false, blurBackground: true, centerVertically: true, shouldBeDismissed: dismissPromise.get())
+    //        sourceNode.requestDismiss = {
+    //            dismissPromise.set(true)
+    //        }
+            
+            let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(source), items: .single(ContextController.Items(items: items)), gesture: gesture)
+            presentInGlobalOverlayImpl?(contextController)
+        })
     })
     
     let previousEntries = Atomic<[InviteRequestsEntry]>(value: [])
@@ -298,10 +322,14 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
                 arguments.approveRequest(peer)
             }, denyRequest: { peer in
                 arguments.denyRequest(peer)
+            }, navigateToChat: { peer in
+                navigateToChatImpl?(peer)
             }, pushController: { c in
                 pushControllerImpl?(c)
             }, dismissInput: {
                 dismissInputImpl?()
+            }, presentInGlobalOverlay: { c in
+                presentInGlobalOverlayImpl?(c)
             })
         }
         
@@ -347,6 +375,11 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
             navigationController.pushViewController(controller)
         }
     }
+    navigateToChatImpl = { [weak controller] peer in
+        if let navigationController = controller?.navigationController as? NavigationController {
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer.id)))
+        }
+    }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
     }
@@ -367,7 +400,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
 }
 
 
-private final class InviteRequestsContextExtractedContentSource: ContextExtractedContentSource {
+final class InviteRequestsContextExtractedContentSource: ContextExtractedContentSource {
     var keepInPlace: Bool
     let ignoreContentTouches: Bool = false
     let blurBackground: Bool

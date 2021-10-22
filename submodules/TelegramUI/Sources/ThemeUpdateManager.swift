@@ -138,7 +138,7 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                                         theme = updatedTheme
                                     }
                                     
-                                    return PreferencesEntry(PresentationThemeSettings(theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion))
+                                    return PreferencesEntry(PresentationThemeSettings(theme: theme, themePreferredBaseTheme: current.themePreferredBaseTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion))
                                 })
                             }).start()
                         }

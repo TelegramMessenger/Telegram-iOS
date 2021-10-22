@@ -162,7 +162,13 @@ private func searchCountries(items: [((String, String), String, [Int])], query: 
     
     var result: [((String, String), String, Int)] = []
     for item in items {
-        let string = "\(item.0) \(item.1)"
+        let componentsOne = item.0.0.components(separatedBy: " ")
+        let abbrOne = componentsOne.compactMap { $0.first.flatMap { String($0) } }.reduce(into: String(), { $0.append(contentsOf: $1) }).replacingOccurrences(of: "&", with: "")
+        
+        let componentsTwo = item.0.0.components(separatedBy: " ")
+        let abbrTwo = componentsTwo.compactMap { $0.first.flatMap { String($0) } }.reduce(into: String(), { $0.append(contentsOf: $1) }).replacingOccurrences(of: "&", with: "")
+        
+        let string = "\(item.0.0) \((item.0.1)) \(item.1) \(abbrOne) \(abbrTwo)"
         let tokens = stringTokens(string)
         if matchStringTokens(tokens, with: queryTokens) {
             for code in item.2 {

@@ -249,13 +249,14 @@ final class ThemeAccentColorController: ViewController {
                                         updatedTheme = themeReference
                                     }
                                     
+                                    let themePreferredBaseTheme = current.themePreferredBaseTheme
                                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                     themeSpecificChatWallpapers[themeReference.index] = nil
                                     
                                     var themeSpecificAccentColors = current.themeSpecificAccentColors
                                     themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
                                     
-                                    return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                    return PresentationThemeSettings(theme: updatedTheme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
                                 })
                                 |> castError(CreateThemeError.self)
                             } else {
@@ -278,13 +279,14 @@ final class ThemeAccentColorController: ViewController {
                                         updatedTheme = themeReference
                                     }
                                     
+                                    let themePreferredBaseTheme = current.themePreferredBaseTheme
                                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                     themeSpecificChatWallpapers[themeReference.index] = nil
                                     
                                     var themeSpecificAccentColors = current.themeSpecificAccentColors
                                     themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
                                     
-                                    return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                    return PresentationThemeSettings(theme: updatedTheme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
                                 })
                                 |> castError(CreateThemeError.self)
                             } else {

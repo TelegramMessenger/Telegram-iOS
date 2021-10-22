@@ -288,11 +288,11 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
     entries.append(.changeColors(presentationData.theme, presentationData.strings.EditTheme_ChangeColors))
     if hasSettings {
         if previewTheme.overallDarkAppearance {
-            entries.append(.toggleDark(presentationData.theme, "Toggle Base Theme"))
+//            entries.append(.toggleDark(presentationData.theme, "Toggle Base Theme"))
         }
     } else {
         if !isCreate {
-            entries.append(.convertToPresetTheme(presentationData.theme, "Convert to Preset Theme"))
+//            entries.append(.convertToPresetTheme(presentationData.theme, "Convert to Preset Theme"))
         }
         entries.append(.uploadTheme(presentationData.theme, uploadText))
         entries.append(.uploadInfo(presentationData.theme, uploadInfo))
@@ -643,7 +643,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                             themeSpecificChatWallpapers[themeReference.index] = nil
                                             
-                                            return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                            return PresentationThemeSettings(theme: themeReference, themePreferredBaseTheme: current.themePreferredBaseTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
                                         }) |> deliverOnMainQueue).start(completed: {
                                             if !hasCustomFile {
                                                 saveThemeTemplateFile(state.title, themeResource, {
@@ -677,7 +677,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         themeSpecificChatWallpapers[themeReference.index] = nil
                                         
-                                        return PresentationThemeSettings(theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                        return PresentationThemeSettings(theme: themeReference, themePreferredBaseTheme: current.themePreferredBaseTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
                                     }) |> deliverOnMainQueue).start(completed: {
                                         if let themeResource = themeResource, !hasCustomFile {
                                             saveThemeTemplateFile(state.title, themeResource, {

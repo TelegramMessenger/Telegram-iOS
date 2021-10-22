@@ -784,7 +784,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
             })))
         }
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground: true)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, keepInPlace: false, blurBackground: true)), items: .single(ContextController.Items(items: items)), gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, openAdmin: { admin in
         let controller = inviteLinkListController(context: context, peerId: peerId, admin: admin)
@@ -957,10 +957,10 @@ final class InviteLinkContextExtractedContentSource: ContextExtractedContentSour
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode
     
-    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, blurBackground: Bool) {
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool) {
         self.controller = controller
         self.sourceNode = sourceNode
-        self.keepInPlace = true
+        self.keepInPlace = keepInPlace
         self.blurBackground = blurBackground
     }
     
