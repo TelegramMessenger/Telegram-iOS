@@ -1635,12 +1635,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             return nil
         }
         let mappedPoint = self.view.convert(point, to: self.scrollNode.view)
-        var maybePassthrough = false
+        var maybePassthrough: ContextController.HandledTouchEvent?
         if let maybeContentNode = self.contentContainerNode.contentNode {
             switch maybeContentNode {
             case .reference:
-                if let controller = self.getController() as? ContextController {
-                    maybePassthrough = controller.passthroughTouchEvents
+                if let controller = self.getController() as? ContextController, let passthroughTouchEvent = controller.passthroughTouchEvent {
+                    maybePassthrough = passthroughTouchEvent(self.view, point)
                 }
             case let .extracted(contentParentNode, _):
                 if case let .extracted(source) = self.source {
@@ -1681,9 +1681,17 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             return self.actionsContainerNode.hitTest(self.view.convert(point, to: self.actionsContainerNode.view), with: event)
         }
 
-        if maybePassthrough {
-            self.getController()?.dismiss(completion: nil)
-            return nil
+        if let maybePassthrough = maybePassthrough {
+            switch maybePassthrough {
+            case .ignore:
+                break
+            case let .dismiss(consume):
+                self.getController()?.dismiss(completion: nil)
+
+                if !consume {
+                    return nil
+                }
+            }
         }
         
         return self.dismissNode.view
@@ -1847,7 +1855,12 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public var useComplexItemsTransitionAnimation = false
     public var immediateItemsTransitionAnimation = false
 
-    public var passthroughTouchEvents = false
+    public enum HandledTouchEvent {
+        case ignore
+        case dismiss(consume: Bool)
+    }
+
+    public var passthroughTouchEvent: ((UIView, CGPoint) -> HandledTouchEvent)?
     
     private var shouldBeDismissedDisposable: Disposable?
     

@@ -2106,13 +2106,15 @@ public extension Api {
                     })
                 }
             
-                public static func deleteHistory(flags: Int32, peer: Api.InputPeer, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
+                public static func deleteHistory(flags: Int32, peer: Api.InputPeer, maxId: Int32, minDate: Int32?, maxDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(469850889)
+                    buffer.appendInt32(-1332768214)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(maxId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.deleteHistory", parameters: [("flags", flags), ("peer", peer), ("maxId", maxId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.AffectedHistory? in
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(minDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(maxDate!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.deleteHistory", parameters: [("flags", flags), ("peer", peer), ("maxId", maxId), ("minDate", minDate), ("maxDate", maxDate)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.AffectedHistory? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.AffectedHistory?
                         if let signature = reader.readInt32() {
@@ -4394,52 +4396,18 @@ public extension Api {
                     })
                 }
             
-                public static func getSearchResultsCalendar(flags: Int32, peer: Api.InputPeer, filter: Api.MessagesFilter, offsetId: Int32, offsetDate: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SearchResultsCalendar>) {
+                public static func getSearchResultsCalendar(peer: Api.InputPeer, filter: Api.MessagesFilter, offsetId: Int32, offsetDate: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SearchResultsCalendar>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1991714845)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(1240514025)
                     peer.serialize(buffer, true)
                     filter.serialize(buffer, true)
                     serializeInt32(offsetId, buffer: buffer, boxed: false)
                     serializeInt32(offsetDate, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getSearchResultsCalendar", parameters: [("flags", flags), ("peer", peer), ("filter", filter), ("offsetId", offsetId), ("offsetDate", offsetDate)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SearchResultsCalendar? in
+                    return (FunctionDescription(name: "messages.getSearchResultsCalendar", parameters: [("peer", peer), ("filter", filter), ("offsetId", offsetId), ("offsetDate", offsetDate)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SearchResultsCalendar? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.SearchResultsCalendar?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.SearchResultsCalendar
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getSearchResultsRawMessages(peer: Api.InputPeer, filter: Api.MessagesFilter, offsetId: Int32, offsetDate: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SearchResultsRawMessages>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1258852762)
-                    peer.serialize(buffer, true)
-                    filter.serialize(buffer, true)
-                    serializeInt32(offsetId, buffer: buffer, boxed: false)
-                    serializeInt32(offsetDate, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getSearchResultsRawMessages", parameters: [("peer", peer), ("filter", filter), ("offsetId", offsetId), ("offsetDate", offsetDate)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SearchResultsRawMessages? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.SearchResultsRawMessages?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.SearchResultsRawMessages
-                        }
-                        return result
-                    })
-                }
-            
-                public static func hideChatJoinRequest(flags: Int32, peer: Api.InputPeer, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(2145904661)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    userId.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.hideChatJoinRequest", parameters: [("flags", flags), ("peer", peer), ("userId", userId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })
@@ -4457,6 +4425,22 @@ public extension Api {
                         var result: Api.messages.SearchResultsPositions?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.SearchResultsPositions
+                        }
+                        return result
+                    })
+                }
+            
+                public static func hideChatJoinRequest(flags: Int32, peer: Api.InputPeer, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(2145904661)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    userId.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.hideChatJoinRequest", parameters: [("flags", flags), ("peer", peer), ("userId", userId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })
@@ -7558,14 +7542,12 @@ public extension Api {
                     })
                 }
             
-                public static func installTheme(flags: Int32, theme: Api.InputTheme?, format: String?, baseTheme: Api.BaseTheme?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                public static func saveTheme(theme: Api.InputTheme, unsave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-953697477)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {theme!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeString(format!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {baseTheme!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "account.installTheme", parameters: [("flags", flags), ("theme", theme), ("format", format), ("baseTheme", baseTheme)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    buffer.appendInt32(-229175188)
+                    theme.serialize(buffer, true)
+                    unsave.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.saveTheme", parameters: [("theme", theme), ("unsave", unsave)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -7575,26 +7557,14 @@ public extension Api {
                     })
                 }
             
-                public static func getChatThemes(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.Themes>) {
+                public static func installTheme(flags: Int32, theme: Api.InputTheme?, format: String?, baseTheme: Api.BaseTheme?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-700916087)
-                    serializeInt64(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "account.getChatThemes", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.Themes? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.account.Themes?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.account.Themes
-                        }
-                        return result
-                    })
-                }
-            
-                public static func saveTheme(theme: Api.InputTheme, unsave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-229175188)
-                    theme.serialize(buffer, true)
-                    unsave.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.saveTheme", parameters: [("theme", theme), ("unsave", unsave)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    buffer.appendInt32(-953697477)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {theme!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(format!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {baseTheme!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "account.installTheme", parameters: [("flags", flags), ("theme", theme), ("format", format), ("baseTheme", baseTheme)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -7749,6 +7719,20 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getChatThemes(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.Themes>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-700916087)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getChatThemes", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.Themes? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.Themes?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.Themes
                         }
                         return result
                     })

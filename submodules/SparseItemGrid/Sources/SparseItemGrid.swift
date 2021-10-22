@@ -380,9 +380,7 @@ public final class SparseItemGrid: ASDisplayNode {
                     self.itemSpacing = 1.0
 
                     let width = containerLayout.size.width
-                    let baseItemWidth = floor(min(150.0, width / 3.0))
-                    let unclippedItemWidth = (CGFloat(zoomLevel.rawValue) / 100.0) * baseItemWidth
-                    let itemsPerRow = floor(width / unclippedItemWidth)
+                    let itemsPerRow = CGFloat(zoomLevel.rawValue)
                     self.itemsPerRow = Int(itemsPerRow)
                     let itemSize = floorToScreenPixels((width - (self.itemSpacing * CGFloat(self.itemsPerRow - 1))) / itemsPerRow)
                     self.itemSize = CGSize(width: itemSize, height: itemSize)
@@ -890,6 +888,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
     private final class ViewportTransition: ASDisplayNode {
         struct InteractiveState {
+            var anchorLocation: CGPoint
             var initialScale: CGFloat
             var targetScale: CGFloat
         }
@@ -927,11 +926,13 @@ public final class SparseItemGrid: ASDisplayNode {
             self.currentProgress = progress
 
             if let fromItem = self.fromViewport.anchorItem(at: fromAnchorFrame.center), let fromFrame = self.fromViewport.frameForItem(at: fromItem.index) {
+                fromAnchorFrame.origin.y = fromFrame.midY
                 fromAnchorFrame.origin.x = fromFrame.midX
                 fromAnchorFrame.size.width = 0.0
             }
 
             if let toItem = self.toViewport.anchorItem(at: fromAnchorFrame.center), let toFrame = self.toViewport.frameForItem(at: toItem.index) {
+                toAnchorFrame.origin.y = toFrame.midY
                 toAnchorFrame.origin.x = toFrame.midX
                 toAnchorFrame.size.width = 0.0
             }
@@ -1004,6 +1005,8 @@ public final class SparseItemGrid: ASDisplayNode {
     private var currentViewportTransition: ViewportTransition?
     private let scrollingArea: SparseItemGridScrollingArea
 
+    private var initialZoomLevel: ZoomLevel?
+
     private var isLoadingHole: Bool = false
     private let loadingHoleDisposable = MetaDisposable()
 
@@ -1070,7 +1073,7 @@ public final class SparseItemGrid: ASDisplayNode {
                 //print("progress: \(progress), scale: \(scale), initial: \(interactiveState.initialScale), target: \(interactiveState.targetScale)")
                 if progress < 0.0 || progress > 1.0 {
                     let boundaryViewport = progress > 1.0 ? currentViewportTransition.toViewport : currentViewportTransition.fromViewport
-                    let zoomLevels = self.availableZoomLevels(startingAt: boundaryViewport.zoomLevel)
+                    let zoomLevels = self.availableZoomLevels(width: containerLayout.size.width, startingAt: boundaryViewport.zoomLevel)
 
                     let isZoomingIn = interactiveState.targetScale > interactiveState.initialScale
                     var nextZoomLevel: ZoomLevel?
@@ -1079,7 +1082,7 @@ public final class SparseItemGrid: ASDisplayNode {
                     if isZoomingIn {
                         if progress > 1.0 {
                             nextZoomLevel = zoomLevels.increment
-                            nextScale = startScale * 2.0
+                            nextScale = startScale * 1.5
                         } else {
                             nextZoomLevel = zoomLevels.decrement
                             nextScale = startScale * 0.5
@@ -1090,14 +1093,23 @@ public final class SparseItemGrid: ASDisplayNode {
                             nextScale = startScale * 0.5
                         } else {
                             nextZoomLevel = zoomLevels.increment
-                            nextScale = startScale * 2.0
+                            nextScale = startScale * 1.5
                         }
                     }
 
-                    if let nextZoomLevel = nextZoomLevel, let anchorItemFrame = boundaryViewport.frameForItem(at: currentViewportTransition.anchorItemIndex) {
+                    let anchorLocation = interactiveState.anchorLocation
+
+                    let nextAnchorItemIndex: Int
+                    if let anchorItem = boundaryViewport.anchorItem(at: anchorLocation) {
+                        nextAnchorItemIndex = anchorItem.index
+                    } else {
+                        nextAnchorItemIndex = currentViewportTransition.anchorItemIndex
+                    }
+
+                    if let nextZoomLevel = nextZoomLevel, let anchorItemFrame = boundaryViewport.frameForItem(at: nextAnchorItemIndex) {
                         replacedTransition = true
 
-                        let restoreScrollPosition: (y: CGFloat, index: Int)? = (anchorItemFrame.minY, currentViewportTransition.anchorItemIndex)
+                        let restoreScrollPosition: (y: CGFloat, index: Int)? = (anchorItemFrame.minY, nextAnchorItemIndex)
 
                         let nextViewport = Viewport(zoomLevel: nextZoomLevel, maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
                             guard let strongSelf = self else {
@@ -1111,11 +1123,14 @@ public final class SparseItemGrid: ASDisplayNode {
 
                         self.currentViewportTransition?.removeFromSupernode()
 
-                        let currentViewportTransition = ViewportTransition(interactiveState: ViewportTransition.InteractiveState(initialScale: startScale, targetScale: nextScale), layout: containerLayout, anchorItemIndex: currentViewportTransition.anchorItemIndex, from: boundaryViewport, to: nextViewport)
+                        let nextInteractiveState = ViewportTransition.InteractiveState(anchorLocation: anchorLocation, initialScale: startScale, targetScale: nextScale)
+                        let currentViewportTransition = ViewportTransition(interactiveState: nextInteractiveState, layout: containerLayout, anchorItemIndex: currentViewportTransition.anchorItemIndex, from: boundaryViewport, to: nextViewport)
                         currentViewportTransition.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
                         self.insertSubnode(currentViewportTransition, belowSubnode: self.scrollingArea)
                         self.currentViewportTransition = currentViewportTransition
-                        currentViewportTransition.update(progress: progress, transition: .immediate, completion: {})
+
+                        let nextProgress = (scale - nextInteractiveState.initialScale) / (nextInteractiveState.targetScale - nextInteractiveState.initialScale)
+                        currentViewportTransition.update(progress: nextProgress, transition: .immediate, completion: {})
                     }
                 }
 
@@ -1131,12 +1146,12 @@ public final class SparseItemGrid: ASDisplayNode {
                     nextZoomLevel = zoomLevels.decrement
                 }
                 if let previousViewport = self.currentViewport, let nextZoomLevel = nextZoomLevel {
-                    let interactiveState = ViewportTransition.InteractiveState(initialScale: 1.0, targetScale: scale > 1.0 ? 2.0 : 0.5)
+                    let anchorLocation = recognizer.location(in: self.view)
+
+                    let interactiveState = ViewportTransition.InteractiveState(anchorLocation: anchorLocation, initialScale: 1.0, targetScale: scale > 1.0 ? scale * 1.5 : scale * 0.5)
 
                     var progress = (scale - interactiveState.initialScale) / (interactiveState.targetScale - interactiveState.initialScale)
                     progress = max(0.0, min(1.0, progress))
-
-                    let anchorLocation = recognizer.location(in: self.view)
 
                     if let anchorItem = previousViewport.anchorItem(at: anchorLocation), let anchorItemFrame = previousViewport.frameForItem(at: anchorItem.index) {
                         let restoreScrollPosition: (y: CGFloat, index: Int)? = (anchorItemFrame.minY, anchorItem.index)
@@ -1207,7 +1222,7 @@ public final class SparseItemGrid: ASDisplayNode {
         self.pinchRecognizer?.isEnabled = fixedItemHeight == nil
 
         if self.currentViewport == nil {
-            let currentViewport = Viewport(zoomLevel: ZoomLevel(rawValue: 100), maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
+            let currentViewport = Viewport(zoomLevel: self.initialZoomLevel ?? ZoomLevel(rawValue: 3), maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1252,17 +1267,17 @@ public final class SparseItemGrid: ASDisplayNode {
         guard let currentViewport = self.currentViewport else {
             return (nil, nil)
         }
-        return self.availableZoomLevels(startingAt: currentViewport.zoomLevel)
+        guard let containerLayout = self.containerLayout else {
+            return (nil, nil)
+        }
+        return self.availableZoomLevels(width: containerLayout.size.width, startingAt: currentViewport.zoomLevel)
     }
 
-    private func availableZoomLevels(startingAt zoomLevel: ZoomLevel) -> (decrement: ZoomLevel?, increment: ZoomLevel?) {
-        let zoomLevels: [ZoomLevel] = [
-            ZoomLevel(rawValue: 25),
-            ZoomLevel(rawValue: 40),
-            ZoomLevel(rawValue: 75),
-            ZoomLevel(rawValue: 100),
-            ZoomLevel(rawValue: 150)
-        ]
+    private func availableZoomLevels(width: CGFloat, startingAt zoomLevel: ZoomLevel) -> (decrement: ZoomLevel?, increment: ZoomLevel?) {
+        var zoomLevels: [ZoomLevel] = []
+        for i in (2 ... 12).reversed() {
+            zoomLevels.append(ZoomLevel(rawValue: i))
+        }
         if let index = zoomLevels.firstIndex(of: zoomLevel) {
             return (index == 0 ? nil : zoomLevels[index - 1], index == (zoomLevels.count - 1) ? nil : zoomLevels[index + 1])
         } else {
@@ -1272,6 +1287,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
     public func setZoomLevel(level: ZoomLevel) {
         guard let previousViewport = self.currentViewport else {
+            self.initialZoomLevel = level
             return
         }
         if self.currentViewportTransition != nil {

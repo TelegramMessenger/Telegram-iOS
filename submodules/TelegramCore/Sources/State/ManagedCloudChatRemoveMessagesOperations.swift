@@ -347,7 +347,7 @@ private func requestClearHistory(postbox: Postbox, network: Network, stateManage
     if case .forEveryone = type {
         flags |= 1 << 1
     }
-    let signal = network.request(Api.functions.messages.deleteHistory(flags: flags, peer: inputPeer, maxId: maxId))
+    let signal = network.request(Api.functions.messages.deleteHistory(flags: flags, peer: inputPeer, maxId: maxId, minDate: nil, maxDate: nil))
     |> map { result -> Api.messages.AffectedHistory? in
         return result
     }
