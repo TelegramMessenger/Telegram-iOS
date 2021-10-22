@@ -301,6 +301,8 @@ public final class SparseMessageList {
                         }
                     }
 
+                    updatePeers(transaction: transaction, peers: peers, update: { _, updated in updated })
+                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
                     let _ = transaction.addMessages(parsedMessages, location: .Random)
 
                     var result: [Message] = []
@@ -632,15 +634,224 @@ public final class SparseMessageList {
         }
     }
 
-    /*public func loadPlaceholders(ids: [MessageId]) {
-        self.impl.with { impl in
-            impl.loadPlaceholders(ids: ids)
-        }
-    }*/
-
     public func loadHole(anchor: MessageId, direction: LoadHoleDirection, completion: @escaping () -> Void) {
         self.impl.with { impl in
             impl.loadHole(anchor: anchor, direction: direction, completion: completion)
+        }
+    }
+}
+
+public final class SparseMessageCalendar {
+    private final class Impl {
+        struct InternalState {
+            var nextRequestOffset: Int32?
+            var minTimestamp: Int32?
+            var messagesByDay: [Int32: Message]
+        }
+
+        private let queue: Queue
+        private let account: Account
+        private let peerId: PeerId
+        private let messageTag: MessageTags
+
+        private var state: InternalState
+        let statePromise = Promise<InternalState>()
+
+        private let disposable = MetaDisposable()
+        private var isLoadingMore: Bool = false {
+            didSet {
+                self.isLoadingMorePromise.set(.single(self.isLoadingMore))
+            }
+        }
+
+        private let isLoadingMorePromise = Promise<Bool>(false)
+        var isLoadingMoreSignal: Signal<Bool, NoError> {
+            return self.isLoadingMorePromise.get()
+        }
+
+        init(queue: Queue, account: Account, peerId: PeerId, messageTag: MessageTags) {
+            self.queue = queue
+            self.account = account
+            self.peerId = peerId
+            self.messageTag = messageTag
+
+            self.state = InternalState(nextRequestOffset: 0, minTimestamp: nil, messagesByDay: [:])
+            self.statePromise.set(.single(self.state))
+
+            self.maybeLoadMore()
+        }
+
+        deinit {
+            self.disposable.dispose()
+        }
+
+        func maybeLoadMore() {
+            if self.isLoadingMore {
+                return
+            }
+            self.loadMore()
+        }
+
+        private func loadMore() {
+            guard let nextRequestOffset = self.state.nextRequestOffset else {
+                return
+            }
+
+            self.isLoadingMore = true
+
+            struct LoadResult {
+                var messagesByDay: [Int32: Message]
+                var nextOffset: Int32?
+                var minMessageId: MessageId?
+                var minTimestamp: Int32?
+            }
+
+            let account = self.account
+            let peerId = self.peerId
+            let messageTag = self.messageTag
+            self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                return transaction.getPeer(peerId).flatMap(apiInputPeer)
+            }
+            |> mapToSignal { inputPeer -> Signal<LoadResult, NoError> in
+                guard let inputPeer = inputPeer else {
+                    return .single(LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil))
+                }
+                guard let messageFilter = messageFilterForTagMask(messageTag) else {
+                    return .single(LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil))
+                }
+                return self.account.network.request(Api.functions.messages.getSearchResultsCalendar(peer: inputPeer, filter: messageFilter, offsetId: nextRequestOffset, offsetDate: 0))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.SearchResultsCalendar?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<LoadResult, NoError> in
+                    return account.postbox.transaction { transaction -> LoadResult in
+                        guard let result = result else {
+                            return LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil)
+                        }
+
+                        switch result {
+                        case let .searchResultsCalendar(_, _, minDate, minMsgId, _, periods, messages, chats, users):
+                            var parsedMessages: [StoreMessage] = []
+                            var peers: [Peer] = []
+                            var peerPresences: [PeerId: PeerPresence] = [:]
+
+                            for chat in chats {
+                                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                    peers.append(groupOrChannel)
+                                }
+                            }
+                            for user in users {
+                                let telegramUser = TelegramUser(user: user)
+                                peers.append(telegramUser)
+                                if let presence = TelegramUserPresence(apiUser: user) {
+                                    peerPresences[telegramUser.id] = presence
+                                }
+                            }
+
+                            for message in messages {
+                                if let parsedMessage = StoreMessage(apiMessage: message) {
+                                    parsedMessages.append(parsedMessage)
+                                }
+                            }
+
+                            updatePeers(transaction: transaction, peers: peers, update: { _, updated in updated })
+                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                            let _ = transaction.addMessages(parsedMessages, location: .Random)
+
+                            var minMessageId: Int32?
+                            var messagesByDay: [Int32: Message] = [:]
+                            for period in periods {
+                                switch period {
+                                case let .searchResultsCalendarPeriod(date, minMsgId, maxMsgId, _):
+                                    if let message = transaction.getMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: maxMsgId)) {
+                                        messagesByDay[date] = message
+                                    }
+                                    if let minMessageIdValue = minMessageId {
+                                        if minMsgId < minMessageIdValue {
+                                            minMessageId = minMsgId
+                                        }
+                                    } else {
+                                        minMessageId = minMsgId
+                                    }
+                                }
+                            }
+
+                            return LoadResult(messagesByDay: messagesByDay, nextOffset: minMessageId, minMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: minMsgId), minTimestamp: minDate)
+                        }
+                    }
+                }
+            }
+            |> deliverOn(self.queue)).start(next: { [weak self] result in
+                guard let strongSelf = self else {
+                    return
+                }
+
+                if let minTimestamp = result.minTimestamp {
+                    strongSelf.state.minTimestamp = minTimestamp
+                }
+                strongSelf.state.nextRequestOffset = result.nextOffset
+
+                for (timestamp, message) in result.messagesByDay {
+                    strongSelf.state.messagesByDay[timestamp] = message
+                }
+
+                strongSelf.statePromise.set(.single(strongSelf.state))
+                strongSelf.isLoadingMore = false
+            }))
+        }
+    }
+
+    public struct State {
+        public var messagesByDay: [Int32: Message]
+        public var minTimestamp: Int32?
+        public var hasMore: Bool
+    }
+
+    private let queue: Queue
+    private let impl: QueueLocalObject<Impl>
+
+    init(account: Account, peerId: PeerId, messageTag: MessageTags) {
+        let queue = Queue()
+        self.queue = queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return Impl(queue: queue, account: account, peerId: peerId, messageTag: messageTag)
+        })
+    }
+
+    public var state: Signal<State, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.statePromise.get().start(next: { state in
+                    subscriber.putNext(State(
+                        messagesByDay: state.messagesByDay,
+                        minTimestamp: state.minTimestamp,
+                        hasMore: state.nextRequestOffset != nil
+                    ))
+                }))
+            }
+
+            return disposable
+        }
+    }
+
+    public var isLoadingMore: Signal<Bool, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.isLoadingMoreSignal.start(next: subscriber.putNext))
+            }
+
+            return disposable
+        }
+    }
+
+    public func loadMore() {
+        self.impl.with { impl in
+            impl.maybeLoadMore()
         }
     }
 }

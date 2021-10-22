@@ -247,6 +247,10 @@ public extension TelegramEngine {
             return SparseMessageList(account: self.account, peerId: peerId, messageTag: tag)
         }
 
+        public func sparseMessageCalendar(peerId: EnginePeer.Id, tag: EngineMessage.Tags) -> SparseMessageCalendar {
+            return SparseMessageCalendar(account: self.account, peerId: peerId, messageTag: tag)
+        }
+
         public func refreshMessageTagStats(peerId: EnginePeer.Id, tags: [EngineMessage.Tags]) -> Signal<Never, NoError> {
             let account = self.account
             return self.account.postbox.transaction { transaction -> Api.InputPeer? in

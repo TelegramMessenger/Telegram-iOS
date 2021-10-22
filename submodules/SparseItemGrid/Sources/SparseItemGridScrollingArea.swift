@@ -680,6 +680,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 }
 
                 strongSelf.updateActivityTimer(isScrolling: false)
+                strongSelf.dismissLineTooltip()
             },
             ended: { [weak self] in
                 guard let strongSelf = self else {
@@ -878,14 +879,18 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 transition.updateAlpha(layer: strongSelf.dateIndicator.layer, alpha: 0.0)
                 transition.updateAlpha(layer: strongSelf.lineIndicator.layer, alpha: 0.0)
 
-                if let lineTooltip = strongSelf.lineTooltip {
-                    strongSelf.lineTooltip = nil
-                    lineTooltip.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak lineTooltip] _ in
-                        lineTooltip?.removeFromSuperview()
-                    })
-                }
+                strongSelf.dismissLineTooltip()
             }, queue: .mainQueue())
             self.activityTimer?.start()
+        }
+    }
+
+    private func dismissLineTooltip() {
+        if let lineTooltip = self.lineTooltip {
+            self.lineTooltip = nil
+            self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak lineTooltip] _ in
+                lineTooltip?.removeFromSuperview()
+            })
         }
     }
 

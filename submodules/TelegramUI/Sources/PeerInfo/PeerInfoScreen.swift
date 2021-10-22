@@ -6130,7 +6130,31 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             pane.updateContentType(contentType: updatedContentType)
         })))
         let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(items: items)), gesture: nil)
-        contextController.passthroughTouchEvents = true
+        contextController.passthroughTouchEvent = { [weak self] sourceView, point in
+            guard let strongSelf = self else {
+                return .ignore
+            }
+
+            let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
+            guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
+                return .dismiss(consume: true)
+            }
+
+            var testView: UIView? = localResult
+            while true {
+                if let testViewValue = testView {
+                    if testViewValue.asyncdisplaykit_node is PeerInfoVisualMediaPaneNode {
+                        return .dismiss(consume: false)
+                    } else {
+                        testView = testViewValue.superview
+                    }
+                } else {
+                    break
+                }
+            }
+
+            return .dismiss(consume: true)
+        }
         self.mediaGalleryContextMenu = contextController
         controller.presentInGlobalOverlay(contextController)
     }
@@ -6138,11 +6162,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private func openMediaCalendar() {
         var initialTimestamp = Int32(Date().timeIntervalSince1970)
 
-        if let pane = self.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode, let timestamp = pane.currentTopTimestamp() {
-            initialTimestamp = timestamp
+        guard let pane = self.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode, let timestamp = pane.currentTopTimestamp(), let calendarSource = pane.calendarSource else {
+            return
         }
+        initialTimestamp = timestamp
 
-        self.controller?.push(CalendarMessageScreen(context: self.context, peerId: self.peerId, initialTimestamp: initialTimestamp, navigateToDay: { [weak self] c, timestamp in
+        self.controller?.push(CalendarMessageScreen(context: self.context, peerId: self.peerId, calendarSource: calendarSource, initialTimestamp: initialTimestamp, navigateToDay: { [weak self] c, timestamp in
             guard let strongSelf = self else {
                 c.dismiss()
                 return

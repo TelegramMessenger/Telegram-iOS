@@ -19,6 +19,7 @@ import QuartzCore
 import DirectMediaImageCache
 import ComponentFlow
 import TelegramNotices
+import TelegramUIPreferences
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext
@@ -704,8 +705,51 @@ private struct Month: Equatable {
     }
 }
 
+private let durationFont = Font.regular(12.0)
+
+private final class DurationLayer: CALayer {
+    override init() {
+        super.init()
+
+        self.contentsGravity = .topRight
+        self.contentsScale = UIScreenScale
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func action(forKey event: String) -> CAAction? {
+        return nullAction
+    }
+
+    func update(duration: Int32) {
+        let string = NSAttributedString(string: stringForDuration(duration), font: durationFont, textColor: .white)
+        let bounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+        let textSize = CGSize(width: ceil(bounds.width), height: ceil(bounds.height))
+        let sideInset: CGFloat = 6.0
+        let verticalInset: CGFloat = 2.0
+        let image = generateImage(CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height + verticalInset * 2.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+
+            context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
+            context.setBlendMode(.copy)
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.height, height: size.height)))
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - size.height, y: 0.0), size: CGSize(width: size.height, height: size.height)))
+            context.fill(CGRect(origin: CGPoint(x: size.height / 2.0, y: 0.0), size: CGSize(width: size.width - size.height, height: size.height)))
+
+            context.setBlendMode(.normal)
+            UIGraphicsPushContext(context)
+            string.draw(in: bounds.offsetBy(dx: sideInset, dy: verticalInset))
+            UIGraphicsPopContext()
+        })
+        self.contents = image?.cgImage
+    }
+}
+
 private final class ItemLayer: CALayer, SparseItemGridLayer {
     var item: VisualMediaItem?
+    var durationLayer: DurationLayer?
     var disposable: Disposable?
 
     var hasContents: Bool = false
@@ -741,6 +785,22 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
         }
     }
 
+    func updateDuration(duration: Int32?) {
+        if let duration = duration {
+            if let durationLayer = self.durationLayer {
+                durationLayer.update(duration: duration)
+            } else {
+                let durationLayer = DurationLayer()
+                durationLayer.update(duration: duration)
+                self.addSublayer(durationLayer)
+                durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 3.0), size: CGSize())
+            }
+        } else if let durationLayer = self.durationLayer {
+            self.durationLayer = nil
+            durationLayer.removeFromSuperlayer()
+        }
+    }
+
     func unbind() {
         self.item = nil
     }
@@ -750,6 +810,9 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
     }
 
     func update(size: CGSize) {
+        if let durationLayer = self.durationLayer {
+            durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
+        }
     }
 }
 
@@ -959,8 +1022,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                         break
                     }
                 }
+
                 if let selectedMedia = selectedMedia {
-                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec) {
+                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, synchronous: synchronous) {
                         if let image = result.image {
                             layer.contents = image.cgImage
                             layer.hasContents = true
@@ -989,6 +1053,12 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                             })
                         }
                     }
+
+                    var duration: Int32?
+                    if layer.bounds.width > 80.0, let file = selectedMedia as? TelegramMediaFile {
+                        duration = file.duration
+                    }
+                    layer.updateDuration(duration: duration)
                 }
 
                 layer.bind(item: item)
@@ -1084,6 +1154,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         init(_ value: SparseItemGrid.ZoomLevel) {
             self.value = value
         }
+
+        var rawValue: Int32 {
+            return Int32(self.value.rawValue)
+        }
+
+        public init(rawValue: Int32) {
+            self.value = SparseItemGrid.ZoomLevel(rawValue: Int(rawValue))
+        }
     }
     
     private let context: AccountContext
@@ -1135,10 +1213,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     
     private var animationTimer: SwiftSignalKit.Timer?
 
+    private(set) var calendarSource: SparseMessageCalendar?
     private var listSource: SparseMessageList
 
     var openCurrentDate: (() -> Void)?
     var paneDidScroll: (() -> Void)?
+
+    private let stateTag: MessageTags
+    private var storedStateDisposable: Disposable?
     
     init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType) {
         self.context = context
@@ -1146,6 +1228,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.chatControllerInteraction = chatControllerInteraction
         self.contentType = contentType
         self.contentTypePromise = ValuePromise<ContentType>(contentType)
+        self.stateTag = tagMaskForType(contentType)
 
         self.itemGrid = SparseItemGrid()
         self.directMediaImageCache = DirectMediaImageCache(account: context.account)
@@ -1192,6 +1275,12 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         )
 
         self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, tag: tagMaskForType(self.contentType))
+        switch contentType {
+        case .photoOrVideo, .photo, .video:
+            self.calendarSource = self.context.engine.messages.sparseMessageCalendar(peerId: self.peerId, tag: tagMaskForType(self.contentType))
+        default:
+            self.calendarSource = nil
+        }
         
         super.init()
 
@@ -1200,7 +1289,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             guard let strongSelf = self else {
                 return
             }
-            if count < 1 {
+            if count < 1 || true {
                 //TODO:localize
                 strongSelf.itemGrid.updateScrollingAreaTooltip(tooltip: SparseItemGridScrollingArea.DisplayTooltip(animation: "anim_infotip", text: "You can hold and move this bar for faster scrolling", completed: {
                     guard let strongSelf = self else {
@@ -1310,6 +1399,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.itemInteraction.selectedMessageIds = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
 
         self.addSubnode(self.itemGrid)
+
+        self.storedStateDisposable = (visualMediaStoredState(postbox: context.account.postbox, peerId: peerId, messageTag: self.stateTag)
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self, let value = value else {
+                return
+            }
+            strongSelf.updateZoomLevel(level: ZoomLevel(rawValue: value.zoomLevel))
+        })
         
         self.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: false)
         
@@ -1517,6 +1614,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
     func updateZoomLevel(level: ZoomLevel) {
         self.itemGrid.setZoomLevel(level: level.value)
+
+        let _ = updateVisualMediaStoredState(postbox: self.context.account.postbox, peerId: self.peerId, messageTag: self.stateTag, state: VisualMediaStoredState(zoomLevel: level.rawValue)).start()
     }
     
     func ensureMessageIsVisible(id: MessageId) {
@@ -1528,39 +1627,46 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         }
         self.isRequestingView = true
         var firstTime = true
+        let queue = Queue()
+
         self.listDisposable.set((self.listSource.state
-        |> deliverOnMainQueue).start(next: { [weak self] list in
-            guard let strongSelf = self else {
-                return
+        |> deliverOn(queue)).start(next: { [weak self] list in
+            let timezoneOffset = Int32(TimeZone.current.secondsFromGMT())
+
+            var mappedItems: [SparseItemGrid.Item] = []
+            var mappeHoles: [SparseItemGrid.HoleAnchor] = []
+            for item in list.items {
+                switch item.content {
+                case let .message(message, _):
+                    mappedItems.append(VisualMediaItem(index: item.index, message: message, localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
+                case let .placeholder(id, timestamp):
+                    mappeHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: id, localMonthTimestamp: Month(localTimestamp: timestamp + timezoneOffset).packedValue))
+                }
             }
-            let currentSynchronous = synchronous && firstTime
-            let currentReloadAtTop = reloadAtTop && firstTime
-            firstTime = false
-            strongSelf.updateHistory(list: list, synchronous: currentSynchronous, reloadAtTop: currentReloadAtTop)
-            strongSelf.isRequestingView = false
+
+            Queue.mainQueue().async {
+                guard let strongSelf = self else {
+                    return
+                }
+
+                let items = SparseItemGrid.Items(
+                    items: mappedItems,
+                    holeAnchors: mappeHoles,
+                    count: list.totalCount,
+                    itemBinding: strongSelf.itemGridBinding
+                )
+
+                let currentSynchronous = synchronous && firstTime
+                let currentReloadAtTop = reloadAtTop && firstTime
+                firstTime = false
+                strongSelf.updateHistory(items: items, synchronous: currentSynchronous, reloadAtTop: currentReloadAtTop)
+                strongSelf.isRequestingView = false
+            }
         }))
     }
     
-    private func updateHistory(list: SparseMessageList.State, synchronous: Bool, reloadAtTop: Bool) {
-        let timezoneOffset = Int32(TimeZone.current.secondsFromGMT())
-
-        var mappedItems: [SparseItemGrid.Item] = []
-        var mappeHoles: [SparseItemGrid.HoleAnchor] = []
-        for item in list.items {
-            switch item.content {
-            case let .message(message, _):
-                mappedItems.append(VisualMediaItem(index: item.index, message: message, localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
-            case let .placeholder(id, timestamp):
-                mappeHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: id, localMonthTimestamp: Month(localTimestamp: timestamp + timezoneOffset).packedValue))
-            }
-        }
-
-        self.items = SparseItemGrid.Items(
-            items: mappedItems,
-            holeAnchors: mappeHoles,
-            count: list.totalCount,
-            itemBinding: self.itemGridBinding
-        )
+    private func updateHistory(items: SparseItemGrid.Items, synchronous: Bool, reloadAtTop: Bool) {
+        self.items = items
 
         if let (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
             var gridSnapshot: UIView?
@@ -1853,5 +1959,43 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     func availableZoomLevels() -> (decrement: ZoomLevel?, increment: ZoomLevel?) {
         let levels = self.itemGrid.availableZoomLevels()
         return (levels.decrement.flatMap(ZoomLevel.init), levels.increment.flatMap(ZoomLevel.init))
+    }
+}
+
+final class VisualMediaStoredState: Codable {
+    let zoomLevel: Int32
+
+    public init(zoomLevel: Int32) {
+        self.zoomLevel = zoomLevel
+    }
+}
+
+func visualMediaStoredState(postbox: Postbox, peerId: PeerId, messageTag: MessageTags) -> Signal<VisualMediaStoredState?, NoError> {
+    return postbox.transaction { transaction -> VisualMediaStoredState? in
+        let key = ValueBoxKey(length: 8 + 4)
+        key.setInt64(0, value: peerId.toInt64())
+        key.setUInt32(8, value: messageTag.rawValue)
+        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.visualMediaStoredState, key: key))?.get(VisualMediaStoredState.self) {
+            return entry
+        } else {
+            return nil
+        }
+    }
+}
+
+private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 25, highWaterItemCount: 50)
+
+func updateVisualMediaStoredState(postbox: Postbox, peerId: PeerId, messageTag: MessageTags, state: VisualMediaStoredState?) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Void in
+        let key = ValueBoxKey(length: 8 + 4)
+        key.setInt64(0, value: peerId.toInt64())
+        key.setUInt32(8, value: messageTag.rawValue)
+
+        let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.visualMediaStoredState, key: key)
+        if let state = state, let entry = CodableEntry(state) {
+            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
+        } else {
+            transaction.removeItemCacheEntry(id: id)
+        }
     }
 }

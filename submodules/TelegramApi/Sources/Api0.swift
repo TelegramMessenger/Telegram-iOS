@@ -336,7 +336,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-842824308] = { return Api.account.WallPapers.parse_wallPapers($0) }
     dict[1012306921] = { return Api.InputTheme.parse_inputTheme($0) }
     dict[-175567375] = { return Api.InputTheme.parse_inputThemeSlug($0) }
-    dict[2014782332] = { return Api.messages.SearchResultsRawMessages.parse_searchResultsRawMessages($0) }
     dict[-2032041631] = { return Api.Poll.parse_poll($0) }
     dict[-1195615476] = { return Api.InputNotifyPeer.parse_inputNotifyPeer($0) }
     dict[423314455] = { return Api.InputNotifyPeer.parse_inputNotifyUsers($0) }
@@ -837,7 +836,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1781355374] = { return Api.MessageAction.parse_messageActionChannelCreate($0) }
     dict[-519864430] = { return Api.MessageAction.parse_messageActionChatMigrateTo($0) }
     dict[-365344535] = { return Api.MessageAction.parse_messageActionChannelMigrateFrom($0) }
-    dict[-339958837] = { return Api.MessageAction.parse_messageActionChatJoinedByRequest($0) }
     dict[-1799538451] = { return Api.MessageAction.parse_messageActionPinMessage($0) }
     dict[-1615153660] = { return Api.MessageAction.parse_messageActionHistoryClear($0) }
     dict[-1834538890] = { return Api.MessageAction.parse_messageActionGameScore($0) }
@@ -856,6 +854,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1441072131] = { return Api.MessageAction.parse_messageActionSetMessagesTTL($0) }
     dict[-1281329567] = { return Api.MessageAction.parse_messageActionGroupCallScheduled($0) }
     dict[-1434950843] = { return Api.MessageAction.parse_messageActionSetChatTheme($0) }
+    dict[-339958837] = { return Api.MessageAction.parse_messageActionChatJoinedByRequest($0) }
     dict[1399245077] = { return Api.PhoneCall.parse_phoneCallEmpty($0) }
     dict[-987599081] = { return Api.PhoneCall.parse_phoneCallWaiting($0) }
     dict[347139340] = { return Api.PhoneCall.parse_phoneCallRequested($0) }
@@ -1150,8 +1149,6 @@ public struct Api {
             case let _1 as Api.account.WallPapers:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputTheme:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.messages.SearchResultsRawMessages:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Poll:
                 _1.serialize(buffer, boxed)

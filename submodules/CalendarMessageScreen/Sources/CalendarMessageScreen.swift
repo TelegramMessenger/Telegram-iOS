@@ -271,7 +271,9 @@ private final class DayComponent: Component {
         init() {
             self.button = HighlightableButton()
             self.highlightView = UIImageView()
+            self.highlightView.isUserInteractionEnabled = false
             self.titleView = UIImageView()
+            self.titleView.isUserInteractionEnabled = false
 
             super.init(frame: CGRect())
 
@@ -316,6 +318,7 @@ private final class DayComponent: Component {
 
                 if let media = component.media {
                     let mediaPreviewView = MediaPreviewView(context: component.context, message: media.message, media: media.media)
+                    mediaPreviewView.isUserInteractionEnabled = false
                     self.mediaPreviewView = mediaPreviewView
                     self.button.insertSubview(mediaPreviewView, belowSubview: self.highlightView)
                 }
@@ -603,6 +606,8 @@ public final class CalendarMessageScreen: ViewController {
         private var presentationData: PresentationData
         private var scrollView: Scroller
 
+        private let calendarSource: SparseMessageCalendar
+
         private var initialMonthIndex: Int = 0
         private var months: [MonthModel] = []
         private var monthViews: [Int: ComponentHostView<ImageCache>] = [:]
@@ -612,9 +617,15 @@ public final class CalendarMessageScreen: ViewController {
         private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
         private var scrollLayout: (width: CGFloat, contentHeight: CGFloat, frames: [Int: CGRect])?
 
-        init(context: AccountContext, peerId: PeerId, initialTimestamp: Int32, navigateToDay: @escaping (Int32) -> Void) {
+        private var calendarState: SparseMessageCalendar.State?
+
+        private var isLoadingMoreDisposable: Disposable?
+        private var stateDisposable: Disposable?
+
+        init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (Int32) -> Void) {
             self.context = context
             self.peerId = peerId
+            self.calendarSource = calendarSource
             self.navigateToDay = navigateToDay
             
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -679,7 +690,29 @@ public final class CalendarMessageScreen: ViewController {
             self.scrollView.delegate = self
             self.view.addSubview(self.scrollView)
 
-            self.reloadMediaInfo()
+            self.isLoadingMoreDisposable = (self.calendarSource.isLoadingMore
+            |> distinctUntilChanged
+            |> filter { !$0 }
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.calendarSource.loadMore()
+            })
+
+            self.stateDisposable = (self.calendarSource.state
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.calendarState = state
+                strongSelf.reloadMediaInfo()
+            })
+        }
+
+        deinit {
+            self.isLoadingMoreDisposable?.dispose()
+            self.stateDisposable?.dispose()
         }
 
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -820,7 +853,66 @@ public final class CalendarMessageScreen: ViewController {
         }
 
         private func reloadMediaInfo() {
-            let peerId = self.peerId
+            guard let calendarState = self.calendarState else {
+                return
+            }
+            var messageMap: [Message] = []
+            for (_, message) in calendarState.messagesByDay {
+                messageMap.append(message)
+            }
+
+            let _ = messageMap
+
+            var updatedMedia: [Int: [Int: DayMedia]] = [:]
+            var removeMonths: [Int] = []
+            for i in 0 ..< self.months.count {
+                let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
+                let lastDayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(self.months[i].numberOfDays)
+
+                if let minTimestamp = calendarState.minTimestamp, minTimestamp > lastDayTimestamp {
+                    removeMonths.append(i)
+                }
+
+                for day in 0 ..< self.months[i].numberOfDays {
+                    let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
+                    let nextDayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day - 1)
+
+                    for message in messageMap {
+                        if message.timestamp <= dayTimestamp && message.timestamp >= nextDayTimestamp {
+                            mediaLoop: for media in message.media {
+                                switch media {
+                                case _ as TelegramMediaImage, _ as TelegramMediaFile:
+                                    if updatedMedia[i] == nil {
+                                        updatedMedia[i] = [:]
+                                    }
+                                    updatedMedia[i]![day] = DayMedia(message: EngineMessage(message), media: EngineMedia(media))
+                                    break mediaLoop
+                                default:
+                                    break
+                                }
+                            }
+
+                            break
+                        }
+                    }
+                }
+            }
+            for (monthIndex, mediaByDay) in updatedMedia {
+                self.months[monthIndex].mediaByDay = mediaByDay
+            }
+
+            for i in removeMonths.reversed() {
+                self.months.remove(at: i)
+            }
+
+            if !removeMonths.isEmpty {
+                self.scrollLayout = nil
+                let _ = self.updateScrollLayoutIfNeeded()
+            }
+
+            self.updateMonthViews()
+
+            /*let peerId = self.peerId
             let months = self.months
             let _ = (self.context.account.postbox.transaction { transaction -> [Int: [Int: DayMedia]] in
                 var updatedMedia: [Int: [Int: DayMedia]] = [:]
@@ -859,7 +951,7 @@ public final class CalendarMessageScreen: ViewController {
                     strongSelf.months[monthIndex].mediaByDay = mediaByDay
                 }
                 strongSelf.updateMonthViews()
-            })
+            })*/
         }
     }
 
@@ -869,12 +961,14 @@ public final class CalendarMessageScreen: ViewController {
 
     private let context: AccountContext
     private let peerId: PeerId
+    private let calendarSource: SparseMessageCalendar
     private let initialTimestamp: Int32
     private let navigateToDay: (CalendarMessageScreen, Int32) -> Void
 
-    public init(context: AccountContext, peerId: PeerId, initialTimestamp: Int32, navigateToDay: @escaping (CalendarMessageScreen, Int32) -> Void) {
+    public init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (CalendarMessageScreen, Int32) -> Void) {
         self.context = context
         self.peerId = peerId
+        self.calendarSource = calendarSource
         self.initialTimestamp = initialTimestamp
         self.navigateToDay = navigateToDay
 
@@ -898,7 +992,7 @@ public final class CalendarMessageScreen: ViewController {
     }
 
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, peerId: self.peerId, initialTimestamp: self.initialTimestamp, navigateToDay: { [weak self] timestamp in
+        self.displayNode = Node(context: self.context, peerId: self.peerId, calendarSource: self.calendarSource, initialTimestamp: self.initialTimestamp, navigateToDay: { [weak self] timestamp in
             guard let strongSelf = self else {
                 return
             }
