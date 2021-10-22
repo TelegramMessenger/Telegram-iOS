@@ -155,7 +155,10 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.isUserInteractionEnabled = false
         
-        let progressFrame = CGRect(origin: CGPoint(x: (self.frame.width - self.buttonHeight) / 2.0, y: 0.0), size: CGSize(width: self.buttonHeight, height: self.buttonHeight))
+        let buttonOffset = self.buttonBackgroundNode.frame.minX
+        let buttonWidth = self.buttonBackgroundNode.frame.width
+        
+        let progressFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(buttonOffset + (buttonWidth - self.buttonHeight) / 2.0), y: 0.0), size: CGSize(width: self.buttonHeight, height: self.buttonHeight))
         let progressNode = ASImageNode()
         progressNode.displaysAsynchronously = false
         progressNode.frame = progressFrame

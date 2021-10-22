@@ -15,6 +15,7 @@ import MergeLists
 import ChatListSearchItemHeader
 import ItemListUI
 import SearchUI
+import ContextUI
 
 private let searchBarFont = Font.regular(17.0)
 
@@ -101,22 +102,26 @@ final class InviteRequestsSearchItem: ItemListControllerSearch {
     let openPeer: (EnginePeer) -> Void
     let approveRequest: (EnginePeer) -> Void
     let denyRequest: (EnginePeer) -> Void
+    let navigateToChat: (EnginePeer) -> Void
     let pushController: (ViewController) -> Void
+    let presentInGlobalOverlay: (ViewController) -> Void
     let dismissInput: () -> Void
     
     private var updateActivity: ((Bool) -> Void)?
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, peerId: PeerId, cancel: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, peerId: PeerId, cancel: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, navigateToChat: @escaping (EnginePeer) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) {
         self.context = context
         self.peerId = peerId
         self.cancel = cancel
         self.openPeer = openPeer
         self.approveRequest = approveRequest
         self.denyRequest = denyRequest
+        self.navigateToChat = navigateToChat
         self.pushController = pushController
         self.dismissInput = dismissInput
+        self.presentInGlobalOverlay = presentInGlobalOverlay
         self.activityDisposable.set((activity.get() |> mapToSignal { value -> Signal<Bool, NoError> in
             if value {
                 return .single(value) |> delay(0.2, queue: Queue.mainQueue())
@@ -159,25 +164,27 @@ final class InviteRequestsSearchItem: ItemListControllerSearch {
     }
     
     func node(current: ItemListControllerSearchNode?, titleContentNode: (NavigationBarContentNode & ItemListControllerSearchNavigationContentNode)?) -> ItemListControllerSearchNode {
-        return InviteRequestsSearchItemNode(context: self.context, peerId: self.peerId, openPeer: self.openPeer, approveRequest: self.approveRequest, denyRequest: self.denyRequest, cancel: self.cancel, updateActivity: { [weak self] value in
+        return InviteRequestsSearchItemNode(context: self.context, peerId: self.peerId, openPeer: self.openPeer, approveRequest: self.approveRequest, denyRequest: self.denyRequest, navigateToChat: self.navigateToChat, cancel: self.cancel, updateActivity: { [weak self] value in
             self?.activity.set(value)
         }, pushController: { [weak self] c in
             self?.pushController(c)
-        }, dismissInput: self.dismissInput)
+        }, dismissInput: self.dismissInput, presentInGlobalOverlay: self.presentInGlobalOverlay)
     }
 }
 
 private final class InviteRequestsSearchItemNode: ItemListControllerSearchNode {
     private let containerNode: InviteRequestsSearchContainerNode
     
-    init(context: AccountContext, peerId: PeerId, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, peerId: PeerId, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, navigateToChat: @escaping (EnginePeer) -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, dismissInput: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) {
         self.containerNode = InviteRequestsSearchContainerNode(context: context, forceTheme: nil, peerId: peerId, openPeer: { peer in
             openPeer(peer)
         }, approveRequest: { peer in
             approveRequest(peer)
         }, denyRequest: { peer in
             denyRequest(peer)
-        }, updateActivity: updateActivity, pushController: pushController)
+        }, navigateToChat: { peer in
+            navigateToChat(peer)
+        }, updateActivity: updateActivity, pushController: pushController, presentInGlobalOverlay: presentInGlobalOverlay)
         self.containerNode.cancel = {
             cancel()
         }
@@ -335,7 +342,7 @@ public final class InviteRequestsSearchContainerNode: SearchDisplayControllerCon
         }
     }
     
-    public init(context: AccountContext, forceTheme: PresentationTheme?, peerId: PeerId, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, forceTheme: PresentationTheme?, peerId: PeerId, openPeer: @escaping (EnginePeer) -> Void, approveRequest: @escaping (EnginePeer) -> Void, denyRequest: @escaping (EnginePeer) -> Void, navigateToChat: @escaping (EnginePeer) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentInGlobalOverlay: @escaping (ViewController) -> Void) {
         self.context = context
         self.openPeer = openPeer
         
@@ -391,8 +398,62 @@ public final class InviteRequestsSearchContainerNode: SearchDisplayControllerCon
         }, denyRequest: { [weak self] peer in
             denyRequest(peer)
             self?.processedPeerIds.insert(peer.id)
-        }, peerContextAction: { _, _, _ in
+        }, peerContextAction: { [weak self] peer, node, gesture in
+            guard let node = node as? ContextExtractedContentContainingNode else {
+                return
+            }
             
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let peer = peer else {
+                    return
+                }
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let addString: String
+                if case let .channel(channel) = peer, case .broadcast = channel.info {
+                    addString = presentationData.strings.MemberRequests_AddToChannel
+                } else {
+                    addString = presentationData.strings.MemberRequests_AddToGroup
+                }
+                var items: [ContextMenuItem] = []
+
+                items.append(.action(ContextMenuActionItem(text: addString, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, f in
+                    f(.dismissWithoutContent)
+                    
+                    approveRequest(peer)
+                    self?.processedPeerIds.insert(peer.id)
+                })))
+                
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.ContactList_Context_SendMessage, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.contextMenu.primaryColor)
+                }, action: { _, f in
+                    f(.dismissWithoutContent)
+                    
+                    navigateToChat(peer)
+                })))
+                
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.MemberRequests_Dismiss, textColor: .destructive, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor)
+                }, action: { [weak self] _, f in
+                    f(.dismissWithoutContent)
+                    
+                    denyRequest(peer)
+                    self?.processedPeerIds.insert(peer.id)
+                })))
+                
+                let dismissPromise = ValuePromise<Bool>(false)
+                let source = InviteRequestsContextExtractedContentSource(sourceNode: node, keepInPlace: false, blurBackground: true, centerVertically: true, shouldBeDismissed: dismissPromise.get())
+        //        sourceNode.requestDismiss = {
+        //            dismissPromise.set(true)
+        //        }
+                
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(source), items: .single(ContextController.Items(items: items)), gesture: gesture)
+                presentInGlobalOverlay(contextController)
+            })
         })
         
         let presentationDataPromise = self.presentationDataPromise
@@ -412,13 +473,20 @@ public final class InviteRequestsSearchContainerNode: SearchDisplayControllerCon
         
         let foundItems = combineLatest(searchQuery, context.account.postbox.peerView(id: peerId) |> take(1))
         |> mapToSignal { query, peerView -> Signal<[InviteRequestsSearchEntry]?, NoError> in
-            guard let query = query, !query.isEmpty else {
+            guard let query = query, !query.isEmpty, let peer = peerViewMainPeer(peerView) else {
                 return .single(nil)
             }
             updateActivity(true)
             let requestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: query))
             let _ = previousRequestsContext.swap(requestsContext)
             
+            let isGroup: Bool
+            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                isGroup = false
+            } else {
+                isGroup = true
+            }
+
             return combineLatest(requestsContext.state, presentationDataPromise.get(), processedPeerIds.get())
             |> mapToSignal { state, presentationData, processedPeerIds -> Signal<[InviteRequestsSearchEntry]?, NoError> in
                 if !state.hasLoadedOnce {
@@ -431,7 +499,7 @@ public final class InviteRequestsSearchContainerNode: SearchDisplayControllerCon
                     if processedPeerIds.contains(importer.peer.peerId) {
                         continue
                     }
-                    entries.append(InviteRequestsSearchEntry(index: index, request: importer, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, isGroup: false))
+                    entries.append(InviteRequestsSearchEntry(index: index, request: importer, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, isGroup: isGroup))
                     index += 1
                 }
                 return .single(entries)

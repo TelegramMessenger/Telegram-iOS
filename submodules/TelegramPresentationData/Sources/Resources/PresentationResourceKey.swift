@@ -55,6 +55,7 @@ public enum PresentationResourceKey: Int32 {
     case itemListCloseIconImage
     case itemListMakeVisibleIcon
     case itemListMakeInvisibleIcon
+    case itemListEditThemeIcon
     case itemListCornersTop
     case itemListCornersBottom
     case itemListCornersBoth

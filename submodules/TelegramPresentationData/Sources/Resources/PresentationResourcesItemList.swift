@@ -181,6 +181,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func makeEditThemeIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListEditThemeIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/EditTheme"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     public static func cornersImage(_ theme: PresentationTheme, top: Bool, bottom: Bool) -> UIImage? {
         if !top && !bottom {
             return nil

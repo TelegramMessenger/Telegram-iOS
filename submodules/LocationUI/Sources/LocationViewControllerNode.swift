@@ -38,6 +38,7 @@ private struct LocationViewTransaction {
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let gotTravelTimes: Bool
+    let count: Int
 }
 
 private enum LocationViewEntryId: Hashable {
@@ -184,7 +185,7 @@ private func preparedTransition(from fromEntries: [LocationViewEntry], to toEntr
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
-    return LocationViewTransaction(deletions: deletions, insertions: insertions, updates: updates, gotTravelTimes: gotTravelTimes)
+    return LocationViewTransaction(deletions: deletions, insertions: insertions, updates: updates, gotTravelTimes: gotTravelTimes, count: toEntries.count)
 }
 
 enum LocationViewLocation: Equatable {
@@ -453,7 +454,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                             var drivingTime: Double?
                             var transitTime: Double?
                             var walkingTime: Double?
-                            if !isLocationView {
+                            if !isLocationView && message.author?.id != context.account.peerId {
                                 if let (previousTimestamp, maybeDrivingTime, maybeTransitTime, maybeWalkingTime) = travelTimes[message.id] {
                                     drivingTime = maybeDrivingTime
                                     transitTime = maybeTransitTime
@@ -704,7 +705,11 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             var index: Int = 0
             var offset: CGFloat = 0.0
             if transition.gotTravelTimes {
-                index = 1
+                if transition.count > 1 {
+                    index = 1
+                } else {
+                    index = 0
+                }
                 offset = 0.0
             } else if transition.insertions.count > 2 {
                 index = 2

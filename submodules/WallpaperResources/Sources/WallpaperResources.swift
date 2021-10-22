@@ -1308,7 +1308,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
     }
 
     let themeSignal: Signal<PresentationTheme?, NoError>
-    if case let .cloud(theme) = theme, let nightMode = nightMode {
+    if case let .cloud(theme) = theme, theme.theme.settings != nil, let nightMode = nightMode {
         themeSignal = .single(makePresentationTheme(cloudTheme: theme.theme, dark: nightMode))
     } else if case let .builtin(theme) = theme {
         themeSignal = .single(makeDefaultPresentationTheme(reference: theme, serviceBackgroundColor: nil))
@@ -1485,12 +1485,12 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                     if large {
                         c.saveGState()
 
-                        c.translateBy(x: 5.0, y: 25.0)
+                        c.translateBy(x: 7.0, y: 27.0)
                         c.translateBy(x: 114.0, y: 32.0)
                         c.scaleBy(x: 1.0, y: -1.0)
                         c.translateBy(x: -114.0, y: -32.0)
                         
-                        let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
+                        let _ = try? drawSvgPath(c, path: "M12.8304,29.8712 C10.0551,31.8416 6.6628,33 2.99998,33 C1.98426,33 0.989361,32.9109 0.022644,32.7402 C2.97318,31.9699 5.24596,29.5785 5.84625,26.5607 C5.99996,25.7879 5.99996,24.8586 5.99996,23 V16.0 H6.00743 C6.27176,7.11861 13.5546,0 22.5,0 H61.5 C70.6127,0 78,7.3873 78,16.5 C78,25.6127 70.6127,33 61.5,33 H22.5 C18.8883,33 15.5476,31.8396 12.8304,29.8712 ")
                         if Set(incomingColors.map(\.rgb)).count > 1 {
                             c.clip()
 
@@ -1504,7 +1504,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
 
                             let colorSpace = CGColorSpaceCreateDeviceRGB()
                             let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as NSArray, locations: &locations)!
-                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 32.0), options: CGGradientDrawingOptions())
+                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 34.0), options: CGGradientDrawingOptions())
                         } else {
                             c.setFillColor(incomingColors[0].cgColor)
                             c.fillPath()
@@ -1517,7 +1517,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                         c.clip()
                         
                         if incomingColors.count >= 2 {
-                            let gradientColors = incomingColors.map { $0.cgColor } as CFArray
+                            let gradientColors = incomingColors.reversed().map { $0.cgColor } as CFArray
 
                             var locations: [CGFloat] = []
                             for i in 0 ..< incomingColors.count {
@@ -1551,12 +1551,12 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                     if large {
                         c.saveGState()
 
-                        c.translateBy(x: drawingRect.width - 114.0 - 5.0, y: 65.0)
+                        c.translateBy(x: -71.0, y: 66.0)
                         c.translateBy(x: 114.0, y: 32.0)
-                        c.scaleBy(x: -1.0, y: -1.0)
-                        c.translateBy(x: 0, y: -32.0)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: 0.0, y: -32.0)
                         
-                        let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
+                        let _ = try? drawSvgPath(c, path: "M57.1696,29.8712 C59.9449,31.8416 63.3372,33 67,33 C68.0157,33 69.0106,32.9109 69.9773,32.7402 C67.0268,31.9699 64.754,29.5786 64.1537,26.5607 C64,25.7879 64,24.8586 64,23 V16.5 V16 H63.9926 C63.7282,7.11861 56.4454,0 47.5,0 H16.5 C7.3873,0 0,7.3873 0,16.5 C0,25.6127 7.3873,33 16.5,33 H47.5 C51.1117,33 54.4524,31.8396 57.1696,29.8712 ")
                         if Set(outgoingColors.map(\.rgb)).count > 1 {
                             c.clip()
 
@@ -1570,7 +1570,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
 
                             let colorSpace = CGColorSpaceCreateDeviceRGB()
                             let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as NSArray, locations: &locations)!
-                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 32.0), options: CGGradientDrawingOptions())
+                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 34.0), options: CGGradientDrawingOptions())
                         } else {
                             c.setFillColor(outgoingColors[0].cgColor)
                             c.fillPath()
@@ -1583,7 +1583,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                         c.clip()
                         
                         if outgoingColors.count >= 2 {
-                            let gradientColors = outgoingColors.map { $0.cgColor } as CFArray
+                            let gradientColors = outgoingColors.reversed().map { $0.cgColor } as CFArray
 
                             var locations: [CGFloat] = []
                             for i in 0 ..< outgoingColors.count {

@@ -623,9 +623,16 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                                 switchedToNightModeWallpaper = true
                             }
                             effectiveTheme = automaticTheme
-                            preferredBaseTheme = .night
+                            if let baseTheme = themeSettings.themePreferredBaseTheme[effectiveTheme.index], [.night, .tinted].contains(baseTheme) {
+                                preferredBaseTheme = baseTheme
+                            } else {
+                                preferredBaseTheme = .night
+                            }
                         } else {
                             effectiveTheme = themeSettings.theme
+                            if let baseTheme = themeSettings.themePreferredBaseTheme[effectiveTheme.index], [.classic, .day].contains(baseTheme) {
+                                preferredBaseTheme = baseTheme
+                            }
                         }
                         
                         if let colors = effectiveColors, colors.baseColor == .theme {

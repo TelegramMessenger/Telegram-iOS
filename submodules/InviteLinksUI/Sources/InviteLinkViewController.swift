@@ -808,17 +808,19 @@ public final class InviteLinkViewController: ViewController {
             }
             
             let navigationController = parentController.navigationController as? NavigationController
-            self.controller?.dismiss()
-            
+          
+  
             let invitationsContext = parentController.invitationsContext
             let revokedInvitationsContext = parentController.revokedInvitationsContext
             if let navigationController = navigationController {
                 let updatedPresentationData = (self.presentationData, parentController.presentationDataPromise.get())
-                let controller = inviteLinkEditController(context: self.context, updatedPresentationData: updatedPresentationData, peerId: self.peerId, invite: self.invite, completion: { invite in
+                let controller = inviteLinkEditController(context: self.context, updatedPresentationData: updatedPresentationData, peerId: self.peerId, invite: self.invite, completion: { [weak self] invite in
                     if let invite = invite {
                         if invite.isRevoked {
                             invitationsContext?.remove(invite)
                             revokedInvitationsContext?.add(invite.withUpdated(isRevoked: true))
+                            
+                            self?.controller?.dismiss()
                         } else {
                             invitationsContext?.update(invite)
                         }
@@ -934,7 +936,6 @@ public final class InviteLinkViewController: ViewController {
             
             var titleText = self.presentationData.strings.InviteLink_InviteLink
   
-            
             var subtitleText = ""
             var subtitleColor = self.presentationData.theme.list.itemSecondaryTextColor
             if self.invite.isRevoked {
@@ -981,11 +982,11 @@ public final class InviteLinkViewController: ViewController {
             transition.updateFrame(node: self.titleNode, frame: titleFrame)
             
             let editSize = self.editButton.measure(CGSize(width: layout.size.width, height: headerHeight))
-            let editFrame = CGRect(origin: CGPoint(x: 16.0, y: 18.0), size: editSize)
+            let editFrame = CGRect(origin: CGPoint(x: 16.0 + layout.safeInsets.left, y: 18.0), size: editSize)
             transition.updateFrame(node: self.editButton, frame: editFrame)
             
             let doneSize = self.doneButton.measure(CGSize(width: layout.size.width, height: headerHeight))
-            let doneFrame = CGRect(origin: CGPoint(x: layout.size.width - doneSize.width - 16.0, y: 18.0), size: doneSize)
+            let doneFrame = CGRect(origin: CGPoint(x: layout.size.width - doneSize.width - 16.0 - layout.safeInsets.right, y: 18.0), size: doneSize)
             transition.updateFrame(node: self.doneButton, frame: doneFrame)
         }
         

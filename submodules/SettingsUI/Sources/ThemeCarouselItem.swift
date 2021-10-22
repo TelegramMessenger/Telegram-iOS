@@ -363,7 +363,7 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
             var string: String?
             if let _ = item.themeReference.emoticon {
             } else {
-                string = "⚙️"
+                string = "🎨"
             }
             
             let emojiTitle = NSAttributedString(string: string ?? "", font: Font.regular(20.0), textColor: .black)

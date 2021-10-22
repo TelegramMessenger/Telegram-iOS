@@ -687,6 +687,7 @@ public func readCGFloat(_ index: inout UnsafePointer<UInt8>, end: UnsafePointer<
 public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: Bool = false) throws {
     var index: UnsafePointer<UInt8> = path.utf8Start
     let end = path.utf8Start.advanced(by: path.utf8CodeUnitCount)
+    var currentPoint = CGPoint()
     while index < end {
         let c = index.pointee
         index = index.successor()
@@ -696,18 +697,32 @@ public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: 
             let y = try readCGFloat(&index, end: end, separator: 32)
             
             //print("Move to \(x), \(y)")
-            context.move(to: CGPoint(x: x, y: y))
+            currentPoint = CGPoint(x: x, y: y)
+            context.move(to: currentPoint)
         } else if c == 76 { // L
             let x = try readCGFloat(&index, end: end, separator: 44)
             let y = try readCGFloat(&index, end: end, separator: 32)
             
             //print("Line to \(x), \(y)")
-            context.addLine(to: CGPoint(x: x, y: y))
+            currentPoint = CGPoint(x: x, y: y)
+            context.addLine(to: currentPoint)
             
             if strokeOnMove {
                 context.strokePath()
-                context.move(to: CGPoint(x: x, y: y))
+                context.move(to: currentPoint)
             }
+        } else if c == 72 { // H
+            let x = try readCGFloat(&index, end: end, separator: 32)
+            
+            //print("Move to \(x), \(y)")
+            currentPoint = CGPoint(x: x, y: currentPoint.y)
+            context.addLine(to: currentPoint)
+        } else if c == 86 { // V
+            let y = try readCGFloat(&index, end: end, separator: 32)
+            
+            //print("Move to \(x), \(y)")
+            currentPoint = CGPoint(x: currentPoint.x, y: y)
+            context.addLine(to: currentPoint)
         } else if c == 67 { // C
             let x1 = try readCGFloat(&index, end: end, separator: 44)
             let y1 = try readCGFloat(&index, end: end, separator: 32)
@@ -715,12 +730,14 @@ public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: 
             let y2 = try readCGFloat(&index, end: end, separator: 32)
             let x = try readCGFloat(&index, end: end, separator: 44)
             let y = try readCGFloat(&index, end: end, separator: 32)
-            context.addCurve(to: CGPoint(x: x, y: y), control1: CGPoint(x: x1, y: y1), control2: CGPoint(x: x2, y: y2))
+            
+            currentPoint = CGPoint(x: x, y: y)
+            context.addCurve(to: currentPoint, control1: CGPoint(x: x1, y: y1), control2: CGPoint(x: x2, y: y2))
             
             //print("Line to \(x), \(y)")
             if strokeOnMove {
                 context.strokePath()
-                context.move(to: CGPoint(x: x, y: y))
+                context.move(to: currentPoint)
             }
         } else if c == 90 { // Z
             if index != end && index.pointee != 32 {

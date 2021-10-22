@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public enum TelegramBaseTheme: Int32 {
+public enum TelegramBaseTheme: Int32, Codable {
     case classic
     case day
     case night
