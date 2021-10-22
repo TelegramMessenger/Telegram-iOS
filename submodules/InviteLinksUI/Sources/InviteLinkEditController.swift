@@ -506,8 +506,13 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                     }
                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 })
-            } else if let invite = invite {
-                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: invite.link, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
+            } else if let initialInvite = invite {
+                if initialInvite.expireDate == expireDate && initialInvite.usageLimit == usageLimit && initialInvite.requestApproval == requestNeeded {
+                    completion?(initialInvite)
+                    dismissImpl?()
+                    return
+                }
+                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: initialInvite.link, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)
