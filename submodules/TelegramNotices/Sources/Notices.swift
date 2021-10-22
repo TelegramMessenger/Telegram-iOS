@@ -160,6 +160,8 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case chatSpecificThemeLightPreviewTip = 26
     case chatSpecificThemeDarkPreviewTip = 27
     case interactiveEmojiSyncTip = 28
+    case sharedMediaScrollingTooltip = 29
+    case sharedMediaFastScrollingTooltip = 30
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -323,6 +325,14 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func dismissedInvitationRequestsNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: peerInviteRequestsNamespace), key: noticeKey(peerId: peerId, key: 0))
+    }
+
+    static func sharedMediaScrollingTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.sharedMediaScrollingTooltip.key)
+    }
+
+    static func sharedMediaFastScrollingTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.sharedMediaFastScrollingTooltip.key)
     }
 }
 
@@ -890,6 +900,54 @@ public struct ApplicationSpecificNotice {
 
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.nextChatSuggestionTip(), entry)
+            }
+        }
+    }
+
+    public static func getSharedMediaScrollingTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.sharedMediaScrollingTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+
+    public static func incrementSharedMediaScrollingTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.sharedMediaScrollingTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            currentValue += count
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.sharedMediaScrollingTooltip(), entry)
+            }
+        }
+    }
+
+    public static func getSharedMediaFastScrollingTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.sharedMediaFastScrollingTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+
+    public static func incrementSharedMediaFastScrollingTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.sharedMediaFastScrollingTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            currentValue += count
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.sharedMediaFastScrollingTooltip(), entry)
             }
         }
     }

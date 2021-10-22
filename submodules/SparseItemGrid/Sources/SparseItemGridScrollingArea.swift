@@ -4,6 +4,263 @@ import Display
 import AsyncDisplayKit
 import ComponentFlow
 import SwiftSignalKit
+import AnimationUI
+
+public final class MultilineText: Component {
+    public let text: String
+    public let font: UIFont
+    public let color: UIColor
+
+    public init(
+        text: String,
+        font: UIFont,
+        color: UIColor
+    ) {
+        self.text = text
+        self.font = font
+        self.color = color
+    }
+
+    public static func ==(lhs: MultilineText, rhs: MultilineText) -> Bool {
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.font != rhs.font {
+            return false
+        }
+        if lhs.color != rhs.color {
+            return false
+        }
+        return true
+    }
+
+    public final class View: UIView {
+        private let text: ImmediateTextNode
+
+        init() {
+            self.text = ImmediateTextNode()
+            self.text.maximumNumberOfLines = 0
+
+            super.init(frame: CGRect())
+
+            self.addSubnode(self.text)
+        }
+
+        required init?(coder aDecoder: NSCoder) {
+            preconditionFailure()
+        }
+
+        func update(component: MultilineText, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.text.attributedText = NSAttributedString(string: component.text, font: component.font, textColor: component.color, paragraphAlignment: nil)
+            let textSize = self.text.updateLayout(availableSize)
+            transition.setFrame(view: self.text.view, frame: CGRect(origin: CGPoint(), size: textSize))
+
+            return textSize
+        }
+    }
+
+    public func makeView() -> View {
+        return View()
+    }
+
+    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
+    }
+}
+
+public final class LottieAnimationComponent: Component {
+    public let name: String
+
+    public init(
+        name: String
+    ) {
+        self.name = name
+    }
+
+    public static func ==(lhs: LottieAnimationComponent, rhs: LottieAnimationComponent) -> Bool {
+        if lhs.name != rhs.name {
+            return false
+        }
+        return true
+    }
+
+    public final class View: UIView {
+        private var animationNode: AnimationNode?
+        private var currentName: String?
+
+        init() {
+            super.init(frame: CGRect())
+        }
+
+        required init?(coder aDecoder: NSCoder) {
+            preconditionFailure()
+        }
+
+        func update(component: LottieAnimationComponent, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            if self.currentName != component.name {
+                self.currentName = component.name
+
+                if let animationNode = self.animationNode {
+                    animationNode.removeFromSupernode()
+                    self.animationNode = nil
+                }
+
+                let animationNode = AnimationNode(animation: component.name, colors: [:], scale: 1.0)
+                self.animationNode = animationNode
+                self.addSubnode(animationNode)
+
+                animationNode.play()
+            }
+
+            if let animationNode = self.animationNode {
+                let preferredSize = animationNode.preferredSize()
+                return preferredSize ?? CGSize(width: 32.0, height: 32.0)
+            } else {
+                return CGSize()
+            }
+        }
+    }
+
+    public func makeView() -> View {
+        return View()
+    }
+
+    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
+    }
+}
+
+public final class TooltipComponent: Component {
+    public let icon: AnyComponent<Empty>?
+    public let content: AnyComponent<Empty>
+    public let arrowLocation: CGRect
+
+    public init(
+        icon: AnyComponent<Empty>?,
+        content: AnyComponent<Empty>,
+        arrowLocation: CGRect
+    ) {
+        self.icon = icon
+        self.content = content
+        self.arrowLocation = arrowLocation
+    }
+
+    public static func ==(lhs: TooltipComponent, rhs: TooltipComponent) -> Bool {
+        if lhs.icon != rhs.icon {
+            return false
+        }
+        if lhs.content != rhs.content {
+            return false
+        }
+        if lhs.arrowLocation != rhs.arrowLocation {
+            return false
+        }
+        return true
+    }
+
+    public final class View: UIView {
+        private let backgroundView: UIView
+        private let backgroundViewMask: UIImageView
+        private var icon: ComponentHostView<Empty>?
+        private let content: ComponentHostView<Empty>
+
+        init() {
+            self.backgroundView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+            self.backgroundViewMask = UIImageView()
+
+            self.backgroundViewMask.image = generateImage(CGSize(width: 42.0, height: 42.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+
+                context.setFillColor(UIColor.black.cgColor)
+                let _ = try? drawSvgPath(context, path: "M0,18.0252 C0,14.1279 0,12.1792 0.5358,10.609 C1.5362,7.6772 3.8388,5.3746 6.7706,4.3742 C8.3409,3.8384 10.2895,3.8384 14.1868,3.8384 L16.7927,3.8384 C18.2591,3.8384 18.9923,3.8384 19.7211,3.8207 C25.1911,3.6877 30.6172,2.8072 35.8485,1.2035 C36.5454,0.9899 37.241,0.758 38.6321,0.2943 C39.1202,0.1316 39.3643,0.0503 39.5299,0.0245 C40.8682,-0.184 42.0224,0.9702 41.8139,2.3085 C41.7881,2.4741 41.7067,2.7181 41.544,3.2062 C41.0803,4.5974 40.8485,5.293 40.6348,5.99 C39.0312,11.2213 38.1507,16.6473 38.0177,22.1173 C38,22.846 38,23.5793 38,25.0457 L38,27.6516 C38,31.5489 38,33.4975 37.4642,35.0677 C36.4638,37.9995 34.1612,40.3022 31.2294,41.3026 C29.6591,41.8384 27.7105,41.8384 23.8132,41.8384 L16,41.8384 C10.3995,41.8384 7.5992,41.8384 5.4601,40.7484 C3.5785,39.7897 2.0487,38.2599 1.0899,36.3783 C0,34.2392 0,31.4389 0,25.8384 L0,18.0252 Z ")
+            })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 34)
+
+            self.content = ComponentHostView<Empty>()
+
+            super.init(frame: CGRect())
+
+            self.addSubview(self.backgroundView)
+            self.backgroundView.mask = self.backgroundViewMask
+            self.addSubview(self.content)
+        }
+
+        required init?(coder aDecoder: NSCoder) {
+            preconditionFailure()
+        }
+
+        func update(component: TooltipComponent, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            let insets = UIEdgeInsets(top: 8.0, left: 8.0, bottom: 8.0, right: 8.0)
+            let spacing: CGFloat = 8.0
+
+            var iconSize: CGSize?
+            if let icon = component.icon {
+                let iconView: ComponentHostView<Empty>
+                if let current = self.icon {
+                    iconView = current
+                } else {
+                    iconView = ComponentHostView<Empty>()
+                    self.icon = iconView
+                    self.addSubview(iconView)
+                }
+                iconSize = iconView.update(
+                    transition: transition,
+                    component: icon,
+                    environment: {},
+                    containerSize: availableSize
+                )
+            } else if let icon = self.icon {
+                self.icon = nil
+                icon.removeFromSuperview()
+            }
+
+            var contentLeftInset: CGFloat = 0.0
+            if let iconSize = iconSize {
+                contentLeftInset += iconSize.width + spacing
+            }
+
+            let contentSize = self.content.update(
+                transition: transition,
+                component: component.content,
+                environment: {},
+                containerSize: CGSize(width: min(200.0, availableSize.width - contentLeftInset), height: availableSize.height)
+            )
+
+            var innerContentHeight = contentSize.height
+            if let iconSize = iconSize, iconSize.height > innerContentHeight {
+                innerContentHeight = iconSize.height
+            }
+
+            let combinedContentSize = CGSize(width: insets.left + insets.right + contentLeftInset + contentSize.width, height: insets.top + insets.bottom + innerContentHeight)
+            var contentRect = CGRect(origin: CGPoint(x: component.arrowLocation.minX - combinedContentSize.width, y: component.arrowLocation.maxY), size: combinedContentSize)
+            if contentRect.minX < 0.0 {
+                contentRect.origin.x = component.arrowLocation.maxX
+            }
+            if contentRect.minY < 0.0 {
+                contentRect.origin.y = component.arrowLocation.minY - contentRect.height
+            }
+
+            let maskedBackgroundFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: contentRect.minY - 4.0), size: CGSize(width: contentRect.width + 4.0, height: contentRect.height + 4.0))
+
+            self.backgroundView.frame = maskedBackgroundFrame
+            self.backgroundViewMask.frame = CGRect(origin: CGPoint(), size: maskedBackgroundFrame.size)
+
+            if let iconSize = iconSize, let icon = self.icon {
+                transition.setFrame(view: icon, frame: CGRect(origin: CGPoint(x: contentRect.minX + insets.left, y: contentRect.minY + insets.top + floor((contentRect.height - insets.top - insets.bottom - iconSize.height) / 2.0)), size: iconSize))
+            }
+            transition.setFrame(view: self.content, frame: CGRect(origin: CGPoint(x: contentRect.minX + insets.left + contentLeftInset, y: contentRect.minY + insets.top + floor((contentRect.height - insets.top - insets.bottom - contentSize.height) / 2.0)), size: contentSize))
+
+            return availableSize
+        }
+    }
+
+    public func makeView() -> View {
+        return View()
+    }
+
+    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
+    }
+}
 
 private final class RoundedRectangle: Component {
     let color: UIColor
@@ -134,7 +391,7 @@ private final class ShadowRoundedRectangle: Component {
                     context.clear(CGRect(origin: CGPoint(), size: size))
 
                     context.setFillColor(component.color.cgColor)
-                    context.setShadow(offset: CGSize(width: 0.0, height: -2.0), blur: 5.0, color: UIColor(white: 0.0, alpha: 0.3).cgColor)
+                    context.setShadow(offset: CGSize(width: 0.0, height: -1.0), blur: 4.0, color: UIColor(white: 0.0, alpha: 0.2).cgColor)
 
                     context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowInset, y: shadowInset), size: CGSize(width: size.width - shadowInset * 2.0, height: size.height - shadowInset * 2.0)))
                 })?.stretchableImage(withLeftCapWidth: Int(diameter + shadowInset * 2.0) / 2, topCapHeight: Int(diameter + shadowInset * 2.0) / 2)
@@ -324,6 +581,11 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private let dateIndicator: ComponentHostView<Empty>
 
     private let lineIndicator: ComponentHostView<Empty>
+
+    private var displayedTooltip: Bool = false
+    private var lineTooltip: ComponentHostView<Empty>?
+
+    private var containerSize: CGSize?
     private var indicatorPosition: CGFloat?
     private var scrollIndicatorHeight: CGFloat?
 
@@ -336,6 +598,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private var activityTimer: SwiftSignalKit.Timer?
 
     public var beginScrolling: (() -> UIScrollView?)?
+    public var setContentOffset: ((CGPoint) -> Void)?
     public var openCurrentDate: (() -> Void)?
 
     private var offsetBarTimer: SwiftSignalKit.Timer?
@@ -349,6 +612,20 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         var scrollableHeight: CGFloat
     }
     private var projectionData: ProjectionData?
+
+    public struct DisplayTooltip {
+        public var animation: String?
+        public var text: String
+        public var completed: () -> Void
+
+        public init(animation: String?, text: String, completed: @escaping () -> Void) {
+            self.animation = animation
+            self.text = text
+            self.completed = completed
+        }
+    }
+
+    public var displayTooltip: DisplayTooltip?
 
     override public init() {
         self.dateIndicator = ComponentHostView<Empty>()
@@ -399,10 +676,10 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 if let scrollView = strongSelf.beginScrolling?() {
                     strongSelf.draggingScrollView = scrollView
                     strongSelf.scrollingInitialOffset = scrollView.contentOffset.y
-                    scrollView.setContentOffset(scrollView.contentOffset, animated: false)
+                    strongSelf.setContentOffset?(scrollView.contentOffset)
                 }
 
-                strongSelf.updateActivityTimer()
+                strongSelf.updateActivityTimer(isScrolling: false)
             },
             ended: { [weak self] in
                 guard let strongSelf = self else {
@@ -424,7 +701,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
                 strongSelf.updateLineIndicator(transition: transition)
 
-                strongSelf.updateActivityTimer()
+                strongSelf.updateActivityTimer(isScrolling: false)
             },
             moved: { [weak self] relativeOffset in
                 guard let strongSelf = self else {
@@ -454,7 +731,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                     offset = scrollView.contentSize.height - scrollView.bounds.height
                 }
 
-                scrollView.setContentOffset(CGPoint(x: 0.0, y: offset), animated: false)
+                strongSelf.setContentOffset?(CGPoint(x: 0.0, y: offset))
                 let _ = scrollView
                 let _ = projectionData
             }
@@ -473,6 +750,10 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         self.updateLineIndicator(transition: transition)
     }
 
+    func feedbackTap() {
+        self.hapticFeedback.tap()
+    }
+
     public func update(
         containerSize: CGSize,
         containerInsets: UIEdgeInsets,
@@ -482,8 +763,15 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         dateString: String,
         transition: ContainedViewLayoutTransition
     ) {
+        self.containerSize = containerSize
+
+        if self.dateIndicator.alpha.isZero {
+            let transition: ContainedViewLayoutTransition = .immediate
+            transition.updateSublayerTransformOffset(layer: self.dateIndicator.layer, offset: CGPoint())
+        }
+
         if isScrolling {
-            self.updateActivityTimer()
+            self.updateActivityTimer(isScrolling: true)
         }
 
         let indicatorSize = self.dateIndicator.update(
@@ -508,18 +796,18 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         }
 
         let indicatorVerticalInset: CGFloat = 3.0
-        let topIndicatorInset: CGFloat = indicatorVerticalInset
+        let topIndicatorInset: CGFloat = indicatorVerticalInset + containerInsets.top
         let bottomIndicatorInset: CGFloat = indicatorVerticalInset + containerInsets.bottom
 
-        let scrollIndicatorHeight = max(35.0, ceil(scrollIndicatorHeightFraction * containerSize.height))
+        let scrollIndicatorHeight = max(44.0, ceil(scrollIndicatorHeightFraction * containerSize.height))
 
         let indicatorPositionFraction = min(1.0, max(0.0, contentOffset / (contentHeight - containerSize.height)))
 
         let indicatorTopPosition = topIndicatorInset
         let indicatorBottomPosition = containerSize.height - bottomIndicatorInset - scrollIndicatorHeight
 
-        let dateIndicatorTopPosition = topIndicatorInset
-        let dateIndicatorBottomPosition = containerSize.height - bottomIndicatorInset - indicatorSize.height
+        let dateIndicatorTopPosition = topIndicatorInset + 4.0
+        let dateIndicatorBottomPosition = containerSize.height - bottomIndicatorInset - 4.0 - indicatorSize.height
 
         self.indicatorPosition = indicatorTopPosition * (1.0 - indicatorPositionFraction) + indicatorBottomPosition * indicatorPositionFraction
         self.scrollIndicatorHeight = scrollIndicatorHeight
@@ -535,11 +823,18 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
         transition.updateFrame(view: self.dateIndicator, frame: CGRect(origin: CGPoint(x: containerSize.width - 12.0 - indicatorSize.width, y: dateIndicatorPosition), size: indicatorSize))
         if isScrolling {
-            self.dateIndicator.alpha = 1.0
-            self.lineIndicator.alpha = 1.0
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+            transition.updateAlpha(layer: self.dateIndicator.layer, alpha: 1.0)
+            transition.updateAlpha(layer: self.lineIndicator.layer, alpha: 1.0)
         }
 
+        self.updateLineTooltip(containerSize: containerSize)
+
         self.updateLineIndicator(transition: transition)
+
+        if isScrolling {
+            self.displayTooltipOnFirstScroll()
+        }
     }
 
     private func updateLineIndicator(transition: ContainedViewLayoutTransition) {
@@ -547,7 +842,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             return
         }
 
-        let lineIndicatorSize = CGSize(width: self.isDragging ? 6.0 : 3.0, height: scrollIndicatorHeight)
+        let lineIndicatorSize = CGSize(width: (self.isDragging || self.lineTooltip != nil) ? 6.0 : 3.0, height: scrollIndicatorHeight)
         let mappedTransition: Transition
         switch transition {
         case .immediate:
@@ -567,7 +862,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         transition.updateFrame(view: self.lineIndicator, frame: CGRect(origin: CGPoint(x: self.bounds.size.width - 3.0 - lineIndicatorSize.width, y: indicatorPosition), size: lineIndicatorSize))
     }
 
-    private func updateActivityTimer() {
+    private func updateActivityTimer(isScrolling: Bool) {
         self.activityTimer?.invalidate()
 
         if self.isDragging {
@@ -582,9 +877,69 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
                 transition.updateAlpha(layer: strongSelf.dateIndicator.layer, alpha: 0.0)
                 transition.updateAlpha(layer: strongSelf.lineIndicator.layer, alpha: 0.0)
+
+                if let lineTooltip = strongSelf.lineTooltip {
+                    strongSelf.lineTooltip = nil
+                    lineTooltip.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak lineTooltip] _ in
+                        lineTooltip?.removeFromSuperview()
+                    })
+                }
             }, queue: .mainQueue())
             self.activityTimer?.start()
         }
+    }
+
+    private func displayTooltipOnFirstScroll() {
+        guard let displayTooltip = self.displayTooltip else {
+            return
+        }
+        if self.displayedTooltip {
+            return
+        }
+        self.displayedTooltip = true
+
+        let lineTooltip = ComponentHostView<Empty>()
+        self.lineTooltip = lineTooltip
+        self.view.addSubview(lineTooltip)
+
+        if let containerSize = self.containerSize {
+            self.updateLineTooltip(containerSize: containerSize)
+        }
+
+        lineTooltip.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+
+        let transition: ContainedViewLayoutTransition = .immediate
+        transition.updateSublayerTransformOffset(layer: self.dateIndicator.layer, offset: CGPoint(x: -3.0, y: 0.0))
+
+        displayTooltip.completed()
+    }
+
+    private func updateLineTooltip(containerSize: CGSize) {
+        guard let displayTooltip = self.displayTooltip else {
+            return
+        }
+        guard let lineTooltip = self.lineTooltip else {
+            return
+        }
+        let lineTooltipSize = lineTooltip.update(
+            transition: .immediate,
+            component: AnyComponent(TooltipComponent(
+                icon: displayTooltip.animation.flatMap { animation in
+                    AnyComponent(LottieAnimationComponent(
+                        name: animation
+                    ))
+                },
+                content: AnyComponent(MultilineText(
+                    text: displayTooltip.text,
+                    font: Font.regular(13.0),
+                    color: .white
+                )),
+                arrowLocation: self.lineIndicator.frame.insetBy(dx: -3.0, dy: -8.0)
+            )),
+            environment: {},
+            containerSize: containerSize
+        )
+        lineTooltip.frame = CGRect(origin: CGPoint(), size: lineTooltipSize)
     }
 
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

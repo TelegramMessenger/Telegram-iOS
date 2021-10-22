@@ -129,20 +129,4 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
 
     xcodeproj_path = '{project}/{target}.xcodeproj'.format(project=project_path, target=app_target)
 
-    bazel_build_settings_path = '{}/.tulsi/Scripts/bazel_build_settings.py'.format(xcodeproj_path)
-
-    with open(bazel_build_settings_path, 'rb') as bazel_build_settings:
-        bazel_build_settings_contents = bazel_build_settings.read().decode('utf-8')
-    bazel_build_settings_contents = bazel_build_settings_contents.replace(
-        'BUILD_SETTINGS = BazelBuildSettings(',
-        'import os\nBUILD_SETTINGS = BazelBuildSettings('
-    )
-    bazel_build_settings_contents = bazel_build_settings_contents.replace(
-        '\'--cpu=ios_arm64\'',
-        '\'--cpu=ios_arm64\'.replace(\'ios_arm64\', \'ios_sim_arm64\' if os.environ.get(\'EFFECTIVE_PLATFORM_NAME\') '
-        '== \'-iphonesimulator\' else \'ios_arm64\')'
-    )
-    with open(bazel_build_settings_path, 'wb') as bazel_build_settings:
-        bazel_build_settings.write(bazel_build_settings_contents.encode('utf-8'))
-
     call_executable(['open', xcodeproj_path])

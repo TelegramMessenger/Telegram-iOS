@@ -232,6 +232,11 @@ private func parseConnection(_ apiConnection: Api.PhoneConnection) -> CallSessio
 public struct CallSessionConnectionSet {
     public let primary: CallSessionConnection
     public let alternatives: [CallSessionConnection]
+
+    public init(primary: CallSessionConnection, alternatives: [CallSessionConnection]) {
+        self.primary = primary
+        self.alternatives = alternatives
+    }
 }
 
 private func parseConnectionSet(primary: Api.PhoneConnection, alternative: [Api.PhoneConnection]) -> CallSessionConnectionSet {

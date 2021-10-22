@@ -18,6 +18,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var experimentalCompatibility: Bool
     public var enableDebugDataDisplay: Bool
     public var acceleratedStickers: Bool
+    public var mockICE: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -34,7 +35,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             enableVoipTcp: false,
             experimentalCompatibility: false,
             enableDebugDataDisplay: false,
-            acceleratedStickers: false
+            acceleratedStickers: false,
+            mockICE: false
         )
     }
     
@@ -52,7 +54,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         enableVoipTcp: Bool,
         experimentalCompatibility: Bool,
         enableDebugDataDisplay: Bool,
-        acceleratedStickers: Bool
+        acceleratedStickers: Bool,
+        mockICE: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -68,6 +71,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.experimentalCompatibility = experimentalCompatibility
         self.enableDebugDataDisplay = enableDebugDataDisplay
         self.acceleratedStickers = acceleratedStickers
+        self.mockICE = mockICE
     }
     
     public init(from decoder: Decoder) throws {
@@ -87,6 +91,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.experimentalCompatibility = (try container.decodeIfPresent(Int32.self, forKey: "experimentalCompatibility") ?? 0) != 0
         self.enableDebugDataDisplay = (try container.decodeIfPresent(Int32.self, forKey: "enableDebugDataDisplay") ?? 0) != 0
         self.acceleratedStickers = (try container.decodeIfPresent(Int32.self, forKey: "acceleratedStickers") ?? 0) != 0
+        self.mockICE = (try container.decodeIfPresent(Int32.self, forKey: "mockICE") ?? 0) != 0
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -106,6 +111,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.experimentalCompatibility ? 1 : 0) as Int32, forKey: "experimentalCompatibility")
         try container.encode((self.enableDebugDataDisplay ? 1 : 0) as Int32, forKey: "enableDebugDataDisplay")
         try container.encode((self.acceleratedStickers ? 1 : 0) as Int32, forKey: "acceleratedStickers")
+        try container.encode((self.mockICE ? 1 : 0) as Int32, forKey: "mockICE")
     }
 }
 

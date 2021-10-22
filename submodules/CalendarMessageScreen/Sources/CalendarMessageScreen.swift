@@ -10,12 +10,12 @@ import TelegramPresentationData
 import ComponentFlow
 import PhotoResources
 
-private final class MediaPreviewNode: ASDisplayNode {
+private final class MediaPreviewView: UIView {
     private let context: AccountContext
     private let message: EngineMessage
     private let media: EngineMedia
 
-    private let imageNode: TransformImageNode
+    private let imageView: TransformImageView
 
     private var requestedImage: Bool = false
     private var disposable: Disposable?
@@ -25,11 +25,15 @@ private final class MediaPreviewNode: ASDisplayNode {
         self.message = message
         self.media = media
 
-        self.imageNode = TransformImageNode()
+        self.imageView = TransformImageView()
 
-        super.init()
+        super.init(frame: CGRect())
 
-        self.addSubnode(self.imageNode)
+        self.addSubview(self.imageView)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
 
     deinit {
@@ -44,7 +48,7 @@ private final class MediaPreviewNode: ASDisplayNode {
                 if !self.requestedImage {
                     self.requestedImage = true
                     let signal = mediaGridMessagePhoto(account: self.context.account, photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), synchronousLoad: synchronousLoads)
-                    self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
+                    self.imageView.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
             }
         } else if case let .file(file) = self.media {
@@ -53,13 +57,13 @@ private final class MediaPreviewNode: ASDisplayNode {
                 if !self.requestedImage {
                     self.requestedImage = true
                     let signal = mediaGridMessageVideo(postbox: self.context.account.postbox, videoReference: .message(message: MessageReference(self.message._asMessage()), media: file), synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true, useMiniThumbnailIfAvailable: true)
-                    self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
+                    self.imageView.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
             }
         }
 
-        let makeLayout = self.imageNode.asyncLayout()
-        self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
+        let makeLayout = self.imageView.asyncLayout()
+        self.imageView.frame = CGRect(origin: CGPoint(), size: size)
         let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: size.width / 2.0), imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
         apply()
     }
@@ -152,6 +156,13 @@ private final class ImageCache: Equatable {
         var color: UInt32
     }
 
+    private struct Text: Hashable {
+        var fontSize: CGFloat
+        var isSemibold: Bool
+        var color: UInt32
+        var string: String
+    }
+
     private var items: [AnyHashable: UIImage] = [:]
 
     func filledCircle(diameter: CGFloat, color: UIColor) -> UIImage {
@@ -166,6 +177,31 @@ private final class ImageCache: Equatable {
 
             context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
         })!.stretchableImage(withLeftCapWidth: Int(diameter) / 2, topCapHeight: Int(diameter) / 2)
+        self.items[key] = image
+        return image
+    }
+
+    func text(fontSize: CGFloat, isSemibold: Bool, color: UIColor, string: String) -> UIImage {
+        let key = AnyHashable(Text(fontSize: fontSize, isSemibold: isSemibold, color: color.argb, string: string))
+        if let image = self.items[key] {
+            return image
+        }
+
+        let font: UIFont
+        if isSemibold {
+            font = Font.semibold(fontSize)
+        } else {
+            font = Font.regular(fontSize)
+        }
+        let attributedString = NSAttributedString(string: string, font: font, textColor: color)
+        let rect = attributedString.boundingRect(with: CGSize(width: 1000.0, height: 1000.0), options: .usesLineFragmentOrigin, context: nil)
+        let image = generateImage(CGSize(width: ceil(rect.width), height: ceil(rect.height)), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+
+            UIGraphicsPushContext(context)
+            attributedString.draw(in: rect)
+            UIGraphicsPopContext()
+        })!
         self.items[key] = image
         return image
     }
@@ -223,28 +259,28 @@ private final class DayComponent: Component {
     }
 
     final class View: UIView {
-        private let buttonNode: HighlightableButtonNode
+        private let button: HighlightableButton
 
-        private let highlightNode: ASImageNode
-        private let titleNode: ImmediateTextNode
-        private var mediaPreviewNode: MediaPreviewNode?
+        private let highlightView: UIImageView
+        private let titleView: UIImageView
+        private var mediaPreviewView: MediaPreviewView?
 
         private var action: (() -> Void)?
         private var currentMedia: DayMedia?
 
         init() {
-            self.buttonNode = HighlightableButtonNode()
-            self.highlightNode = ASImageNode()
-            self.titleNode = ImmediateTextNode()
+            self.button = HighlightableButton()
+            self.highlightView = UIImageView()
+            self.titleView = UIImageView()
 
             super.init(frame: CGRect())
 
-            self.buttonNode.addSubnode(self.highlightNode)
-            self.buttonNode.addSubnode(self.titleNode)
+            self.button.addSubview(self.highlightView)
+            self.button.addSubview(self.titleView)
 
-            self.addSubnode(self.buttonNode)
+            self.addSubview(self.button)
 
-            self.buttonNode.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
+            self.button.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
         }
 
         required init?(coder aDecoder: NSCoder) {
@@ -258,58 +294,64 @@ private final class DayComponent: Component {
         func update(component: DayComponent, availableSize: CGSize, environment: Environment<ImageCache>, transition: Transition) -> CGSize {
             self.action = component.action
 
-            let shadowInset: CGFloat = 0.0
             let diameter = min(availableSize.width, availableSize.height)
+            let contentFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - diameter) / 2.0), y: floor((availableSize.height - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter))
 
             let imageCache = environment[ImageCache.self]
             if component.media != nil {
-                self.highlightNode.image = imageCache.value.filledCircle(diameter: diameter, color: UIColor(white: 0.0, alpha: 0.2))
+                self.highlightView.image = imageCache.value.filledCircle(diameter: diameter, color: UIColor(white: 0.0, alpha: 0.2))
             } else if component.isCurrent {
-                self.highlightNode.image = imageCache.value.filledCircle(diameter: diameter, color: component.theme.list.itemAccentColor)
+                self.highlightView.image = imageCache.value.filledCircle(diameter: diameter, color: component.theme.list.itemAccentColor)
             } else {
-                self.highlightNode.image = nil
+                self.highlightView.image = nil
             }
 
             if self.currentMedia != component.media {
                 self.currentMedia = component.media
 
-                if let mediaPreviewNode = self.mediaPreviewNode {
-                    self.mediaPreviewNode = nil
-                    mediaPreviewNode.removeFromSupernode()
+                if let mediaPreviewView = self.mediaPreviewView {
+                    self.mediaPreviewView = nil
+                    mediaPreviewView.removeFromSuperview()
                 }
 
                 if let media = component.media {
-                    let mediaPreviewNode = MediaPreviewNode(context: component.context, message: media.message, media: media.media)
-                    self.mediaPreviewNode = mediaPreviewNode
-                    self.buttonNode.insertSubnode(mediaPreviewNode, belowSubnode: self.highlightNode)
+                    let mediaPreviewView = MediaPreviewView(context: component.context, message: media.message, media: media.media)
+                    self.mediaPreviewView = mediaPreviewView
+                    self.button.insertSubview(mediaPreviewView, belowSubview: self.highlightView)
                 }
             }
 
             let titleColor: UIColor
-            let titleFont: UIFont
+            let titleFontSize: CGFloat
+            let titleFontIsSemibold: Bool
             if component.isCurrent || component.media != nil {
                 titleColor = component.theme.list.itemCheckColors.foregroundColor
-                titleFont = Font.semibold(17.0)
+                titleFontSize = 17.0
+                titleFontIsSemibold = true
             } else if component.isEnabled {
                 titleColor = component.theme.list.itemPrimaryTextColor
-                titleFont = Font.regular(17.0)
+                titleFontSize = 17.0
+                titleFontIsSemibold = false
             } else {
                 titleColor = component.theme.list.itemDisabledTextColor
-                titleFont = Font.regular(17.0)
+                titleFontSize = 17.0
+                titleFontIsSemibold = false
             }
-            self.titleNode.attributedText = NSAttributedString(string: component.title, font: titleFont, textColor: titleColor)
-            let titleSize = self.titleNode.updateLayout(availableSize)
 
-            transition.setFrame(view: self.highlightNode.view, frame: CGRect(origin: CGPoint(x: -shadowInset, y: -shadowInset), size: CGSize(width: availableSize.width + shadowInset * 2.0, height: availableSize.height + shadowInset * 2.0)))
+            let titleImage = imageCache.value.text(fontSize: titleFontSize, isSemibold: titleFontIsSemibold, color: titleColor, string: component.title)
+            self.titleView.image = titleImage
+            let titleSize = titleImage.size
 
-            self.titleNode.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: floor((availableSize.height - titleSize.height) / 2.0)), size: titleSize)
+            transition.setFrame(view: self.highlightView, frame: contentFrame)
 
-            self.buttonNode.frame = CGRect(origin: CGPoint(), size: availableSize)
-            self.buttonNode.isEnabled = component.isEnabled && component.media != nil
+            self.titleView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: floor((availableSize.height - titleSize.height) / 2.0)), size: titleSize)
 
-            if let mediaPreviewNode = self.mediaPreviewNode {
-                mediaPreviewNode.frame = CGRect(origin: CGPoint(), size: availableSize)
-                mediaPreviewNode.updateLayout(size: availableSize, synchronousLoads: false)
+            self.button.frame = CGRect(origin: CGPoint(), size: availableSize)
+            self.button.isEnabled = component.isEnabled && component.media != nil
+
+            if let mediaPreviewView = self.mediaPreviewView {
+                mediaPreviewView.frame = contentFrame
+                mediaPreviewView.updateLayout(size: contentFrame.size, synchronousLoads: false)
             }
 
             return availableSize
@@ -382,6 +424,7 @@ private final class MonthComponent: CombinedComponent {
             let weekdaySize: CGFloat = 46.0
             let weekdaySpacing: CGFloat = 6.0
 
+            let usableWeekdayWidth = floor((context.availableSize.width - sideInset * 2.0 - weekdaySpacing * 6.0) / 7.0)
             let weekdayWidth = floor((context.availableSize.width - sideInset * 2.0) / 7.0)
 
             let title = title.update(
@@ -440,7 +483,7 @@ private final class MonthComponent: CombinedComponent {
                     environment: {
                         context.environment[ImageCache.self]
                     },
-                    availableSize: CGSize(width: weekdaySize, height: weekdaySize),
+                    availableSize: CGSize(width: usableWeekdayWidth, height: weekdaySize),
                     transition: .immediate
                 )
             }
@@ -843,7 +886,7 @@ public final class CalendarMessageScreen: ViewController {
 
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(dismissPressed)), animated: false)
         //TODO:localize
-        self.navigationItem.setTitle("Jump to Date", animated: false)
+        self.navigationItem.setTitle("Calendar", animated: false)
     }
 
     required public init(coder aDecoder: NSCoder) {
