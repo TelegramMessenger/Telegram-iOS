@@ -18,10 +18,11 @@ public protocol ContextActionNodeProtocol: ASDisplayNode {
 
 final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
     private var presentationData: PresentationData
-    private var action: ContextMenuActionItem
+    private(set) var action: ContextMenuActionItem
     private let getController: () -> ContextControllerProtocol?
     private let actionSelected: (ContextMenuActionResult) -> Void
     private let requestLayout: () -> Void
+    private let requestUpdateAction: (AnyHashable, ContextMenuActionItem) -> Void
     
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
@@ -40,12 +41,13 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         return true
     }
     
-    init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, requestLayout: @escaping () -> Void) {
+    init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, requestLayout: @escaping () -> Void, requestUpdateAction: @escaping (AnyHashable, ContextMenuActionItem) -> Void) {
         self.presentationData = presentationData
         self.action = action
         self.getController = getController
         self.actionSelected = actionSelected
         self.requestLayout = requestLayout
+        self.requestUpdateAction = requestUpdateAction
         
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
         
@@ -316,6 +318,37 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
     @objc private func buttonPressed() {
         self.performAction()
     }
+
+    func updateAction(item: ContextMenuActionItem) {
+        self.action = item
+
+        let textColor: UIColor
+        switch self.action.textColor {
+        case .primary:
+            textColor = self.presentationData.theme.contextMenu.primaryColor
+        case .destructive:
+            textColor = self.presentationData.theme.contextMenu.destructiveColor
+        case .disabled:
+            textColor = self.presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.4)
+        }
+
+        let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize)
+        let titleFont: UIFont
+        switch self.action.textFont {
+        case .regular:
+            titleFont = textFont
+        case let .custom(customFont):
+            titleFont = customFont
+        }
+
+        self.textNode.attributedText = NSAttributedString(string: self.action.text, font: titleFont, textColor: textColor)
+
+        if self.action.iconSource == nil {
+            self.iconNode.image = self.action.icon(self.presentationData.theme)
+        }
+
+        self.requestLayout()
+    }
     
     func performAction() {
         guard let controller = self.getController() else {
@@ -326,38 +359,11 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             dismissWithResult: { [weak self] result in
                 self?.actionSelected(result)
             },
-            updateAction: { [weak self] updatedAction in
+            updateAction: { [weak self] id, updatedAction in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.action = updatedAction
-
-                let textColor: UIColor
-                switch strongSelf.action.textColor {
-                case .primary:
-                    textColor = strongSelf.presentationData.theme.contextMenu.primaryColor
-                case .destructive:
-                    textColor = strongSelf.presentationData.theme.contextMenu.destructiveColor
-                case .disabled:
-                    textColor = strongSelf.presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.4)
-                }
-
-                let textFont = Font.regular(strongSelf.presentationData.listsFontSize.baseDisplaySize)
-                let titleFont: UIFont
-                switch strongSelf.action.textFont {
-                case .regular:
-                    titleFont = textFont
-                case let .custom(customFont):
-                    titleFont = customFont
-                }
-
-                strongSelf.textNode.attributedText = NSAttributedString(string: strongSelf.action.text, font: titleFont, textColor: textColor)
-
-                if strongSelf.action.iconSource == nil {
-                    strongSelf.iconNode.image = strongSelf.action.icon(strongSelf.presentationData.theme)
-                }
-
-                strongSelf.requestLayout()
+                strongSelf.requestUpdateAction(id, updatedAction)
             }
         ))
     }

@@ -732,10 +732,12 @@ final class CachedPeerInvitationImporters: Codable {
         self.dates = dates
         
         var abouts: [PeerId: String] = [:]
-        let aboutsArray = try container.decode([DictionaryPair].self, forKey: "abouts")
-        for aboutPair in aboutsArray {
-            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(aboutPair.key))
-            abouts[peerId] = aboutPair.value
+        let aboutsArray = try container.decodeIfPresent([DictionaryPair].self, forKey: "abouts")
+        if let aboutsArray = aboutsArray {
+            for aboutPair in aboutsArray {
+                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(aboutPair.key))
+                abouts[peerId] = aboutPair.value
+            }
         }
         self.abouts = abouts
         

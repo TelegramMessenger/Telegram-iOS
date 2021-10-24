@@ -342,9 +342,11 @@ public final class SparseItemGrid: ASDisplayNode {
                     return self.displayLayer.frame
                 } set(value) {
                     if let layer = self.layer {
-                        layer.frame = value
+                        layer.bounds = CGRect(origin: CGPoint(), size: value.size)
+                        layer.position = value.center
                     } else if let view = self.view {
-                        view.frame = value
+                        view.bounds = CGRect(origin: CGPoint(), size: value.size)
+                        view.center = value.center
                     } else {
                         preconditionFailure()
                     }
@@ -564,6 +566,22 @@ public final class SparseItemGrid: ASDisplayNode {
             }
         }
 
+        func visualItem(at point: CGPoint) -> SparseItemGridDisplayItem? {
+            guard let items = self.items, !items.items.isEmpty else {
+                return nil
+            }
+
+            let localPoint = self.scrollView.convert(point, from: self.view)
+
+            for (_, visibleItem) in self.visibleItems {
+                if visibleItem.frame.contains(localPoint) {
+                    return visibleItem
+                }
+            }
+
+            return nil
+        }
+
         func item(at point: CGPoint) -> Item? {
             guard let items = self.items, !items.items.isEmpty else {
                 return nil
@@ -656,6 +674,10 @@ public final class SparseItemGrid: ASDisplayNode {
             } else {
                 return false
             }
+        }
+
+        func stopScrolling() {
+            self.scrollView.setContentOffset(self.scrollView.contentOffset, animated: false)
         }
 
         private func updateVisibleItems(resetScrolling: Bool, synchronous: Bool, restoreScrollPosition: (y: CGFloat, index: Int)?) {
@@ -1219,7 +1241,7 @@ public final class SparseItemGrid: ASDisplayNode {
         self.scrollingArea.isHidden = lockScrollingAtTop
 
         self.tapRecognizer?.isEnabled = fixedItemHeight == nil
-        self.pinchRecognizer?.isEnabled = fixedItemHeight == nil
+        self.pinchRecognizer?.isEnabled = fixedItemHeight == nil && !lockScrollingAtTop
 
         if self.currentViewport == nil {
             let currentViewport = Viewport(zoomLevel: self.initialZoomLevel ?? ZoomLevel(rawValue: 3), maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
@@ -1359,6 +1381,13 @@ public final class SparseItemGrid: ASDisplayNode {
         return self.view.convert(currentViewport.frameForItem(layer: layer), from: currentViewport.view)
     }
 
+    public func item(at point: CGPoint) -> SparseItemGridDisplayItem? {
+        guard let currentViewport = self.currentViewport else {
+            return nil
+        }
+        return currentViewport.visualItem(at: point)
+    }
+
     public func scrollToItem(at index: Int) {
         guard let currentViewport = self.currentViewport else {
             return
@@ -1379,5 +1408,16 @@ public final class SparseItemGrid: ASDisplayNode {
 
     public func updateScrollingAreaTooltip(tooltip: SparseItemGridScrollingArea.DisplayTooltip) {
         self.scrollingArea.displayTooltip = tooltip
+    }
+
+    public func cancelGestures() {
+        self.tapRecognizer?.state = .cancelled
+        self.pinchRecognizer?.state = .cancelled
+    }
+
+    public func hideScrollingArea() {
+        self.currentViewport?.stopScrolling()
+
+        self.scrollingArea.hideScroller()
     }
 }
