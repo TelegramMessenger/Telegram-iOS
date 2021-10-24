@@ -80,7 +80,7 @@ func stringForEstimatedDuration(strings: PresentationStrings, time: Double, form
         let string: String
         if hours >= 24 {
             string = strings.Map_ETADays(days)
-        } else if hours > 1 {
+        } else if hours > 0 {
             if hours == 1 && minutes == 0 {
                 string = strings.Map_ETAHours(1)
             } else {

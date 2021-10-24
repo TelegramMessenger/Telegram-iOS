@@ -455,13 +455,23 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                             var transitTime: Double?
                             var walkingTime: Double?
                             if !isLocationView && message.author?.id != context.account.peerId {
+                                let signal = combineLatest(queue: Queue.mainQueue(), getExpectedTravelTime(coordinate: location.coordinate, transportType: .automobile), getExpectedTravelTime(coordinate: location.coordinate, transportType: .transit), getExpectedTravelTime(coordinate: location.coordinate, transportType: .walking))
+                                |> mapToSignal { drivingTime, transitTime, walkingTime -> Signal<(Double?, Double?, Double?), NoError> in
+                                    if drivingTime != nil && transitTime != nil && walkingTime != nil {
+                                        return .single((drivingTime, transitTime, walkingTime))
+                                    } else {
+                                        return .single((drivingTime, transitTime, walkingTime))
+                                        |> delay(0.3, queue: Queue.mainQueue())
+                                    }
+                                }
+                                
                                 if let (previousTimestamp, maybeDrivingTime, maybeTransitTime, maybeWalkingTime) = travelTimes[message.id] {
                                     drivingTime = maybeDrivingTime
                                     transitTime = maybeTransitTime
                                     walkingTime = maybeWalkingTime
                                     
                                     if timestamp > previousTimestamp + 60.0 {
-                                        strongSelf.travelDisposables.add(combineLatest(queue: Queue.mainQueue(), getExpectedTravelTime(coordinate: location.coordinate, transportType: .automobile), getExpectedTravelTime(coordinate: location.coordinate, transportType: .transit), getExpectedTravelTime(coordinate: location.coordinate, transportType: .walking)).start(next: { [weak self] drivingTime, transitTime, walkingTime in
+                                        strongSelf.travelDisposables.add(signal.start(next: { [weak self] drivingTime, transitTime, walkingTime in
                                             guard let strongSelf = self else {
                                                 return
                                             }
@@ -472,7 +482,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                                         }))
                                     }
                                 } else {
-                                    strongSelf.travelDisposables.add(combineLatest(queue: Queue.mainQueue(), getExpectedTravelTime(coordinate: location.coordinate, transportType: .automobile), getExpectedTravelTime(coordinate: location.coordinate, transportType: .transit), getExpectedTravelTime(coordinate: location.coordinate, transportType: .walking)).start(next: { [weak self] drivingTime, transitTime, walkingTime in
+                                    strongSelf.travelDisposables.add(signal.start(next: { [weak self] drivingTime, transitTime, walkingTime in
                                         guard let strongSelf = self else {
                                             return
                                         }

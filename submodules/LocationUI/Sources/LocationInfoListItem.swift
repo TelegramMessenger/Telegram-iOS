@@ -10,6 +10,7 @@ import ItemListUI
 import LocationResources
 import AppBundle
 import SolidRoundedButtonNode
+import ShimmerEffect
 
 final class LocationInfoListItem: ListViewItem {
     let presentationData: ItemListPresentationData
@@ -80,12 +81,14 @@ final class LocationInfoListItemNode: ListViewItemNode {
     private let venueIconNode: TransformImageNode
     private let buttonNode: HighlightableButtonNode
     
+    private var placeholderNode: ShimmerEffectNode?
     private var drivingButtonNode: SolidRoundedButtonNode?
     private var transitButtonNode: SolidRoundedButtonNode?
     private var walkingButtonNode: SolidRoundedButtonNode?
     
     private var item: LocationInfoListItem?
     private var layoutParams: ListViewItemLayoutParams?
+    private var absoluteLocation: (CGRect, CGSize)?
     
     required init() {
         self.backgroundNode = ASDisplayNode()
@@ -305,13 +308,52 @@ final class LocationInfoListItemNode: ListViewItemNode {
                         
                         let directionsWidth: CGFloat = 93.0
                         let directionsSpacing: CGFloat = 8.0
+                        
+                        if item.drivingTime == nil && item.transitTime == nil && item.walkingTime == nil {
+                            let shimmerNode: ShimmerEffectNode
+                            if let current = strongSelf.placeholderNode {
+                                shimmerNode = current
+                            } else {
+                                shimmerNode = ShimmerEffectNode()
+                                strongSelf.placeholderNode = shimmerNode
+                                strongSelf.addSubnode(shimmerNode)
+                            }
+                            shimmerNode.frame = CGRect(origin: CGPoint(x: leftInset, y: subtitleFrame.maxY + 12.0), size: CGSize(width: contentSize.width - leftInset, height: 32.0))
+                            if let (rect, size) = strongSelf.absoluteLocation {
+                                shimmerNode.updateAbsoluteRect(rect, within: size)
+                            }
+                            
+                            var shapes: [ShimmerEffectNode.Shape] = []
+                            shapes.append(.roundedRectLine(startPoint: CGPoint(x: 0.0, y: 0.0), width: directionsWidth, diameter: 32.0))
+                            shapes.append(.roundedRectLine(startPoint: CGPoint(x: directionsWidth + directionsSpacing, y: 0.0), width: directionsWidth, diameter: 32.0))
+                            shapes.append(.roundedRectLine(startPoint: CGPoint(x: directionsWidth + directionsSpacing + directionsWidth + directionsSpacing, y: 0.0), width: directionsWidth, diameter: 32.0))
+                            
+                            shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerNode.frame.size)
+                        } else if let shimmerNode = strongSelf.placeholderNode {
+                            strongSelf.placeholderNode = nil
+                            shimmerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak shimmerNode] _ in
+                                shimmerNode?.removeFromSupernode()
+                            })
+                        }
+                        
                         let drivingHeight = strongSelf.drivingButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
                         let transitHeight = strongSelf.transitButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
                         let walkingHeight = strongSelf.walkingButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
-                                                
-                        strongSelf.drivingButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: drivingHeight))
-                        strongSelf.transitButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset + directionsWidth + directionsSpacing, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: transitHeight))
-                        strongSelf.walkingButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset + directionsWidth + directionsSpacing + directionsWidth + directionsSpacing, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: walkingHeight))
+                        
+                        var buttonOrigin = leftInset
+                        strongSelf.drivingButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: drivingHeight))
+                        
+                        if item.drivingTime != nil {
+                            buttonOrigin += directionsWidth + directionsSpacing
+                        }
+                        
+                        strongSelf.transitButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: transitHeight))
+                        
+                        if item.transitTime != nil {
+                            buttonOrigin += directionsWidth + directionsSpacing
+                        }
+                        
+                        strongSelf.walkingButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: walkingHeight))
                         
                         strongSelf.buttonNode.frame = CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: 72.0)
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentSize.width, height: contentSize.height))
@@ -331,5 +373,14 @@ final class LocationInfoListItemNode: ListViewItemNode {
     
     @objc private func buttonPressed() {
         self.item?.action()
+    }
+    
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        var rect = rect
+        rect.origin.y += self.insets.top
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.placeholderNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
+        }
     }
 }
