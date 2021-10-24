@@ -660,8 +660,33 @@ public struct PeerInvitationImportersState: Equatable {
 }
 
 final class CachedPeerInvitationImporters: Codable {
+    private struct DictionaryPair: Codable, Hashable {
+        var key: Int64
+        var value: String
+        
+        init(_ key: Int64, value: String) {
+            self.key = key
+            self.value = value
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+            self.key = try container.decode(Int64.self, forKey: "k")
+            self.value = try container.decode(String.self, forKey: "v")
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: StringCodingKey.self)
+
+            try container.encode(self.key, forKey: "k")
+            try container.encode(self.value, forKey: "v")
+        }
+    }
+    
     let peerIds: [PeerId]
     let dates: [PeerId: Int32]
+    let abouts: [PeerId: String]
     let count: Int32
     
     static func key(peerId: PeerId, link: String, requested: Bool) -> ValueBoxKey {
@@ -676,12 +701,18 @@ final class CachedPeerInvitationImporters: Codable {
         self.dates = importers.reduce(into: [PeerId: Int32]()) {
             $0[$1.peer.peerId] = $1.date
         }
+        self.abouts = importers.reduce(into: [PeerId: String]()) {
+            if let about = $1.about {
+                $0[$1.peer.peerId] = about
+            }
+        }
         self.count = count
     }
     
-    init(peerIds: [PeerId], dates: [PeerId: Int32], count: Int32) {
+    init(peerIds: [PeerId], dates: [PeerId: Int32], abouts: [PeerId: String], count: Int32) {
         self.peerIds = peerIds
         self.dates = dates
+        self.abouts = abouts
         self.count = count
     }
     
@@ -700,6 +731,14 @@ final class CachedPeerInvitationImporters: Codable {
         }
         self.dates = dates
         
+        var abouts: [PeerId: String] = [:]
+        let aboutsArray = try container.decode([DictionaryPair].self, forKey: "abouts")
+        for aboutPair in aboutsArray {
+            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(aboutPair.key))
+            abouts[peerId] = aboutPair.value
+        }
+        self.abouts = abouts
+        
         self.count = try container.decode(Int32.self, forKey: "count")
     }
     
@@ -715,6 +754,12 @@ final class CachedPeerInvitationImporters: Codable {
         }
         try container.encode(dates, forKey: "dates")
         
+        var abouts: [DictionaryPair] = []
+        for (peerId, about) in self.abouts {
+            abouts.append(DictionaryPair(peerId.id._internalGetInt64Value(), value: about))
+        }
+        try container.encode(abouts, forKey: "abouts")
+        
         try container.encode(self.count, forKey: "count")
     }
 }
@@ -727,7 +772,7 @@ private final class PeerInvitationImportersContextImpl {
     private let requested: Bool
     private let query: String?
     private let disposable = MetaDisposable()
-    private let updateDisposable = MetaDisposable()
+    private let updateDisposables = DisposableSet()
     private let actionDisposables = DisposableSet()
     private var isLoadingMore: Bool = false
     private var hasLoadedOnce: Bool = false
@@ -771,7 +816,7 @@ private final class PeerInvitationImportersContextImpl {
                 var result: [PeerInvitationImportersState.Importer] = []
                 for peerId in cachedResult.peerIds {
                     if let peer = transaction.getPeer(peerId), let date = cachedResult.dates[peerId] {
-                        result.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date))
+                        result.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date, about: cachedResult.abouts[peerId]))
                     } else {
                         return nil
                     }
@@ -801,7 +846,7 @@ private final class PeerInvitationImportersContextImpl {
     
     deinit {
         self.disposable.dispose()
-        self.updateDisposable.dispose()
+        self.updateDisposables.dispose()
         self.actionDisposables.dispose()
     }
     
@@ -931,6 +976,30 @@ private final class PeerInvitationImportersContextImpl {
         self.count = max(0, self.count - 1)
         self.updateState()
         self.updateCache()
+        
+        if case .approve = action {
+            self.updateDisposables.add(self.account.postbox.transaction({ transaction in
+                let peer = transaction.getPeer(self.peerId)
+                if let peer = peer as? TelegramGroup {
+                    updatePeers(transaction: transaction, peers: [peer], update: { current, _ in
+                        var updated = current
+                        if let current = current as? TelegramGroup {
+                            updated = current.updateParticipantCount(current.participantCount + 1)
+                        }
+                        return updated
+                    })
+                } else if let _ = peer as? TelegramChannel {
+                    transaction.updatePeerCachedData(peerIds: Set([self.peerId]), update: { _, current in
+                        var updated = current
+                        if let current = current as? CachedChannelData, let currentMemberCount = current.participantsSummary.memberCount {
+                            let updatedParticipantsSummary = current.participantsSummary.withUpdatedMemberCount(currentMemberCount + 1)
+                            updated = current.withUpdatedParticipantsSummary(updatedParticipantsSummary)
+                        }
+                        return updated
+                    })
+                }
+            }).start())
+        }
     }
     
     private func updateCache() {
@@ -942,7 +1011,7 @@ private final class PeerInvitationImportersContextImpl {
         let resultImporters = Array(self.results.prefix(50))
         let count = self.count
         let link = self.link
-        self.updateDisposable.set(self.account.postbox.transaction({ transaction in
+        self.updateDisposables.add(self.account.postbox.transaction({ transaction in
             if let entry = CodableEntry(CachedPeerInvitationImporters(importers: resultImporters, count: count)) {
                 transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: self.requested)), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
             }

@@ -6914,6 +6914,7 @@ Sorry for the inconvenience.";
 "MemberRequests.RequestToJoinSentDescriptionGroup" = "You will be added to the group once it admins approve your request.";
 "MemberRequests.RequestToJoinSentDescriptionChannel" = "You will be added to the channel once it admins approve your request.";
 
+"Notification.JoinedChatByRequestYou" = "Your request to join the channel was approved";
 "Notification.JoinedGroupByRequestYou" = "Your request to join the group was approved";
 "Notification.JoinedGroupByRequest" = "%@ was accepted to the group chat";
 
