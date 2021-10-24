@@ -888,7 +888,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private func dismissLineTooltip() {
         if let lineTooltip = self.lineTooltip {
             self.lineTooltip = nil
-            self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak lineTooltip] _ in
+            lineTooltip.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak lineTooltip] _ in
                 lineTooltip?.removeFromSuperview()
             })
         }
