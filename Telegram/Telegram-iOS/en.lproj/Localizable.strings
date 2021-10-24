@@ -6931,3 +6931,10 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.JoinedViaRequest" = "%1$@ joined via invite link %2$@, approved by %3$@";
 
 "Appearance.NightTheme" = "Night Mode";
+
+"Map.ETADays_0" = "%@ days";
+"Map.ETADays_1" = "%@ day";
+"Map.ETADays_2" = "%@ days";
+"Map.ETADays_3_10" = "%@ days";
+"Map.ETADays_many" = "%@ days";
+"Map.ETADays_any" = "%@ days";

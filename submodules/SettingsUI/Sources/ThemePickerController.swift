@@ -23,7 +23,7 @@ import AnimationUI
 private final class ThemePickerControllerArguments {
     let context: AccountContext
     let selectTheme: (TelegramBaseTheme?, PresentationThemeReference) -> Void
-    let previewTheme: (PresentationThemeReference) -> Void
+    let previewTheme: (PresentationThemeReference, Bool) -> Void
     let selectAccentColor: (TelegramBaseTheme?, PresentationThemeAccentColor?) -> Void
     let openAccentColorPicker: (PresentationThemeReference, Bool) -> Void
     let editTheme: (PresentationCloudTheme) -> Void
@@ -32,7 +32,7 @@ private final class ThemePickerControllerArguments {
     let themeContextAction: (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void
     let colorContextAction: (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, selectTheme: @escaping (TelegramBaseTheme?, PresentationThemeReference) -> Void, previewTheme: @escaping (PresentationThemeReference) -> Void, selectAccentColor: @escaping (TelegramBaseTheme?, PresentationThemeAccentColor?) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, Bool) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, editCurrentTheme: @escaping () -> Void, createNewTheme: @escaping () -> Void, themeContextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void, colorContextAction: @escaping (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (TelegramBaseTheme?, PresentationThemeReference) -> Void, previewTheme: @escaping (PresentationThemeReference, Bool) -> Void, selectAccentColor: @escaping (TelegramBaseTheme?, PresentationThemeAccentColor?) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, Bool) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, editCurrentTheme: @escaping () -> Void, createNewTheme: @escaping () -> Void, themeContextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void, colorContextAction: @escaping (Bool, PresentationThemeReference, ThemeSettingsColorOption?, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.selectTheme = selectTheme
         self.previewTheme = previewTheme
@@ -158,7 +158,7 @@ private enum ThemePickerControllerEntry: ItemListNodeEntry {
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .themes(theme, strings, themes, currentTheme, nightMode, animatedEmojiStickers):
                 return ThemeGridThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, animatedEmojiStickers: animatedEmojiStickers, themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], nightMode: nightMode, currentTheme: currentTheme, updatedTheme: { theme in
-                arguments.previewTheme(theme)
+                arguments.previewTheme(theme, nightMode)
             }, contextAction: { theme, node, gesture in
                 arguments.themeContextAction(false, theme, node, gesture)
             }, tag: nil)
@@ -395,8 +395,8 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
     
     let arguments = ThemePickerControllerArguments(context: context, selectTheme: { baseTheme, theme in
         selectThemeImpl?(baseTheme, theme)
-    }, previewTheme: { themeReference in
-        if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference) {
+    }, previewTheme: { themeReference, nightMode in
+        if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, baseTheme: nightMode ? .night : .classic ) {
             let controller = ThemePreviewController(context: context, previewTheme: theme, source: .settings(themeReference, nil, false))
             pushControllerImpl?(controller)
         }
@@ -426,15 +426,16 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
             return themeReference
         }
         |> deliverOnMainQueue).start(next: { themeReference in
-            guard case let .cloud(cloudTheme) = themeReference else {
-                return
+            if case let .cloud(cloudTheme) = themeReference, cloudTheme.theme.settings?.isEmpty ?? true {
+                let controller = editThemeController(context: context, mode: .edit(cloudTheme), navigateToChat: { peerId in
+                    if let navigationController = getNavigationControllerImpl?() {
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                    }
+                })
+                pushControllerImpl?(controller)
+            } else {
+                openAccentColorPickerImpl?(themeReference, false)
             }
-            let controller = editThemeController(context: context, mode: .edit(cloudTheme), navigateToChat: { peerId in
-                if let navigationController = getNavigationControllerImpl?() {
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
-                }
-            })
-            pushControllerImpl?(controller)
         })
     }, createNewTheme: {
         let _ = (context.sharedContext.accountManager.transaction { transaction -> PresentationThemeReference in

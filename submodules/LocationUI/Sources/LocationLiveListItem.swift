@@ -358,10 +358,21 @@ final class LocationLiveListItemNode: ListViewItemNode {
                         let drivingHeight = strongSelf.drivingButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
                         let transitHeight = strongSelf.transitButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
                         let walkingHeight = strongSelf.walkingButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
-                                                
-                        strongSelf.drivingButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: drivingHeight))
-                        strongSelf.transitButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset + directionsWidth + directionsSpacing, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: transitHeight))
-                        strongSelf.walkingButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset + directionsWidth + directionsSpacing + directionsWidth + directionsSpacing, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: walkingHeight))
+                              
+                        var buttonOrigin = leftInset
+                        strongSelf.drivingButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: drivingHeight))
+                        
+                        if item.drivingTime != nil {
+                            buttonOrigin += directionsWidth + directionsSpacing
+                        }
+                        
+                        strongSelf.transitButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: transitHeight))
+                        
+                        if item.transitTime != nil {
+                            buttonOrigin += directionsWidth + directionsSpacing
+                        }
+                        
+                        strongSelf.walkingButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: walkingHeight))
                     }
                 })
             })

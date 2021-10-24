@@ -75,9 +75,12 @@ func stringForEstimatedDuration(strings: PresentationStrings, time: Double, form
         let time = max(time, 60.0)
         let minutes = Int32(time / 60.0) % 60
         let hours = Int32(time / 3600.0)
+        let days = Int32(time / (3600.0 * 24.0))
         
         let string: String
-        if hours > 1 {
+        if hours >= 24 {
+            string = strings.Map_ETADays(days)
+        } else if hours > 0 {
             if hours == 1 && minutes == 0 {
                 string = strings.Map_ETAHours(1)
             } else {
