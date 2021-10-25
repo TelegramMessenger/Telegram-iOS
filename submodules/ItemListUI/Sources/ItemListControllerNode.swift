@@ -357,13 +357,13 @@ open class ItemListControllerNode: ASDisplayNode {
                     case let .known(value):
                         let transition: ContainedViewLayoutTransition
                         if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > 30.0 {
-                            transition = .animated(duration: 0.3, curve: .linear)
+                            transition = .animated(duration: 0.2, curve: .easeInOut)
                         } else {
                             transition = .immediate
                         }
                         strongSelf.navigationBar.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
                     case .unknown, .none:
-                        strongSelf.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
+                        strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)
                 }
                 
                 strongSelf.previousContentOffset = offset

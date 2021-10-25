@@ -280,8 +280,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.blockDestructiveIcon(theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
                 arguments.terminateAllWebSessions()
             })
-        case let .currentAddDevice(_, text):
-            return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+        case let .currentAddDevice(theme, text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addDeviceIcon(theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
                 arguments.addDevice()
             })
         case let .currentSessionInfo(_, text):
@@ -303,8 +303,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .otherSessionsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .addDevice(_, text):
-            return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+        case let .addDevice(theme, text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addDeviceIcon(theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
                 arguments.addDevice()
             })
         case let .session(_, _, _, dateTimeFormat, session, enabled, editing, revealed):
@@ -313,8 +313,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             }, removeSession: { id in
                 arguments.removeSession(id)
             })
-        case let .website(_, theme, strings, dateTimeFormat, nameDisplayOrder, website, peer, enabled, editing, revealed):
-            return ItemListWebsiteItem(context: arguments.context, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, website: website, peer: peer, enabled: enabled, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
+        case let .website(_, _, _, dateTimeFormat, nameDisplayOrder, website, peer, enabled, editing, revealed):
+            return ItemListWebsiteItem(context: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, website: website, peer: peer, enabled: enabled, editing: editing, revealed: revealed, sectionId: self.section, setSessionIdWithRevealedOptions: { previousId, id in
                 arguments.setSessionIdWithRevealedOptions(previousId, id)
             }, removeSession: { id in
                 arguments.removeWebSession(id)

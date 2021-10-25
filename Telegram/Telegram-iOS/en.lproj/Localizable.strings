@@ -4097,6 +4097,7 @@ Unused sets are archived when you add more.";
 
 "ChatSettings.AutoDownloadSettings.TypePhoto" = "Photos";
 "ChatSettings.AutoDownloadSettings.TypeVideo" = "Videos (%@)";
+"ChatSettings.AutoDownloadSettings.TypeMedia" = "Media (%@)";
 "ChatSettings.AutoDownloadSettings.TypeFile" = "Files (%@)";
 "ChatSettings.AutoDownloadSettings.OffForAll" = "Disabled";
 "ChatSettings.AutoDownloadSettings.Delimeter" = ", ";
@@ -6938,3 +6939,21 @@ Sorry for the inconvenience.";
 "Map.ETADays_3_10" = "%@ days";
 "Map.ETADays_many" = "%@ days";
 "Map.ETADays_any" = "%@ days";
+
+"ChatSettings.UseLessDataForCalls" = "Use Less Data for Calls";
+
+"Time.JustNow" = "just now";
+"Time.MinutesAgo_0" = "%@ minutes ago"; //three to ten
+"Time.MinutesAgo_1" = "%@ minute ago"; //one
+"Time.MinutesAgo_2" = "%@ minutes ago"; //two
+"Time.MinutesAgo_3_10" = "%@ minutes ago"; //three to ten
+"Time.MinutesAgo_many" = "%@ minutes ago"; // more than ten
+"Time.MinutesAgo_any" = "%@ minutes ago"; // more than ten
+"Time.HoursAgo_0" = "%@ hours ago";
+"Time.HoursAgo_1" = "%@ hour ago";
+"Time.HoursAgo_2" = "%@ hours ago";
+"Time.HoursAgo_3_10" = "%@ hours ago";
+"Time.HoursAgo_any" = "%@ hours ago";
+"Time.HoursAgo_many" = "%@ hours ago";
+"Time.HoursAgo_0" = "%@ hours ago";
+"Time.AtDate" = "last seen %@";

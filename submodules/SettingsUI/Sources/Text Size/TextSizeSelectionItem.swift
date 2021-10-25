@@ -126,7 +126,7 @@ class BubbleSettingsRadiusItemNode: ListViewItemNode, ItemListItemNode {
         sliderView.enablePanHandling = true
         sliderView.trackCornerRadius = 2.0
         sliderView.lineSize = 4.0
-        sliderView.dotSize = 5.0
+        sliderView.dotSize = 8.0
         sliderView.minimumValue = 0.0
         sliderView.maximumValue = 4.0
         sliderView.startValue = 0.0

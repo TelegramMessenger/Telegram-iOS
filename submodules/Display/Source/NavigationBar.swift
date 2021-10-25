@@ -922,8 +922,8 @@ open class NavigationBar: ASDisplayNode {
     }
     
     public func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
-        transition.updateAlpha(node: self.backgroundNode, alpha: alpha)
-        transition.updateAlpha(node: self.stripeNode, alpha: alpha)
+        transition.updateAlpha(node: self.backgroundNode, alpha: alpha, delay: 0.15)
+        transition.updateAlpha(node: self.stripeNode, alpha: alpha, delay: 0.15)
     }
     
     public func updatePresentationData(_ presentationData: NavigationBarPresentationData) {

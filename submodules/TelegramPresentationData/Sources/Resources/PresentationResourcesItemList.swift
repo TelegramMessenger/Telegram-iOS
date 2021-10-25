@@ -210,6 +210,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func addDeviceIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListAddDeviceIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     public static func cornersImage(_ theme: PresentationTheme, top: Bool, bottom: Bool) -> UIImage? {
         if !top && !bottom {
             return nil

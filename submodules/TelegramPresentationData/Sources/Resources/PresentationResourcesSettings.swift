@@ -23,19 +23,19 @@ private func renderIcon(name: String) -> UIImage? {
 }
 
 public struct PresentationResourcesSettings {
-    public static let editProfile = renderIcon(name: "Settings/MenuIcons/EditProfile")
-    public static let proxy = renderIcon(name: "Settings/MenuIcons/Proxy")
-    public static let savedMessages = renderIcon(name: "Settings/MenuIcons/SavedMessages")
-    public static let recentCalls = renderIcon(name: "Settings/MenuIcons/RecentCalls")
-    public static let devices = renderIcon(name: "Settings/MenuIcons/Sessions")
-    public static let chatFolders = renderIcon(name: "Settings/MenuIcons/ChatListFilters")
-    public static let stickers = renderIcon(name: "Settings/MenuIcons/Stickers")
+    public static let editProfile = renderIcon(name: "Settings/Menu/EditProfile")
+    public static let proxy = renderIcon(name: "Settings/Menu/Proxy")
+    public static let savedMessages = renderIcon(name: "Settings/Menu/SavedMessages")
+    public static let recentCalls = renderIcon(name: "Settings/Menu/RecentCalls")
+    public static let devices = renderIcon(name: "Settings/Menu/Sessions")
+    public static let chatFolders = renderIcon(name: "Settings/Menu/ChatListFilters")
+    public static let stickers = renderIcon(name: "Settings/Menu/Stickers")
     
-    public static let notifications = renderIcon(name: "Settings/MenuIcons/Notifications")
-    public static let security = renderIcon(name: "Settings/MenuIcons/Security")
-    public static let dataAndStorage = renderIcon(name: "Settings/MenuIcons/DataAndStorage")
-    public static let appearance = renderIcon(name: "Settings/MenuIcons/Appearance")
-    public static let language = renderIcon(name: "Settings/MenuIcons/Language")
+    public static let notifications = renderIcon(name: "Settings/Menu/Notifications")
+    public static let security = renderIcon(name: "Settings/Menu/Security")
+    public static let dataAndStorage = renderIcon(name: "Settings/Menu/DataAndStorage")
+    public static let appearance = renderIcon(name: "Settings/Menu/Appearance")
+    public static let language = renderIcon(name: "Settings/Menu/Language")
 
     public static let wallet = generateImage(CGSize(width: 29.0, height: 29.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
@@ -44,24 +44,24 @@ public struct PresentationResourcesSettings {
         context.setFillColor(UIColor.white.cgColor)
         context.fill(bounds.insetBy(dx: 5.0, dy: 5.0))
         
-        if let image = generateTintedImage(image: UIImage(bundleImageName: "Settings/MenuIcons/Wallet"), color: UIColor(rgb: 0x1b1b1c))?.cgImage {
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Settings/Menu/Wallet"), color: UIColor(rgb: 0x1b1b1c))?.cgImage {
             context.draw(image, in: bounds)
         }
         
         drawBorder(context: context, rect: bounds)
     })
         
-    public static let passport = renderIcon(name: "Settings/MenuIcons/Passport")
-    public static let watch = renderIcon(name: "Settings/MenuIcons/Watch")
+    public static let passport = renderIcon(name: "Settings/Menu/Passport")
+    public static let watch = renderIcon(name: "Settings/Menu/Watch")
     
-    public static let support = renderIcon(name: "Settings/MenuIcons/Support")
-    public static let faq = renderIcon(name: "Settings/MenuIcons/Faq")
-    public static let tips = renderIcon(name: "Settings/MenuIcons/Tips")
+    public static let support = renderIcon(name: "Settings/Menu/Support")
+    public static let faq = renderIcon(name: "Settings/Menu/Faq")
+    public static let tips = renderIcon(name: "Settings/Menu/Tips")
     
-    public static let addAccount = renderIcon(name: "Settings/MenuIcons/AddAccount")
-    public static let setPasscode = renderIcon(name: "Settings/MenuIcons/SetPasscode")
-    public static let clearCache = renderIcon(name: "Settings/MenuIcons/ClearCache")
-    public static let changePhoneNumber = renderIcon(name: "Settings/MenuIcons/ChangePhoneNumber")
+    public static let addAccount = renderIcon(name: "Settings/Menu/AddAccount")
+    public static let setPasscode = renderIcon(name: "Settings/Menu/SetPasscode")
+    public static let clearCache = renderIcon(name: "Settings/Menu/ClearCache")
+    public static let changePhoneNumber = renderIcon(name: "Settings/Menu/ChangePhoneNumber")
     
-    public static let websites = renderIcon(name: "Settings/MenuIcons/Websites")
+    public static let websites = renderIcon(name: "Settings/Menu/Websites")
 }
