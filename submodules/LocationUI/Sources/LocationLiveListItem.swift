@@ -24,9 +24,9 @@ final class LocationLiveListItem: ListViewItem {
     let message: Message
     let distance: Double?
     
-    let drivingTime: Double?
-    let transitTime: Double?
-    let walkingTime: Double?
+    let drivingTime: ExpectedTravelTime
+    let transitTime: ExpectedTravelTime
+    let walkingTime: ExpectedTravelTime
     
     let action: () -> Void
     let longTapAction: () -> Void
@@ -35,7 +35,7 @@ final class LocationLiveListItem: ListViewItem {
     let transitAction: () -> Void
     let walkingAction: () -> Void
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, message: Message, distance: Double?, drivingTime: Double?, transitTime: Double?, walkingTime: Double?, action: @escaping () -> Void, longTapAction: @escaping () -> Void = { }, drivingAction: @escaping () -> Void, transitAction: @escaping () -> Void, walkingAction: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, message: Message, distance: Double?, drivingTime: ExpectedTravelTime, transitTime: ExpectedTravelTime, walkingTime: ExpectedTravelTime, action: @escaping () -> Void, longTapAction: @escaping () -> Void = { }, drivingAction: @escaping () -> Void, transitAction: @escaping () -> Void, walkingAction: @escaping () -> Void) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -206,7 +206,17 @@ final class LocationLiveListItemNode: ListViewItemNode {
             
             let titleSpacing: CGFloat = 1.0
             var contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height)
-            if item.drivingTime != nil || item.transitTime != nil || item.walkingTime != nil {
+            let hasEta: Bool
+            if case .ready = item.drivingTime {
+                hasEta = true
+            } else if case .ready = item.transitTime {
+                hasEta = true
+            } else if case .ready = item.walkingTime {
+                hasEta = true
+            } else {
+                hasEta = false
+            }
+            if hasEta {
                 contentSize.height += 46.0
             }
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: UIEdgeInsets())
@@ -326,7 +336,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             timerNode.removeFromSupernode()
                         }
                         
-                        if let drivingTime = item.drivingTime {
+                        if case let .ready(drivingTime) = item.drivingTime {
                             strongSelf.drivingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: drivingTime, format: { $0 })
                             
                             if currentItem?.drivingTime == nil {
@@ -335,7 +345,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             }
                         }
                         
-                        if let transitTime = item.transitTime {
+                        if case let .ready(transitTime) = item.transitTime {
                             strongSelf.transitButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: transitTime, format: { $0 })
                             
                             if currentItem?.transitTime == nil {
@@ -344,7 +354,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             }
                         }
                         
-                        if let walkingTime = item.walkingTime {
+                        if case let .ready(walkingTime) = item.walkingTime {
                             strongSelf.walkingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: walkingTime, format: { $0 })
                             
                             if currentItem?.walkingTime == nil {
@@ -362,13 +372,13 @@ final class LocationLiveListItemNode: ListViewItemNode {
                         var buttonOrigin = leftInset
                         strongSelf.drivingButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: drivingHeight))
                         
-                        if item.drivingTime != nil {
+                        if case .ready = item.drivingTime {
                             buttonOrigin += directionsWidth + directionsSpacing
                         }
                         
                         strongSelf.transitButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: transitHeight))
                         
-                        if item.transitTime != nil {
+                        if case .ready = item.transitTime {
                             buttonOrigin += directionsWidth + directionsSpacing
                         }
                         

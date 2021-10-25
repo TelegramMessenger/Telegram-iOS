@@ -194,7 +194,7 @@ private final class StorageUsageItemNode: ListViewItemNode {
                 
                 var textFrame = CGRect(origin: textOrigin, size: textLayout.size)
                 if textFrame.maxX > params.width - params.rightInset - inset {
-                    textFrame.origin = CGPoint(x: horizontalSpacing, y: textOrigin.y + verticalSpacing)
+                    textFrame.origin = CGPoint(x: params.leftInset + horizontalSpacing, y: textOrigin.y + verticalSpacing)
                 }
  
                 textOrigin = CGPoint(x: textFrame.maxX + horizontalSpacing, y: textFrame.minY)

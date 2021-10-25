@@ -10,6 +10,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import AuthTransferUI
+import ItemListPeerActionItem
 
 private final class RecentSessionsControllerArguments {
     let context: AccountContext
@@ -271,12 +272,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             return ItemListRecentSessionItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, session: session, enabled: true, editable: false, editing: false, revealed: false, sectionId: self.section, setSessionIdWithRevealedOptions: { _, _ in
             }, removeSession: { _ in
             })
-        case let .terminateOtherSessions(_, text):
-            return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+        case let .terminateOtherSessions(theme, text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.blockDestructiveIcon(theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
                 arguments.terminateOtherSessions()
             })
-        case let .terminateAllWebSessions(_, text):
-            return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+        case let .terminateAllWebSessions(theme, text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.blockDestructiveIcon(theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
                 arguments.terminateAllWebSessions()
             })
         case let .currentAddDevice(_, text):

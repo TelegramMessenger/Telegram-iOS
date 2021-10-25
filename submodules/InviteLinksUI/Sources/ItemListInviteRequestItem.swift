@@ -471,6 +471,9 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     transition.updateAlpha(node: strongSelf.subtitleNode, alpha: isExtracted ? 0.0 : 1.0)
                     transition.updateAlpha(node: strongSelf.expandedSubtitleNode, alpha: isExtracted ? 1.0 : 0.0)
                     
+                    transition.updateAlpha(node: strongSelf.addButton, alpha: isExtracted ? 0.0 : 1.0, delay: isExtracted ? 0.0 : 0.1)
+                    transition.updateAlpha(node: strongSelf.dismissButton, alpha: isExtracted ? 0.0 : 1.0, delay: isExtracted ? 0.0 : 0.1)
+                    
                     transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? inset : 0.0, y: isExtracted ? extractedVerticalOffset : 0.0))
                 }
             }

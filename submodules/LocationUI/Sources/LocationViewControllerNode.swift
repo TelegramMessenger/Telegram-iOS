@@ -48,9 +48,9 @@ private enum LocationViewEntryId: Hashable {
 }
 
 private enum LocationViewEntry: Comparable, Identifiable {
-    case info(PresentationTheme, TelegramMediaMap, String?, Double?, Double?, Double?, Double?)
+    case info(PresentationTheme, TelegramMediaMap, String?, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime)
     case toggleLiveLocation(PresentationTheme, String, String, Double?, Double?)
-    case liveLocation(PresentationTheme, PresentationDateTimeFormat, PresentationPersonNameOrder, Message, Double?, Double?, Double?, Double?, Int)
+    case liveLocation(PresentationTheme, PresentationDateTimeFormat, PresentationPersonNameOrder, Message, Double?, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime, Int)
     
     var stableId: LocationViewEntryId {
         switch self {
@@ -240,12 +240,12 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     var onAnnotationsReady: (() -> Void)?
     
     private let travelDisposables = DisposableSet()
-    private var travelTimes: [EngineMessage.Id: (Double, Double?, Double?, Double?)] = [:] {
+    private var travelTimes: [EngineMessage.Id: (Double, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime)] = [:] {
         didSet {
             self.travelTimesPromise.set(.single(self.travelTimes))
         }
     }
-    private let travelTimesPromise = Promise<[EngineMessage.Id: (Double, Double?, Double?, Double?)]>([:])
+    private let travelTimesPromise = Promise<[EngineMessage.Id: (Double, ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime)]>([:])
 
     init(context: AccountContext, presentationData: PresentationData, subject: Message, interaction: LocationViewInteraction, locationManager: LocationManager) {
         self.context = context
@@ -287,12 +287,25 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             throttledUserLocation(self.headerNode.mapNode.userLocation)
         )
         
-        var eta: Signal<(Double?, Double?, Double?)?, NoError> = .single(nil)
+        var eta: Signal<(ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime), NoError> = .single((.calculating, .calculating, .calculating))
         var address: Signal<String?, NoError> = .single(nil)
         
         if let location = getLocation(from: subject), location.liveBroadcastingTimeout == nil {
-            eta = .single(nil)
-            |> then(combineLatest(queue: Queue.mainQueue(), getExpectedTravelTime(coordinate: location.coordinate, transportType: .automobile), getExpectedTravelTime(coordinate: location.coordinate, transportType: .transit), getExpectedTravelTime(coordinate: location.coordinate, transportType: .walking)) |> map(Optional.init))
+            eta = .single((.calculating, .calculating, .calculating))
+            |> then(combineLatest(queue: Queue.mainQueue(), getExpectedTravelTime(coordinate: location.coordinate, transportType: .automobile), getExpectedTravelTime(coordinate: location.coordinate, transportType: .transit), getExpectedTravelTime(coordinate: location.coordinate, transportType: .walking))
+            |> mapToSignal { drivingTime, transitTime, walkingTime -> Signal<(ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime), NoError> in
+                if case .calculating = drivingTime {
+                    return .complete()
+                }
+                if case .calculating = transitTime {
+                    return .complete()
+                }
+                if case .calculating = walkingTime {
+                    return .complete()
+                }
+                
+                return .single((drivingTime, transitTime, walkingTime))
+            })
             
             if let venue = location.venue, let venueAddress = venue.address, !venueAddress.isEmpty {
                 address = .single(venueAddress)
@@ -360,7 +373,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
                     let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
                     
-                    entries.append(.info(presentationData.theme, location, address, distance, eta?.0, eta?.1, eta?.2))
+                    entries.append(.info(presentationData.theme, location, address, distance, eta.0, eta.1, eta.2))
                     
                     annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, location: location, forcedSelection: true))
                 } else {
@@ -451,18 +464,24 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         if message.localTags.contains(.OutgoingLiveLocation), let selfPeer = selfPeer {
                             userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, isSelf: true, heading: location.heading)
                         } else {
-                            var drivingTime: Double?
-                            var transitTime: Double?
-                            var walkingTime: Double?
+                            var drivingTime: ExpectedTravelTime = .unknown
+                            var transitTime: ExpectedTravelTime = .unknown
+                            var walkingTime: ExpectedTravelTime = .unknown
+                            
                             if !isLocationView && message.author?.id != context.account.peerId {
                                 let signal = combineLatest(queue: Queue.mainQueue(), getExpectedTravelTime(coordinate: location.coordinate, transportType: .automobile), getExpectedTravelTime(coordinate: location.coordinate, transportType: .transit), getExpectedTravelTime(coordinate: location.coordinate, transportType: .walking))
-                                |> mapToSignal { drivingTime, transitTime, walkingTime -> Signal<(Double?, Double?, Double?), NoError> in
-                                    if drivingTime != nil && transitTime != nil && walkingTime != nil {
-                                        return .single((drivingTime, transitTime, walkingTime))
-                                    } else {
-                                        return .single((drivingTime, transitTime, walkingTime))
-                                        |> delay(0.3, queue: Queue.mainQueue())
+                                |> mapToSignal { drivingTime, transitTime, walkingTime -> Signal<(ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime), NoError> in
+                                    if case .calculating = drivingTime {
+                                        return .complete()
                                     }
+                                    if case .calculating = transitTime {
+                                        return .complete()
+                                    }
+                                    if case .calculating = walkingTime {
+                                        return .complete()
+                                    }
+                                    
+                                    return .single((drivingTime, transitTime, walkingTime))
                                 }
                                 
                                 if let (previousTimestamp, maybeDrivingTime, maybeTransitTime, maybeWalkingTime) = travelTimes[message.id] {
@@ -482,6 +501,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                                         }))
                                     }
                                 } else {
+                                    drivingTime = .calculating
+                                    transitTime = .calculating
+                                    walkingTime = .calculating
+                                    
                                     strongSelf.travelDisposables.add(signal.start(next: { [weak self] drivingTime, transitTime, walkingTime in
                                         guard let strongSelf = self else {
                                             return

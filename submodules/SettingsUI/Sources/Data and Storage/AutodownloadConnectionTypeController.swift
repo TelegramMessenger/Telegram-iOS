@@ -157,15 +157,15 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
             case let .typesHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .photos(_, text, value, enabled):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Photos")?.precomposed(), title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.photo)
                 })
             case let .videos(_, text, value, enabled):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Videos")?.precomposed(), title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.video)
                 })
             case let .files(_, text, value, enabled):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Files")?.precomposed(), title: text, enabled: enabled, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.customize(.file)
                 })
             case let .voiceMessagesInfo(_, text):

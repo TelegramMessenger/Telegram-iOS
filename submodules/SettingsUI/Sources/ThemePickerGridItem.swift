@@ -140,29 +140,7 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
         guard let item = self.item else {
             return
         }
-        let wasSelected = item.selected
         item.action(item.themeReference)
-        
-        if let animatedStickerNode = self.animatedStickerNode {
-            Queue.mainQueue().after(0.1) {
-                if !wasSelected {
-                    animatedStickerNode.seekTo(.frameIndex(0))
-                    animatedStickerNode.play()
-
-//                    let scale: CGFloat = 2.6
-//                    animatedStickerNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
-//                    animatedStickerNode.layer.animateSpring(from: 1.0 as NSNumber, to: scale as NSNumber, keyPath: "transform.scale", duration: 0.45)
-//
-//                    animatedStickerNode.completed = { [weak animatedStickerNode, weak self] _ in
-//                        guard let item = self?.item, item.selected else {
-//                            return
-//                        }
-//                        animatedStickerNode?.transform = CATransform3DIdentity
-//                        animatedStickerNode?.layer.animateSpring(from: scale as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45)
-//                    }
-                }
-            }
-        }
     }
     
     private func removePlaceholder(animated: Bool) {

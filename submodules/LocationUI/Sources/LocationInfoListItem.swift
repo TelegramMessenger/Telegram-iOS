@@ -18,15 +18,15 @@ final class LocationInfoListItem: ListViewItem {
     let location: TelegramMediaMap
     let address: String?
     let distance: String?
-    let drivingTime: Double?
-    let transitTime: Double?
-    let walkingTime: Double?
+    let drivingTime: ExpectedTravelTime
+    let transitTime: ExpectedTravelTime
+    let walkingTime: ExpectedTravelTime
     let action: () -> Void
     let drivingAction: () -> Void
     let transitAction: () -> Void
     let walkingAction: () -> Void
     
-    public init(presentationData: ItemListPresentationData, engine: TelegramEngine, location: TelegramMediaMap, address: String?, distance: String?, drivingTime: Double?, transitTime: Double?, walkingTime: Double?, action: @escaping () -> Void, drivingAction: @escaping () -> Void, transitAction: @escaping () -> Void, walkingAction: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, engine: TelegramEngine, location: TelegramMediaMap, address: String?, distance: String?, drivingTime: ExpectedTravelTime, transitTime: ExpectedTravelTime, walkingTime: ExpectedTravelTime, action: @escaping () -> Void, drivingAction: @escaping () -> Void, transitAction: @escaping () -> Void, walkingAction: @escaping () -> Void) {
         self.presentationData = presentationData
         self.engine = engine
         self.location = location
@@ -279,28 +279,28 @@ final class LocationInfoListItemNode: ListViewItemNode {
                         let iconNodeFrame = CGRect(origin: CGPoint(x: params.leftInset + inset, y: 10.0), size: CGSize(width: iconSize, height: iconSize))
                         strongSelf.venueIconNode.frame = iconNodeFrame
                         
-                        if let drivingTime = item.drivingTime {
+                        if case let .ready(drivingTime) = item.drivingTime {
                             strongSelf.drivingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: drivingTime, format: { $0 })
                             
-                            if currentItem?.drivingTime == nil {
+                            if let previousDrivingTime = currentItem?.drivingTime, case .calculating = previousDrivingTime {
                                 strongSelf.drivingButtonNode?.alpha = 1.0
                                 strongSelf.drivingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
                         }
                         
-                        if let transitTime = item.transitTime {
+                        if case let .ready(transitTime) = item.transitTime {
                             strongSelf.transitButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: transitTime, format: { $0 })
                             
-                            if currentItem?.transitTime == nil {
+                            if let previousTransitTime = currentItem?.transitTime, case .calculating = previousTransitTime {
                                 strongSelf.transitButtonNode?.alpha = 1.0
                                 strongSelf.transitButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
                         }
                         
-                        if let walkingTime = item.walkingTime {
+                        if case let .ready(walkingTime) = item.walkingTime {
                             strongSelf.walkingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: walkingTime, format: { $0 })
                             
-                            if currentItem?.walkingTime == nil {
+                            if let previousWalkingTime = currentItem?.walkingTime, case .calculating = previousWalkingTime {
                                 strongSelf.walkingButtonNode?.alpha = 1.0
                                 strongSelf.walkingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
@@ -309,7 +309,7 @@ final class LocationInfoListItemNode: ListViewItemNode {
                         let directionsWidth: CGFloat = 93.0
                         let directionsSpacing: CGFloat = 8.0
                         
-                        if item.drivingTime == nil && item.transitTime == nil && item.walkingTime == nil {
+                        if case .calculating = item.drivingTime, case .calculating = item.transitTime, case .calculating = item.walkingTime {
                             let shimmerNode: ShimmerEffectNode
                             if let current = strongSelf.placeholderNode {
                                 shimmerNode = current
@@ -343,13 +343,13 @@ final class LocationInfoListItemNode: ListViewItemNode {
                         var buttonOrigin = leftInset
                         strongSelf.drivingButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: drivingHeight))
                         
-                        if item.drivingTime != nil {
+                        if case .ready = item.drivingTime {
                             buttonOrigin += directionsWidth + directionsSpacing
                         }
                         
                         strongSelf.transitButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: transitHeight))
                         
-                        if item.transitTime != nil {
+                        if case .ready = item.transitTime {
                             buttonOrigin += directionsWidth + directionsSpacing
                         }
                         

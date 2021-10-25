@@ -181,9 +181,32 @@ public struct PresentationResourcesItemList {
         })
     }
     
-    public static func makeEditThemeIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func editThemeIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListEditThemeIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Settings/EditTheme"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func knobImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListKnob.rawValue, { theme in
+            return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setShadow(offset: CGSize(width: 0.0, height: -3.0), blur: 12.0, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
+                context.setFillColor(UIColor.white.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
+            })
+        })
+    }
+    
+    public static func blockAccentIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListBlockAccentIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/Block"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func blockDestructiveIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListBlockDestructiveIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/Block"), color: theme.list.itemDestructiveColor)
         })
     }
     

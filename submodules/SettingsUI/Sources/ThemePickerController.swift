@@ -271,7 +271,7 @@ private enum ThemePickerControllerEntry: ItemListNodeEntry {
                     arguments.openAccentColorPicker(currentTheme, create)
                 }, tag: ThemeSettingsEntryTag.accentColor)
             case let .editTheme(theme, text):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.makeEditThemeIcon(theme), title: text, sectionId: self.section, height: .generic, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.editThemeIcon(theme), title: text, sectionId: self.section, height: .generic, editing: false, action: {
                     arguments.editCurrentTheme()
                 })
             case let .createTheme(theme, text):

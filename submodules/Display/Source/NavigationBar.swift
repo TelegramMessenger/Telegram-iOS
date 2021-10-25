@@ -921,6 +921,11 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self.backgroundNode, alpha: alpha)
+        transition.updateAlpha(node: self.stripeNode, alpha: alpha)
+    }
+    
     public func updatePresentationData(_ presentationData: NavigationBarPresentationData) {
         if presentationData.theme !== self.presentationData.theme || presentationData.strings !== self.presentationData.strings {
             self.presentationData = presentationData
