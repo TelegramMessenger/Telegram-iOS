@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import TelegramPresentationData
 
 private final class NullActionClass: NSObject, CAAction {
     @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
@@ -129,8 +130,7 @@ private final class Shimmer {
         if let image = self.image {
             layer.contents = image.cgImage
 
-            let shiftedContentsRect = CGRect(origin: CGPoint(x: frame.minX / containerSize.width, y: frame.minY / containerSize.height), size: CGSize(width: frame.width / containerSize.width, height: frame.height / containerSize.height))
-            let _ = shiftedContentsRect
+            let shiftedContentsRect = CGRect(origin: CGPoint(x: 0.0, y: frame.minY / containerSize.height), size: CGSize(width: 1.0, height: frame.height / containerSize.height))
             layer.contentsRect = shiftedContentsRect
 
             if layer.animation(forKey: "shimmer") == nil {
@@ -140,7 +140,7 @@ private final class Shimmer {
                 animation.isAdditive = true
                 animation.repeatCount = .infinity
                 animation.duration = 0.8
-                animation.beginTime = 1.0
+                animation.beginTime = layer.convertTime(1.0, from: nil)
                 layer.add(animation, forKey: "shimmer")
             }
         }
@@ -429,6 +429,8 @@ public final class SparseItemGrid: ASDisplayNode {
         private let scrollView: UIScrollView
         private let shimmer: Shimmer
 
+        var theme: PresentationTheme
+
         var layout: Layout?
         var items: Items?
         var visibleItems: [AnyHashable: VisibleItem] = [:]
@@ -446,7 +448,8 @@ public final class SparseItemGrid: ASDisplayNode {
 
         let coveringOffsetUpdated: (Viewport, ContainedViewLayoutTransition) -> Void
 
-        init(zoomLevel: ZoomLevel, maybeLoadHoleAnchor: @escaping (HoleAnchor, HoleLocation) -> Void, coveringOffsetUpdated: @escaping (Viewport, ContainedViewLayoutTransition) -> Void) {
+        init(theme: PresentationTheme, zoomLevel: ZoomLevel, maybeLoadHoleAnchor: @escaping (HoleAnchor, HoleLocation) -> Void, coveringOffsetUpdated: @escaping (Viewport, ContainedViewLayoutTransition) -> Void) {
+            self.theme = theme
             self.zoomLevel = zoomLevel
             self.maybeLoadHoleAnchor = maybeLoadHoleAnchor
             self.coveringOffsetUpdated = coveringOffsetUpdated
@@ -589,6 +592,23 @@ public final class SparseItemGrid: ASDisplayNode {
 
             for (_, visibleItem) in self.visibleItems {
                 if visibleItem.frame.contains(localPoint) {
+                    return visibleItem
+                }
+            }
+
+            return nil
+        }
+
+        func visualItem(at index: Int) -> SparseItemGridDisplayItem? {
+            guard let items = self.items, !items.items.isEmpty else {
+                return nil
+            }
+
+            guard let item = items.item(at: index) else {
+                return nil
+            }
+            for (id, visibleItem) in self.visibleItems {
+                if id == item.id {
                     return visibleItem
                 }
             }
@@ -749,6 +769,8 @@ public final class SparseItemGrid: ASDisplayNode {
                 let visibleRange = layout.visibleItemRange(for: visibleBounds, count: items.count)
                 for index in visibleRange.minIndex ... visibleRange.maxIndex {
                     if let item = items.item(at: index) {
+                        let itemFrame = layout.frame(at: index)
+
                         let itemLayer: VisibleItem
                         if let current = self.visibleItems[item.id] {
                             itemLayer = current
@@ -777,7 +799,6 @@ public final class SparseItemGrid: ASDisplayNode {
                                 itemLayer.shimmerLayer = placeholderLayer
                             }
 
-                            let itemFrame = layout.frame(at: index)
                             placeholderLayer.frame = itemFrame
                             self.shimmer.update(colors: shimmerColors, layer: placeholderLayer, containerSize: layout.containerLayout.size, frame: itemFrame.offsetBy(dx: 0.0, dy: -visibleBounds.minY))
                             placeholderLayer.update(size: itemFrame.size)
@@ -788,7 +809,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
                         validIds.insert(item.id)
 
-                        itemLayer.frame = layout.frame(at: index)
+                        itemLayer.frame = itemFrame
                     } else {
                         let placeholderLayer: SparseItemGridShimmerLayer
                         if self.visiblePlaceholders.count > usedPlaceholderCount {
@@ -834,6 +855,7 @@ public final class SparseItemGrid: ASDisplayNode {
                     } else if let view = item.view {
                         view.removeFromSuperview()
                     }
+                    item.shimmerLayer?.removeFromSuperlayer()
                 }
             }
 
@@ -931,6 +953,7 @@ public final class SparseItemGrid: ASDisplayNode {
                     contentOffset: self.scrollView.bounds.minY,
                     isScrolling: self.scrollView.isDragging || self.scrollView.isDecelerating,
                     dateString: dateString ?? "",
+                    theme: self.theme,
                     transition: .immediate
                 )
             }
@@ -1058,6 +1081,7 @@ public final class SparseItemGrid: ASDisplayNode {
     private var tapRecognizer: UITapGestureRecognizer?
     private var pinchRecognizer: UIPinchGestureRecognizer?
 
+    private var theme: PresentationTheme
     private var containerLayout: ContainerLayout?
     private var items: Items?
 
@@ -1082,7 +1106,9 @@ public final class SparseItemGrid: ASDisplayNode {
 
     public var cancelExternalContentGestures: (() -> Void)?
 
-    override public init() {
+    public init(theme: PresentationTheme) {
+        self.theme = theme
+
         self.scrollingArea = SparseItemGridScrollingArea()
 
         super.init()
@@ -1135,7 +1161,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
                 let progress = (scale - interactiveState.initialScale) / (interactiveState.targetScale - interactiveState.initialScale)
                 var replacedTransition = false
-                //print("progress: \(progress), scale: \(scale), initial: \(interactiveState.initialScale), target: \(interactiveState.targetScale)")
+
                 if progress < 0.0 || progress > 1.0 {
                     let boundaryViewport = progress > 1.0 ? currentViewportTransition.toViewport : currentViewportTransition.fromViewport
                     let zoomLevels = self.availableZoomLevels(width: containerLayout.size.width, startingAt: boundaryViewport.zoomLevel)
@@ -1176,7 +1202,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
                         let restoreScrollPosition: (y: CGFloat, index: Int)? = (anchorItemFrame.minY, nextAnchorItemIndex)
 
-                        let nextViewport = Viewport(zoomLevel: nextZoomLevel, maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
+                        let nextViewport = Viewport(theme: self.theme, zoomLevel: nextZoomLevel, maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
                             guard let strongSelf = self else {
                                 return
                             }
@@ -1226,7 +1252,7 @@ public final class SparseItemGrid: ASDisplayNode {
                         let restoreScrollPosition: (y: CGFloat, index: Int)? = (anchorItemFrame.minY, anchorItem.index)
                         let anchorItemIndex = anchorItem.index
 
-                        let nextViewport = Viewport(zoomLevel: nextZoomLevel, maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
+                        let nextViewport = Viewport(theme: self.theme, zoomLevel: nextZoomLevel, maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
                             guard let strongSelf = self else {
                                 return
                             }
@@ -1285,7 +1311,8 @@ public final class SparseItemGrid: ASDisplayNode {
         }
     }
 
-    public func update(size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets, lockScrollingAtTop: Bool, fixedItemHeight: CGFloat?, items: Items, synchronous: Bool) {
+    public func update(size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets, lockScrollingAtTop: Bool, fixedItemHeight: CGFloat?, items: Items, theme: PresentationTheme, synchronous: Bool) {
+        self.theme = theme
         let containerLayout = ContainerLayout(size: size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, lockScrollingAtTop: lockScrollingAtTop, fixedItemHeight: fixedItemHeight)
         self.containerLayout = containerLayout
         self.items = items
@@ -1295,7 +1322,7 @@ public final class SparseItemGrid: ASDisplayNode {
         self.pinchRecognizer?.isEnabled = fixedItemHeight == nil && !lockScrollingAtTop
 
         if self.currentViewport == nil {
-            let currentViewport = Viewport(zoomLevel: self.initialZoomLevel ?? ZoomLevel(rawValue: 3), maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
+            let currentViewport = Viewport(theme: self.theme, zoomLevel: self.initialZoomLevel ?? ZoomLevel(rawValue: 3), maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1377,7 +1404,7 @@ public final class SparseItemGrid: ASDisplayNode {
         self.currentViewport = nil
         previousViewport.removeFromSupernode()
 
-        let currentViewport = Viewport(zoomLevel: level, maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
+        let currentViewport = Viewport(theme: self.theme, zoomLevel: level, maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
             guard let strongSelf = self else {
                 return
             }
@@ -1466,6 +1493,13 @@ public final class SparseItemGrid: ASDisplayNode {
             return nil
         }
         return currentViewport.visualItem(at: point)
+    }
+
+    public func item(at index: Int) -> SparseItemGridDisplayItem? {
+        guard let currentViewport = self.currentViewport else {
+            return nil
+        }
+        return currentViewport.visualItem(at: index)
     }
 
     public func scrollToItem(at index: Int) {

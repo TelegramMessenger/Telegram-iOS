@@ -326,7 +326,7 @@ private let gradientColors: [NSArray] = [
     [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
 ]
 
-private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: Int64, letters: [String]) -> UIImage? {
+private func avatarViewLettersImage(size: CGSize, peerId: PeerId, letters: [String]) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
     let context = UIGraphicsGetCurrentContext()
 
@@ -334,7 +334,12 @@ private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: 
     context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
     context?.clip()
 
-    let colorIndex = abs(Int(accountPeerId + peerId))
+    let colorIndex: Int
+    if peerId.namespace == .max {
+        colorIndex = 0
+    } else {
+        colorIndex = abs(Int(clamping: peerId.id._internalGetInt64Value()))
+    }
 
     let colorsArray = gradientColors[colorIndex % gradientColors.count]
     var locations: [CGFloat] = [1.0, 0.0]
@@ -368,11 +373,11 @@ private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: 
     return image
 }
 
-private func avatarImage(path: String?, peerId: Int64, accountPeerId: Int64, letters: [String], size: CGSize) -> UIImage {
+private func avatarImage(path: String?, peerId: PeerId, letters: [String], size: CGSize) -> UIImage {
     if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
         return roundImage
     } else {
-        return avatarViewLettersImage(size: size, peerId: peerId, accountPeerId: accountPeerId, letters: letters)!
+        return avatarViewLettersImage(size: size, peerId: peerId, letters: letters)!
     }
 }
 
@@ -394,48 +399,27 @@ private func storeTemporaryImage(path: String) -> String {
 private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) -> INImage? {
     if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
         let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "intents.png", keepDuration: .shortLived)
-        if let _ = fileSize(cachedPath), let data = try? Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped) {
-            do {
-                return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
-            } catch {
-                return nil
-            }
+        if let _ = fileSize(cachedPath) {
+            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
         } else {
-            let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+            let image = avatarImage(path: path, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
             if let data = image.pngData() {
                 let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
             }
-            do {
-                //let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
-                //return INImage(imageData: data)
-                return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
-            } catch {
-                return nil
-            }
+
+            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
         }
     }
 
     let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar-\(peer.displayLetters.joined(separator: ","))", representationId: "intents.png", keepDuration: .shortLived)
     if let _ = fileSize(cachedPath) {
-        do {
-            //let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: [])
-            //return INImage(imageData: data)
-            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
-        } catch {
-            return nil
-        }
+        return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
     } else {
-        let image = avatarImage(path: nil, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+        let image = avatarImage(path: nil, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
         if let data = image.pngData() {
             let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
         }
-        do {
-            //let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
-            //return INImage(imageData: data)
-            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
-        } catch {
-            return nil
-        }
+        return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
     }
 }
 

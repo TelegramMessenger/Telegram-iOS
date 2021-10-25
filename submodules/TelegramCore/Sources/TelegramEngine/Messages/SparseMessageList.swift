@@ -74,6 +74,8 @@ public final class SparseMessageList {
         private var topSection: TopSection?
         private var topItemsDisposable = MetaDisposable()
 
+        private var deletedMessagesDisposable: Disposable?
+
         private var sparseItems: SparseItems?
         private var sparseItemsDisposable: Disposable?
 
@@ -159,12 +161,24 @@ public final class SparseMessageList {
                     strongSelf.updateState()
                 }
             })
+
+            self.deletedMessagesDisposable = (account.postbox.combinedView(keys: [.deletedMessages(peerId: peerId)])
+            |> deliverOn(self.queue)).start(next: { [weak self] views in
+                guard let strongSelf = self else {
+                    return
+                }
+                guard let view = views.views[.deletedMessages(peerId: peerId)] as? DeletedMessagesView else {
+                    return
+                }
+                strongSelf.processDeletedMessages(ids: view.currentDeletedMessages)
+            })
         }
 
         deinit {
             self.topItemsDisposable.dispose()
             self.sparseItemsDisposable?.dispose()
             self.loadHoleDisposable.dispose()
+            self.deletedMessagesDisposable?.dispose()
         }
 
         private func resetTopSection() {
@@ -188,160 +202,35 @@ public final class SparseMessageList {
             }))
         }
 
+        private func processDeletedMessages(ids: [MessageId]) {
+            if let sparseItems = self.sparseItems {
+                let idsSet = Set(ids)
+
+                var removeIndices: [Int] = []
+                for i in 0 ..< sparseItems.items.count {
+                    switch sparseItems.items[i] {
+                    case let .anchor(id, _, message):
+                        if message != nil, idsSet.contains(id) {
+                            removeIndices.append(i)
+                        }
+                    default:
+                        break
+                    }
+                }
+
+                if !removeIndices.isEmpty {
+                    for index in removeIndices.reversed() {
+                        self.sparseItems?.items.remove(at: index)
+                    }
+
+                    self.updateState()
+                }
+            }
+        }
+
         func loadMoreFromTopSection() {
             self.topSectionItemRequestCount += 100
             self.resetTopSection()
-        }
-
-        func loadPlaceholders(ids: [MessageId]) {
-            var loadGlobalIds: [MessageId] = []
-            var loadChannelIds: [PeerId: [MessageId]] = [:]
-            for id in ids {
-                if self.loadingPlaceholders[id] != nil {
-                    continue
-                }
-                self.loadingPlaceholders[id] = MetaDisposable()
-                if id.peerId.namespace == Namespaces.Peer.CloudUser || id.peerId.namespace == Namespaces.Peer.CloudGroup {
-                    loadGlobalIds.append(id)
-                } else if id.peerId.namespace == Namespaces.Peer.CloudChannel {
-                    if loadChannelIds[id.peerId] == nil {
-                        loadChannelIds[id.peerId] = []
-                    }
-                    loadChannelIds[id.peerId]!.append(id)
-                }
-            }
-
-            var loadSignals: [Signal<(messages: [Api.Message], chats: [Api.Chat], users: [Api.User]), NoError>] = []
-            let account = self.account
-
-            if !loadGlobalIds.isEmpty {
-                loadSignals.append(self.account.postbox.transaction { transaction -> [Api.InputMessage] in
-                    var result: [Api.InputMessage] = []
-                    for id in loadGlobalIds {
-                        let inputMessage: Api.InputMessage = .inputMessageID(id: id.id)
-                        result.append(inputMessage)
-                    }
-                    return result
-                }
-                |> mapToSignal { inputMessages -> Signal<(messages: [Api.Message], chats: [Api.Chat], users: [Api.User]), NoError> in
-                    return account.network.request(Api.functions.messages.getMessages(id: inputMessages))
-                    |> map { result -> (messages: [Api.Message], chats: [Api.Chat], users: [Api.User]) in
-                        switch result {
-                        case let .messages(messages, chats, users):
-                            return (messages, chats, users)
-                        case let .messagesSlice(_, _, _, _, messages, chats, users):
-                            return (messages, chats, users)
-                        case let .channelMessages(_, _, _, _, messages, chats, users):
-                            return (messages, chats, users)
-                        case .messagesNotModified:
-                            return ([], [], [])
-                        }
-                    }
-                    |> `catch` { _ -> Signal<(messages: [Api.Message], chats: [Api.Chat], users: [Api.User]), NoError> in
-                        return .single(([], [], []))
-                    }
-                })
-            }
-
-            if !loadChannelIds.isEmpty {
-                for (channelId, ids) in loadChannelIds {
-                    loadSignals.append(self.account.postbox.transaction { transaction -> Api.InputChannel? in
-                        return transaction.getPeer(channelId).flatMap(apiInputChannel)
-                    }
-                    |> mapToSignal { inputChannel -> Signal<(messages: [Api.Message], chats: [Api.Chat], users: [Api.User]), NoError> in
-                        guard let inputChannel = inputChannel else {
-                            return .single(([], [], []))
-                        }
-
-                        return account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: ids.map { Api.InputMessage.inputMessageID(id: $0.id) }))
-                        |> map { result -> (messages: [Api.Message], chats: [Api.Chat], users: [Api.User]) in
-                            switch result {
-                            case let .messages(messages, chats, users):
-                                return (messages, chats, users)
-                            case let .messagesSlice(_, _, _, _, messages, chats, users):
-                                return (messages, chats, users)
-                            case let .channelMessages(_, _, _, _, messages, chats, users):
-                                return (messages, chats, users)
-                            case .messagesNotModified:
-                                return ([], [], [])
-                            }
-                        }
-                        |> `catch` { _ -> Signal<(messages: [Api.Message], chats: [Api.Chat], users: [Api.User]), NoError> in
-                            return .single(([], [], []))
-                        }
-                    })
-                }
-            }
-
-            let _ = (combineLatest(queue: self.queue, loadSignals)
-            |> mapToSignal { messageLists -> Signal<[Message], NoError> in
-                return account.postbox.transaction { transaction -> [Message] in
-                    var parsedMessages: [StoreMessage] = []
-                    var peers: [Peer] = []
-                    var peerPresences: [PeerId: PeerPresence] = [:]
-
-                    for (messages, chats, users) in messageLists {
-                        for chat in chats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            if let presence = TelegramUserPresence(apiUser: user) {
-                                peerPresences[telegramUser.id] = presence
-                            }
-                        }
-
-                        for message in messages {
-                            if let parsedMessage = StoreMessage(apiMessage: message) {
-                                parsedMessages.append(parsedMessage)
-                            }
-                        }
-                    }
-
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated in updated })
-                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
-                    let _ = transaction.addMessages(parsedMessages, location: .Random)
-
-                    var result: [Message] = []
-                    for parsedMessage in parsedMessages {
-                        switch parsedMessage.id {
-                        case let .Id(id):
-                            if let message = transaction.getMessage(id) {
-                                result.append(message)
-                            }
-                        case .Partial:
-                            break
-                        }
-                    }
-
-                    return result
-                }
-            }
-            |> deliverOn(self.queue)).start(next: { [weak self] messages in
-                guard let strongSelf = self else {
-                    return
-                }
-                for message in messages {
-                    strongSelf.loadedPlaceholders[message.id] = message
-                }
-                if strongSelf.sparseItems != nil {
-                    for i in 0 ..< strongSelf.sparseItems!.items.count {
-                        switch strongSelf.sparseItems!.items[i] {
-                        case let .anchor(id, timestamp, _):
-                            if let message = strongSelf.loadedPlaceholders[id] {
-                                strongSelf.sparseItems!.items[i] = .anchor(id: id, timestamp: timestamp, message: message)
-                            }
-                        case .range:
-                            break
-                        }
-                    }
-                }
-
-                strongSelf.updateState()
-            })
         }
 
         func loadHole(anchor: MessageId, direction: LoadHoleDirection, completion: @escaping () -> Void) {
@@ -811,12 +700,23 @@ public final class SparseMessageCalendar {
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
 
+    public var minTimestamp: Int32?
+    private var disposable: Disposable?
+
     init(account: Account, peerId: PeerId, messageTag: MessageTags) {
         let queue = Queue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(queue: queue, account: account, peerId: peerId, messageTag: messageTag)
         })
+
+        self.disposable = self.state.start(next: { [weak self] state in
+            self?.minTimestamp = state.minTimestamp
+        })
+    }
+
+    deinit {
+        self.disposable?.dispose()
     }
 
     public var state: Signal<State, NoError> {

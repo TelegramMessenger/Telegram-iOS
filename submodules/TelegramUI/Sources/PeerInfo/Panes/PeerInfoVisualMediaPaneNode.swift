@@ -1384,7 +1384,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.stateTag = tagMaskForType(contentType)
 
         self.contextGestureContainerNode = ContextControllerSourceNode()
-        self.itemGrid = SparseItemGrid()
+        self.itemGrid = SparseItemGrid(theme: self.context.sharedContext.currentPresentationData.with({ $0 }).theme)
         self.directMediaImageCache = DirectMediaImageCache(account: context.account)
 
         let useListItems: Bool
@@ -2160,7 +2160,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 fixedItemHeight = nil
             }
 
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, synchronous: wasFirstTime)
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime)
         }
     }
 
@@ -2201,6 +2201,24 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             }
             if let index = previousIndex {
                 self.itemGrid.scrollToItem(at: index)
+
+                if let item = self.itemGrid.item(at: index) {
+                    if let layer = item.layer as? ItemLayer {
+                        Queue.mainQueue().after(0.1, { [weak layer] in
+                            guard let layer = layer else {
+                                return
+                            }
+
+                            let overlayLayer = ListShimmerLayer.OverlayLayer()
+                            overlayLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.6).cgColor
+                            overlayLayer.frame = layer.bounds
+                            layer.addSublayer(overlayLayer)
+                            overlayLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.8, delay: 0.3, removeOnCompletion: false, completion: { [weak overlayLayer] _ in
+                                overlayLayer?.removeFromSuperlayer()
+                            })
+                        })
+                    }
+                }
             }
         }
     }

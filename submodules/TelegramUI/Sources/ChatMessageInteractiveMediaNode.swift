@@ -613,10 +613,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
-                                    if !manual {
-                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: .message(message: MessageReference(message), media: image), displayAtSize: isSecretMedia ? nil : 600, storeToDownloadsPeerType: storeToDownloadsPeerType).start())
-                                    } else if let representation = largestRepresentationForPhoto(image) {
-                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, range: representationFetchRangeForDisplayAtSize(representation: representation, dimension: isSecretMedia ? nil : 600), storeToDownloadsPeerType: storeToDownloadsPeerType).start())
+                                    if let representation = largestRepresentationForPhoto(image) {
+                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, range: representationFetchRangeForDisplayAtSize(representation: representation, dimension: isSecretMedia ? nil : 600), userInitiated: manual, storeToDownloadsPeerType: storeToDownloadsPeerType).start())
                                     }
                                 }
                             }, cancel: {
@@ -816,6 +814,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: emptyColor, custom: patternArguments)
                     
                     let imageFrame = CGRect(origin: CGPoint(x: -arguments.insets.left, y: -arguments.insets.top), size: arguments.drawingSize).ensuredValid
+                    let cleanImageFrame = CGRect(origin: imageFrame.origin, size: CGSize(width: imageFrame.width - arguments.corners.extendedEdges.right, height: imageFrame.height))
                     
                     let imageApply = imageLayout(arguments)
                     
@@ -860,7 +859,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 }
                                 statusApply(hasAnimation)
 
-                                let dateAndStatusFrame = CGRect(origin: CGPoint(x: imageFrame.width - layoutConstants.image.statusInsets.right - statusSize.width, y: imageFrame.height - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
+                                let dateAndStatusFrame = CGRect(origin: CGPoint(x: cleanImageFrame.width - layoutConstants.image.statusInsets.right - statusSize.width, y: cleanImageFrame.height - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
 
                                 strongSelf.dateAndStatusNode.frame = dateAndStatusFrame
                                 strongSelf.dateAndStatusNode.bounds = CGRect(origin: CGPoint(), size: dateAndStatusFrame.size)

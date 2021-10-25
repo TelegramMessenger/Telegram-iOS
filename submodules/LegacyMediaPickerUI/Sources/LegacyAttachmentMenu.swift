@@ -229,7 +229,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                 let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
                 
                 var hasHeic = false
-                var allItems = carouselItem.selectionContext.selectedItems() ?? []
+                var allItems = carouselItem.selectionContext?.selectedItems() ?? []
                 if let currentItem = currentItem {
                     allItems.append(currentItem)
                 }
