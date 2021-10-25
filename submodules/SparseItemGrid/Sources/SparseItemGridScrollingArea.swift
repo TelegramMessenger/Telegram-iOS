@@ -907,7 +907,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private func dismissLineTooltip() {
         if let lineTooltip = self.lineTooltip {
             self.lineTooltip = nil
-            lineTooltip.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak lineTooltip] _ in
+            lineTooltip.layer.animateAlpha(from: lineTooltip.alpha, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak lineTooltip] _ in
                 lineTooltip?.removeFromSuperview()
             })
         }
@@ -936,6 +936,10 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         transition.updateSublayerTransformOffset(layer: self.dateIndicator.layer, offset: CGPoint(x: -3.0, y: 0.0))
 
         displayTooltip.completed()
+
+        Queue.mainQueue().after(2.0, { [weak self] in
+            self?.dismissLineTooltip()
+        })
     }
 
     private func updateLineTooltip(containerSize: CGSize) {

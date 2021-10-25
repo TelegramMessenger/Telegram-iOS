@@ -417,14 +417,8 @@ private final class PeerInfoPendingPane {
             paneNode = visualPaneNode
             //paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .music)
         case .gifs:
-            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .gifs)
+            let visualPaneNode = PeerInfoGifPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .gifs)
             paneNode = visualPaneNode
-            visualPaneNode.openCurrentDate = {
-                openMediaCalendar()
-            }
-            visualPaneNode.paneDidScroll = {
-                paneDidScroll()
-            }
         case .groupsInCommon:
             paneNode = PeerInfoGroupsInCommonPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction, groupsInCommonContext: data.groupsInCommon!)
         case .members:

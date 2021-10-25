@@ -166,9 +166,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private let descriptionProgressNode: ImmediateTextNode
     public let dateNode: TextNode
     
-    private let extensionIconNode: ASImageNode
+    public let extensionIconNode: ASImageNode
     private let extensionIconText: TextNode
-    private let iconImageNode: TransformImageNode
+    public let iconImageNode: TransformImageNode
     private let iconStatusNode: SemanticStatusNode
     
     private let restrictionNode: ASDisplayNode
