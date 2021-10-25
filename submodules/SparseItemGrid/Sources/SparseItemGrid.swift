@@ -329,6 +329,7 @@ public final class SparseItemGrid: ASDisplayNode {
         final class VisibleItem: SparseItemGridDisplayItem {
             let layer: SparseItemGridLayer?
             let view: SparseItemGridView?
+            var shimmerLayer: SparseItemGridShimmerLayer?
 
             init(layer: SparseItemGridLayer?, view: SparseItemGridView?) {
                 self.layer = layer
@@ -470,12 +471,12 @@ public final class SparseItemGrid: ASDisplayNode {
             self.view.addSubview(self.scrollView)
         }
 
-        func update(containerLayout: ContainerLayout, items: Items, restoreScrollPosition: (y: CGFloat, index: Int)?) {
+        func update(containerLayout: ContainerLayout, items: Items, restoreScrollPosition: (y: CGFloat, index: Int)?, synchronous: Bool) {
             if self.layout?.containerLayout != containerLayout || self.items !== items {
                 self.layout = Layout(containerLayout: containerLayout, zoomLevel: self.zoomLevel)
                 self.items = items
 
-                self.updateVisibleItems(resetScrolling: true, synchronous: false, restoreScrollPosition: restoreScrollPosition)
+                self.updateVisibleItems(resetScrolling: true, synchronous: synchronous, restoreScrollPosition: restoreScrollPosition)
             }
         }
 
@@ -691,10 +692,6 @@ public final class SparseItemGrid: ASDisplayNode {
             self.scrollView.setContentOffset(self.scrollView.contentOffset, animated: false)
         }
 
-        func updateShimmerLayers() {
-            self.updateVisibleItems(resetScrolling: false, synchronous: false, restoreScrollPosition: nil)
-        }
-
         private func updateVisibleItems(resetScrolling: Bool, synchronous: Bool, restoreScrollPosition: (y: CGFloat, index: Int)?) {
             guard let layout = self.layout, let items = self.items else {
                 return
@@ -770,19 +767,21 @@ public final class SparseItemGrid: ASDisplayNode {
 
                         if itemLayer.needsShimmer {
                             let placeholderLayer: SparseItemGridShimmerLayer
-                            if self.visiblePlaceholders.count > usedPlaceholderCount {
-                                placeholderLayer = self.visiblePlaceholders[usedPlaceholderCount]
+                            if let current = itemLayer.shimmerLayer {
+                                placeholderLayer = current
                             } else {
                                 placeholderLayer = items.itemBinding.createShimmerLayer() ?? Shimmer.Layer()
                                 self.scrollView.layer.insertSublayer(placeholderLayer, at: 0)
-                                self.visiblePlaceholders.append(placeholderLayer)
+                                itemLayer.shimmerLayer = placeholderLayer
                             }
 
                             let itemFrame = layout.frame(at: index)
                             placeholderLayer.frame = itemFrame
                             self.shimmer.update(colors: shimmerColors, layer: placeholderLayer, containerSize: layout.containerLayout.size, frame: itemFrame.offsetBy(dx: 0.0, dy: -visibleBounds.minY))
                             placeholderLayer.update(size: itemFrame.size)
-                            usedPlaceholderCount += 1
+                        } else if let placeholderLayer = itemLayer.shimmerLayer {
+                            itemLayer.shimmerLayer = nil
+                            placeholderLayer.removeFromSuperlayer()
                         }
 
                         validIds.insert(item.id)
@@ -1185,7 +1184,7 @@ public final class SparseItemGrid: ASDisplayNode {
                         })
 
                         nextViewport.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
-                        nextViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: restoreScrollPosition)
+                        nextViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: restoreScrollPosition, synchronous: false)
 
                         self.currentViewportTransition?.removeFromSupernode()
 
@@ -1235,7 +1234,7 @@ public final class SparseItemGrid: ASDisplayNode {
                         })
 
                         nextViewport.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
-                        nextViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: restoreScrollPosition)
+                        nextViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: restoreScrollPosition, synchronous: false)
 
                         let currentViewportTransition = ViewportTransition(interactiveState: interactiveState, layout: containerLayout, anchorItemIndex: anchorItemIndex, from: previousViewport, to: nextViewport, coveringOffsetUpdated: { [weak self] transition in
                             self?.transitionCoveringOffsetUpdated(transition: transition)
@@ -1272,7 +1271,7 @@ public final class SparseItemGrid: ASDisplayNode {
                         strongSelf.scrollingArea.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
                         currentViewport.setScrollingArea(scrollingArea: strongSelf.scrollingArea)
                         currentViewport.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
-                        currentViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: nil)
+                        currentViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: nil, synchronous: false)
                     }
 
                     strongSelf.currentViewportTransition = nil
@@ -1284,7 +1283,7 @@ public final class SparseItemGrid: ASDisplayNode {
         }
     }
 
-    public func update(size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets, lockScrollingAtTop: Bool, fixedItemHeight: CGFloat?, items: Items) {
+    public func update(size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets, lockScrollingAtTop: Bool, fixedItemHeight: CGFloat?, items: Items, synchronous: Bool) {
         let containerLayout = ContainerLayout(size: size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, lockScrollingAtTop: lockScrollingAtTop, fixedItemHeight: fixedItemHeight)
         self.containerLayout = containerLayout
         self.items = items
@@ -1312,7 +1311,7 @@ public final class SparseItemGrid: ASDisplayNode {
         } else if let currentViewport = self.currentViewport {
             self.scrollingArea.frame = CGRect(origin: CGPoint(), size: size)
             currentViewport.frame = CGRect(origin: CGPoint(), size: size)
-            currentViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: nil)
+            currentViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: nil, synchronous: synchronous)
         }
     }
 
@@ -1395,7 +1394,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
                 self.scrollingArea.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
                 currentViewport.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
-                currentViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: restoreScrollPosition)
+                currentViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: restoreScrollPosition, synchronous: false)
 
                 let currentViewportTransition = ViewportTransition(interactiveState: nil, layout: containerLayout, anchorItemIndex: anchorItemIndex, from: previousViewport, to: currentViewport, coveringOffsetUpdated: { [weak self] transition in
                     self?.transitionCoveringOffsetUpdated(transition: transition)
@@ -1413,7 +1412,7 @@ public final class SparseItemGrid: ASDisplayNode {
                         strongSelf.insertSubnode(currentViewport, belowSubnode: strongSelf.scrollingArea)
                         strongSelf.scrollingArea.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
                         currentViewport.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
-                        currentViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: nil)
+                        currentViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: nil, synchronous: false)
                     }
 
                     strongSelf.currentViewport?.setScrollingArea(scrollingArea: strongSelf.scrollingArea)
@@ -1500,11 +1499,13 @@ public final class SparseItemGrid: ASDisplayNode {
         self.scrollingArea.hideScroller()
     }
 
-    public func updateShimmerLayers() {
-        self.currentViewport?.updateShimmerLayers()
-        if let currentViewportTransition = self.currentViewportTransition {
-            currentViewportTransition.fromViewport.updateShimmerLayers()
-            currentViewportTransition.toViewport.updateShimmerLayers()
+    public func updateShimmerLayers(item: SparseItemGridDisplayItem) {
+        guard let item = item as? Viewport.VisibleItem else {
+            return
+        }
+        if let itemShimmerLayer = item.shimmerLayer, !item.needsShimmer {
+            item.shimmerLayer = nil
+            itemShimmerLayer.removeFromSuperlayer()
         }
     }
 }

@@ -979,7 +979,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     var coveringInsetOffsetUpdatedImpl: ((ContainedViewLayoutTransition) -> Void)?
     var onBeginFastScrollingImpl: (() -> Void)?
     var getShimmerColorsImpl: (() -> SparseItemGrid.ShimmerColors)?
-    var updateShimmerLayersImpl: (() -> Void)?
+    var updateShimmerLayersImpl: ((SparseItemGridDisplayItem) -> Void)?
 
     private var shimmerImages: [CGFloat: UIImage] = [:]
 
@@ -1115,8 +1115,10 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 continue
             }
 
+            let displayItem = layers[i]
+
             if self.useListItems {
-                guard let view = layers[i].view as? ItemView else {
+                guard let view = displayItem.view as? ItemView else {
                     continue
                 }
                 view.bind(
@@ -1129,7 +1131,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                     size: view.bounds.size
                 )
             } else {
-                guard let layer = layers[i].layer as? ItemLayer else {
+                guard let layer = displayItem.layer as? ItemLayer else {
                     continue
                 }
                 if layer.bounds.isEmpty {
@@ -1171,7 +1173,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                         }
                         if let loadSignal = result.loadSignal {
                             layer.disposable = (loadSignal
-                            |> deliverOnMainQueue).start(next: { [weak self, weak layer] image in
+                            |> deliverOnMainQueue).start(next: { [weak self, weak layer, weak displayItem] image in
                                 guard let layer = layer else {
                                     return
                                 }
@@ -1193,7 +1195,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
 
                                     layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
 
-                                    self?.updateShimmerLayersImpl?()
+                                    if let displayItem = displayItem {
+                                        self?.updateShimmerLayersImpl?(displayItem)
+                                    }
                                 }
                             })
                         }
@@ -1322,6 +1326,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private let itemGridBinding: SparseItemGridBindingImpl
     private let directMediaImageCache: DirectMediaImageCache
     private var items: SparseItemGrid.Items?
+    private var didUpdateItemsOnce: Bool = false
 
     private var isDeceleratingAfterTracking = false
     
@@ -1534,8 +1539,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             return SparseItemGrid.ShimmerColors(background: backgroundColor.argb, foreground: foregroundColor.argb)
         }
 
-        self.itemGridBinding.updateShimmerLayersImpl = { [weak self] in
-            self?.itemGrid.updateShimmerLayers()
+        self.itemGridBinding.updateShimmerLayersImpl = { [weak self] layer in
+            self?.itemGrid.updateShimmerLayers(item: layer)
         }
 
         self.itemGrid.cancelExternalContentGestures = { [weak self] in
@@ -1646,13 +1651,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
         self.storedStateDisposable = (visualMediaStoredState(postbox: context.account.postbox, peerId: peerId, messageTag: self.stateTag)
         |> deliverOnMainQueue).start(next: { [weak self] value in
-            guard let strongSelf = self, let value = value else {
+            guard let strongSelf = self else {
                 return
             }
-            strongSelf.updateZoomLevel(level: ZoomLevel(rawValue: value.zoomLevel))
+            if let value = value {
+                strongSelf.updateZoomLevel(level: ZoomLevel(rawValue: value.zoomLevel))
+            }
+            strongSelf.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: false)
         })
-        
-        self.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: false)
         
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
             guard let strongSelf = self else {
@@ -2086,6 +2092,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
         transition.updateFrame(node: self.itemGrid, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
         if let items = self.items {
+            let wasFirstTime = !self.didUpdateItemsOnce
+            self.didUpdateItemsOnce = true
             let fixedItemHeight: CGFloat?
             switch self.contentType {
             case .files, .music, .voiceAndVideoMessages:
@@ -2146,7 +2154,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 fixedItemHeight = nil
             }
 
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items)
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, synchronous: wasFirstTime)
         }
     }
 
