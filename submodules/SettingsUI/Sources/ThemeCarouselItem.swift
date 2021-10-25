@@ -452,16 +452,28 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
         }
     }
     
-    func crossfade() {
-//        if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
-//            snapshotView.transform = self.containerNode.view.transform
-//            snapshotView.frame = self.containerNode.view.frame
-//            self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
-//
-//            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatThemeScreen.themeCrossfadeDuration, delay: ChatThemeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-//                snapshotView?.removeFromSuperview()
-//            })
-//        }
+    func prepareCrossfadeTransition() {
+        guard self.snapshotView == nil else {
+            return
+        }
+        
+        if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
+            snapshotView.transform = self.containerNode.view.transform
+            snapshotView.frame = self.containerNode.view.frame
+            self.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
+            self.snapshotView = snapshotView
+        }
+    }
+    
+    func animateCrossfadeTransition() {
+        guard self.snapshotView?.layer.animationKeys()?.isEmpty ?? true else {
+            return
+        }
+        
+        self.snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.snapshotView?.removeFromSuperview()
+            self?.snapshotView = nil
+        })
     }
         
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
@@ -796,11 +808,11 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
             self.snapshotView = snapshotView
         }
         
-//        self.listNode.forEachVisibleItemNode { node in
-//            if let node = node as? ThemeCarouselThemeItemIconNode {
-//                node.prepareCrossfadeTransition()
-//            }
-//        }
+        self.listNode.forEachVisibleItemNode { node in
+            if let node = node as? ThemeCarouselThemeItemIconNode {
+                node.prepareCrossfadeTransition()
+            }
+        }
     }
     
     func animateCrossfadeTransition() {

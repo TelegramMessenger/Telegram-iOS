@@ -209,7 +209,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         for (NSInteger i = 0; i < self.positionsCount; i++)
         {
             if (self.useLinesForPositions) {
-                CGSize lineSize = CGSizeMake(2.0, 8.0);
+                CGSize lineSize = CGSizeMake(4.0, 12.0);
                 CGRect lineRect = CGRectMake(margin - lineSize.width / 2.0f + totalLength / (self.positionsCount - 1) * i, (sideLength - lineSize.height) / 2, lineSize.width, lineSize.height);
                 if (vertical)
                     lineRect = CGRectMake(lineRect.origin.y, lineRect.origin.x, lineRect.size.height, lineRect.size.width);

@@ -284,7 +284,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 arguments.selectTheme(theme)
             }, contextAction: { theme, node, gesture in
                 arguments.themeContextAction(false, theme, node, gesture)
-            }, tag: nil)
+            }, tag: ThemeSettingsEntryTag.theme)
             case let .chatTheme(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openThemeSettings()
@@ -1030,8 +1030,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             var topOffset: CGFloat?
             var bottomOffset: CGFloat?
             var leftOffset: CGFloat?
-            var themeItemNode: ThemeSettingsThemeItemNode?
-            var colorItemNode: ThemeSettingsAccentColorItemNode?
+            var themeItemNode: ThemeCarouselThemeItemNode?
             
             var view: UIView?
             if #available(iOS 11.0, *) {
@@ -1053,14 +1052,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                             let frame = node.view.convert(node.view.bounds, to: controller.navigationController?.view)
                             topOffset = frame.minY
                             bottomOffset = frame.maxY
-                            if let itemNode = node as? ThemeSettingsThemeItemNode {
+                            if let itemNode = node as? ThemeCarouselThemeItemNode {
                                 themeItemNode = itemNode
-                            }
-                        } else if itemTag.isEqual(to: ThemeSettingsEntryTag.accentColor) && hasAccentColors {
-                            let frame = node.view.convert(node.view.bounds, to: controller.navigationController?.view)
-                            bottomOffset = frame.maxY
-                            if let itemNode = node as? ThemeSettingsAccentColorItemNode {
-                                colorItemNode = itemNode
                             }
                         }
                     }
@@ -1077,14 +1070,12 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             
             if view != nil {
                 themeItemNode?.prepareCrossfadeTransition()
-                colorItemNode?.prepareCrossfadeTransition()
             }
             
             let crossfadeController = ThemeSettingsCrossfadeController(view: view, topOffset: topOffset, bottomOffset: bottomOffset, leftOffset: leftOffset)
-            crossfadeController.didAppear = { [weak themeItemNode, weak colorItemNode] in
+            crossfadeController.didAppear = { [weak themeItemNode] in
                 if view != nil {
                     themeItemNode?.animateCrossfadeTransition()
-                    colorItemNode?.animateCrossfadeTransition()
                 }
             }
             

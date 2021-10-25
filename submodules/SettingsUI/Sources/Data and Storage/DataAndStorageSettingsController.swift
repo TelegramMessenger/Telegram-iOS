@@ -300,21 +300,21 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
         let arguments = arguments as! DataAndStorageControllerArguments
         switch self {
             case let .storageUsage(_, text):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Storage")?.precomposed(), title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openStorageUsage()
                 })
             case let .networkUsage(_, text):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Network")?.precomposed(), title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openNetworkUsage()
                 })
             case let .automaticDownloadHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .automaticDownloadCellular(_, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Cellular")?.precomposed(), title: text, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.openAutomaticDownloadConnectionType(.cellular)
                 })
             case let .automaticDownloadWifi(_, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/WiFi")?.precomposed(), title: text, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.openAutomaticDownloadConnectionType(.wifi)
                 })
             case let .automaticDownloadReset(_, text, enabled):

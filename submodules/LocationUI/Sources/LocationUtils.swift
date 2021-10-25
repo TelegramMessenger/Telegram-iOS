@@ -120,8 +120,16 @@ func throttledUserLocation(_ userLocation: Signal<CLLocation?, NoError>) -> Sign
     }
 }
 
-func getExpectedTravelTime(coordinate: CLLocationCoordinate2D, transportType: MKDirectionsTransportType) -> Signal<Double?, NoError> {
+enum ExpectedTravelTime: Equatable {
+    case unknown
+    case calculating
+    case ready(Double)
+}
+
+func getExpectedTravelTime(coordinate: CLLocationCoordinate2D, transportType: MKDirectionsTransportType) -> Signal<ExpectedTravelTime, NoError> {
     return Signal { subscriber in
+        subscriber.putNext(.calculating)
+        
         let destinationPlacemark = MKPlacemark(coordinate: coordinate, addressDictionary: nil)
         let destination = MKMapItem(placemark: destinationPlacemark)
         
@@ -133,7 +141,11 @@ func getExpectedTravelTime(coordinate: CLLocationCoordinate2D, transportType: MK
         
         let directions = MKDirections(request: request)
         directions.calculateETA { response, error in
-            subscriber.putNext(response?.expectedTravelTime)
+            if let travelTime = response?.expectedTravelTime {
+                subscriber.putNext(.ready(travelTime))
+            } else {
+                subscriber.putNext(.unknown)
+            }
             subscriber.putCompletion()
         }
         return ActionDisposable {
