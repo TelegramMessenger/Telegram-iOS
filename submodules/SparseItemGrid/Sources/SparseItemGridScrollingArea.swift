@@ -164,16 +164,28 @@ public final class TooltipComponent: Component {
         private var icon: ComponentHostView<Empty>?
         private let content: ComponentHostView<Empty>
 
+        private let regularMaskImage: UIImage
+        private let invertedMaskImage: UIImage
+
         init() {
             self.backgroundView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
             self.backgroundViewMask = UIImageView()
 
-            self.backgroundViewMask.image = generateImage(CGSize(width: 42.0, height: 42.0), rotatedContext: { size, context in
+            self.regularMaskImage = generateImage(CGSize(width: 42.0, height: 42.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
 
                 context.setFillColor(UIColor.black.cgColor)
                 let _ = try? drawSvgPath(context, path: "M0,18.0252 C0,14.1279 0,12.1792 0.5358,10.609 C1.5362,7.6772 3.8388,5.3746 6.7706,4.3742 C8.3409,3.8384 10.2895,3.8384 14.1868,3.8384 L16.7927,3.8384 C18.2591,3.8384 18.9923,3.8384 19.7211,3.8207 C25.1911,3.6877 30.6172,2.8072 35.8485,1.2035 C36.5454,0.9899 37.241,0.758 38.6321,0.2943 C39.1202,0.1316 39.3643,0.0503 39.5299,0.0245 C40.8682,-0.184 42.0224,0.9702 41.8139,2.3085 C41.7881,2.4741 41.7067,2.7181 41.544,3.2062 C41.0803,4.5974 40.8485,5.293 40.6348,5.99 C39.0312,11.2213 38.1507,16.6473 38.0177,22.1173 C38,22.846 38,23.5793 38,25.0457 L38,27.6516 C38,31.5489 38,33.4975 37.4642,35.0677 C36.4638,37.9995 34.1612,40.3022 31.2294,41.3026 C29.6591,41.8384 27.7105,41.8384 23.8132,41.8384 L16,41.8384 C10.3995,41.8384 7.5992,41.8384 5.4601,40.7484 C3.5785,39.7897 2.0487,38.2599 1.0899,36.3783 C0,34.2392 0,31.4389 0,25.8384 L0,18.0252 Z ")
-            })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 34)
+            })!.stretchableImage(withLeftCapWidth: 16, topCapHeight: 33)
+
+            self.invertedMaskImage = generateImage(CGSize(width: 42.0, height: 42.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+
+                context.setFillColor(UIColor.black.cgColor)
+                let _ = try? drawSvgPath(context, path: "M0,18.0252 C0,14.1279 0,12.1792 0.5358,10.609 C1.5362,7.6772 3.8388,5.3746 6.7706,4.3742 C8.3409,3.8384 10.2895,3.8384 14.1868,3.8384 L16.7927,3.8384 C18.2591,3.8384 18.9923,3.8384 19.7211,3.8207 C25.1911,3.6877 30.6172,2.8072 35.8485,1.2035 C36.5454,0.9899 37.241,0.758 38.6321,0.2943 C39.1202,0.1316 39.3643,0.0503 39.5299,0.0245 C40.8682,-0.184 42.0224,0.9702 41.8139,2.3085 C41.7881,2.4741 41.7067,2.7181 41.544,3.2062 C41.0803,4.5974 40.8485,5.293 40.6348,5.99 C39.0312,11.2213 38.1507,16.6473 38.0177,22.1173 C38,22.846 38,23.5793 38,25.0457 L38,27.6516 C38,31.5489 38,33.4975 37.4642,35.0677 C36.4638,37.9995 34.1612,40.3022 31.2294,41.3026 C29.6591,41.8384 27.7105,41.8384 23.8132,41.8384 L16,41.8384 C10.3995,41.8384 7.5992,41.8384 5.4601,40.7484 C3.5785,39.7897 2.0487,38.2599 1.0899,36.3783 C0,34.2392 0,31.4389 0,25.8384 L0,18.0252 Z ")
+            })!.stretchableImage(withLeftCapWidth: 16, topCapHeight: 9)
+
+            self.backgroundViewMask.image = self.regularMaskImage
 
             self.content = ComponentHostView<Empty>()
 
@@ -235,14 +247,21 @@ public final class TooltipComponent: Component {
             if contentRect.minX < 0.0 {
                 contentRect.origin.x = component.arrowLocation.maxX
             }
-            if contentRect.minY < 0.0 {
-                contentRect.origin.y = component.arrowLocation.minY - contentRect.height
+
+            let maskedBackgroundFrame: CGRect
+
+            if contentRect.maxY > availableSize.height {
+                self.backgroundViewMask.image = self.invertedMaskImage
+                contentRect.origin.y = component.arrowLocation.minY - contentRect.height - 4.0
+                maskedBackgroundFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: contentRect.minY - 4.0 + 3.0), size: CGSize(width: contentRect.width + 4.0, height: contentRect.height + 8.0))
+                self.backgroundViewMask.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: maskedBackgroundFrame.size)
+            } else {
+                self.backgroundViewMask.image = self.regularMaskImage
+                maskedBackgroundFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: contentRect.minY - 4.0), size: CGSize(width: contentRect.width + 4.0, height: contentRect.height + 4.0))
+                self.backgroundViewMask.frame = CGRect(origin: CGPoint(), size: maskedBackgroundFrame.size)
             }
 
-            let maskedBackgroundFrame = CGRect(origin: CGPoint(x: contentRect.minX, y: contentRect.minY - 4.0), size: CGSize(width: contentRect.width + 4.0, height: contentRect.height + 4.0))
-
             self.backgroundView.frame = maskedBackgroundFrame
-            self.backgroundViewMask.frame = CGRect(origin: CGPoint(), size: maskedBackgroundFrame.size)
 
             if let iconSize = iconSize, let icon = self.icon {
                 transition.setFrame(view: icon, frame: CGRect(origin: CGPoint(x: contentRect.minX + insets.left, y: contentRect.minY + insets.top + floor((contentRect.height - insets.top - insets.bottom - iconSize.height) / 2.0)), size: iconSize))
@@ -800,20 +819,20 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         let topIndicatorInset: CGFloat = indicatorVerticalInset + containerInsets.top
         let bottomIndicatorInset: CGFloat = indicatorVerticalInset + containerInsets.bottom
 
-        let scrollIndicatorHeight = max(44.0, ceil(scrollIndicatorHeightFraction * containerSize.height))
+        let scrollIndicatorHeight: CGFloat = 44.0
 
         let indicatorPositionFraction = min(1.0, max(0.0, contentOffset / (contentHeight - containerSize.height)))
 
         let indicatorTopPosition = topIndicatorInset
         let indicatorBottomPosition = containerSize.height - bottomIndicatorInset - scrollIndicatorHeight
 
-        let dateIndicatorTopPosition = topIndicatorInset + 4.0
-        let dateIndicatorBottomPosition = containerSize.height - bottomIndicatorInset - 4.0 - indicatorSize.height
+        let dateIndicatorTopPosition = topIndicatorInset + floor(scrollIndicatorHeight - indicatorSize.height) / 2.0
+        let dateIndicatorBottomPosition = containerSize.height - bottomIndicatorInset - floor(scrollIndicatorHeight - indicatorSize.height) / 2.0 - indicatorSize.height
 
         self.indicatorPosition = indicatorTopPosition * (1.0 - indicatorPositionFraction) + indicatorBottomPosition * indicatorPositionFraction
         self.scrollIndicatorHeight = scrollIndicatorHeight
 
-        let dateIndicatorPosition = dateIndicatorTopPosition * (1.0 - indicatorPositionFraction) + dateIndicatorBottomPosition * indicatorPositionFraction
+        let dateIndicatorPosition = dateIndicatorTopPosition * (1.0 - indicatorPositionFraction) + dateIndicatorBottomPosition * indicatorPositionFraction - UIScreenPixel
 
         self.projectionData = ProjectionData(
             minY: dateIndicatorTopPosition,
@@ -888,7 +907,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private func dismissLineTooltip() {
         if let lineTooltip = self.lineTooltip {
             self.lineTooltip = nil
-            lineTooltip.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak lineTooltip] _ in
+            lineTooltip.layer.animateAlpha(from: lineTooltip.alpha, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak lineTooltip] _ in
                 lineTooltip?.removeFromSuperview()
             })
         }
@@ -917,6 +936,10 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         transition.updateSublayerTransformOffset(layer: self.dateIndicator.layer, offset: CGPoint(x: -3.0, y: 0.0))
 
         displayTooltip.completed()
+
+        Queue.mainQueue().after(2.0, { [weak self] in
+            self?.dismissLineTooltip()
+        })
     }
 
     private func updateLineTooltip(containerSize: CGSize) {
@@ -963,5 +986,13 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         }
 
         return nil
+    }
+
+    public func hideScroller() {
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+        transition.updateAlpha(layer: self.dateIndicator.layer, alpha: 0.0)
+        transition.updateAlpha(layer: self.lineIndicator.layer, alpha: 0.0)
+
+        self.dismissLineTooltip()
     }
 }

@@ -169,11 +169,11 @@ public final class SparseMessageList {
 
         private func resetTopSection() {
             let count: Int
-            #if DEBUG
+            /*#if DEBUG
             count = 20
-            #else
+            #else*/
             count = 200
-            #endif
+            //#endif
             self.topItemsDisposable.set((self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .upperBound, count: count, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: self.messageTag, appendMessagesFromTheSameGroup: false, namespaces: .not(Set(Namespaces.Message.allScheduled)), orderStatistics: [])
             |> deliverOn(self.queue)).start(next: { [weak self] view, updateType, _ in
                 guard let strongSelf = self else {

@@ -6022,141 +6022,168 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
 
     private func displayMediaGalleryContextMenu(source: ContextReferenceContentNode) {
-        guard let controller = self.controller else {
-            return
-        }
-        guard let pane = self.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
-            return
-        }
-
-        var items: [ContextMenuItem] = []
-        //TODO:localize
-
-        var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
-        let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
-            var canZoom: Bool = true
-            if !"".isEmpty {
-                canZoom = false
-            }
-            return ContextMenuActionItem(text: isZoomIn ? "Zoom In" : "Zoom Out", textColor: canZoom ? .primary : .disabled, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
-            }, action: canZoom ? { action in
-                guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
-                    return
-                }
-                pane.updateZoomLevel(level: zoomLevel)
-                if let recurseGenerateAction = recurseGenerateAction {
-                    action.updateAction(recurseGenerateAction(isZoomIn))
-                }
-            } : nil)
-        }
-        recurseGenerateAction = { isZoomIn in
-            return generateAction(isZoomIn)
-        }
-
-        items.append(.action(generateAction(true)))
-        items.append(.action(generateAction(false)))
-
-        items.append(.action(ContextMenuActionItem(text: "Show Calendar", icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] _, a in
-            a(.default)
-
-            self?.openMediaCalendar()
-        })))
-        items.append(.separator)
-
-        let showPhotos: Bool
-        switch pane.contentType {
-        case .photo, .photoOrVideo:
-            showPhotos = true
-        default:
-            showPhotos = false
-        }
-        let showVideos: Bool
-        switch pane.contentType {
-        case .video, .photoOrVideo:
-            showVideos = true
-        default:
-            showVideos = false
-        }
-
-        items.append(.action(ContextMenuActionItem(text: "Show Photos", icon: { theme in
-            if !showPhotos {
-                return nil
-            }
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak pane] _, a in
-            a(.default)
-
-            guard let pane = pane else {
-                return
-            }
-            let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
-            switch pane.contentType {
-            case .photoOrVideo:
-                updatedContentType = .video
-            case .photo:
-                updatedContentType = .photo
-            case .video:
-                updatedContentType = .photoOrVideo
-            default:
-                updatedContentType = pane.contentType
-            }
-            pane.updateContentType(contentType: updatedContentType)
-        })))
-        items.append(.action(ContextMenuActionItem(text: "Show Videos", icon: { theme in
-            if !showVideos {
-                return nil
-            }
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak pane] _, a in
-            a(.default)
-
-            guard let pane = pane else {
-                return
-            }
-            let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
-            switch pane.contentType {
-            case .photoOrVideo:
-                updatedContentType = .photo
-            case .photo:
-                updatedContentType = .photoOrVideo
-            case .video:
-                updatedContentType = .video
-            default:
-                updatedContentType = pane.contentType
-            }
-            pane.updateContentType(contentType: updatedContentType)
-        })))
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(items: items)), gesture: nil)
-        contextController.passthroughTouchEvent = { [weak self] sourceView, point in
+        let summaryTags: [MessageTags] = [.photo, .video]
+        let peerId = self.peerId
+        let _ = (context.account.postbox.combinedView(keys: summaryTags.map { tag in
+            return PostboxViewKey.historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)
+        })
+        |> deliverOnMainQueue).start(next: { [weak self] views in
             guard let strongSelf = self else {
-                return .ignore
+                return
             }
 
-            let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
-            guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
+            var mediaCount: [MessageTags: Int32] = [:]
+            for tag in summaryTags {
+                if let view = views.views[PostboxViewKey.historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)] as? MessageHistoryTagSummaryView {
+                    mediaCount[tag] = view.count ?? 0
+                } else {
+                    mediaCount[tag] = 0
+                }
+            }
+
+            let photoCount: Int32 = mediaCount[.photo] ?? 0
+            let videoCount: Int32 = mediaCount[.video] ?? 0
+
+            guard let controller = strongSelf.controller else {
+                return
+            }
+            guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
+                return
+            }
+
+            var items: [ContextMenuItem] = []
+            //TODO:localize
+
+            var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
+            let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
+                let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
+                let canZoom: Bool = nextZoomLevel != nil
+
+                return ContextMenuActionItem(id: isZoomIn ? 0 : 1, text: isZoomIn ? "Zoom In" : "Zoom Out", textColor: canZoom ? .primary : .disabled, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
+                }, action: canZoom ? { action in
+                    guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
+                        return
+                    }
+                    pane.updateZoomLevel(level: zoomLevel)
+                    if let recurseGenerateAction = recurseGenerateAction {
+                        action.updateAction(0, recurseGenerateAction(true))
+                        action.updateAction(1, recurseGenerateAction(false))
+                    }
+                } : nil)
+            }
+            recurseGenerateAction = { isZoomIn in
+                return generateAction(isZoomIn)
+            }
+
+            items.append(.action(generateAction(true)))
+            items.append(.action(generateAction(false)))
+
+            items.append(.action(ContextMenuActionItem(text: "Show Calendar", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
+            }, action: { _, a in
+                a(.default)
+
+                self?.openMediaCalendar()
+            })))
+
+            if photoCount != 0 && videoCount != 0 {
+                items.append(.separator)
+
+                let showPhotos: Bool
+                switch pane.contentType {
+                case .photo, .photoOrVideo:
+                    showPhotos = true
+                default:
+                    showPhotos = false
+                }
+                let showVideos: Bool
+                switch pane.contentType {
+                case .video, .photoOrVideo:
+                    showVideos = true
+                default:
+                    showVideos = false
+                }
+
+                items.append(.action(ContextMenuActionItem(text: "Show Photos", icon: { theme in
+                    if !showPhotos {
+                        return nil
+                    }
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak pane] _, a in
+                    a(.default)
+
+                    guard let pane = pane else {
+                        return
+                    }
+                    let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
+                    switch pane.contentType {
+                    case .photoOrVideo:
+                        updatedContentType = .video
+                    case .photo:
+                        updatedContentType = .photo
+                    case .video:
+                        updatedContentType = .photoOrVideo
+                    default:
+                        updatedContentType = pane.contentType
+                    }
+                    pane.updateContentType(contentType: updatedContentType)
+                })))
+                items.append(.action(ContextMenuActionItem(text: "Show Videos", icon: { theme in
+                    if !showVideos {
+                        return nil
+                    }
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak pane] _, a in
+                    a(.default)
+
+                    guard let pane = pane else {
+                        return
+                    }
+                    let updatedContentType: PeerInfoVisualMediaPaneNode.ContentType
+                    switch pane.contentType {
+                    case .photoOrVideo:
+                        updatedContentType = .photo
+                    case .photo:
+                        updatedContentType = .photoOrVideo
+                    case .video:
+                        updatedContentType = .video
+                    default:
+                        updatedContentType = pane.contentType
+                    }
+                    pane.updateContentType(contentType: updatedContentType)
+                })))
+            }
+
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(items: items)), gesture: nil)
+            contextController.passthroughTouchEvent = { sourceView, point in
+                guard let strongSelf = self else {
+                    return .ignore
+                }
+
+                let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
+                guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
+                    return .dismiss(consume: true)
+                }
+
+                var testView: UIView? = localResult
+                while true {
+                    if let testViewValue = testView {
+                        if testViewValue.asyncdisplaykit_node is PeerInfoVisualMediaPaneNode {
+                            return .dismiss(consume: false)
+                        } else {
+                            testView = testViewValue.superview
+                        }
+                    } else {
+                        break
+                    }
+                }
+
                 return .dismiss(consume: true)
             }
-
-            var testView: UIView? = localResult
-            while true {
-                if let testViewValue = testView {
-                    if testViewValue.asyncdisplaykit_node is PeerInfoVisualMediaPaneNode {
-                        return .dismiss(consume: false)
-                    } else {
-                        testView = testViewValue.superview
-                    }
-                } else {
-                    break
-                }
-            }
-
-            return .dismiss(consume: true)
-        }
-        self.mediaGalleryContextMenu = contextController
-        controller.presentInGlobalOverlay(contextController)
+            strongSelf.mediaGalleryContextMenu = contextController
+            controller.presentInGlobalOverlay(contextController)
+        })
     }
 
     private func openMediaCalendar() {

@@ -774,15 +774,6 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
 
     func bind(item: VisualMediaItem) {
         self.item = item
-
-        self.updateShimmerLayer()
-    }
-
-    func updateShimmerLayer() {
-        if self.hasContents {
-            self.removeAnimation(forKey: "shimmer")
-            self.contentsRect = CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0))
-        }
     }
 
     func updateDuration(duration: Int32?) {
@@ -819,8 +810,6 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
 private final class ItemView: UIView, SparseItemGridView {
     var item: VisualMediaItem?
     var disposable: Disposable?
-
-    var hasContents: Bool = false
 
     var messageItem: ListMessageItem?
     var messageItemNode: ListViewItemNode?
@@ -925,7 +914,55 @@ private final class ItemView: UIView, SparseItemGridView {
     }
 }
 
-private final class SparseItemGridBindingImpl: SparseItemGridBinding {
+protocol ListShimmerLayerImageProvider: AnyObject {
+    func getListShimmerImage(height: CGFloat) -> UIImage
+    func getSeparatorColor() -> UIColor
+}
+
+private final class ListShimmerLayer: CALayer, SparseItemGridShimmerLayer {
+    final class OverlayLayer: CALayer {
+        override func action(forKey event: String) -> CAAction? {
+            return nullAction
+        }
+    }
+
+    let imageProvider: ListShimmerLayerImageProvider
+    let shimmerOverlay: OverlayLayer
+    let separatorLayer: OverlayLayer
+
+    private var validHeight: CGFloat?
+
+    init(imageProvider: ListShimmerLayerImageProvider) {
+        self.imageProvider = imageProvider
+        self.shimmerOverlay = OverlayLayer()
+        self.separatorLayer = OverlayLayer()
+
+        super.init()
+
+        self.addSublayer(self.shimmerOverlay)
+        self.addSublayer(self.separatorLayer)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func action(forKey event: String) -> CAAction? {
+        return nullAction
+    }
+
+    func update(size: CGSize) {
+        if self.validHeight != size.height {
+            self.validHeight = size.height
+            ASDisplayNodeSetResizableContents(self.shimmerOverlay, self.imageProvider.getListShimmerImage(height: size.height))
+            self.separatorLayer.backgroundColor = self.imageProvider.getSeparatorColor().cgColor
+        }
+        self.shimmerOverlay.frame = CGRect(origin: CGPoint(), size: size)
+        self.separatorLayer.frame = CGRect(origin: CGPoint(x: 65.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width - 65.0, height: UIScreenPixel))
+    }
+}
+
+private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimmerLayerImageProvider {
     let context: AccountContext
     let chatLocation: ChatLocation
     let directMediaImageCache: DirectMediaImageCache
@@ -942,6 +979,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
     var coveringInsetOffsetUpdatedImpl: ((ContainedViewLayoutTransition) -> Void)?
     var onBeginFastScrollingImpl: (() -> Void)?
     var getShimmerColorsImpl: (() -> SparseItemGrid.ShimmerColors)?
+    var updateShimmerLayersImpl: ((SparseItemGridDisplayItem) -> Void)?
+
+    private var shimmerImages: [CGFloat: UIImage] = [:]
 
     init(context: AccountContext, chatLocation: ChatLocation, useListItems: Bool, listItemInteraction: ListMessageItemInteraction, chatControllerInteraction: ChatControllerInteraction, directMediaImageCache: DirectMediaImageCache) {
         self.context = context
@@ -958,6 +998,95 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
         self.chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: 1.0)
     }
 
+    func getListShimmerImage(height: CGFloat) -> UIImage {
+        if let image = self.shimmerImages[height] {
+            return image
+        } else {
+            let fakeFile = TelegramMediaFile(
+                fileId: MediaId(namespace: 0, id: 1),
+                partialReference: nil,
+                resource: EmptyMediaResource(),
+                previewRepresentations: [],
+                videoThumbnails: [],
+                immediateThumbnailData: nil,
+                mimeType: "image/jpeg",
+                size: nil,
+                attributes: [.FileName(fileName: "file")]
+            )
+            let fakeMessage = Message(
+                stableId: 1,
+                stableVersion: 1,
+                id: MessageId(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(1)), namespace: 0, id: 1),
+                globallyUniqueId: nil,
+                groupingKey: nil,
+                groupInfo: nil,
+                threadId: nil,
+                timestamp: 1, flags: [],
+                tags: [],
+                globalTags: [],
+                localTags: [],
+                forwardInfo: nil,
+                author: nil,
+                text: "",
+                attributes: [],
+                media: [fakeFile],
+                peers: SimpleDictionary<PeerId, Peer>(),
+                associatedMessages: SimpleDictionary<MessageId, Message>(),
+                associatedMessageIds: []
+            )
+            let messageItem = ListMessageItem(
+                presentationData: self.chatPresentationData,
+                context: self.context,
+                chatLocation: self.chatLocation,
+                interaction: self.listItemInteraction,
+                message: fakeMessage,
+                selection: .none,
+                displayHeader: false
+            )
+
+            var itemNode: ListViewItemNode?
+            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: 400.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+                itemNode = node
+                apply().1(ListViewItemApply(isOnScreen: true))
+            })
+
+            guard let fileItemNode = itemNode as? ListMessageFileItemNode else {
+                return UIImage()
+            }
+
+            let image = generateImage(CGSize(width: 320.0, height: height), rotatedContext: { size, context in
+                UIGraphicsPushContext(context)
+
+                context.setFillColor(self.chatPresentationData.theme.theme.list.plainBackgroundColor.cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: size))
+
+                context.setBlendMode(.copy)
+                context.setFillColor(UIColor.clear.cgColor)
+
+                func fillRoundedRect(rect: CGRect, radius: CGFloat) {
+                    UIBezierPath(roundedRect: rect, byRoundingCorners: [.topLeft, .topRight, .bottomLeft, .bottomRight], cornerRadii: CGSize(width: radius, height: radius)).fill()
+                }
+
+                let lineHeight: CGFloat = 8.0
+                let titleOrigin = CGPoint(x: fileItemNode.titleNode.frame.minX, y: fileItemNode.titleNode.frame.midY)
+                let dateOrigin = CGPoint(x: fileItemNode.descriptionNode.frame.minX, y: fileItemNode.descriptionNode.frame.midY)
+
+                fillRoundedRect(rect: CGRect(origin: CGPoint(x: titleOrigin.x, y: titleOrigin.y - lineHeight / 2.0), size: CGSize(width: 160.0, height: lineHeight)), radius: lineHeight / 2.0)
+                fillRoundedRect(rect: CGRect(origin: CGPoint(x: dateOrigin.x, y: dateOrigin.y - lineHeight / 2.0), size: CGSize(width: 220.0, height: lineHeight)), radius: lineHeight / 2.0)
+
+                fillRoundedRect(rect: fileItemNode.extensionIconNode.frame, radius: 6.0)
+
+                UIGraphicsPopContext()
+            })!.stretchableImage(withLeftCapWidth: 299, topCapHeight: 0)
+            self.shimmerImages[height] = image
+            return image
+        }
+    }
+
+    func getSeparatorColor() -> UIColor {
+        return self.chatPresentationData.theme.theme.list.itemPlainSeparatorColor
+    }
+
     func createLayer() -> SparseItemGridLayer? {
         if self.useListItems {
             return nil
@@ -972,14 +1101,24 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
         return ItemView()
     }
 
+    func createShimmerLayer() -> SparseItemGridShimmerLayer? {
+        if self.useListItems {
+            let layer = ListShimmerLayer(imageProvider: self)
+            return layer
+        }
+        return nil
+    }
+
     func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], synchronous: Bool) {
         for i in 0 ..< items.count {
             guard let item = items[i] as? VisualMediaItem else {
                 continue
             }
 
+            let displayItem = layers[i]
+
             if self.useListItems {
-                guard let view = layers[i].view as? ItemView else {
+                guard let view = displayItem.view as? ItemView else {
                     continue
                 }
                 view.bind(
@@ -992,7 +1131,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                     size: view.bounds.size
                 )
             } else {
-                guard let layer = layers[i].layer as? ItemLayer else {
+                guard let layer = displayItem.layer as? ItemLayer else {
                     continue
                 }
                 if layer.bounds.isEmpty {
@@ -1034,28 +1173,38 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                         }
                         if let loadSignal = result.loadSignal {
                             layer.disposable = (loadSignal
-                            |> deliverOnMainQueue).start(next: { [weak layer] image in
+                            |> deliverOnMainQueue).start(next: { [weak self, weak layer, weak displayItem] image in
                                 guard let layer = layer else {
                                     return
                                 }
-                                let copyLayer = ItemLayer()
-                                copyLayer.contents = layer.contents
-                                copyLayer.contentsRect = layer.contentsRect
-                                copyLayer.frame = layer.bounds
-                                layer.addSublayer(copyLayer)
-                                copyLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyLayer] _ in
-                                    copyLayer?.removeFromSuperlayer()
-                                })
+                                if layer.hasContents {
+                                    let copyLayer = ItemLayer()
+                                    copyLayer.contents = layer.contents
+                                    copyLayer.contentsRect = layer.contentsRect
+                                    copyLayer.frame = layer.bounds
+                                    layer.addSublayer(copyLayer)
+                                    copyLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyLayer] _ in
+                                        copyLayer?.removeFromSuperlayer()
+                                    })
 
-                                layer.contents = image?.cgImage
-                                layer.hasContents = true
-                                layer.updateShimmerLayer()
+                                    layer.contents = image?.cgImage
+                                    layer.hasContents = true
+                                } else {
+                                    layer.contents = image?.cgImage
+                                    layer.hasContents = true
+
+                                    layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+
+                                    if let displayItem = displayItem {
+                                        self?.updateShimmerLayersImpl?(displayItem)
+                                    }
+                                }
                             })
                         }
                     }
 
                     var duration: Int32?
-                    if layer.bounds.width > 80.0, let file = selectedMedia as? TelegramMediaFile {
+                    if layer.bounds.width > 80.0, let file = selectedMedia as? TelegramMediaFile, !file.isAnimated {
                         duration = file.duration
                     }
                     layer.updateDuration(duration: duration)
@@ -1172,10 +1321,12 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     
     weak var parentController: ViewController?
 
+    private let contextGestureContainerNode: ContextControllerSourceNode
     private let itemGrid: SparseItemGrid
     private let itemGridBinding: SparseItemGridBindingImpl
     private let directMediaImageCache: DirectMediaImageCache
     private var items: SparseItemGrid.Items?
+    private var didUpdateItemsOnce: Bool = false
 
     private var isDeceleratingAfterTracking = false
     
@@ -1221,6 +1372,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
     private let stateTag: MessageTags
     private var storedStateDisposable: Disposable?
+
+    private weak var currentGestureItem: SparseItemGridDisplayItem?
     
     init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType) {
         self.context = context
@@ -1230,6 +1383,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.contentTypePromise = ValuePromise<ContentType>(contentType)
         self.stateTag = tagMaskForType(contentType)
 
+        self.contextGestureContainerNode = ContextControllerSourceNode()
         self.itemGrid = SparseItemGrid()
         self.directMediaImageCache = DirectMediaImageCache(account: context.account)
 
@@ -1289,7 +1443,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             guard let strongSelf = self else {
                 return
             }
-            if count < 1 || true {
+            if count < 1 {
                 //TODO:localize
                 strongSelf.itemGrid.updateScrollingAreaTooltip(tooltip: SparseItemGridScrollingArea.DisplayTooltip(animation: "anim_infotip", text: "You can hold and move this bar for faster scrolling", completed: {
                     guard let strongSelf = self else {
@@ -1384,6 +1538,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
             return SparseItemGrid.ShimmerColors(background: backgroundColor.argb, foreground: foregroundColor.argb)
         }
+
+        self.itemGridBinding.updateShimmerLayersImpl = { [weak self] layer in
+            self?.itemGrid.updateShimmerLayers(item: layer)
+        }
+
+        self.itemGrid.cancelExternalContentGestures = { [weak self] in
+            self?.contextGestureContainerNode.cancelGesture()
+        }
         
         self._itemInteraction = VisualMediaItemInteraction(
             openMessage: { [weak self] message in
@@ -1398,17 +1560,111 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         )
         self.itemInteraction.selectedMessageIds = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
 
-        self.addSubnode(self.itemGrid)
+        self.contextGestureContainerNode.isGestureEnabled = !useListItems
+        self.contextGestureContainerNode.addSubnode(self.itemGrid)
+        self.addSubnode(self.contextGestureContainerNode)
+
+        self.contextGestureContainerNode.shouldBegin = { [weak self] point in
+            guard let strongSelf = self else {
+                return false
+            }
+            guard let item = strongSelf.itemGrid.item(at: point) else {
+                return false
+            }
+
+            if let result = strongSelf.view.hitTest(point, with: nil) {
+                if result.asyncdisplaykit_node is SparseItemGridScrollingArea {
+                    return false
+                }
+            }
+
+            strongSelf.currentGestureItem = item
+
+            return true
+        }
+
+        self.contextGestureContainerNode.customActivationProgress = { [weak self] progress, update in
+            guard let strongSelf = self, let currentGestureItem = strongSelf.currentGestureItem else {
+                return
+            }
+            guard let itemLayer = currentGestureItem.layer else {
+                return
+            }
+
+            let targetContentRect = CGRect(origin: CGPoint(), size: itemLayer.bounds.size)
+
+            let scaleSide = itemLayer.bounds.width
+            let minScale: CGFloat = max(0.7, (scaleSide - 15.0) / scaleSide)
+            let currentScale = 1.0 * (1.0 - progress) + minScale * progress
+
+            let originalCenterOffsetX: CGFloat = itemLayer.bounds.width / 2.0 - targetContentRect.midX
+            let scaledCenterOffsetX: CGFloat = originalCenterOffsetX * currentScale
+
+            let originalCenterOffsetY: CGFloat = itemLayer.bounds.height / 2.0 - targetContentRect.midY
+            let scaledCenterOffsetY: CGFloat = originalCenterOffsetY * currentScale
+
+            let scaleMidX: CGFloat = scaledCenterOffsetX - originalCenterOffsetX
+            let scaleMidY: CGFloat = scaledCenterOffsetY - originalCenterOffsetY
+
+            switch update {
+            case .update:
+                let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                itemLayer.transform = sublayerTransform
+            case .begin:
+                let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                itemLayer.transform = sublayerTransform
+            case .ended:
+                let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                let previousTransform = itemLayer.transform
+                itemLayer.transform = sublayerTransform
+
+                itemLayer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: sublayerTransform), keyPath: "transform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
+            }
+        }
+
+        self.contextGestureContainerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self, let currentGestureItem = strongSelf.currentGestureItem else {
+                return
+            }
+            strongSelf.currentGestureItem = nil
+
+            guard let itemLayer = currentGestureItem.layer as? ItemLayer else {
+                return
+            }
+            guard let message = itemLayer.item?.message else {
+                return
+            }
+            let rect = strongSelf.itemGrid.frameForItem(layer: itemLayer)
+
+            let proxyNode = ASDisplayNode()
+            proxyNode.frame = rect
+            proxyNode.contents = itemLayer.contents
+            proxyNode.isHidden = true
+            strongSelf.addSubnode(proxyNode)
+
+            let escapeNotification = EscapeNotification {
+                proxyNode.removeFromSupernode()
+            }
+
+            Queue.mainQueue().after(1.0, {
+                escapeNotification.keep()
+            })
+
+            strongSelf.chatControllerInteraction.openMessageContextActions(message, proxyNode, proxyNode.bounds, gesture)
+
+            strongSelf.itemGrid.cancelGestures()
+        }
 
         self.storedStateDisposable = (visualMediaStoredState(postbox: context.account.postbox, peerId: peerId, messageTag: self.stateTag)
         |> deliverOnMainQueue).start(next: { [weak self] value in
-            guard let strongSelf = self, let value = value else {
+            guard let strongSelf = self else {
                 return
             }
-            strongSelf.updateZoomLevel(level: ZoomLevel(rawValue: value.zoomLevel))
+            if let value = value {
+                strongSelf.updateZoomLevel(level: ZoomLevel(rawValue: value.zoomLevel))
+            }
+            strongSelf.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: false)
         })
-        
-        self.requestHistoryAroundVisiblePosition(synchronous: false, reloadAtTop: false)
         
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
             guard let strongSelf = self else {
@@ -1509,7 +1765,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 } else if photoCount != 0 {
                     return PeerInfoStatusData(text: "\(photoCount) photos", isActivity: false)
                 } else if videoCount != 0 {
-                    return PeerInfoStatusData(text: "\(photoCount) videos", isActivity: false)
+                    return PeerInfoStatusData(text: "\(videoCount) videos", isActivity: false)
                 } else {
                     return nil
                 }
@@ -1606,6 +1862,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         }
         self.contentType = contentType
         self.contentTypePromise.set(contentType)
+
+        self.itemGrid.hideScrollingArea()
 
         self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, tag: tagMaskForType(self.contentType))
         self.isRequestingView = false
@@ -1836,8 +2094,12 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         self.currentParams = (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
 
+        transition.updateFrame(node: self.contextGestureContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+
         transition.updateFrame(node: self.itemGrid, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
         if let items = self.items {
+            let wasFirstTime = !self.didUpdateItemsOnce
+            self.didUpdateItemsOnce = true
             let fixedItemHeight: CGFloat?
             switch self.contentType {
             case .files, .music, .voiceAndVideoMessages:
@@ -1898,7 +2160,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 fixedItemHeight = nil
             }
 
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items)
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, synchronous: wasFirstTime)
         }
     }
 

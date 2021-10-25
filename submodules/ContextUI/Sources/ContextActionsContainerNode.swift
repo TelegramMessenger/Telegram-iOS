@@ -78,12 +78,16 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         self.containerNode.clipsToBounds = true
         self.containerNode.cornerRadius = 14.0
         self.containerNode.backgroundColor = presentationData.theme.contextMenu.backgroundColor
+
+        var requestUpdateAction: ((AnyHashable, ContextMenuActionItem) -> Void)?
         
         var itemNodes: [ContextItemNode] = []
         for i in 0 ..< items.count {
             switch items[i] {
             case let .action(action):
-                itemNodes.append(.action(ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout)))
+                itemNodes.append(.action(ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, requestUpdateAction: { id, action in
+                    requestUpdateAction?(id, action)
+                })))
                 if i != items.count - 1 {
                     switch items[i + 1] {
                     case .action, .custom:
@@ -116,7 +120,24 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         self.itemNodes = itemNodes
         
         super.init()
-                        
+
+        requestUpdateAction = { [weak self] id, action in
+            guard let strongSelf = self else {
+                return
+            }
+            loop: for itemNode in strongSelf.itemNodes {
+                switch itemNode {
+                case let .action(contextActionNode):
+                    if contextActionNode.action.id == id {
+                        contextActionNode.updateAction(item: action)
+                        break loop
+                    }
+                default:
+                    break
+                }
+            }
+        }
+
         self.addSubnode(self.containerNode)
         
         self.itemNodes.forEach({ itemNode in
