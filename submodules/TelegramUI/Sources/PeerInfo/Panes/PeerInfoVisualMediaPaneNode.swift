@@ -1572,6 +1572,12 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 return false
             }
 
+            if let result = strongSelf.view.hitTest(point, with: nil) {
+                if result.asyncdisplaykit_node is SparseItemGridScrollingArea {
+                    return false
+                }
+            }
+
             strongSelf.currentGestureItem = item
 
             return true
