@@ -596,6 +596,23 @@ public final class SparseItemGrid: ASDisplayNode {
             return nil
         }
 
+        func visualItem(at index: Int) -> SparseItemGridDisplayItem? {
+            guard let items = self.items, !items.items.isEmpty else {
+                return nil
+            }
+
+            guard let item = items.item(at: index) else {
+                return nil
+            }
+            for (id, visibleItem) in self.visibleItems {
+                if id == item.id {
+                    return visibleItem
+                }
+            }
+
+            return nil
+        }
+
         func item(at point: CGPoint) -> Item? {
             guard let items = self.items, !items.items.isEmpty else {
                 return nil
@@ -1466,6 +1483,13 @@ public final class SparseItemGrid: ASDisplayNode {
             return nil
         }
         return currentViewport.visualItem(at: point)
+    }
+
+    public func item(at index: Int) -> SparseItemGridDisplayItem? {
+        guard let currentViewport = self.currentViewport else {
+            return nil
+        }
+        return currentViewport.visualItem(at: index)
     }
 
     public func scrollToItem(at index: Int) {

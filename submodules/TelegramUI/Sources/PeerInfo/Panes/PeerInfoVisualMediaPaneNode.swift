@@ -2201,6 +2201,24 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             }
             if let index = previousIndex {
                 self.itemGrid.scrollToItem(at: index)
+
+                if let item = self.itemGrid.item(at: index) {
+                    if let layer = item.layer as? ItemLayer {
+                        Queue.mainQueue().after(0.1, { [weak layer] in
+                            guard let layer = layer else {
+                                return
+                            }
+
+                            let overlayLayer = ListShimmerLayer.OverlayLayer()
+                            overlayLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.6).cgColor
+                            overlayLayer.frame = layer.bounds
+                            layer.addSublayer(overlayLayer)
+                            overlayLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.8, delay: 0.3, removeOnCompletion: false, completion: { [weak overlayLayer] _ in
+                                overlayLayer?.removeFromSuperlayer()
+                            })
+                        })
+                    }
+                }
             }
         }
     }

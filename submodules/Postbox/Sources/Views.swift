@@ -32,6 +32,7 @@ public enum PostboxViewKey: Hashable {
     case historyTagInfo(peerId: PeerId, tag: MessageTags)
     case topChatMessage(peerIds: [PeerId])
     case contacts(accountPeerId: PeerId?, includePresences: Bool)
+    case deletedMessages(peerId: PeerId)
 
     public func hash(into hasher: inout Hasher) {
         switch self {
@@ -106,6 +107,8 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(peerIds)
         case .contacts:
             hasher.combine(16)
+        case let .deletedMessages(peerId):
+            hasher.combine(peerId)
         }
     }
     
@@ -297,6 +300,12 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case let .deletedMessages(peerId):
+            if case .deletedMessages(peerId) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -365,5 +374,7 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableTopChatMessageView(postbox: postbox, peerIds: Set(peerIds))
     case let .contacts(accountPeerId, includePresences):
         return MutableContactPeersView(postbox: postbox, accountPeerId: accountPeerId, includePresences: includePresences)
+    case let .deletedMessages(peerId):
+        return MutableDeletedMessagesView(peerId: peerId)
     }
 }

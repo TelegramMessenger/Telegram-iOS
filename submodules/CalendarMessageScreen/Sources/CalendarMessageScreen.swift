@@ -268,6 +268,8 @@ private final class DayComponent: Component {
         private var action: (() -> Void)?
         private var currentMedia: DayMedia?
 
+        private(set) var index: MessageIndex?
+
         init() {
             self.button = HighlightableButton()
             self.highlightView = UIImageView()
@@ -295,6 +297,7 @@ private final class DayComponent: Component {
 
         func update(component: DayComponent, availableSize: CGSize, environment: Environment<ImageCache>, transition: Transition) -> CGSize {
             self.action = component.action
+            self.index = component.media?.message.index
 
             let diameter = min(availableSize.width, availableSize.height)
             let contentFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - diameter) / 2.0), y: floor((availableSize.height - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter))
@@ -601,16 +604,18 @@ public final class CalendarMessageScreen: ViewController {
     private final class Node: ViewControllerTracingNode, UIScrollViewDelegate {
         private let context: AccountContext
         private let peerId: PeerId
+        private let initialTimestamp: Int32
         private let navigateToDay: (Int32) -> Void
+        private let previewDay: (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void
 
         private var presentationData: PresentationData
         private var scrollView: Scroller
 
         private let calendarSource: SparseMessageCalendar
 
-        private var initialMonthIndex: Int = 0
         private var months: [MonthModel] = []
         private var monthViews: [Int: ComponentHostView<ImageCache>] = [:]
+        private let contextGestureContainerNode: ContextControllerSourceNode
 
         private let imageCache = ImageCache()
 
@@ -622,13 +627,19 @@ public final class CalendarMessageScreen: ViewController {
         private var isLoadingMoreDisposable: Disposable?
         private var stateDisposable: Disposable?
 
-        init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (Int32) -> Void) {
+        private weak var currentGestureDayView: DayComponent.View?
+
+        init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (Int32) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
             self.context = context
             self.peerId = peerId
+            self.initialTimestamp = initialTimestamp
             self.calendarSource = calendarSource
             self.navigateToDay = navigateToDay
+            self.previewDay = previewDay
             
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+            self.contextGestureContainerNode = ContextControllerSourceNode()
 
             self.scrollView = Scroller()
             self.scrollView.showsVerticalScrollIndicator = true
@@ -644,14 +655,81 @@ public final class CalendarMessageScreen: ViewController {
 
             super.init()
 
+            self.contextGestureContainerNode.shouldBegin = { [weak self] point in
+                guard let strongSelf = self else {
+                    return false
+                }
+
+                guard let result = strongSelf.contextGestureContainerNode.view.hitTest(point, with: nil) as? HighlightableButton else {
+                    return false
+                }
+
+                guard let dayView = result.superview as? DayComponent.View else {
+                    return false
+                }
+
+                strongSelf.currentGestureDayView = dayView
+
+                return true
+            }
+
+            self.contextGestureContainerNode.customActivationProgress = { [weak self] progress, update in
+                guard let strongSelf = self, let currentGestureDayView = strongSelf.currentGestureDayView else {
+                    return
+                }
+                let itemLayer = currentGestureDayView.layer
+
+                let targetContentRect = CGRect(origin: CGPoint(), size: itemLayer.bounds.size)
+
+                let scaleSide = itemLayer.bounds.width
+                let minScale: CGFloat = max(0.7, (scaleSide - 15.0) / scaleSide)
+                let currentScale = 1.0 * (1.0 - progress) + minScale * progress
+
+                let originalCenterOffsetX: CGFloat = itemLayer.bounds.width / 2.0 - targetContentRect.midX
+                let scaledCenterOffsetX: CGFloat = originalCenterOffsetX * currentScale
+
+                let originalCenterOffsetY: CGFloat = itemLayer.bounds.height / 2.0 - targetContentRect.midY
+                let scaledCenterOffsetY: CGFloat = originalCenterOffsetY * currentScale
+
+                let scaleMidX: CGFloat = scaledCenterOffsetX - originalCenterOffsetX
+                let scaleMidY: CGFloat = scaledCenterOffsetY - originalCenterOffsetY
+
+                switch update {
+                case .update:
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    itemLayer.sublayerTransform = sublayerTransform
+                case .begin:
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    itemLayer.sublayerTransform = sublayerTransform
+                case .ended:
+                    let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
+                    let previousTransform = itemLayer.sublayerTransform
+                    itemLayer.sublayerTransform = sublayerTransform
+
+                    itemLayer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: sublayerTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
+                }
+            }
+
+            self.contextGestureContainerNode.activated = { [weak self] gesture, _ in
+                guard let strongSelf = self, let currentGestureDayView = strongSelf.currentGestureDayView else {
+                    return
+                }
+                strongSelf.currentGestureDayView = nil
+
+                currentGestureDayView.isUserInteractionEnabled = false
+                currentGestureDayView.isUserInteractionEnabled = true
+
+                if let index = currentGestureDayView.index {
+                    strongSelf.previewDay(index, strongSelf, currentGestureDayView.convert(currentGestureDayView.bounds, to: strongSelf.view), gesture)
+                }
+            }
+
             let calendar = Calendar(identifier: .gregorian)
 
             let baseDate = Date()
             let currentYear = calendar.component(.year, from: baseDate)
             let currentMonth = calendar.component(.month, from: baseDate)
             let currentDayOfMonth = calendar.component(.day, from: baseDate)
-
-            let initialDate = Date(timeIntervalSince1970: TimeInterval(initialTimestamp))
 
             for i in 0 ..< 12 * 20 {
                 guard let firstDayOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: baseDate)) else {
@@ -660,7 +738,15 @@ public final class CalendarMessageScreen: ViewController {
                 guard let monthBaseDate = calendar.date(byAdding: .month, value: -i, to: firstDayOfMonth) else {
                     break
                 }
+
                 guard let monthModel = monthMetadata(calendar: calendar, for: monthBaseDate, currentYear: currentYear, currentMonth: currentMonth, currentDayOfMonth: currentDayOfMonth) else {
+                    break
+                }
+
+                let firstDayTimestamp = Int32(monthModel.firstDay.timeIntervalSince1970)
+                let lastDayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(monthModel.numberOfDays)
+
+                if let minTimestamp = calendarSource.minTimestamp, minTimestamp > lastDayTimestamp {
                     break
                 }
 
@@ -676,19 +762,11 @@ public final class CalendarMessageScreen: ViewController {
                 self.months.append(monthModel)
             }
 
-            if self.months.count > 1 {
-                for i in 0 ..< self.months.count - 1 {
-                    if initialDate >= self.months[i].firstDay {
-                        self.initialMonthIndex = i
-                        break
-                    }
-                }
-            }
-
             self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
 
             self.scrollView.delegate = self
-            self.view.addSubview(self.scrollView)
+            self.addSubnode(self.contextGestureContainerNode)
+            self.contextGestureContainerNode.view.addSubview(self.scrollView)
 
             self.isLoadingMoreDisposable = (self.calendarSource.isLoadingMore
             |> distinctUntilChanged
@@ -722,18 +800,36 @@ public final class CalendarMessageScreen: ViewController {
             if self.updateScrollLayoutIfNeeded() {
             }
 
-            if isFirstLayout, let frame = self.scrollLayout?.frames[self.initialMonthIndex] {
-                var contentOffset = floor(frame.midY - self.scrollView.bounds.height / 2.0)
-                if contentOffset < 0 {
-                    contentOffset = 0
+            if isFirstLayout {
+                let initialDate = Date(timeIntervalSince1970: TimeInterval(self.initialTimestamp))
+                var initialMonthIndex: Int?
+
+                if self.months.count > 1 {
+                    for i in 0 ..< self.months.count - 1 {
+                        if initialDate >= self.months[i].firstDay {
+                            initialMonthIndex = i
+                            break
+                        }
+                    }
                 }
-                if contentOffset > self.scrollView.contentSize.height - self.scrollView.bounds.height {
-                    contentOffset = self.scrollView.contentSize.height - self.scrollView.bounds.height
+
+                if isFirstLayout, let initialMonthIndex = initialMonthIndex, let frame = self.scrollLayout?.frames[initialMonthIndex] {
+                    var contentOffset = floor(frame.midY - self.scrollView.bounds.height / 2.0)
+                    if contentOffset < 0 {
+                        contentOffset = 0
+                    }
+                    if contentOffset > self.scrollView.contentSize.height - self.scrollView.bounds.height {
+                        contentOffset = self.scrollView.contentSize.height - self.scrollView.bounds.height
+                    }
+                    self.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
                 }
-                self.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
             }
 
             updateMonthViews()
+        }
+
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            self.contextGestureContainerNode.cancelGesture()
         }
 
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -784,7 +880,8 @@ public final class CalendarMessageScreen: ViewController {
 
             self.scrollLayout = (layout.size.width, contentHeight, frames)
 
-            self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationHeight))
+            self.contextGestureContainerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationHeight))
+            self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height - navigationHeight))
             self.scrollView.contentSize = CGSize(width: layout.size.width, height: contentHeight)
             self.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: layout.intrinsicInsets.bottom, left: 0.0, bottom: 0.0, right: layout.size.width - 3.0 - 6.0)
 
@@ -861,19 +958,11 @@ public final class CalendarMessageScreen: ViewController {
                 messageMap.append(message)
             }
 
-            let _ = messageMap
-
             var updatedMedia: [Int: [Int: DayMedia]] = [:]
-            var removeMonths: [Int] = []
             for i in 0 ..< self.months.count {
-                let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
-                let lastDayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(self.months[i].numberOfDays)
-
-                if let minTimestamp = calendarState.minTimestamp, minTimestamp > lastDayTimestamp {
-                    removeMonths.append(i)
-                }
-
                 for day in 0 ..< self.months[i].numberOfDays {
+                    let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
+
                     let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
                     let nextDayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day - 1)
 
@@ -901,57 +990,7 @@ public final class CalendarMessageScreen: ViewController {
                 self.months[monthIndex].mediaByDay = mediaByDay
             }
 
-            for i in removeMonths.reversed() {
-                self.months.remove(at: i)
-            }
-
-            if !removeMonths.isEmpty {
-                self.scrollLayout = nil
-                let _ = self.updateScrollLayoutIfNeeded()
-            }
-
             self.updateMonthViews()
-
-            /*let peerId = self.peerId
-            let months = self.months
-            let _ = (self.context.account.postbox.transaction { transaction -> [Int: [Int: DayMedia]] in
-                var updatedMedia: [Int: [Int: DayMedia]] = [:]
-
-                for i in 0 ..< months.count {
-                    for day in 0 ..< months[i].numberOfDays {
-                        let dayTimestamp = Int32(months[i].firstDay.timeIntervalSince1970) + 24 * 60 * 60 * Int32(day)
-                        let nextDayTimestamp = Int32(months[i].firstDay.timeIntervalSince1970) + 24 * 60 * 60 * Int32(day - 1)
-                        if let message = transaction.firstMessageInRange(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: .photoOrVideo, timestampMax: dayTimestamp, timestampMin: nextDayTimestamp - 1) {
-                            /*if message.timestamp < nextDayTimestamp {
-                                continue
-                            }*/
-                            if updatedMedia[i] == nil {
-                                updatedMedia[i] = [:]
-                            }
-                            mediaLoop: for media in message.media {
-                                switch media {
-                                case _ as TelegramMediaImage, _ as TelegramMediaFile:
-                                    updatedMedia[i]![day] = DayMedia(message: EngineMessage(message), media: EngineMedia(media))
-                                    break mediaLoop
-                                default:
-                                    break
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return updatedMedia
-            }
-            |> deliverOnMainQueue).start(next: { [weak self] updatedMedia in
-                guard let strongSelf = self else {
-                    return
-                }
-                for (monthIndex, mediaByDay) in updatedMedia {
-                    strongSelf.months[monthIndex].mediaByDay = mediaByDay
-                }
-                strongSelf.updateMonthViews()
-            })*/
         }
     }
 
@@ -964,13 +1003,15 @@ public final class CalendarMessageScreen: ViewController {
     private let calendarSource: SparseMessageCalendar
     private let initialTimestamp: Int32
     private let navigateToDay: (CalendarMessageScreen, Int32) -> Void
+    private let previewDay: (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void
 
-    public init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (CalendarMessageScreen, Int32) -> Void) {
+    public init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (CalendarMessageScreen, Int32) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
         self.context = context
         self.peerId = peerId
         self.calendarSource = calendarSource
         self.initialTimestamp = initialTimestamp
         self.navigateToDay = navigateToDay
+        self.previewDay = previewDay
 
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
 
@@ -997,7 +1038,7 @@ public final class CalendarMessageScreen: ViewController {
                 return
             }
             strongSelf.navigateToDay(strongSelf, timestamp)
-        })
+        }, previewDay: self.previewDay)
 
         self.displayNodeDidLoad()
     }
