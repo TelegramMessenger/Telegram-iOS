@@ -826,13 +826,13 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         let indicatorTopPosition = topIndicatorInset
         let indicatorBottomPosition = containerSize.height - bottomIndicatorInset - scrollIndicatorHeight
 
-        let dateIndicatorTopPosition = topIndicatorInset + 4.0
-        let dateIndicatorBottomPosition = containerSize.height - bottomIndicatorInset - 4.0 - indicatorSize.height
+        let dateIndicatorTopPosition = topIndicatorInset + floor(scrollIndicatorHeight - indicatorSize.height) / 2.0
+        let dateIndicatorBottomPosition = containerSize.height - bottomIndicatorInset - floor(scrollIndicatorHeight - indicatorSize.height) / 2.0 - indicatorSize.height
 
         self.indicatorPosition = indicatorTopPosition * (1.0 - indicatorPositionFraction) + indicatorBottomPosition * indicatorPositionFraction
         self.scrollIndicatorHeight = scrollIndicatorHeight
 
-        let dateIndicatorPosition = dateIndicatorTopPosition * (1.0 - indicatorPositionFraction) + dateIndicatorBottomPosition * indicatorPositionFraction
+        let dateIndicatorPosition = dateIndicatorTopPosition * (1.0 - indicatorPositionFraction) + dateIndicatorBottomPosition * indicatorPositionFraction - UIScreenPixel
 
         self.projectionData = ProjectionData(
             minY: dateIndicatorTopPosition,
