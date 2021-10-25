@@ -477,6 +477,8 @@ public final class SparseItemGrid: ASDisplayNode {
                 self.items = items
 
                 self.updateVisibleItems(resetScrolling: true, synchronous: synchronous, restoreScrollPosition: restoreScrollPosition)
+
+                self.snapCoveringInsetOffset(animated: false)
             }
         }
 
@@ -532,25 +534,25 @@ public final class SparseItemGrid: ASDisplayNode {
 
         @objc func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
-                self.snapCoveringInsetOffset()
+                self.snapCoveringInsetOffset(animated: true)
             }
         }
 
         @objc func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
             if !self.ignoreScrolling {
                 if !decelerate {
-                    self.snapCoveringInsetOffset()
+                    self.snapCoveringInsetOffset(animated: true)
                 }
             }
         }
 
         @objc func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
-                self.snapCoveringInsetOffset()
+                self.snapCoveringInsetOffset(animated: true)
             }
         }
 
-        private func snapCoveringInsetOffset() {
+        private func snapCoveringInsetOffset(animated: Bool) {
             if let layout = self.layout, let _ = self.items {
                 let offset = self.scrollView.contentOffset.y
                 if offset < layout.containerLayout.insets.top {
@@ -572,7 +574,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
                     if coveringInsetOffset != self.coveringInsetOffset {
                         self.coveringInsetOffset = coveringInsetOffset
-                        self.coveringOffsetUpdated(self, .animated(duration: 0.2, curve: .easeInOut))
+                        self.coveringOffsetUpdated(self, animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
                     }
                 }
             }
