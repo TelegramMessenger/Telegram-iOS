@@ -99,8 +99,10 @@ private final class FetchManagerStatusContext {
         if let originalStatus = self.originalStatus {
             if originalStatus == .Remote && self.hasEntry {
                 return .Fetching(isActive: false, progress: 0.0)
-            } else {
+            } else if self.hasEntry {
                 return originalStatus
+            } else {
+                return .Remote
             }
         } else {
             return nil
@@ -238,7 +240,14 @@ private final class FetchManagerCategoryContext {
         
         if (previousPriorityKey != nil) != (updatedPriorityKey != nil) {
             if let statusContext = self.statusContexts[id] {
-                var hasForegroundPriorityKey = false
+                let previousStatus = statusContext.combinedStatus
+                statusContext.hasEntry = self.entries[id] != nil
+                if let combinedStatus = statusContext.combinedStatus, combinedStatus != previousStatus {
+                    for f in statusContext.subscribers.copyItems() {
+                        f(combinedStatus)
+                    }
+                }
+                /*var hasForegroundPriorityKey = false
                 if let updatedPriorityKey = updatedPriorityKey, let topReference = updatedPriorityKey.topReference {
                     switch topReference {
                         case .userInitiated:
@@ -270,7 +279,7 @@ private final class FetchManagerCategoryContext {
                             }
                         }
                     }
-                }
+                }*/
             }
         }
         

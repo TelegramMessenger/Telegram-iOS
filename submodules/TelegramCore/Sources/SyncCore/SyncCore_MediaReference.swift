@@ -11,6 +11,15 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
                 return peer
         }
     }
+
+    public var id: MessageId? {
+        switch content {
+        case .none:
+            return nil
+        case let .message(_, id, _, _, _):
+            return id
+        }
+    }
     
     public var timestamp: Int32? {
         switch content {
