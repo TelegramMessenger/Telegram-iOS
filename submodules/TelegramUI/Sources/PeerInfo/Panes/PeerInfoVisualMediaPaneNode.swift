@@ -1384,7 +1384,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.stateTag = tagMaskForType(contentType)
 
         self.contextGestureContainerNode = ContextControllerSourceNode()
-        self.itemGrid = SparseItemGrid()
+        self.itemGrid = SparseItemGrid(theme: self.context.sharedContext.currentPresentationData.with({ $0 }).theme)
         self.directMediaImageCache = DirectMediaImageCache(account: context.account)
 
         let useListItems: Bool
@@ -2160,7 +2160,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 fixedItemHeight = nil
             }
 
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, synchronous: wasFirstTime)
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime)
         }
     }
 

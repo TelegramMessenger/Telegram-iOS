@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import ComponentFlow
 import SwiftSignalKit
 import AnimationUI
+import TelegramPresentationData
 
 public final class MultilineText: Component {
     public let text: String
@@ -474,7 +475,7 @@ private final class SparseItemGridScrollingIndicatorComponent: CombinedComponent
                 component: Text(
                     text: context.component.dateString,
                     font: Font.medium(13.0),
-                    color: .black
+                    color: context.component.foregroundColor
                 ),
                 availableSize: CGSize(width: 200.0, height: 100.0),
                 transition: .immediate
@@ -482,7 +483,7 @@ private final class SparseItemGridScrollingIndicatorComponent: CombinedComponent
 
             let rect = rect.update(
                 component: ShadowRoundedRectangle(
-                    color: .white
+                    color: context.component.backgroundColor
                 ),
                 availableSize: CGSize(width: text.size.width + 26.0, height: 32.0),
                 transition: .immediate
@@ -646,6 +647,8 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
     public var displayTooltip: DisplayTooltip?
 
+    private var theme: PresentationTheme?
+
     override public init() {
         self.dateIndicator = ComponentHostView<Empty>()
         self.lineIndicator = ComponentHostView<Empty>()
@@ -781,9 +784,11 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         contentOffset: CGFloat,
         isScrolling: Bool,
         dateString: String,
+        theme: PresentationTheme,
         transition: ContainedViewLayoutTransition
     ) {
         self.containerSize = containerSize
+        self.theme = theme
 
         if self.dateIndicator.alpha.isZero {
             let transition: ContainedViewLayoutTransition = .immediate
@@ -797,9 +802,9 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         let indicatorSize = self.dateIndicator.update(
             transition: .immediate,
             component: AnyComponent(SparseItemGridScrollingIndicatorComponent(
-                backgroundColor: .white,
+                backgroundColor: theme.list.itemHighlightedBackgroundColor,
                 shadowColor: .black,
-                foregroundColor: .black,
+                foregroundColor: theme.list.itemPrimaryTextColor,
                 dateString: dateString
             )),
             environment: {},
@@ -858,7 +863,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     }
 
     private func updateLineIndicator(transition: ContainedViewLayoutTransition) {
-        guard let indicatorPosition = self.indicatorPosition, let scrollIndicatorHeight = self.scrollIndicatorHeight else {
+        guard let indicatorPosition = self.indicatorPosition, let scrollIndicatorHeight = self.scrollIndicatorHeight, let theme = self.theme else {
             return
         }
 
@@ -873,7 +878,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         let _ = self.lineIndicator.update(
             transition: mappedTransition,
             component: AnyComponent(RoundedRectangle(
-                color: UIColor(white: 0.0, alpha: 0.3)
+                color: theme.list.scrollIndicatorColor
             )),
             environment: {},
             containerSize: lineIndicatorSize
