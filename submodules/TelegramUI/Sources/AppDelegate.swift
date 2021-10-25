@@ -637,14 +637,16 @@ final class SharedApplicationContext {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
-                var icons = [PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
-                        PresentationAppIcon(name: "New2", imageName: "New2_180x180"),
-                        PresentationAppIcon(name: "New1", imageName: "New1_180x180"),
-                        PresentationAppIcon(name: "Black", imageName: "BlackIcon"),
-                        PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon"),
-                        PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon"),
-                        PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon"),
-                        PresentationAppIcon(name: "BlackFilled", imageName: "BlackFilledIcon")]
+                var icons = [
+                    PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
+                    PresentationAppIcon(name: "New2", imageName: "New2"),
+                    PresentationAppIcon(name: "New1", imageName: "New1"),
+                    PresentationAppIcon(name: "Black", imageName: "BlackIcon"),
+                    PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon"),
+                    PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon"),
+                    PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon"),
+                    PresentationAppIcon(name: "BlackFilled", imageName: "BlackFilledIcon")
+                ]
                 if buildConfig.isInternalBuild {
                     icons.append(PresentationAppIcon(name: "WhiteFilled", imageName: "WhiteFilledIcon"))
                 }

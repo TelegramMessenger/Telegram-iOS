@@ -268,6 +268,27 @@ filegroup(
     ]),
 )
 
+alternate_icon_folders = [
+    "BlackIcon",
+    "BlackClassicIcon",
+    "BlackFilledIcon",
+    "BlueIcon",
+    "BlueClassicIcon",
+    "BlueFilledIcon",
+    "WhiteFilledIcon",
+    "New1",
+    "New2",
+]
+
+[
+    filegroup(
+        name = "{}".format(name),
+        srcs = glob([
+            "Telegram-iOS/{}.alticon/*.png".format(name),
+        ]),
+    ) for name in alternate_icon_folders
+]
+
 filegroup(
     name = "LaunchScreen",
     srcs = glob([
@@ -1855,11 +1876,14 @@ ios_application(
         ":VersionInfoPlist",
         ":UrlTypesInfoPlist",
     ],
-    ipa_post_processor = ":AddAlternateIcons",
+    alternate_icons = [
+        ":{}".format(name) for name in alternate_icon_folders
+    ],
+    #ipa_post_processor = ":AddAlternateIcons",
     resources = [
         ":LaunchScreen",
         ":DefaultAppIcon",
-        ":AdditionalIcons",
+        #":AdditionalIcons",
     ],
     frameworks = [
         ":MtProtoKitFramework",
