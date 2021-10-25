@@ -339,7 +339,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                         if case let .ready(drivingTime) = item.drivingTime {
                             strongSelf.drivingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: drivingTime, format: { $0 })
                             
-                            if currentItem?.drivingTime == nil {
+                            if let previousDrivingTime = currentItem?.drivingTime, case .calculating = previousDrivingTime {
                                 strongSelf.drivingButtonNode?.alpha = 1.0
                                 strongSelf.drivingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
@@ -348,7 +348,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                         if case let .ready(transitTime) = item.transitTime {
                             strongSelf.transitButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: transitTime, format: { $0 })
                             
-                            if currentItem?.transitTime == nil {
+                            if let previousTransitTime = currentItem?.transitTime, case .calculating = previousTransitTime {
                                 strongSelf.transitButtonNode?.alpha = 1.0
                                 strongSelf.transitButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
@@ -357,7 +357,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                         if case let .ready(walkingTime) = item.walkingTime {
                             strongSelf.walkingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: walkingTime, format: { $0 })
                             
-                            if currentItem?.walkingTime == nil {
+                            if let previousWalkingTime = currentItem?.walkingTime, case .calculating = previousWalkingTime {
                                 strongSelf.walkingButtonNode?.alpha = 1.0
                                 strongSelf.walkingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
