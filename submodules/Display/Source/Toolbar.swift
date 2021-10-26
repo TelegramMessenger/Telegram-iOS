@@ -2,12 +2,19 @@ import Foundation
 import UIKit
 
 public struct ToolbarAction: Equatable {
+    public enum Color: Equatable {
+        case accent
+        case custom(UIColor)
+    }
+
     public let title: String
     public let isEnabled: Bool
+    public let color: Color
     
-    public init(title: String, isEnabled: Bool) {
+    public init(title: String, isEnabled: Bool, color: Color = .accent) {
         self.title = title
         self.isEnabled = isEnabled
+        self.color = color
     }
 }
 

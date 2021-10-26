@@ -1972,6 +1972,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if dateHeaderAtBottom {
             layoutInsets.top += layoutConstants.timestampHeaderHeight
         }
+        if isAd {
+            layoutInsets.top += 4.0
+        }
         
         let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
         

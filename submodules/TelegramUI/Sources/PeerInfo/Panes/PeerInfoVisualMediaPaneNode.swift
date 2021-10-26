@@ -1172,6 +1172,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                             }
                         }
                         if let loadSignal = result.loadSignal {
+                            layer.disposable?.dispose()
                             layer.disposable = (loadSignal
                             |> deliverOnMainQueue).start(next: { [weak self, weak layer, weak displayItem] image in
                                 guard let layer = layer else {
@@ -2167,9 +2168,6 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     func currentTopTimestamp() -> Int32? {
         var timestamp: Int32?
         self.itemGrid.forEachVisibleItem { item in
-            if timestamp != nil {
-                return
-            }
             guard let itemLayer = item.layer as? ItemLayer else {
                 return
             }

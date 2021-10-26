@@ -68,7 +68,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     if let bot = author as? TelegramUser, bot.botInfo != nil, let startParam = adAttribute.startParam {
                         navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
                     } else {
-                        navigationData = .chat(textInputState: nil, subject: nil, peekData: nil)
+                        var subject: ChatControllerSubject?
+                        if let messageId = adAttribute.messageId {
+                            subject = .message(id: messageId, highlight: true, timecode: nil)
+                        }
+                        navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
                     }
                     item.controllerInteraction.openPeer(author.id, navigationData, nil)
                 } else {

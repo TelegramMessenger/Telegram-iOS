@@ -111,7 +111,7 @@ private class AdMessagesHistoryContextImpl {
         func toMessage(peerId: PeerId, transaction: Transaction) -> Message {
             var attributes: [MessageAttribute] = []
 
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, startParam: self.startParam))
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, startParam: self.startParam, messageId: self.messageId))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
