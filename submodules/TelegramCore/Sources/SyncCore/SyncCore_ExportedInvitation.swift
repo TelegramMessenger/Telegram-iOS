@@ -2,6 +2,7 @@ import Postbox
 
 public struct ExportedInvitation: Codable, Equatable {
     public let link: String
+    public let title: String?
     public let isPermanent: Bool
     public let requestApproval: Bool
     public let isRevoked: Bool
@@ -13,8 +14,9 @@ public struct ExportedInvitation: Codable, Equatable {
     public let count: Int32?
     public let requestedCount: Int32?
     
-    public init(link: String, isPermanent: Bool, requestApproval: Bool, isRevoked: Bool, adminId: PeerId, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, count: Int32?, requestedCount: Int32?) {
+    public init(link: String, title: String?, isPermanent: Bool, requestApproval: Bool, isRevoked: Bool, adminId: PeerId, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, count: Int32?, requestedCount: Int32?) {
         self.link = link
+        self.title = title
         self.isPermanent = isPermanent
         self.requestApproval = requestApproval
         self.isRevoked = isRevoked
@@ -31,6 +33,7 @@ public struct ExportedInvitation: Codable, Equatable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.link = try container.decode(String.self, forKey: "l")
+        self.title = try container.decodeIfPresent(String.self, forKey: "title")
         self.isPermanent = try container.decode(Bool.self, forKey: "permanent")
         self.requestApproval = try container.decodeIfPresent(Bool.self, forKey: "requestApproval") ?? false
         self.isRevoked = try container.decode(Bool.self, forKey: "revoked")
@@ -47,6 +50,7 @@ public struct ExportedInvitation: Codable, Equatable {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         try container.encode(self.link, forKey: "l")
+        try container.encodeIfPresent(self.title, forKey: "title")
         try container.encode(self.isPermanent, forKey: "permanent")
         try container.encode(self.requestApproval, forKey: "requestApproval")
         try container.encode(self.isRevoked, forKey: "revoked")
@@ -60,10 +64,10 @@ public struct ExportedInvitation: Codable, Equatable {
     }
     
     public static func ==(lhs: ExportedInvitation, rhs: ExportedInvitation) -> Bool {
-        return lhs.link == rhs.link && lhs.isPermanent == rhs.isPermanent && lhs.requestApproval == rhs.requestApproval && lhs.isRevoked == rhs.isRevoked && lhs.adminId == rhs.adminId && lhs.date == rhs.date && lhs.startDate == rhs.startDate && lhs.expireDate == rhs.expireDate && lhs.usageLimit == rhs.usageLimit && lhs.count == rhs.count && lhs.requestedCount == rhs.requestedCount
+        return lhs.link == rhs.link && lhs.title == rhs.title && lhs.isPermanent == rhs.isPermanent && lhs.requestApproval == rhs.requestApproval && lhs.isRevoked == rhs.isRevoked && lhs.adminId == rhs.adminId && lhs.date == rhs.date && lhs.startDate == rhs.startDate && lhs.expireDate == rhs.expireDate && lhs.usageLimit == rhs.usageLimit && lhs.count == rhs.count && lhs.requestedCount == rhs.requestedCount
     }
     
     public func withUpdated(isRevoked: Bool) -> ExportedInvitation {
-        return ExportedInvitation(link: self.link, isPermanent: self.isPermanent, requestApproval: self.requestApproval, isRevoked: isRevoked, adminId: self.adminId, date: self.date, startDate: self.startDate, expireDate: self.expireDate, usageLimit: self.usageLimit, count: self.count, requestedCount: self.requestedCount)
+        return ExportedInvitation(link: self.link, title: self.title, isPermanent: self.isPermanent, requestApproval: self.requestApproval, isRevoked: isRevoked, adminId: self.adminId, date: self.date, startDate: self.startDate, expireDate: self.expireDate, usageLimit: self.usageLimit, count: self.count, requestedCount: self.requestedCount)
     }
 }

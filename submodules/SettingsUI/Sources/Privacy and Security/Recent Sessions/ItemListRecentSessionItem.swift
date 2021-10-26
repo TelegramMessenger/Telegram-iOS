@@ -102,6 +102,15 @@ final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
 private func iconForSession(_ session: RecentAccountSession) -> UIImage? {
     let platform = session.platform.lowercased()
     let device = session.deviceModel.lowercased()
+    if device.contains("chrome") {
+        return UIImage(bundleImageName: "Settings/Devices/Chrome")
+    }
+    if device.contains("brave") {
+        return UIImage(bundleImageName: "Settings/Devices/Brave")
+    }
+    if device.contains("vivaldi") {
+        return UIImage(bundleImageName: "Settings/Devices/Vivaldi")
+    }
     if device.contains("safari") {
         return UIImage(bundleImageName: "Settings/Devices/Safari")
     }
@@ -115,6 +124,12 @@ private func iconForSession(_ session: RecentAccountSession) -> UIImage? {
         return UIImage(bundleImageName: "Settings/Devices/iOS")
     }
     return nil
+}
+
+private func trimmedLocationName(_ session: RecentAccountSession) -> String {
+    var country = session.country
+    country = country.replacingOccurrences(of: "United Arab Emirates", with: "UAE")
+    return country
 }
 
 class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
@@ -255,7 +270,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                 label = stringForRelativeActivityTimestamp(strings: item.presentationData.strings, dateTimeFormat: item.dateTimeFormat, relativeTimestamp: item.session.activityDate, relativeTo: timestamp)
             }
             
-            locationAttributedString = NSAttributedString(string: "\(item.session.country) • \(label)", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            locationAttributedString = NSAttributedString(string: "\(trimmedLocationName(item.session)) • \(label)", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                         
             let leftInset: CGFloat = 59.0 + params.leftInset
             

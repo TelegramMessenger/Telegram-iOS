@@ -338,6 +338,9 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
             
             let inviteLink = item.invite?.link.replacingOccurrences(of: "https://", with: "") ?? ""
             var titleText = inviteLink
+            if let title = item.invite?.title, !title.isEmpty {
+                titleText = title
+            }
 
             var subtitleText: String = ""
             var timerValue: TimerNode.Value?

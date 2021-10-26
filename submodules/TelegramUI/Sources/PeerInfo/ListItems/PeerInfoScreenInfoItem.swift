@@ -35,6 +35,7 @@ final class PeerInfoScreenInfoItem: PeerInfoScreenItem {
 
 private final class PeerInfoScreenInfoItemNode: PeerInfoScreenItemNode {
     private let bottomSeparatorNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     private var item: PeerInfoScreenInfoItem?
     private var itemNode: InfoItemNode?
@@ -42,6 +43,9 @@ private final class PeerInfoScreenInfoItemNode: PeerInfoScreenItemNode {
     override init() {
         self.bottomSeparatorNode = ASDisplayNode()
         self.bottomSeparatorNode.isLayerBacked = true
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         super.init()
         
@@ -97,6 +101,18 @@ private final class PeerInfoScreenInfoItemNode: PeerInfoScreenItemNode {
         var separatorInset: CGFloat = sideInset
         if bottomItem != nil {
             separatorInset += 49.0
+        }
+        
+        let hasCorners = safeInsets.left > 0.0 && (topItem == nil || bottomItem == nil)
+        let hasTopCorners = hasCorners && topItem == nil
+        let hasBottomCorners = hasCorners && bottomItem == nil
+        
+        self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
+        self.bottomSeparatorNode.isHidden = hasBottomCorners
+        
+        if self.maskNode.supernode == nil {
+            self.addSubnode(self.maskNode)
         }
         
         transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: height - UIScreenPixel), size: CGSize(width: width - sideInset, height: UIScreenPixel)))

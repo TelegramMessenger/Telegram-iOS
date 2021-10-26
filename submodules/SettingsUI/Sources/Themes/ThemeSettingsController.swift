@@ -446,7 +446,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     var selectThemeImpl: ((PresentationThemeReference) -> Void)?
     var selectAccentColorImpl: ((PresentationThemeAccentColor?) -> Void)?
     var openAccentColorPickerImpl: ((PresentationThemeReference, Bool) -> Void)?
-    var moreImpl: (() -> Void)?
     
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
     
@@ -973,10 +972,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             themeReference = settings.theme
         }
         
-        let rightNavigationButton = ItemListNavigationButton(content: .icon(.add), style: .regular, enabled: true, action: {
-            moreImpl?()
-        })
-        
         var defaultThemes: [PresentationThemeReference] = []
         if presentationData.autoNightModeTriggered {
             defaultThemes.append(contentsOf: [.builtin(.nightAccent), .builtin(.night)])
@@ -1000,7 +995,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         var chatThemes = cloudThemes.filter { $0.emoticon != nil }
         chatThemes.insert(.builtin(.dayClassic), at: 0)
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
@@ -1242,42 +1237,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             
             presentCrossfadeControllerImpl?(true)
         })
-    }
-    moreImpl = {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationData: presentationData)
-        var items: [ActionSheetItem] = []
-        items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_CreateTheme, color: .accent, action: { [weak actionSheet] in
-            actionSheet?.dismissAnimated()
-            
-            let _ = (context.sharedContext.accountManager.transaction { transaction -> PresentationThemeReference in
-                let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings)?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
-                
-                let themeReference: PresentationThemeReference
-                let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-                if autoNightModeTriggered {
-                    themeReference = settings.automaticThemeSwitchSetting.theme
-                } else {
-                    themeReference = settings.theme
-                }
-                
-                return themeReference
-            }
-            |> deliverOnMainQueue).start(next: { themeReference in
-                let controller = editThemeController(context: context, mode: .create(nil, nil), navigateToChat: { peerId in
-                    if let navigationController = getNavigationControllerImpl?() {
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
-                    }
-                })
-                pushControllerImpl?(controller)
-            })
-        }))
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
-            })
-        ])])
-        presentControllerImpl?(actionSheet, nil)
     }
     return controller
 }

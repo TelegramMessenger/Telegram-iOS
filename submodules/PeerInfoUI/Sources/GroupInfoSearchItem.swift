@@ -32,7 +32,7 @@ final class ChannelMembersSearchItem: ItemListControllerSearch {
         self.pushController = pushController
         self.dismissInput = dismissInput
         self.searchMode = searchMode
-        activityDisposable.set((activity.get() |> mapToSignal { value -> Signal<Bool, NoError> in
+        self.activityDisposable.set((activity.get() |> mapToSignal { value -> Signal<Bool, NoError> in
             if value {
                 return .single(value) |> delay(0.2, queue: Queue.mainQueue())
             } else {

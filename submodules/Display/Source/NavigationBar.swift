@@ -921,7 +921,12 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public var isBackgroundVisible: Bool {
+        return self.backgroundNode.alpha == 1.0
+    }
+    
     public func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
+        let alpha = max(0.0, min(1.0, alpha))
         transition.updateAlpha(node: self.backgroundNode, alpha: alpha, delay: 0.15)
         transition.updateAlpha(node: self.stripeNode, alpha: alpha, delay: 0.15)
     }

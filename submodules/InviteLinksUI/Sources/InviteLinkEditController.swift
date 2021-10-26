@@ -421,7 +421,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
             timeLimit = .unlimited
         }
         
-        initialState = InviteLinkEditControllerState(title: "", usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: invite.requestApproval, pickingTimeLimit: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(title: invite.title ?? "", usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: invite.requestApproval, pickingTimeLimit: false, pickingUsageLimit: false)
     } else {
         initialState = InviteLinkEditControllerState(title: "", usage: .unlimited, time: .unlimited, requestApproval: false, pickingTimeLimit: false, pickingUsageLimit: false)
     }
@@ -525,11 +525,13 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                 expireDate = 0
             }
 
+            let titleString = state.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let title = titleString.isEmpty ? nil : titleString
             let usageLimit = state.usage.value
             let requestNeeded = state.requestApproval
             
             if invite == nil {
-                let _ = (context.engine.peers.createPeerExportedInvitation(peerId: peerId, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
+                let _ = (context.engine.peers.createPeerExportedInvitation(peerId: peerId, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)
@@ -548,7 +550,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                     dismissImpl?()
                     return
                 }
-                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: initialInvite.link, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
+                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: initialInvite.link, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)

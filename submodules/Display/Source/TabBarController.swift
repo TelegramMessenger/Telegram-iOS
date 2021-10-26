@@ -273,6 +273,12 @@ open class TabBarController: ViewController {
         self.displayNodeDidLoad()
     }
     
+    public func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
+        let alpha = max(0.0, min(1.0, alpha))
+        transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.backgroundNode, alpha: alpha, delay: 0.15)
+        transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.separatorNode, alpha: alpha, delay: 0.15)
+    }
+    
     private func updateSelectedIndex() {
         if !self.isNodeLoaded {
             return

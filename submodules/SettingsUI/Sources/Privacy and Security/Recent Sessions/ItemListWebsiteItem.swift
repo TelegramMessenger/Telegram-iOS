@@ -99,6 +99,13 @@ final class ItemListWebsiteItem: ListViewItem, ItemListItem {
 
 private let avatarFont = avatarPlaceholderFont(size: 11.0)
 
+private func trimmedLocationName(_ session: WebAuthorization) -> String {
+    var country = session.region
+    country = country.replacingOccurrences(of: "United Arab Emirates", with: "UAE")
+    return country
+}
+
+
 class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -221,7 +228,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             let label = stringForRelativeActivityTimestamp(strings: item.presentationData.strings, dateTimeFormat: item.dateTimeFormat, relativeTimestamp: item.website.dateActive, relativeTo: timestamp)
             
-            locationAttributedString = NSAttributedString(string: "\(item.website.region) • \(label)", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            locationAttributedString = NSAttributedString(string: "\(trimmedLocationName(item.website)) • \(label)", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
             
             let leftInset: CGFloat = 59.0 + params.leftInset
             
