@@ -6612,10 +6612,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             |> take(1))
         }
     }
-    
-    private func updateNavigation(transition: ContainedViewLayoutTransition, additive: Bool) {
+        
+    fileprivate func updateNavigation(transition: ContainedViewLayoutTransition, additive: Bool) {
         let offsetY = self.scrollNode.view.contentOffset.y
         
+        if self.isSettings {
+            let bottomOffsetY = self.scrollNode.view.contentSize.height + self.scrollNode.view.contentInset.bottom - offsetY - self.scrollNode.frame.height
+            let backgroundAlpha: CGFloat = min(30.0, bottomOffsetY) / 30.0
+            
+            if let tabBarController = self.controller?.parent as? TabBarController {
+                tabBarController.updateBackgroundAlpha(backgroundAlpha, transition: transition)
+            }
+        }
+                
         if self.state.isEditing || offsetY <= 50.0 || self.paneContainerNode.alpha.isZero {
             if !self.scrollNode.view.bounces {
                 self.scrollNode.view.bounces = true
@@ -7253,12 +7262,24 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         super.displayNodeDidLoad()
     }
     
+    public override func willMove(toParent viewController: UIViewController?) {
+        super.willMove(toParent: parent)
+        
+        if self.isSettings, viewController == nil, let tabBarController = self.parent as? TabBarController {
+            tabBarController.updateBackgroundAlpha(1.0, transition: .immediate)
+        }
+    }
+    
     public override func didMove(toParent viewController: UIViewController?) {
         super.didMove(toParent: viewController)
         
-        if self.isSettings && viewController == nil {
-            Queue.mainQueue().after(0.1) {
-                self.controllerNode.resetHeaderExpansion()
+        if self.isSettings {
+            if viewController == nil {
+                Queue.mainQueue().after(0.1) {
+                    self.controllerNode.resetHeaderExpansion()
+                }
+            } else {
+                self.controllerNode.updateNavigation(transition: .immediate, additive: false)
             }
         }
     }
