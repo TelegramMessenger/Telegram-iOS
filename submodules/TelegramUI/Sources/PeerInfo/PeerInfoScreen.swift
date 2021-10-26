@@ -111,8 +111,6 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
     }
     
     func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
-        let previousItems = self.currentItems
-        
         self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         self.topSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -215,12 +213,6 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
         } else {
             transition.updateAlpha(node: self.topSeparatorNode, alpha: 1.0)
             transition.updateAlpha(node: self.bottomSeparatorNode, alpha: 1.0)
-        }
-        
-        if previousItems.isEmpty && items.count == 1 && transition.isAnimated {
-            self.alpha = 0.0
-            let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .linear)
-            alphaTransition.updateAlpha(node: self, alpha: 1.0)
         }
         
         return contentHeight
@@ -6395,6 +6387,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             for (sectionId, sectionItems) in items {
                 validRegularSections.append(sectionId)
                 
+                var wasAdded = false
                 let sectionNode: PeerInfoScreenItemSectionContainerNode
                 if let current = self.regularSections[sectionId] {
                     sectionNode = current
@@ -6402,6 +6395,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     sectionNode = PeerInfoScreenItemSectionContainerNode()
                     self.regularSections[sectionId] = sectionNode
                     self.scrollNode.addSubnode(sectionNode)
+                    wasAdded = true
+                }
+                
+                if wasAdded && transition.isAnimated && self.isSettings && !self.state.isEditing {
+                    sectionNode.alpha = 0.0
+                    transition.updateAlpha(node: sectionNode, alpha: 1.0)
                 }
                                 
                 let sectionHeight = sectionNode.update(width: layout.size.width, safeInsets: insets, presentationData: self.presentationData, items: sectionItems, transition: transition)

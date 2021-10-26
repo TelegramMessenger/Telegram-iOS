@@ -2266,7 +2266,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             panelSubtitleAlpha = 0.0
             
             var headerBackgroundAlpha: CGFloat = 0.0
-            if titleCollapseFraction >= 0.8 {
+            if !state.isEditing && titleCollapseFraction >= 0.8 {
                 headerBackgroundAlpha = (titleCollapseFraction - 0.8) / 0.2
             }
             self.updateHeaderAlpha?(headerBackgroundAlpha, transition)
