@@ -1717,6 +1717,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     var navigationTransition: PeerInfoHeaderNavigationTransition?
     
+    var updateHeaderAlpha: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    
     init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isSettings: Bool) {
         self.context = context
         self.isAvatarExpanded = avatarInitiallyExpanded
@@ -2086,7 +2088,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
             }
             if self.isSettings {
-                titleString = NSAttributedString(string: title, font: Font.regular(30.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                titleString = NSAttributedString(string: title, font: Font.semibold(26.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
                 smallTitleString = NSAttributedString(string: title, font: Font.semibold(28.0), textColor: .white)
             } else {
                 titleString = NSAttributedString(string: title, font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
@@ -2262,6 +2264,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.isSettings {
             subtitleAlpha = 1.0 - titleCollapseFraction
             panelSubtitleAlpha = 0.0
+            
+            var headerBackgroundAlpha: CGFloat = 0.0
+            if titleCollapseFraction >= 0.8 {
+                headerBackgroundAlpha = (titleCollapseFraction - 0.8) / 0.2
+            }
+            self.updateHeaderAlpha?(headerBackgroundAlpha, transition)
         } else {
             if (panelSubtitleString ?? subtitleString).string != subtitleString.string {
                 subtitleAlpha = 1.0 - effectiveAreaExpansionFraction

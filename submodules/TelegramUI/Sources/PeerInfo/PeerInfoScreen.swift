@@ -111,6 +111,8 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
     }
     
     func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, items: [PeerInfoScreenItem], transition: ContainedViewLayoutTransition) -> CGFloat {
+        let previousItems = self.currentItems
+        
         self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         self.topSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -172,7 +174,8 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
             itemTransition.updateFrame(node: itemNode, frame: itemFrame)
             if wasAdded {
                 itemNode.alpha = 0.0
-                transition.updateAlpha(node: itemNode, alpha: 1.0)
+                let alphaTransition: ContainedViewLayoutTransition = transition.isAnimated ? .animated(duration: 0.35, curve: .linear) : .immediate
+                alphaTransition.updateAlpha(node: itemNode, alpha: 1.0)
             }
             
             if item is PeerInfoScreenCommentItem {
@@ -212,6 +215,12 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
         } else {
             transition.updateAlpha(node: self.topSeparatorNode, alpha: 1.0)
             transition.updateAlpha(node: self.bottomSeparatorNode, alpha: 1.0)
+        }
+        
+        if previousItems.isEmpty && items.count == 1 && transition.isAnimated {
+            self.alpha = 0.0
+            let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .linear)
+            alphaTransition.updateAlpha(node: self, alpha: 1.0)
         }
         
         return contentHeight
@@ -1639,6 +1648,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         
         self.paneContainerNode.parentController = controller
         
+        self.headerNode.updateHeaderAlpha = { [weak self] alpha, transition in
+            self?.updateHeaderBackgroundAlpha(alpha, transition: transition)
+        }
+        
         self._interaction = PeerInfoInteraction(
             openUsername: { [weak self] value in
                 self?.openUsername(value: value)
@@ -2989,7 +3002,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         
         transition.updateAlpha(node: self.headerNode.backgroundNode, alpha: alpha, delay: 0.15)
         transition.updateAlpha(node: self.headerNode.expandedBackgroundNode, alpha: alpha, delay: 0.15)
-        transition.updateAlpha(node: self.headerNode.navigationBackgroundNode, alpha: alpha, delay: 0.15)
         transition.updateAlpha(node: self.headerNode.separatorNode, alpha: alpha, delay: 0.15)
     }
     

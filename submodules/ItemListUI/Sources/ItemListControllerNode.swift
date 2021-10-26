@@ -699,7 +699,11 @@ open class ItemListControllerNode: ASDisplayNode {
                         if let validLayout = self.validLayout {
                             updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
                         }
-                        self.insertSubnode(updatedNode, aboveSubnode: self.listNode)
+                        if self.rightOverlayNode.supernode != nil {
+                            self.insertSubnode(updatedNode, aboveSubnode: self.rightOverlayNode)
+                        } else {
+                            self.insertSubnode(updatedNode, aboveSubnode: self.listNode)
+                        }
                         updatedNode.activate()
                     }
                 } else {
