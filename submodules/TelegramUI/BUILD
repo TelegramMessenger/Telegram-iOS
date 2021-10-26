@@ -241,6 +241,11 @@ swift_library(
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/AdUI:AdUI",
+        "//submodules/SparseItemGrid:SparseItemGrid",
+        "//submodules/CalendarMessageScreen:CalendarMessageScreen",
+        "//submodules/LottieMeshSwift:LottieMeshSwift",
+        "//submodules/MeshAnimationCache:MeshAnimationCache",
+        "//submodules/DirectMediaImageCache:DirectMediaImageCache",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

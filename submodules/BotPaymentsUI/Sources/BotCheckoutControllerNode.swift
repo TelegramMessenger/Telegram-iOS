@@ -453,18 +453,7 @@ private func formSupportApplePay(_ paymentForm: BotPaymentForm) -> Bool {
     guard let nativeProvider = paymentForm.nativeProvider else {
         return false
     }
-    let applePayProviders = Set<String>([
-        "stripe",
-        "sberbank",
-        "yandex",
-        "privatbank",
-        "tranzzo",
-        "paymaster",
-        "smartglocal",
-    ])
-    if !applePayProviders.contains(nativeProvider.name) {
-        return false
-    }
+    
     guard let nativeParamsData = nativeProvider.params.data(using: .utf8) else {
         return false
     }

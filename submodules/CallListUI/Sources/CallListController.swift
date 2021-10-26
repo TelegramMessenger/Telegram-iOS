@@ -262,6 +262,12 @@ public final class CallListController: TelegramBaseController {
                 }
             }
         })
+        
+        if case .navigation = self.mode {
+            self.controllerNode.navigationBar = self.navigationBar
+            self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        }
+        
         self.controllerNode.startNewCall = { [weak self] in
             self?.beginCallImpl()
         }

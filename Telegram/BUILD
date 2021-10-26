@@ -268,6 +268,27 @@ filegroup(
     ]),
 )
 
+alternate_icon_folders = [
+    "BlackIcon",
+    "BlackClassicIcon",
+    "BlackFilledIcon",
+    "BlueIcon",
+    "BlueClassicIcon",
+    "BlueFilledIcon",
+    "WhiteFilledIcon",
+    "New1",
+    "New2",
+]
+
+[
+    filegroup(
+        name = "{}".format(name),
+        srcs = glob([
+            "Telegram-iOS/{}.alticon/*.png".format(name),
+        ]),
+    ) for name in alternate_icon_folders
+]
+
 filegroup(
     name = "LaunchScreen",
     srcs = glob([
@@ -351,7 +372,6 @@ plist_fragment(
 
 official_apple_pay_merchants = [
     "merchant.ph.telegra.Telegraph",
-    "merchant.yandex.ph.telegra.Telegraph",
     "merchant.sberbank.ph.telegra.Telegraph",
     "merchant.sberbank.test.ph.telegra.Telegraph",
     "merchant.privatbank.test.telergramios",
@@ -359,6 +379,7 @@ official_apple_pay_merchants = [
     "merchant.paymaster.test.telegramios",
     "merchant.smartglocal.prod.telegramios",
     "merchant.smartglocal.test.telegramios",
+    "merchant.yoomoney.test.telegramios",
 ]
 
 official_bundle_ids = [
@@ -1855,11 +1876,14 @@ ios_application(
         ":VersionInfoPlist",
         ":UrlTypesInfoPlist",
     ],
-    ipa_post_processor = ":AddAlternateIcons",
+    alternate_icons = [
+        ":{}".format(name) for name in alternate_icon_folders
+    ],
+    #ipa_post_processor = ":AddAlternateIcons",
     resources = [
         ":LaunchScreen",
         ":DefaultAppIcon",
-        ":AdditionalIcons",
+        #":AdditionalIcons",
     ],
     frameworks = [
         ":MtProtoKitFramework",

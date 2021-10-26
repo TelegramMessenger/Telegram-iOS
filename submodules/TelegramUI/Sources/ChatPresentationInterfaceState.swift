@@ -82,6 +82,7 @@ enum ChatTitlePanelContext: Equatable, Comparable {
     case chatInfo
     case requestInProgress
     case toastAlert(String)
+    case inviteRequests([EnginePeer], Int32)
     
     private var index: Int {
         switch self {
@@ -93,6 +94,8 @@ enum ChatTitlePanelContext: Equatable, Comparable {
                 return 2
             case .toastAlert:
                 return 3
+            case .inviteRequests:
+                return 4
         }
     }
     

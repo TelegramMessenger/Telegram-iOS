@@ -22,6 +22,7 @@ swift_library(
         "//submodules/SelectablePeerNode:SelectablePeerNode",
         "//submodules/PeerInfoUI:PeerInfoUI",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
     ],
     visibility = [
         "//visibility:public",

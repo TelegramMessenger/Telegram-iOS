@@ -69,7 +69,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         }
     }
     
-    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
+    init(presentationData: PresentationData, items: [ContextMenuItem], getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, requestLayout: @escaping () -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
         self.presentationData = presentationData
         self.feedbackTap = feedbackTap
         self.blurBackground = blurBackground
@@ -78,12 +78,16 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         self.containerNode.clipsToBounds = true
         self.containerNode.cornerRadius = 14.0
         self.containerNode.backgroundColor = presentationData.theme.contextMenu.backgroundColor
+
+        var requestUpdateAction: ((AnyHashable, ContextMenuActionItem) -> Void)?
         
         var itemNodes: [ContextItemNode] = []
         for i in 0 ..< items.count {
             switch items[i] {
             case let .action(action):
-                itemNodes.append(.action(ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected)))
+                itemNodes.append(.action(ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, requestUpdateAction: { id, action in
+                    requestUpdateAction?(id, action)
+                })))
                 if i != items.count - 1 {
                     switch items[i + 1] {
                     case .action, .custom:
@@ -116,7 +120,24 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         self.itemNodes = itemNodes
         
         super.init()
-                        
+
+        requestUpdateAction = { [weak self] id, action in
+            guard let strongSelf = self else {
+                return
+            }
+            loop: for itemNode in strongSelf.itemNodes {
+                switch itemNode {
+                case let .action(contextActionNode):
+                    if contextActionNode.action.id == id {
+                        contextActionNode.updateAction(item: action)
+                        break loop
+                    }
+                default:
+                    break
+                }
+            }
+        }
+
         self.addSubnode(self.containerNode)
         
         self.itemNodes.forEach({ itemNode in
@@ -469,7 +490,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         return self.additionalActionsNode != nil
     }
     
-    init(presentationData: PresentationData, items: ContextController.Items, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
+    init(presentationData: PresentationData, items: ContextController.Items, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, requestLayout: @escaping () -> Void, feedbackTap: @escaping () -> Void, blurBackground: Bool) {
         self.blurBackground = blurBackground
         self.shadowNode = ASImageNode()
         self.shadowNode.displaysAsynchronously = false
@@ -488,14 +509,14 @@ final class ContextActionsContainerNode: ASDisplayNode {
             additionalShadowNode.isHidden = true
             self.additionalShadowNode = additionalShadowNode
             
-            self.additionalActionsNode = InnerActionsContainerNode(presentationData: presentationData, items: [firstItem], getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
+            self.additionalActionsNode = InnerActionsContainerNode(presentationData: presentationData, items: [firstItem], getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
             items.items.removeFirst()
         } else {
             self.additionalShadowNode = nil
             self.additionalActionsNode = nil
         }
         
-        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items.items, getController: getController, actionSelected: actionSelected, feedbackTap: feedbackTap, blurBackground: blurBackground)
+        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items.items, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
         if let tip = items.tip {
             let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
             textSelectionTipNode.isUserInteractionEnabled = false

@@ -1699,13 +1699,41 @@ public func standaloneChatMessagePhotoInteractiveFetched(account: Account, photo
     }
 }
 
-public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, displayAtSize: Int?, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
+public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, displayAtSize: Int?, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Never, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         var fetchRange: (Range<Int>, MediaBoxFetchPriority)?
         if let displayAtSize = displayAtSize, let range = representationFetchRangeForDisplayAtSize(representation: largestRepresentation, dimension: displayAtSize) {
             fetchRange = (range, .default)
         }
-        
+
+        /*switch photoReference {
+        case let .message(message, _):
+            if let id = message.id {
+                let ranges: IndexSet
+                if let (range, _) = fetchRange {
+                    ranges = IndexSet(integersIn: range)
+                } else {
+                    ranges = IndexSet(integersIn: 0 ..< Int(Int32.max) as Range<Int>)
+                }
+                return context.fetchManager.interactivelyFetched(
+                    category: .image,
+                    location: .chat(id.peerId),
+                    locationKey: .messageId(id),
+                    mediaReference: photoReference.abstract,
+                    resourceReference: photoReference.resourceReference(largestRepresentation.resource),
+                    ranges: ranges,
+                    statsCategory: .image,
+                    elevatedPriority: false,
+                    userInitiated: false,
+                    priority: .userInitiated,
+                    storeToDownloadsPeerType: nil
+                )
+                |> ignoreValues
+            }
+        default:
+            break
+        }*/
+
         return fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: photoReference.resourceReference(largestRepresentation.resource), range: fetchRange, statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
             if case .remote = type, let peerType = storeToDownloadsPeerType {
@@ -1716,6 +1744,10 @@ public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoRef
                 |> then(.single(type))
             }
             return .single(type)
+        }
+        |> ignoreValues
+        |> `catch` { _ -> Signal<Never, NoError> in
+            return .complete()
         }
     } else {
         return .never()

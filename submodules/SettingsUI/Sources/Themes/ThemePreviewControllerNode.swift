@@ -72,7 +72,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
     private var wallpaper: TelegramWallpaper
     
-    init(context: AccountContext, previewTheme: PresentationTheme, initialWallpaper: TelegramWallpaper?, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool, ready: Promise<Bool>) {
+    init(context: AccountContext, previewTheme: PresentationTheme, initialWallpaper: TelegramWallpaper?, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool, forceReady: Bool, ready: Promise<Bool>) {
         self.context = context
         self.previewTheme = previewTheme
         self.isPreview = isPreview
@@ -125,7 +125,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings, doneButtonType: .set)
         
-        if case .file = previewTheme.chat.defaultWallpaper {
+        if case .file = previewTheme.chat.defaultWallpaper, !forceReady {
             self.toolbarNode.setDoneEnabled(false)
         }
         

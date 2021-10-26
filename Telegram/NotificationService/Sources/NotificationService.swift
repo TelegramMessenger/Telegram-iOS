@@ -326,7 +326,7 @@ private let gradientColors: [NSArray] = [
     [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
 ]
 
-private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: Int64, letters: [String]) -> UIImage? {
+private func avatarViewLettersImage(size: CGSize, peerId: PeerId, letters: [String]) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
     let context = UIGraphicsGetCurrentContext()
 
@@ -334,7 +334,12 @@ private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: 
     context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
     context?.clip()
 
-    let colorIndex = abs(Int(accountPeerId + peerId))
+    let colorIndex: Int
+    if peerId.namespace == .max {
+        colorIndex = 0
+    } else {
+        colorIndex = abs(Int(clamping: peerId.id._internalGetInt64Value()))
+    }
 
     let colorsArray = gradientColors[colorIndex % gradientColors.count]
     var locations: [CGFloat] = [1.0, 0.0]
@@ -368,11 +373,11 @@ private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: 
     return image
 }
 
-private func avatarImage(path: String?, peerId: Int64, accountPeerId: Int64, letters: [String], size: CGSize) -> UIImage {
+private func avatarImage(path: String?, peerId: PeerId, letters: [String], size: CGSize) -> UIImage {
     if let path = path, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
         return roundImage
     } else {
-        return avatarViewLettersImage(size: size, peerId: peerId, accountPeerId: accountPeerId, letters: letters)!
+        return avatarViewLettersImage(size: size, peerId: peerId, letters: letters)!
     }
 }
 
@@ -394,48 +399,27 @@ private func storeTemporaryImage(path: String) -> String {
 private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) -> INImage? {
     if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
         let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "intents.png", keepDuration: .shortLived)
-        if let _ = fileSize(cachedPath), let data = try? Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped) {
-            do {
-                return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
-            } catch {
-                return nil
-            }
+        if let _ = fileSize(cachedPath) {
+            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
         } else {
-            let image = avatarImage(path: path, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+            let image = avatarImage(path: path, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
             if let data = image.pngData() {
                 let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
             }
-            do {
-                //let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
-                //return INImage(imageData: data)
-                return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
-            } catch {
-                return nil
-            }
+
+            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
         }
     }
 
     let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar-\(peer.displayLetters.joined(separator: ","))", representationId: "intents.png", keepDuration: .shortLived)
     if let _ = fileSize(cachedPath) {
-        do {
-            //let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: [])
-            //return INImage(imageData: data)
-            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
-        } catch {
-            return nil
-        }
+        return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
     } else {
-        let image = avatarImage(path: nil, peerId: peer.id.toInt64(), accountPeerId: accountPeerId.toInt64(), letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
+        let image = avatarImage(path: nil, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0))
         if let data = image.pngData() {
             let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
         }
-        do {
-            //let data = try Data(contentsOf: URL(fileURLWithPath: cachedPath), options: .alwaysMapped)
-            //return INImage(imageData: data)
-            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
-        } catch {
-            return nil
-        }
+        return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
     }
 }
 
@@ -614,17 +598,40 @@ private final class NotificationServiceHandler {
             return nil
         }
 
-        let _ = (self.accountManager.currentAccountRecord(allocateIfNotExists: false)
+        let _ = (self.accountManager.accountRecords()
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records in
-            guard let strongSelf = self, let record = records else {
+            var recordId: AccountRecordId?
+            var isCurrentAccount: Bool = false
+
+            if let keyId = notificationPayloadKeyId(data: payloadData) {
+                outer: for listRecord in records.records {
+                    for attribute in listRecord.attributes {
+                        if case let .backupData(backupData) = attribute {
+                            if let notificationEncryptionKeyId = backupData.data?.notificationEncryptionKeyId {
+                                if keyId == notificationEncryptionKeyId {
+                                    recordId = listRecord.id
+                                    isCurrentAccount = records.currentRecord?.id == listRecord.id
+                                    break outer
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            guard let strongSelf = self, let recordId = recordId else {
+                let content = NotificationContent()
+                updateCurrentContent(content)
+                completed()
+
                 return
             }
 
             let _ = (standaloneStateManager(
                 accountManager: strongSelf.accountManager,
                 networkArguments: networkArguments,
-                id: record.0,
+                id: recordId,
                 encryptionParameters: strongSelf.encryptionParameters,
                 rootPath: rootPath,
                 auxiliaryMethods: accountAuxiliaryMethods
@@ -634,6 +641,8 @@ private final class NotificationServiceHandler {
                     return
                 }
                 guard let stateManager = stateManager else {
+                    let content = NotificationContent()
+                    updateCurrentContent(content)
                     completed()
                     return
                 }
@@ -642,18 +651,31 @@ private final class NotificationServiceHandler {
                 strongSelf.notificationKeyDisposable.set((existingMasterNotificationsKey(postbox: stateManager.postbox)
                 |> deliverOn(strongSelf.queue)).start(next: { notificationsKey in
                     guard let strongSelf = self else {
+                        let content = NotificationContent()
+                        updateCurrentContent(content)
+                        completed()
+
                         return
                     }
                     guard let notificationsKey = notificationsKey else {
+                        let content = NotificationContent()
+                        updateCurrentContent(content)
                         completed()
+
                         return
                     }
                     guard let decryptedPayload = decryptedNotificationPayload(key: notificationsKey, data: payloadData) else {
+                        let content = NotificationContent()
+                        updateCurrentContent(content)
                         completed()
+
                         return
                     }
                     guard let payloadJson = try? JSONSerialization.jsonObject(with: decryptedPayload, options: []) as? [String: Any] else {
+                        let content = NotificationContent()
+                        updateCurrentContent(content)
                         completed()
+
                         return
                     }
 
@@ -678,6 +700,10 @@ private final class NotificationServiceHandler {
                     } else if let channelIdString = payloadJson["channel_id"] as? String {
                         if let channelIdValue = Int64(channelIdString) {
                             peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelIdValue))
+                        }
+                    } else if let encryptionIdString = payloadJson["encryption_id"] as? String {
+                        if let encryptionIdValue = Int64(encryptionIdString) {
+                            peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(encryptionIdValue))
                         }
                     }
 
@@ -751,7 +777,7 @@ private final class NotificationServiceHandler {
                             }
 
                             content.userInfo["peerId"] = "\(peerId.toInt64())"
-                            content.userInfo["accountId"] = "\(record.0.int64)"
+                            content.userInfo["accountId"] = "\(recordId.int64)"
 
                             if let silentString = payloadJson["silent"] as? String {
                                 if let silentValue = Int(silentString), silentValue != 0 {
@@ -904,7 +930,9 @@ private final class NotificationServiceHandler {
                                                     return
                                                 }
 
-                                                content.badge = Int(value.0)
+                                                if isCurrentAccount {
+                                                    content.badge = Int(value.0)
+                                                }
 
                                                 if let image = mediaAttachment as? TelegramMediaImage, let resource = largestImageRepresentation(image.representations)?.resource {
                                                     if let mediaData = mediaData {
@@ -1053,7 +1081,9 @@ private final class NotificationServiceHandler {
                                         )
                                         |> deliverOn(strongSelf.queue)).start(next: { value in
                                             var content = NotificationContent()
-                                            content.badge = Int(value.0)
+                                            if isCurrentAccount {
+                                                content.badge = Int(value.0)
+                                            }
 
                                             updateCurrentContent(content)
 
@@ -1096,7 +1126,9 @@ private final class NotificationServiceHandler {
                                         )
                                         |> deliverOn(strongSelf.queue)).start(next: { value in
                                             var content = NotificationContent()
-                                            content.badge = Int(value.0)
+                                            if isCurrentAccount {
+                                                content.badge = Int(value.0)
+                                            }
 
                                             updateCurrentContent(content)
 

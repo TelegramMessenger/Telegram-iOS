@@ -1104,19 +1104,20 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if isPreview {
             needShareButton = false
         }
-        if item.content.firstMessage.adAttribute != nil {
+        let isAd = item.content.firstMessage.adAttribute != nil
+        if isAd {
             needShareButton = false
         }
         
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth
-            if needShareButton {
+            if needShareButton || isAd {
                 tmpWidth -= 38.0
             }
         } else {
             tmpWidth = layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
-            if needShareButton && tmpWidth + 32.0 > baseWidth {
+            if (needShareButton || isAd) && tmpWidth + 32.0 > baseWidth {
                 tmpWidth = baseWidth - 32.0
             }
         }
@@ -2580,7 +2581,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 strongSelf.insertSubnode(shareButtonNode, belowSubnode: strongSelf.messageAccessibilityArea)
                 shareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
             }
-
         } else if let shareButtonNode = strongSelf.shareButtonNode {
             strongSelf.shareButtonNode = nil
             shareButtonNode.removeFromSupernode()

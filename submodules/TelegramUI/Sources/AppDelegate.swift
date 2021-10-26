@@ -7,7 +7,6 @@ import Intents
 import Postbox
 import PushKit
 import AsyncDisplayKit
-import CloudKit
 import TelegramUIPreferences
 import TelegramPresentationData
 import TelegramCallsUI
@@ -638,14 +637,16 @@ final class SharedApplicationContext {
             self.window?.rootViewController?.dismiss(animated: true, completion: nil)
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
-                var icons = [PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
-                        PresentationAppIcon(name: "New2", imageName: "New2_180x180"),
-                        PresentationAppIcon(name: "New1", imageName: "New1_180x180"),
-                        PresentationAppIcon(name: "Black", imageName: "BlackIcon"),
-                        PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon"),
-                        PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon"),
-                        PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon"),
-                        PresentationAppIcon(name: "BlackFilled", imageName: "BlackFilledIcon")]
+                var icons = [
+                    PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
+                    PresentationAppIcon(name: "New2", imageName: "New2"),
+                    PresentationAppIcon(name: "New1", imageName: "New1"),
+                    PresentationAppIcon(name: "Black", imageName: "BlackIcon"),
+                    PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon"),
+                    PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon"),
+                    PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon"),
+                    PresentationAppIcon(name: "BlackFilled", imageName: "BlackFilledIcon")
+                ]
                 if buildConfig.isInternalBuild {
                     icons.append(PresentationAppIcon(name: "WhiteFilled", imageName: "WhiteFilledIcon"))
                 }
@@ -2276,6 +2277,8 @@ private func notificationPayloadKey(data: Data) -> Data? {
 private func accountIdFromNotification(_ notification: UNNotification, sharedContext: Signal<SharedApplicationContext, NoError>) -> Signal<AccountRecordId?, NoError> {
     if let id = notification.request.content.userInfo["accountId"] as? Int64 {
         return .single(AccountRecordId(rawValue: id))
+    } else if let idString = notification.request.content.userInfo["accountId"] as? String, let id = Int64(idString) {
+        return .single(AccountRecordId(rawValue: id))
     } else {
         var encryptedData: Data?
         if var encryptedPayload = notification.request.content.userInfo["p"] as? String {
@@ -2334,6 +2337,8 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
 @available(iOS 10.0, *)
 private func peerIdFromNotification(_ notification: UNNotification) -> PeerId? {
     if let peerId = notification.request.content.userInfo["peerId"] as? Int64 {
+        return PeerId(peerId)
+    } else if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerId = Int64(peerIdString) {
         return PeerId(peerId)
     } else {
         let payload = notification.request.content.userInfo

@@ -11,6 +11,14 @@ private final class MediaPlayerNodeLayerNullAction: NSObject, CAAction {
 }
 
 private final class MediaPlayerNodeLayer: AVSampleBufferDisplayLayer {
+    override init() {
+        super.init()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override func action(forKey event: String) -> CAAction? {
         return MediaPlayerNodeLayerNullAction()
     }

@@ -1451,6 +1451,28 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     }
                     return current
                 })
+            case let .updatePendingJoinRequests(peer, requestsPending):
+                updatedState.updateCachedPeerData(peer.peerId, { current in
+                    if peer.peerId.namespace == Namespaces.Peer.CloudGroup {
+                        let previous: CachedGroupData
+                        if let current = current as? CachedGroupData {
+                            previous = current
+                        } else {
+                            previous = CachedGroupData()
+                        }
+                        return previous.withUpdatedInviteRequestsPending(requestsPending)
+                    } else if peer.peerId.namespace == Namespaces.Peer.CloudChannel {
+                        let previous: CachedChannelData
+                        if let current = current as? CachedChannelData {
+                            previous = current
+                        } else {
+                            previous = CachedChannelData()
+                        }
+                        return previous.withUpdatedInviteRequestsPending(requestsPending)
+                    } else {
+                        return current
+                    }
+                })
             default:
                 break
         }

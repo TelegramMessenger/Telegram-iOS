@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -30,6 +31,7 @@ public enum ItemListNavigationButtonContent: Equatable {
     case none
     case text(String)
     case icon(ItemListNavigationButtonContentIcon)
+    case node(ASDisplayNode)
 }
 
 public struct ItemListNavigationButton {
@@ -335,6 +337,11 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                             image = PresentationResourcesRootController.navigationShareIcon(controllerState.presentationData.theme)
                                     }
                                     item = UIBarButtonItem(image: image, style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
+                                case let .node(node):
+                                    item = UIBarButtonItem(customDisplayNode: node)
+                                    item.setCustomAction({ [weak self] in
+                                        self?.navigationButtonActions.0?()
+                                    })
                             }
                             strongSelf.leftNavigationButtonTitleAndStyle = (leftNavigationButton.content, leftNavigationButton.style)
                             strongSelf.navigationItem.setLeftBarButton(item, animated: false)
@@ -392,6 +399,11 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                                 image = PresentationResourcesRootController.navigationShareIcon(controllerState.presentationData.theme)
                                         }
                                         item = UIBarButtonItem(image: image, style: style.barButtonItemStyle, target: strongSelf, action: action)
+                                    case let .node(node):
+                                        item = UIBarButtonItem(customDisplayNode: node)
+                                        item.setCustomAction({ [weak self] in
+                                            self?.navigationButtonActions.1?()
+                                        })
                                 }
                             }
                             items.append(item)

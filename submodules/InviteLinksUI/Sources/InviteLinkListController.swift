@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -210,7 +211,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
         let arguments = arguments as! InviteLinkListControllerArguments
         switch self {
             case let .header(theme, text):
-                return InviteLinkHeaderItem(context: arguments.context, theme: theme, text: text, sectionId: self.section)
+                return InviteLinkHeaderItem(context: arguments.context, theme: theme, text: text, animationName: "Invite", sectionId: self.section)
             case let .mainLinkHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .mainLink(_, invite, peers, importersCount, isPublic):
@@ -283,7 +284,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
     let mainInvite: ExportedInvitation?
     var isPublic = false
     if let peer = peer, let address = peer.addressName, !address.isEmpty && admin == nil {
-        mainInvite = ExportedInvitation(link: "t.me/\(address)", isPermanent: true, isRevoked: false, adminId: EnginePeer.Id(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil)
+        mainInvite = ExportedInvitation(link: "t.me/\(address)", isPermanent: true, requestApproval: false, isRevoked: false, adminId: EnginePeer.Id(0), date: 0, startDate: nil, expireDate: nil, usageLimit: nil, count: nil, requestedCount: nil)
         isPublic = true
     } else if let invites = invites, let invite = invites.first(where: { $0.isPermanent && !$0.isRevoked }) {
         mainInvite = invite
@@ -426,6 +427,42 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
     
     let arguments = InviteLinkListControllerArguments(context: context, shareMainLink: { invite in
         let shareController = ShareController(context: context, subject: .url(invite.link), updatedPresentationData: updatedPresentationData)
+        shareController.completed = { peerIds in
+            let _ = (context.account.postbox.transaction { transaction -> [Peer] in
+                var peers: [Peer] = []
+                for peerId in peerIds {
+                    if let peer = transaction.getPeer(peerId) {
+                        peers.append(peer)
+                    }
+                }
+                return peers
+            } |> deliverOnMainQueue).start(next: { peers in
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+                let text: String
+                var savedMessages = false
+                if peerIds.count == 1, let peerId = peerIds.first, peerId == context.account.peerId {
+                    text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_SavedMessages_One
+                    savedMessages = true
+                } else {
+                    if peers.count == 1, let peer = peers.first {
+                        let peerName = peer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_Chat_One(peerName).string
+                    } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                        let firstPeerName = firstPeer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        let secondPeerName = secondPeer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                    } else if let peer = peers.first {
+                        let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                    } else {
+                        text = ""
+                    }
+                }
+                
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+            })
+        }
         shareController.actionCompleted = {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
@@ -591,6 +628,42 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                     f(.default)
                 
                     let shareController = ShareController(context: context, subject: .url(invite.link), updatedPresentationData: updatedPresentationData)
+                    shareController.completed = { peerIds in
+                        let _ = (context.account.postbox.transaction { transaction -> [Peer] in
+                            var peers: [Peer] = []
+                            for peerId in peerIds {
+                                if let peer = transaction.getPeer(peerId) {
+                                    peers.append(peer)
+                                }
+                            }
+                            return peers
+                        } |> deliverOnMainQueue).start(next: { peers in
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            
+                            let text: String
+                            var savedMessages = false
+                            if peerIds.count == 1, let peerId = peerIds.first, peerId == context.account.peerId {
+                                text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_SavedMessages_One
+                                savedMessages = true
+                            } else {
+                                if peers.count == 1, let peer = peers.first {
+                                    let peerName = peer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_Chat_One(peerName).string
+                                } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                    let firstPeerName = firstPeer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let secondPeerName = secondPeer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                                } else if let peer = peers.first {
+                                    let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                                } else {
+                                    text = ""
+                                }
+                            }
+                            
+                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                        })
+                    }
                     shareController.actionCompleted = {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
@@ -711,7 +784,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
             })))
         }
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, blurBackground: true)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node, keepInPlace: false, blurBackground: true)), items: .single(ContextController.Items(items: items)), gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, openAdmin: { admin in
         let controller = inviteLinkListController(context: context, peerId: peerId, admin: admin)
@@ -756,7 +829,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
     |> distinctUntilChanged
     |> deliverOnMainQueue
     |> map { invite -> PeerInvitationImportersContext? in
-        return invite.flatMap { context.engine.peers.peerInvitationImporters(peerId: peerId, invite: $0) }
+        return invite.flatMap { context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: $0, requested: false)) }
     } |> afterNext { context in
         if let context = context {
             importersState.set(context.state |> map(Optional.init))
@@ -884,10 +957,10 @@ final class InviteLinkContextExtractedContentSource: ContextExtractedContentSour
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode
     
-    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, blurBackground: Bool) {
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode, keepInPlace: Bool, blurBackground: Bool) {
         self.controller = controller
         self.sourceNode = sourceNode
-        self.keepInPlace = true
+        self.keepInPlace = keepInPlace
         self.blurBackground = blurBackground
     }
     

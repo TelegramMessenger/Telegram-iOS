@@ -53,6 +53,9 @@ swift_library(
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/AvatarNode:AvatarNode",
+        "//submodules/LocalizedPeerData:LocalizedPeerData",
+        "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
     ],
     visibility = [
         "//visibility:public",

@@ -5,6 +5,7 @@ objc_library(
     module_name = "opusfile",
     srcs = glob([
         "Sources/*.c",
+        "Sources/*.h",
     ]),
     hdrs = glob([
         "include/opusfile/*.h",

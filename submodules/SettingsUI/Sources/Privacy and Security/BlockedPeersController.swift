@@ -124,7 +124,7 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
         let arguments = arguments as! BlockedPeersControllerArguments
         switch self {
             case let .add(theme, text):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.blockAccentIcon(theme), title: text, sectionId: self.section, height: .generic, editing: false, action: {
                     arguments.addPeer()
                 })
             case let .peerItem(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, editing, enabled):

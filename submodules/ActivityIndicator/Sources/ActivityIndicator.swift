@@ -16,7 +16,7 @@ private func generateIndefiniteActivityIndicatorImage(color: UIColor, diameter: 
 }
 
 private func convertIndicatorColor(_ color: UIColor) -> UIColor {
-    if color.isEqual(UIColor(rgb: 0x007ee5)) {
+    if color.isEqual(UIColor(rgb: 0x007aff)) {
         return .gray
     } else if color.isEqual(UIColor(rgb: 0x2ea6ff)) {
         return .white

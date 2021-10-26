@@ -2693,6 +2693,13 @@ final class MessageHistoryTable: Table {
             return nil
         }
     }
+
+    func firstMessageInRange(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, timestampMax: Int32, timestampMin: Int32) -> IntermediateMessage? {
+        guard let index = self.tagsTable.earlierIndices(tag: tag, peerId: peerId, namespace: namespace, index: MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: 1), timestamp: timestampMax), includeFrom: true, minIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: 1), timestamp: timestampMin), count: 1).first else {
+            return nil
+        }
+        return self.getMessage(index)
+    }
     
     func incomingMessageStatsInIndices(_ peerId: PeerId, namespace: MessageId.Namespace, indices: [MessageIndex]) -> (Int, Bool) {
         var count: Int = 0

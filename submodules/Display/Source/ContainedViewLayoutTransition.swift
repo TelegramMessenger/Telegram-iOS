@@ -865,6 +865,36 @@ public extension ContainedViewLayoutTransition {
             })
         }
     }
+
+    func updateTransform(node: ASDisplayNode, transform: CGAffineTransform, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        let transform = CATransform3DMakeAffineTransform(transform)
+
+        if CATransform3DEqualToTransform(node.layer.transform, transform) {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+
+        switch self {
+        case .immediate:
+            node.layer.transform = transform
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let previousTransform: CATransform3D
+            if beginWithCurrentState, let presentation = node.layer.presentation() {
+                previousTransform = presentation.transform
+            } else {
+                previousTransform = node.layer.transform
+            }
+            node.layer.transform = transform
+            node.layer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { value in
+                completion?(value)
+            })
+        }
+    }
     
     func updateTransformScale(node: ASDisplayNode, scale: CGFloat, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
         let t = node.layer.transform

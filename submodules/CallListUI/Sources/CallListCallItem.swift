@@ -188,6 +188,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
@@ -205,6 +206,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     required init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
+        
+        self.maskNode = ASImageNode()
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -523,7 +526,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                     } else if last && strongSelf.bottomStripeNode.supernode != nil {
                                         strongSelf.bottomStripeNode.removeFromSupernode()
                                     }
-                                    
+                                    if strongSelf.maskNode.supernode != nil {
+                                        strongSelf.maskNode.removeFromSupernode()
+                                    }
                                     transition.updateFrameAdditive(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight)))
                                 case .blocks:
                                     if strongSelf.backgroundNode.supernode == nil {
@@ -535,11 +540,18 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                     if strongSelf.bottomStripeNode.supernode == nil {
                                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                                     }
+                                    if strongSelf.maskNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                                    }
+                                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                                    var hasTopCorners = false
+                                    var hasBottomCorners = false
                                     switch neighbors.top {
                                         case .sameSection(false):
                                             strongSelf.topStripeNode.isHidden = true
                                         default:
-                                            strongSelf.topStripeNode.isHidden = false
+                                            hasTopCorners = true
+                                            strongSelf.topStripeNode.isHidden = hasCorners
                                     }
                                     let bottomStripeInset: CGFloat
                                     switch neighbors.bottom {
@@ -547,9 +559,14 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                             bottomStripeInset = leftInset
                                         default:
                                             bottomStripeInset = 0.0
+                                            hasBottomCorners = true
+                                            strongSelf.bottomStripeNode.isHidden = hasCorners
                                     }
+                                
+                                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                                     
                                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))
                                     transition.updateFrameAdditive(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width - bottomStripeInset, height: separatorHeight)))
                             }

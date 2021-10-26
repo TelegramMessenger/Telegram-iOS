@@ -229,7 +229,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                 let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
                 
                 var hasHeic = false
-                var allItems = carouselItem.selectionContext.selectedItems() ?? []
+                var allItems = carouselItem.selectionContext?.selectedItems() ?? []
                 if let currentItem = currentItem {
                     allItems.append(currentItem)
                 }
@@ -266,7 +266,9 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
             }
         };
         carouselItem.allowCaptions = true
-        carouselItem.editingContext.setForcedCaption(initialCaption, entities: [])
+        if !initialCaption.isEmpty {
+            carouselItem.editingContext.setForcedCaption(initialCaption, entities: [])
+        }
         itemViews.append(carouselItem)
         
         let galleryItem = TGMenuSheetButtonItemView(title: editing ? presentationData.strings.Conversation_EditingMessageMediaChange : presentationData.strings.AttachmentMenu_PhotoOrVideo, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: { [weak controller] in

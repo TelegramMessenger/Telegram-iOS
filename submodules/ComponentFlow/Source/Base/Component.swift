@@ -100,7 +100,7 @@ public final class EmptyComponentState: ComponentState {
 public protocol _TypeErasedComponent {
     func _makeView() -> UIView
     func _makeContext() -> _TypeErasedComponentContext
-    func _update(view: UIView, availableSize: CGSize, transition: Transition) -> CGSize
+    func _update(view: UIView, availableSize: CGSize, environment: Any, transition: Transition) -> CGSize
     func _isEqual(to other: _TypeErasedComponent) -> Bool
 }
 
@@ -111,7 +111,7 @@ public protocol Component: _TypeErasedComponent, Equatable {
     
     func makeView() -> View
     func makeState() -> State
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize
+    func update(view: View, availableSize: CGSize, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize
 }
 
 public extension Component {
@@ -123,8 +123,8 @@ public extension Component {
         return ComponentContext<Self>(component: self, environment: Environment<EnvironmentType>(), state: self.makeState())
     }
 
-    func _update(view: UIView, availableSize: CGSize, transition: Transition) -> CGSize {
-        return self.update(view: view as! Self.View, availableSize: availableSize, transition: transition)
+    func _update(view: UIView, availableSize: CGSize, environment: Any, transition: Transition) -> CGSize {
+        return self.update(view: view as! Self.View, availableSize: availableSize, environment: environment as! Environment<EnvironmentType>, transition: transition)
     }
 
     func _isEqual(to other: _TypeErasedComponent) -> Bool {
@@ -173,8 +173,8 @@ public class AnyComponent<EnvironmentType>: _TypeErasedComponent, Equatable {
         return self.wrapped._makeContext()
     }
 
-    public func _update(view: UIView, availableSize: CGSize, transition: Transition) -> CGSize {
-        return self.wrapped._update(view: view, availableSize: availableSize, transition: transition)
+    public func _update(view: UIView, availableSize: CGSize, environment: Any, transition: Transition) -> CGSize {
+        return self.wrapped._update(view: view, availableSize: availableSize, environment: environment as! Environment<EnvironmentType>, transition: transition)
     }
 
     public func _isEqual(to other: _TypeErasedComponent) -> Bool {

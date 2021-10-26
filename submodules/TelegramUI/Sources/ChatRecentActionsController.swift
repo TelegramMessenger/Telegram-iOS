@@ -144,7 +144,9 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, presentInviteMembers: {
         }, presentGigagroupHelp: {
         }, editMessageMedia: { _, _ in
-        }, updateShowCommands: { _ in }, statuses: nil)
+        }, updateShowCommands: { _ in
+        }, openInviteRequests: {
+        }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
         
@@ -177,10 +179,8 @@ final class ChatRecentActionsController: TelegramBaseController {
                 let previousStrings = strongSelf.presentationData.strings
                 
                 var presentationData = presentationData
-                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoji == themeEmoticon }) {
-                    let useDarkAppearance = presentationData.theme.overallDarkAppearance
-                    let customTheme = useDarkAppearance ? theme.darkTheme : theme.theme
-                    if let settings = customTheme.settings, let theme = makePresentationTheme(settings: settings) {
+                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoticon == themeEmoticon }) {
+                    if let theme = makePresentationTheme(cloudTheme: theme, dark: presentationData.theme.overallDarkAppearance) {
                         presentationData = presentationData.withUpdated(theme: theme)
                         presentationData = presentationData.withUpdated(chatWallpaper: theme.chat.defaultWallpaper)
                     }

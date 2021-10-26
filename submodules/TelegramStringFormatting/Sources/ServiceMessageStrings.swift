@@ -256,7 +256,19 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = addAttributesToStringWithRanges(strings.Message_PinnedGenericMessage(authorName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 }
             case .joinedByLink:
-                attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByLink(authorName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                if message.author?.id == accountPeerId {
+                    attributedString = NSAttributedString(string: strings.Notification_JoinedGroupByLinkYou, font: titleFont, textColor: primaryTextColor)
+                } else {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByLink(authorName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                }
+            case .joinedByRequest:
+                if message.author?.id == accountPeerId {
+                    attributedString = NSAttributedString(string: strings.Notification_JoinedGroupByRequestYou, font: titleFont, textColor: primaryTextColor)
+                } else if let peerId = message.author?.id {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByRequest(authorName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId)]))
+                } else {
+                    attributedString = NSAttributedString(string: "", font: titleFont, textColor: primaryTextColor)
+                }
             case .channelMigratedFromGroup, .groupMigratedToChannel:
                 attributedString = NSAttributedString(string: "", font: titleFont, textColor: primaryTextColor)
             case let .messageAutoremoveTimeoutUpdated(timeout):

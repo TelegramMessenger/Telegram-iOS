@@ -68,15 +68,6 @@ class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     }
 }
 
-private func generateKnobImage() -> UIImage? {
-    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setShadow(offset: CGSize(width: 0.0, height: -1.0), blur: 3.5, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
-    })
-}
-
 class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -132,8 +123,8 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
         sliderView.enablePanHandling = true
         sliderView.enablePanHandling = true
         sliderView.trackCornerRadius = 1.0
-        sliderView.lineSize = 2.0
-        sliderView.dotSize = 5.0
+        sliderView.lineSize = 4.0
+        sliderView.dotSize = 8.0
         sliderView.minimumValue = 0.0
         sliderView.maximumValue = 6.0
         sliderView.startValue = 0.0
@@ -161,9 +152,9 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
             }
             sliderView.value = value
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.disclosureArrowColor
+            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
             sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
-            sliderView.knobImage = generateKnobImage()
+            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
             
             let sliderInset: CGFloat = item.displayIcons ? 38.0 : 16.0
             
@@ -283,8 +274,8 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                         
                         if themeUpdated {
                             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                            sliderView.backColor = item.theme.list.disclosureArrowColor
-                            sliderView.knobImage = generateKnobImage()
+                            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
+                            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
                         }
                         
                         let value: CGFloat

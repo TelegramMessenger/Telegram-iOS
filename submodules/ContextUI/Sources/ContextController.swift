@@ -28,6 +28,7 @@ public enum ContextMenuActionItemTextLayout {
 public enum ContextMenuActionItemTextColor {
     case primary
     case destructive
+    case disabled
 }
 
 public enum ContextMenuActionResult {
@@ -67,6 +68,19 @@ public struct ContextMenuActionBadge {
 }
 
 public final class ContextMenuActionItem {
+    public final class Action {
+        public let controller: ContextControllerProtocol
+        public let dismissWithResult: (ContextMenuActionResult) -> Void
+        public let updateAction: (AnyHashable, ContextMenuActionItem) -> Void
+
+        init(controller: ContextControllerProtocol, dismissWithResult: @escaping (ContextMenuActionResult) -> Void, updateAction: @escaping (AnyHashable, ContextMenuActionItem) -> Void) {
+            self.controller = controller
+            self.dismissWithResult = dismissWithResult
+            self.updateAction = updateAction
+        }
+    }
+
+    public let id: AnyHashable?
     public let text: String
     public let textColor: ContextMenuActionItemTextColor
     public let textFont: ContextMenuActionItemFont
@@ -74,9 +88,48 @@ public final class ContextMenuActionItem {
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
-    public let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void
+    public let action: ((Action) -> Void)?
     
-    public init(text: String, textColor: ContextMenuActionItemTextColor = .primary, textLayout: ContextMenuActionItemTextLayout = .twoLinesMax, textFont: ContextMenuActionItemFont = .regular, badge: ContextMenuActionBadge? = nil, icon: @escaping (PresentationTheme) -> UIImage?, iconSource: ContextMenuActionItemIconSource? = nil, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+    convenience public init(
+        id: AnyHashable? = nil,
+        text: String,
+        textColor: ContextMenuActionItemTextColor = .primary,
+        textLayout: ContextMenuActionItemTextLayout = .twoLinesMax,
+        textFont: ContextMenuActionItemFont = .regular,
+        badge: ContextMenuActionBadge? = nil,
+        icon: @escaping (PresentationTheme) -> UIImage?,
+        iconSource: ContextMenuActionItemIconSource? = nil,
+        action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?
+    ) {
+        self.init(
+            id: id,
+            text: text,
+            textColor: textColor,
+            textLayout: textLayout,
+            textFont: textFont,
+            badge: badge,
+            icon: icon,
+            iconSource: iconSource,
+            action: action.flatMap { action in
+                return { impl in
+                    action(impl.controller, impl.dismissWithResult)
+                }
+            }
+        )
+    }
+
+    public init(
+        id: AnyHashable? = nil,
+        text: String,
+        textColor: ContextMenuActionItemTextColor = .primary,
+        textLayout: ContextMenuActionItemTextLayout = .twoLinesMax,
+        textFont: ContextMenuActionItemFont = .regular,
+        badge: ContextMenuActionBadge? = nil,
+        icon: @escaping (PresentationTheme) -> UIImage?,
+        iconSource: ContextMenuActionItemIconSource? = nil,
+        action: ((Action) -> Void)?
+    ) {
+        self.id = id
         self.text = text
         self.textColor = textColor
         self.textFont = textFont
@@ -214,6 +267,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.contentContainerNode = ContextContentContainerNode()
         
         var feedbackTap: (() -> Void)?
+        var updateLayout: (() -> Void)?
         
         var blurBackground = true
         if case .reference = source {
@@ -227,6 +281,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             return controller
         }, actionSelected: { result in
             beginDismiss(result)
+        }, requestLayout: {
+            updateLayout?()
         }, feedbackTap: {
             feedbackTap?()
         }, blurBackground: blurBackground)
@@ -235,6 +291,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         feedbackTap = { [weak self] in
             self?.hapticFeedback.tap()
+        }
+
+        updateLayout = { [weak self] in
+            self?.updateLayout()
         }
         
         self.scrollNode.view.delegate = self
@@ -1058,6 +1118,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             return self?.getController()
         }, actionSelected: { [weak self] result in
             self?.beginDismiss(result)
+        }, requestLayout: { [weak self] in
+            self?.updateLayout()
         }, feedbackTap: { [weak self] in
             self?.hapticFeedback.tap()
         }, blurBackground: self.blurBackground)
@@ -1083,6 +1145,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if let validLayout = self.validLayout {
             self.updateLayout(layout: validLayout, transition: .immediate, previousActionsContainerNode: nil, previousActionsContainerFrame: nil)
+        }
+    }
+
+    func updateLayout() {
+        if let layout = self.validLayout {
+            self.updateLayout(layout: layout, transition: .immediate, previousActionsContainerNode: nil)
         }
     }
     
@@ -1572,10 +1640,13 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             return nil
         }
         let mappedPoint = self.view.convert(point, to: self.scrollNode.view)
+        var maybePassthrough: ContextController.HandledTouchEvent?
         if let maybeContentNode = self.contentContainerNode.contentNode {
             switch maybeContentNode {
             case .reference:
-                break
+                if let controller = self.getController() as? ContextController, let passthroughTouchEvent = controller.passthroughTouchEvent {
+                    maybePassthrough = passthroughTouchEvent(self.view, point)
+                }
             case let .extracted(contentParentNode, _):
                 if case let .extracted(source) = self.source {
                     if !source.ignoreContentTouches {
@@ -1613,6 +1684,19 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if self.actionsContainerNode.frame.contains(mappedPoint) {
             return self.actionsContainerNode.hitTest(self.view.convert(point, to: self.actionsContainerNode.view), with: event)
+        }
+
+        if let maybePassthrough = maybePassthrough {
+            switch maybePassthrough {
+            case .ignore:
+                break
+            case let .dismiss(consume):
+                self.getController()?.dismiss(completion: nil)
+
+                if !consume {
+                    return nil
+                }
+            }
         }
         
         return self.dismissNode.view
@@ -1775,6 +1859,13 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var useComplexItemsTransitionAnimation = false
     public var immediateItemsTransitionAnimation = false
+
+    public enum HandledTouchEvent {
+        case ignore
+        case dismiss(consume: Bool)
+    }
+
+    public var passthroughTouchEvent: ((UIView, CGPoint) -> HandledTouchEvent)?
     
     private var shouldBeDismissedDisposable: Disposable?
     

@@ -330,6 +330,7 @@ private func roundTimeToDay(_ timestamp: Int32) -> Int32 {
 
 private enum PreparedAutomaticThemeSwitchTrigger {
     case explicitNone
+    case explicitForce
     case system
     case time(fromSeconds: Int32, toSeconds: Int32)
     case brightness(threshold: Double)
@@ -341,26 +342,30 @@ private struct AutomaticThemeSwitchParameters {
     
     init(settings: AutomaticThemeSwitchSetting) {
         let trigger: PreparedAutomaticThemeSwitchTrigger
-        switch settings.trigger {
-            case .system:
-                trigger = .system
-            case .explicitNone:
-                trigger = .explicitNone
-            case let .timeBased(setting):
-                let fromValue: Int32
-                let toValue: Int32
-                switch setting {
-                    case let .automatic(latitude, longitude, _):
-                        let calculator = EDSunriseSet(date: Date(), timezone: TimeZone.current, latitude: latitude, longitude: longitude)!
-                        fromValue = roundTimeToDay(Int32(calculator.sunset.timeIntervalSince1970))
-                        toValue = roundTimeToDay(Int32(calculator.sunrise.timeIntervalSince1970))
-                    case let .manual(fromSeconds, toSeconds):
-                        fromValue = fromSeconds
-                        toValue = toSeconds
-                }
-                trigger = .time(fromSeconds: fromValue, toSeconds: toValue)
-            case let .brightness(threshold):
-                trigger = .brightness(threshold: threshold)
+        if settings.force {
+            trigger = .explicitForce
+        } else {
+            switch settings.trigger {
+                case .system:
+                    trigger = .system
+                case .explicitNone:
+                    trigger = .explicitNone
+                case let .timeBased(setting):
+                    let fromValue: Int32
+                    let toValue: Int32
+                    switch setting {
+                        case let .automatic(latitude, longitude, _):
+                            let calculator = EDSunriseSet(date: Date(), timezone: TimeZone.current, latitude: latitude, longitude: longitude)!
+                            fromValue = roundTimeToDay(Int32(calculator.sunset.timeIntervalSince1970))
+                            toValue = roundTimeToDay(Int32(calculator.sunrise.timeIntervalSince1970))
+                        case let .manual(fromSeconds, toSeconds):
+                            fromValue = fromSeconds
+                            toValue = toSeconds
+                    }
+                    trigger = .time(fromSeconds: fromValue, toSeconds: toValue)
+                case let .brightness(threshold):
+                    trigger = .brightness(threshold: threshold)
+            }
         }
         self.trigger = trigger
         self.theme = settings.theme
@@ -371,6 +376,8 @@ private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchPar
     switch parameters.trigger {
         case .explicitNone:
             return false
+        case .explicitForce:
+            return true
         case .system:
             return systemUserInterfaceStyle == .dark
         case let .time(fromValue, toValue):
@@ -605,6 +612,7 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                         var effectiveColors = currentColors
                         
                         var switchedToNightModeWallpaper = false
+                        var preferredBaseTheme: TelegramBaseTheme?
                         if autoNightModeTriggered {
                             let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
                             effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
@@ -615,15 +623,23 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                                 switchedToNightModeWallpaper = true
                             }
                             effectiveTheme = automaticTheme
+                            if let baseTheme = themeSettings.themePreferredBaseTheme[effectiveTheme.index], [.night, .tinted].contains(baseTheme) {
+                                preferredBaseTheme = baseTheme
+                            } else {
+                                preferredBaseTheme = .night
+                            }
                         } else {
                             effectiveTheme = themeSettings.theme
+                            if let baseTheme = themeSettings.themePreferredBaseTheme[effectiveTheme.index], [.classic, .day].contains(baseTheme) {
+                                preferredBaseTheme = baseTheme
+                            }
                         }
                         
                         if let colors = effectiveColors, colors.baseColor == .theme {
                             effectiveColors = nil
                         }
                         
-                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
+                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
                         
                         if autoNightModeTriggered && !switchedToNightModeWallpaper {
                             switch effectiveChatWallpaper {

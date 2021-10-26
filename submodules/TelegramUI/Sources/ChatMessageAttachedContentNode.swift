@@ -285,7 +285,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         
         return { presentationData, automaticDownloadSettings, associatedData, attributes, context, controllerInteraction, message, messageRead, chatLocation, title, subtitle, text, entities, mediaAndFlags, mediaBadge, actionIcon, actionTitle, displayLine, layoutConstants, preparePosition, constrainedSize in
             let isPreview = presentationData.isPreview
-            let fontSize: CGFloat = floor(presentationData.fontSize.baseDisplaySize * 15.0 / 17.0)
+            let fontSize: CGFloat
+            if message.adAttribute != nil {
+                fontSize = floor(presentationData.fontSize.baseDisplaySize)
+            } else {
+                fontSize = floor(presentationData.fontSize.baseDisplaySize * 15.0 / 17.0)
+            }
             
             let titleFont = Font.semibold(fontSize)
             let textFont = Font.regular(fontSize)

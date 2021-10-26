@@ -107,10 +107,10 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
     private var disabledOverlayNode: ASDisplayNode?
     private let maskNode: ASImageNode
     
+    let iconNode: ASImageNode
     private let titleNode: TextNode
     private let appNode: TextNode
     private let locationNode: TextNode
-    private let labelNode: TextNode
     
     private let activateArea: AccessibilityAreaNode
     
@@ -130,6 +130,10 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
         
         self.maskNode = ASImageNode()
         
+        self.iconNode = ASImageNode()
+        self.iconNode.cornerRadius = 7.0
+        self.iconNode.clipsToBounds = true
+        
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
@@ -144,12 +148,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
         self.locationNode.isUserInteractionEnabled = false
         self.locationNode.contentMode = .left
         self.locationNode.contentsScale = UIScreen.main.scale
-        
-        self.labelNode = TextNode()
-        self.labelNode.isUserInteractionEnabled = false
-        self.labelNode.contentMode = .left
-        self.labelNode.contentsScale = UIScreen.main.scale
-        
+    
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
@@ -157,10 +156,10 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
+        self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.appNode)
         self.addSubnode(self.locationNode)
-        self.addSubnode(self.labelNode)
         
         self.addSubnode(self.activateArea)
     }
@@ -169,7 +168,6 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeAppLayout = TextNode.asyncLayout(self.appNode)
         let makeLocationLayout = TextNode.asyncLayout(self.locationNode)
-        let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
         
         var currentDisabledOverlayNode = self.disabledOverlayNode
@@ -179,8 +177,8 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
         return { item, params, neighbors in
             var updatedTheme: PresentationTheme?
             
-            let titleFont = Font.medium(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
-            let textFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
+            let titleFont = Font.medium(floor(item.presentationData.fontSize.itemListBaseFontSize * 16.0 / 17.0))
+            let textFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             
             let verticalInset: CGFloat = 10.0
             let titleSpacing: CGFloat = 1.0
@@ -193,7 +191,6 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             var titleAttributedString: NSAttributedString?
             var appAttributedString: NSAttributedString?
             var locationAttributedString: NSAttributedString?
-            var labelAttributedString: NSAttributedString?
             
             let peerRevealOptions: [ItemListRevealOption]
             if item.editable && item.enabled {
@@ -226,16 +223,18 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             }
             
             appAttributedString = NSAttributedString(string: appString, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
-            locationAttributedString = NSAttributedString(string: "\(item.session.ip) — \(item.session.country)", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            
+            let label: String
             if item.session.isCurrent {
-                labelAttributedString = NSAttributedString(string: item.presentationData.strings.Presence_online, font: textFont, textColor: item.presentationData.theme.list.itemAccentColor)
+                label = item.presentationData.strings.Presence_online
             } else {
                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                let dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: item.session.activityDate, relativeTo: timestamp, dateTimeFormat: item.dateTimeFormat)
-                labelAttributedString = NSAttributedString(string: dateText, font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                label = stringForRelativeActivityTimestamp(strings: item.presentationData.strings, dateTimeFormat: item.dateTimeFormat, relativeTimestamp: item.session.activityDate, relativeTo: timestamp)
             }
             
-            let leftInset: CGFloat = 15.0 + params.leftInset
+            locationAttributedString = NSAttributedString(string: "\(item.session.country) • \(label)", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                        
+            let leftInset: CGFloat = 59.0 + params.leftInset
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
             
@@ -248,8 +247,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                 editingOffset = 0.0
             }
             
-            let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0 - editingOffset - rightInset - labelLayout.size.width - 5.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0 - editingOffset - rightInset - 5.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (appLayout, appApply) = makeAppLayout(TextNodeLayoutArguments(attributedString: appAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (locationLayout, locationApply) = makeLocationLayout(TextNodeLayoutArguments(attributedString: locationAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -364,7 +362,6 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                         })
                     }
                     
-                    let _ = labelApply()
                     let _ = titleApply()
                     let _ = appApply()
                     let _ = locationApply()
@@ -412,7 +409,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
                     
-                    transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - labelLayout.size.width - 15.0 - rightInset, y: verticalInset), size: labelLayout.size))
+                    transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 16.0, y: 12.0), size: CGSize(width: 30.0, height: 30.0)))
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: verticalInset), size: titleLayout.size))
                     transition.updateFrame(node: strongSelf.appNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: appLayout.size))
                     transition.updateFrame(node: strongSelf.locationNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: strongSelf.appNode.frame.maxY + textSpacing), size: locationLayout.size))
@@ -455,7 +452,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             editingOffset = 0.0
         }
         
-        transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: revealOffset + params.width - params.rightInset - self.labelNode.bounds.size.width - 15.0, y: self.labelNode.frame.minY), size: self.labelNode.bounds.size))
+        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + self.revealOffset + editingOffset + 16.0, y: self.iconNode.frame.minY), size: self.iconNode.bounds.size))
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
         transition.updateFrame(node: self.appNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.appNode.frame.minY), size: self.appNode.bounds.size))
         transition.updateFrame(node: self.locationNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.locationNode.frame.minY), size: self.locationNode.bounds.size))
