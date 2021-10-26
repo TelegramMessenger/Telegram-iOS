@@ -802,7 +802,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         let indicatorSize = self.dateIndicator.update(
             transition: .immediate,
             component: AnyComponent(SparseItemGridScrollingIndicatorComponent(
-                backgroundColor: theme.list.itemHighlightedBackgroundColor,
+                backgroundColor: theme.list.itemBlocksBackgroundColor,
                 shadowColor: .black,
                 foregroundColor: theme.list.itemPrimaryTextColor,
                 dateString: dateString

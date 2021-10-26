@@ -209,8 +209,8 @@ public final class SparseMessageList {
                 var removeIndices: [Int] = []
                 for i in 0 ..< sparseItems.items.count {
                     switch sparseItems.items[i] {
-                    case let .anchor(id, _, message):
-                        if message != nil, idsSet.contains(id) {
+                    case let .anchor(id, _, _):
+                        if idsSet.contains(id) {
                             removeIndices.append(i)
                         }
                     default:
