@@ -62,7 +62,6 @@ import PeerInfoAvatarListNode
 import PasswordSetupUI
 import CalendarMessageScreen
 import TooltipUI
-import _idx_Display_D7FBA2C5_ios_min9_0
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
