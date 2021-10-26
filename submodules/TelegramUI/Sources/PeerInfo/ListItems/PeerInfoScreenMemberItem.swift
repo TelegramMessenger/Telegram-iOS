@@ -51,6 +51,7 @@ final class PeerInfoScreenMemberItem: PeerInfoScreenItem {
 
 private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
     private let selectionNode: PeerInfoScreenSelectableBackgroundNode
+    private let maskNode: ASImageNode
     private let bottomSeparatorNode: ASDisplayNode
     
     private var item: PeerInfoScreenMemberItem?
@@ -60,6 +61,9 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         var bringToFrontForHighlightImpl: (() -> Void)?
         self.selectionNode = PeerInfoScreenSelectableBackgroundNode(bringToFrontForHighlight: { bringToFrontForHighlightImpl?() })
         self.selectionNode.isUserInteractionEnabled = false
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.bottomSeparatorNode = ASDisplayNode()
         self.bottomSeparatorNode.isLayerBacked = true
@@ -220,6 +224,19 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         let height = itemNode.contentSize.height
         
         transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: itemNode.bounds.size))
+        
+        
+        let hasCorners = safeInsets.left > 0.0 && (topItem == nil || bottomItem == nil)
+        let hasTopCorners = hasCorners && topItem == nil
+        let hasBottomCorners = hasCorners && bottomItem == nil
+        
+        self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
+        self.bottomSeparatorNode.isHidden = hasBottomCorners
+        
+        if self.maskNode.supernode == nil {
+            self.addSubnode(self.maskNode)
+        }
         
         let highlightNodeOffset: CGFloat = topItem == nil ? 0.0 : UIScreenPixel
         self.selectionNode.update(size: CGSize(width: width, height: height + highlightNodeOffset), theme: presentationData.theme, transition: transition)

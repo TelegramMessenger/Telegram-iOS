@@ -478,6 +478,56 @@ public struct messages {
         }
     
     }
+    public enum SearchResultsRawMessages: TypeConstructorDescription {
+        case searchResultsRawMessages(msgIds: [Int32], msgDates: [Int32])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .searchResultsRawMessages(let msgIds, let msgDates):
+                    if boxed {
+                        buffer.appendInt32(2014782332)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(msgIds.count))
+                    for item in msgIds {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(msgDates.count))
+                    for item in msgDates {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .searchResultsRawMessages(let msgIds, let msgDates):
+                return ("searchResultsRawMessages", [("msgIds", msgIds), ("msgDates", msgDates)])
+    }
+    }
+    
+        public static func parse_searchResultsRawMessages(_ reader: BufferReader) -> SearchResultsRawMessages? {
+            var _1: [Int32]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _2: [Int32]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.SearchResultsRawMessages.searchResultsRawMessages(msgIds: _1!, msgDates: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum ExportedChatInvites: TypeConstructorDescription {
         case exportedChatInvites(count: Int32, invites: [Api.ExportedChatInvite], users: [Api.User])
     
