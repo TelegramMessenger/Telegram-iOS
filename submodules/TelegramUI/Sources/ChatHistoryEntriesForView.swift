@@ -259,7 +259,6 @@ func chatHistoryEntriesForView(
 
         if view.laterId == nil && !view.isLoading {
             if !entries.isEmpty, case let .MessageEntry(lastMessage, _, _, _, _, _) = entries[entries.count - 1], !adMessages.isEmpty {
-
                 var nextAdMessageId: Int32 = 1
                 for message in adMessages {
                     let updatedMessage = Message(

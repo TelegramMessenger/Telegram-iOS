@@ -32,9 +32,10 @@ private final class InviteLinkEditControllerArguments {
 }
 
 private enum InviteLinksEditSection: Int32 {
+    case title
+    case requestApproval
     case time
     case usage
-    case requestApproval
     case revoke
 }
 
@@ -55,6 +56,12 @@ func isValidNumberOfUsers(_ number: String) -> Bool {
 }
 
 private enum InviteLinksEditEntry: ItemListNodeEntry {
+    case title(PresentationTheme, String, String)
+    case titleInfo(PresentationTheme, String)
+    
+    case requestApproval(PresentationTheme, String, Bool)
+    case requestApprovalInfo(PresentationTheme, String)
+    
     case timeHeader(PresentationTheme, String)
     case timePicker(PresentationTheme, InviteLinkTimeLimit)
     case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool)
@@ -66,13 +73,12 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     case usageCustomPicker(PresentationTheme, Int32?, Bool, Bool)
     case usageInfo(PresentationTheme, String)
     
-    case requestApproval(PresentationTheme, String, Bool)
-    case requestApprovalInfo(PresentationTheme, String)
-    
     case revoke(PresentationTheme, String)
    
     var section: ItemListSectionId {
         switch self {
+            case .title, .titleInfo:
+                return InviteLinksEditSection.title.rawValue
             case .requestApproval, .requestApprovalInfo:
                 return InviteLinksEditSection.requestApproval.rawValue
             case .timeHeader, .timePicker, .timeExpiryDate, .timeCustomPicker, .timeInfo:
@@ -86,35 +92,63 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .requestApproval:
+            case .title:
                 return 0
-            case .requestApprovalInfo:
+            case .titleInfo:
                 return 1
-            case .timeHeader:
+            case .requestApproval:
                 return 2
-            case .timePicker:
+            case .requestApprovalInfo:
                 return 3
-            case .timeExpiryDate:
+            case .timeHeader:
                 return 4
-            case .timeCustomPicker:
+            case .timePicker:
                 return 5
-            case .timeInfo:
+            case .timeExpiryDate:
                 return 6
-            case .usageHeader:
+            case .timeCustomPicker:
                 return 7
-            case .usagePicker:
+            case .timeInfo:
                 return 8
-            case .usageCustomPicker:
+            case .usageHeader:
                 return 9
-            case .usageInfo:
+            case .usagePicker:
                 return 10
-            case .revoke:
+            case .usageCustomPicker:
                 return 11
+            case .usageInfo:
+                return 12
+            case .revoke:
+                return 13
         }
     }
     
     static func ==(lhs: InviteLinksEditEntry, rhs: InviteLinksEditEntry) -> Bool {
         switch lhs {
+            case let .title(lhsTheme, lhsPlaceholder, lhsValue):
+                if case let .title(rhsTheme, rhsPlaceholder, rhsValue) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .titleInfo(lhsTheme, lhsText):
+                if case let .titleInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .requestApproval(lhsTheme, lhsText, lhsValue):
+                if case let .requestApproval(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .requestApprovalInfo(lhsTheme, lhsText):
+                if case let .requestApprovalInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .timeHeader(lhsTheme, lhsText):
                 if case let .timeHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -169,18 +203,6 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .requestApproval(lhsTheme, lhsText, lhsValue):
-                if case let .requestApproval(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .requestApprovalInfo(lhsTheme, lhsText):
-                if case let .requestApprovalInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
             case let .revoke(lhsTheme, lhsText):
                 if case let .revoke(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -197,6 +219,26 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! InviteLinkEditControllerArguments
         switch self {
+            case let .title(_, placeholder, value):
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, sectionId: self.section, textUpdated: { value in
+                    arguments.updateState { state in
+                        var updatedState = state
+                        updatedState.title = value
+                        return updatedState
+                    }
+                }, action: {})
+            case let .titleInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+            case let .requestApproval(_, text, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.updateState { state in
+                        var updatedState = state
+                        updatedState.requestApproval = value
+                        return updatedState
+                    }
+                })
+            case let .requestApprovalInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .timeHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .timePicker(_, value):
@@ -288,16 +330,6 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 })
             case let .usageInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .requestApproval(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.updateState { state in
-                        var updatedState = state
-                        updatedState.requestApproval = value
-                        return updatedState
-                    }
-                })
-            case let .requestApprovalInfo(_, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .revoke(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                     arguments.revoke()
@@ -308,6 +340,9 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
 
 private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, isGroup: Bool, isPublic: Bool, presentationData: PresentationData) -> [InviteLinksEditEntry] {
     var entries: [InviteLinksEditEntry] = []
+    
+    entries.append(.title(presentationData.theme, presentationData.strings.InviteLink_Create_LinkName, state.title))
+    entries.append(.titleInfo(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameInfo))
     
     entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval))
     var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
@@ -354,6 +389,7 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
 }
 
 private struct InviteLinkEditControllerState: Equatable {
+    var title: String
     var usage: InviteLinkUsageLimit
     var time: InviteLinkTimeLimit
     var requestApproval = false
@@ -385,9 +421,9 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
             timeLimit = .unlimited
         }
         
-        initialState = InviteLinkEditControllerState(usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: invite.requestApproval, pickingTimeLimit: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(title: "", usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: invite.requestApproval, pickingTimeLimit: false, pickingUsageLimit: false)
     } else {
-        initialState = InviteLinkEditControllerState(usage: .unlimited, time: .unlimited, requestApproval: false, pickingTimeLimit: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(title: "", usage: .unlimited, time: .unlimited, requestApproval: false, pickingTimeLimit: false, pickingUsageLimit: false)
     }
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)

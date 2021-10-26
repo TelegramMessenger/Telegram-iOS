@@ -1126,92 +1126,73 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
         pushControllerImpl?(controller)
     }
     selectAccentColorImpl = { currentBaseTheme, accentColor in
-        let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-            return current
-//            var currentTheme = current.theme
-//            let currentPreferredBaseTheme = currentBaseTheme
-//            if case let .cloud(theme) = currentTheme, let _ = theme.theme.settings, currentBaseTheme != nil {
-//
-//            }
-//
-//            return PresentationThemeSettings(theme: updatedTheme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
-        }).start()
+        var wallpaperSignal: Signal<TelegramWallpaper?, NoError> = .single(nil)
+        if let colorWallpaper = accentColor?.wallpaper, case let .file(file) = colorWallpaper {
+            wallpaperSignal = cachedWallpaper(account: context.account, slug: file.slug, settings: colorWallpaper.settings)
+            |> mapToSignal { cachedWallpaper in
+                if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
+                    let _ = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start()
+
+                    return .single(wallpaper)
+    
+                } else {
+                    return .single(nil)
+                }
+            }
+        }
         
-        presentCrossfadeControllerImpl?(true)
+        let _ = (wallpaperSignal
+        |> deliverOnMainQueue).start(next: { presetWallpaper in
+            let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
+                var currentTheme = current.theme
+                if autoNightModeTriggered {
+                    currentTheme = current.automaticThemeSwitchSetting.theme
+                }
+                
+                let generalThemeReference: PresentationThemeReference
+                if case let .cloud(theme) = currentTheme, let settings = theme.theme.settings?.first {
+                    generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
+                } else {
+                    generalThemeReference = currentTheme
+                }
+                
+                currentTheme = generalThemeReference
+                var updatedTheme = current.theme
+                var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                
+                if autoNightModeTriggered {
+                    updatedAutomaticThemeSwitchSetting.theme = generalThemeReference
+                } else {
+                    updatedTheme = generalThemeReference
+                }
+                
+                guard let _ = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.color, wallpaper: presetWallpaper, baseColor: accentColor?.baseColor) else {
+                    return current
+                }
+                
+                let themePreferredBaseTheme = current.themePreferredBaseTheme
+                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                var themeSpecificAccentColors = current.themeSpecificAccentColors
+                themeSpecificAccentColors[generalThemeReference.index] = accentColor?.withUpdatedWallpaper(presetWallpaper)
+                
+                if case .builtin = generalThemeReference {
+                    let index = coloredThemeIndex(reference: currentTheme, accentColor: accentColor)
+                    if let wallpaper = current.themeSpecificChatWallpapers[index] {
+                        if wallpaper.isColorOrGradient || wallpaper.isPattern || wallpaper.isBuiltin {
+                            themeSpecificChatWallpapers[index] = presetWallpaper
+                        }
+                    } else {
+                        themeSpecificChatWallpapers[index] = presetWallpaper
+                    }
+                }
+                
+                return PresentationThemeSettings(theme: updatedTheme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+            }).start()
+            
+            presentCrossfadeControllerImpl?(true)
+        })
     }
-        
-        
-//        var wallpaperSignal: Signal<TelegramWallpaper?, NoError> = .single(nil)
-//        if let colorWallpaper = accentColor?.wallpaper, case let .file(file) = colorWallpaper {
-//            wallpaperSignal = cachedWallpaper(account: context.account, slug: file.slug, settings: colorWallpaper.settings)
-//            |> mapToSignal { cachedWallpaper in
-//                if let wallpaper = cachedWallpaper?.wallpaper, case let .file(file) = wallpaper {
-//                    let _ = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start()
-//
-//                    return .single(wallpaper)
-//
-//                } else {
-//                    return .single(nil)
-//                }
-//            }
-//        }
-//
-//        let _ = (wallpaperSignal
-//        |> deliverOnMainQueue).start(next: { presetWallpaper in
-//            let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-//                let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
-//                var currentTheme = current.theme
-//                let currentPreferredBaseTheme = currentBaseTheme
-//
-//                if autoNightModeTriggered {
-//                    currentTheme = current.automaticThemeSwitchSetting.theme
-//                }
-//
-//                let generalThemeReference: PresentationThemeReference
-//                if case let .cloud(theme) = currentTheme, let settings = theme.theme.settings, currentBaseTheme != nil &&  {
-//                    generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
-//                } else {
-//                    generalThemeReference = currentTheme
-//                }
-//
-//                currentTheme = generalThemeReference
-//                var updatedTheme = current.theme
-//                var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
-//
-//                if autoNightModeTriggered {
-//                    updatedAutomaticThemeSwitchSetting.theme = generalThemeReference
-//                } else {
-//                    updatedTheme = generalThemeReference
-//                }
-//
-//                guard let _ = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: generalThemeReference, accentColor: accentColor?.color, wallpaper: presetWallpaper, baseColor: accentColor?.baseColor) else {
-//                    return current
-//                }
-//
-//                var themePreferredBaseTheme = current.themePreferredBaseTheme
-//                if up
-//
-//                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-//                var themeSpecificAccentColors = current.themeSpecificAccentColors
-//                themeSpecificAccentColors[generalThemeReference.index] = accentColor?.withUpdatedWallpaper(presetWallpaper)
-//
-//                if case .builtin = generalThemeReference {
-//                    let index = coloredThemeIndex(reference: currentTheme, accentColor: accentColor)
-//                    if let wallpaper = current.themeSpecificChatWallpapers[index] {
-//                        if wallpaper.isColorOrGradient || wallpaper.isPattern || wallpaper.isBuiltin {
-//                            themeSpecificChatWallpapers[index] = presetWallpaper
-//                        }
-//                    } else {
-//                        themeSpecificChatWallpapers[index] = presetWallpaper
-//                    }
-//                }
-//
-//                return PresentationThemeSettings(theme: updatedTheme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
-//            }).start()
-//
-//            presentCrossfadeControllerImpl?(true)
-//        })
-//    }
     return controller
 }
 

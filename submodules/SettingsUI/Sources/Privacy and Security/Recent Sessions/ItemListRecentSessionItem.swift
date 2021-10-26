@@ -99,6 +99,24 @@ final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
     }
 }
 
+private func iconForSession(_ session: RecentAccountSession) -> UIImage? {
+    let platform = session.platform.lowercased()
+    let device = session.deviceModel.lowercased()
+    if device.contains("safari") {
+        return UIImage(bundleImageName: "Settings/Devices/Safari")
+    }
+    if device.contains("firefox") {
+        return UIImage(bundleImageName: "Settings/Devices/Firefox")
+    }
+    if device.contains("opera") {
+        return UIImage(bundleImageName: "Settings/Devices/Opera")
+    }
+    if platform.contains("ios") || platform.contains("macos") {
+        return UIImage(bundleImageName: "Settings/Devices/iOS")
+    }
+    return nil
+}
+
 class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -222,6 +240,11 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                 appString += item.session.systemVersion
             }
             
+            var updatedIcon: UIImage?
+            if item.session != currentItem?.session {
+                updatedIcon = iconForSession(item.session)
+            }
+            
             appAttributedString = NSAttributedString(string: appString, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             
             let label: String
@@ -297,6 +320,10 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.activateArea.accessibilityTraits = []
                     } else {
                         strongSelf.activateArea.accessibilityTraits = .notEnabled
+                    }
+                    
+                    if let updatedIcon = updatedIcon {
+                        strongSelf.iconNode.image = updatedIcon
                     }
                     
                     if let _ = updatedTheme {
@@ -440,7 +467,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             return
         }
         
-        let leftInset: CGFloat = 15.0 + params.leftInset
+        let leftInset: CGFloat = 59.0 + params.leftInset
         
         let editingOffset: CGFloat
         if let editableControlNode = self.editableControlNode {
