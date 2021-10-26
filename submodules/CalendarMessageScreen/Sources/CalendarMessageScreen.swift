@@ -153,6 +153,7 @@ private final class ImageCache: Equatable {
 
     private struct FilledCircle: Hashable {
         var diameter: CGFloat
+        var innerDiameter: CGFloat?
         var color: UInt32
     }
 
@@ -163,10 +164,17 @@ private final class ImageCache: Equatable {
         var string: String
     }
 
+    private struct MonthSelection: Hashable {
+        var leftRadius: CGFloat
+        var rightRadius: CGFloat
+        var maxRadius: CGFloat
+        var color: UInt32
+    }
+
     private var items: [AnyHashable: UIImage] = [:]
 
-    func filledCircle(diameter: CGFloat, color: UIColor) -> UIImage {
-        let key = AnyHashable(FilledCircle(diameter: diameter, color: color.argb))
+    func filledCircle(diameter: CGFloat, innerDiameter: CGFloat?, color: UIColor) -> UIImage {
+        let key = AnyHashable(FilledCircle(diameter: diameter, innerDiameter: innerDiameter, color: color.argb))
         if let image = self.items[key] {
             return image
         }
@@ -176,6 +184,12 @@ private final class ImageCache: Equatable {
             context.setFillColor(color.cgColor)
 
             context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+
+            if let innerDiameter = innerDiameter {
+                context.setBlendMode(.copy)
+                context.setFillColor(UIColor.clear.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: (size.width - innerDiameter) / 2.0, y: (size.height - innerDiameter) / 2.0), size: CGSize(width: innerDiameter, height: innerDiameter)))
+            }
         })!.stretchableImage(withLeftCapWidth: Int(diameter) / 2, topCapHeight: Int(diameter) / 2)
         self.items[key] = image
         return image
@@ -194,7 +208,10 @@ private final class ImageCache: Equatable {
             font = Font.regular(fontSize)
         }
         let attributedString = NSAttributedString(string: string, font: font, textColor: color)
-        let rect = attributedString.boundingRect(with: CGSize(width: 1000.0, height: 1000.0), options: .usesLineFragmentOrigin, context: nil)
+        var rect = attributedString.boundingRect(with: CGSize(width: 1000.0, height: 1000.0), options: .usesLineFragmentOrigin, context: nil)
+        if string == "1" {
+            rect.origin.x -= 1.0
+        }
         let image = generateImage(CGSize(width: ceil(rect.width), height: ceil(rect.height)), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
 
@@ -205,10 +222,82 @@ private final class ImageCache: Equatable {
         self.items[key] = image
         return image
     }
+
+    func monthSelection(leftRadius: CGFloat, rightRadius: CGFloat, maxRadius: CGFloat, color: UIColor) -> UIImage {
+        let key = AnyHashable(MonthSelection(leftRadius: leftRadius, rightRadius: rightRadius, maxRadius: maxRadius, color: color.argb))
+        if let image = self.items[key] {
+            return image
+        }
+
+        let image = generateImage(CGSize(width: maxRadius, height: maxRadius), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(color.cgColor)
+
+            UIGraphicsPushContext(context)
+
+            context.clip(to: CGRect(origin: CGPoint(), size: CGSize(width: size.width / 2.0, height: size.height)))
+            UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: leftRadius).fill()
+
+            context.resetClip()
+            context.clip(to: CGRect(origin: CGPoint(x: size.width / 2.0, y: 0.0), size: CGSize(width: size.width - size.width / 2.0, height: size.height)))
+            UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: rightRadius).fill()
+
+            UIGraphicsPopContext()
+        })!.stretchableImage(withLeftCapWidth: Int(maxRadius / 2.0), topCapHeight: Int(maxRadius / 2.0))
+        self.items[key] = image
+        return image
+    }
+}
+
+private final class ImageComponent: Component {
+    let image: UIImage?
+
+    init(
+        image: UIImage?
+    ) {
+        self.image = image
+    }
+
+    static func ==(lhs: ImageComponent, rhs: ImageComponent) -> Bool {
+        if lhs.image !== rhs.image {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIImageView {
+        init() {
+            super.init(frame: CGRect())
+        }
+
+        required init?(coder aDecoder: NSCoder) {
+            preconditionFailure()
+        }
+
+        func update(component: ImageComponent, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.image = component.image
+
+            return availableSize
+        }
+    }
+
+    func makeView() -> View {
+        return View()
+    }
+
+    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
+    }
 }
 
 private final class DayComponent: Component {
     typealias EnvironmentType = ImageCache
+
+    enum DaySelection {
+        case none
+        case edge
+        case middle
+    }
 
     let title: String
     let isCurrent: Bool
@@ -216,6 +305,8 @@ private final class DayComponent: Component {
     let theme: PresentationTheme
     let context: AccountContext
     let media: DayMedia?
+    let selection: DaySelection
+    let isSelecting: Bool
     let action: () -> Void
 
     init(
@@ -225,6 +316,8 @@ private final class DayComponent: Component {
         theme: PresentationTheme,
         context: AccountContext,
         media: DayMedia?,
+        selection: DaySelection,
+        isSelecting: Bool,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -233,6 +326,8 @@ private final class DayComponent: Component {
         self.theme = theme
         self.context = context
         self.media = media
+        self.selection = selection
+        self.isSelecting = isSelecting
         self.action = action
     }
 
@@ -255,13 +350,20 @@ private final class DayComponent: Component {
         if lhs.media != rhs.media {
             return false
         }
+        if lhs.selection != rhs.selection {
+            return false
+        }
+        if lhs.isSelecting != rhs.isSelecting {
+            return false
+        }
         return true
     }
 
     final class View: UIView {
-        private let button: HighlightableButton
+        private let button: HighlightTrackingButton
 
         private let highlightView: UIImageView
+        private var selectionView: UIImageView?
         private let titleView: UIImageView
         private var mediaPreviewView: MediaPreviewView?
 
@@ -269,9 +371,10 @@ private final class DayComponent: Component {
         private var currentMedia: DayMedia?
 
         private(set) var index: MessageIndex?
+        private var isHighlightingEnabled: Bool = false
 
         init() {
-            self.button = HighlightableButton()
+            self.button = HighlightTrackingButton()
             self.highlightView = UIImageView()
             self.highlightView.isUserInteractionEnabled = false
             self.titleView = UIImageView()
@@ -285,6 +388,17 @@ private final class DayComponent: Component {
             self.addSubview(self.button)
 
             self.button.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            self.button.highligthedChanged = { [weak self] highligthed in
+                guard let strongSelf = self, let mediaPreviewView = strongSelf.mediaPreviewView else {
+                    return
+                }
+                if strongSelf.isHighlightingEnabled && highligthed {
+                    mediaPreviewView.alpha = 0.8
+                } else {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+                    transition.updateAlpha(layer: mediaPreviewView.layer, alpha: 1.0)
+                }
+            }
         }
 
         required init?(coder aDecoder: NSCoder) {
@@ -298,15 +412,14 @@ private final class DayComponent: Component {
         func update(component: DayComponent, availableSize: CGSize, environment: Environment<ImageCache>, transition: Transition) -> CGSize {
             self.action = component.action
             self.index = component.media?.message.index
+            self.isHighlightingEnabled = component.isEnabled && component.media != nil && !component.isSelecting
 
             let diameter = min(availableSize.width, availableSize.height)
             let contentFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - diameter) / 2.0), y: floor((availableSize.height - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter))
 
             let imageCache = environment[ImageCache.self]
             if component.media != nil {
-                self.highlightView.image = imageCache.value.filledCircle(diameter: diameter, color: UIColor(white: 0.0, alpha: 0.2))
-            } else if component.isCurrent {
-                self.highlightView.image = imageCache.value.filledCircle(diameter: diameter, color: component.theme.list.itemAccentColor)
+                self.highlightView.image = imageCache.value.filledCircle(diameter: diameter, innerDiameter: nil, color: UIColor(white: 0.0, alpha: 0.2))
             } else {
                 self.highlightView.image = nil
             }
@@ -330,34 +443,86 @@ private final class DayComponent: Component {
             let titleColor: UIColor
             let titleFontSize: CGFloat
             let titleFontIsSemibold: Bool
-            if component.isCurrent || component.media != nil {
-                titleColor = component.theme.list.itemCheckColors.foregroundColor
+            if component.media != nil {
+                if component.theme.overallDarkAppearance {
+                    titleColor = component.theme.list.itemPrimaryTextColor
+                } else {
+                    titleColor = component.theme.list.itemCheckColors.foregroundColor
+                }
                 titleFontSize = 17.0
                 titleFontIsSemibold = true
-            } else if component.isEnabled {
-                titleColor = component.theme.list.itemPrimaryTextColor
-                titleFontSize = 17.0
-                titleFontIsSemibold = false
             } else {
-                titleColor = component.theme.list.itemDisabledTextColor
                 titleFontSize = 17.0
-                titleFontIsSemibold = false
+                switch component.selection {
+                case .middle, .edge:
+                    titleFontIsSemibold = true
+                default:
+                    titleFontIsSemibold = component.isCurrent
+                }
+
+                if case .edge = component.selection {
+                    if component.theme.overallDarkAppearance {
+                        titleColor = component.theme.list.itemPrimaryTextColor
+                    } else {
+                        titleColor = component.theme.list.itemCheckColors.foregroundColor
+                    }
+                } else {
+                    if component.isCurrent {
+                        titleColor = component.theme.list.itemAccentColor
+                    } else if component.isEnabled {
+                        titleColor = component.theme.list.itemPrimaryTextColor
+                    } else {
+                        titleColor = component.theme.list.itemDisabledTextColor
+                    }
+                }
+            }
+
+            switch component.selection {
+            case .edge:
+                let selectionView: UIImageView
+                if let current = self.selectionView {
+                    selectionView = current
+                } else {
+                    selectionView = UIImageView()
+                    self.selectionView = selectionView
+                    self.button.insertSubview(selectionView, belowSubview: self.titleView)
+                }
+                selectionView.frame = contentFrame
+                if self.mediaPreviewView != nil {
+                    selectionView.image = imageCache.value.filledCircle(diameter: diameter, innerDiameter: diameter - 2.0 * 2.0, color: component.theme.list.itemCheckColors.fillColor)
+                } else {
+                    selectionView.image = imageCache.value.filledCircle(diameter: diameter, innerDiameter: nil, color: component.theme.list.itemCheckColors.fillColor)
+                }
+            case .middle, .none:
+                if let selectionView = self.selectionView {
+                    self.selectionView = nil
+                    selectionView.removeFromSuperview()
+                }
+            }
+
+            let contentScale: CGFloat
+            switch component.selection {
+            case .edge, .middle:
+                contentScale = (contentFrame.width - 8.0) / contentFrame.width
+            case .none:
+                contentScale = 1.0
             }
 
             let titleImage = imageCache.value.text(fontSize: titleFontSize, isSemibold: titleFontIsSemibold, color: titleColor, string: component.title)
             self.titleView.image = titleImage
             let titleSize = titleImage.size
 
-            transition.setFrame(view: self.highlightView, frame: contentFrame)
+            transition.setFrame(view: self.highlightView, frame: CGRect(origin: CGPoint(x: contentFrame.midX - contentFrame.width * contentScale / 2.0, y: contentFrame.midY - contentFrame.width * contentScale / 2.0), size: CGSize(width: contentFrame.width * contentScale, height: contentFrame.height * contentScale)))
 
             self.titleView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: floor((availableSize.height - titleSize.height) / 2.0)), size: titleSize)
 
             self.button.frame = CGRect(origin: CGPoint(), size: availableSize)
-            self.button.isEnabled = component.isEnabled && component.media != nil
 
             if let mediaPreviewView = self.mediaPreviewView {
                 mediaPreviewView.frame = contentFrame
                 mediaPreviewView.updateLayout(size: contentFrame.size, synchronousLoads: false)
+
+                mediaPreviewView.layer.sublayerTransform = CATransform3DMakeScale(contentScale, contentScale, 1.0)
             }
 
             return availableSize
@@ -381,7 +546,8 @@ private final class MonthComponent: CombinedComponent {
     let foregroundColor: UIColor
     let strings: PresentationStrings
     let theme: PresentationTheme
-    let navigateToDay: (Int32) -> Void
+    let dayAction: (Int32) -> Void
+    let selectedDays: ClosedRange<Int32>?
 
     init(
         context: AccountContext,
@@ -389,14 +555,16 @@ private final class MonthComponent: CombinedComponent {
         foregroundColor: UIColor,
         strings: PresentationStrings,
         theme: PresentationTheme,
-        navigateToDay: @escaping (Int32) -> Void
+        dayAction: @escaping (Int32) -> Void,
+        selectedDays: ClosedRange<Int32>?
     ) {
         self.context = context
         self.model = model
         self.foregroundColor = foregroundColor
         self.strings = strings
         self.theme = theme
-        self.navigateToDay = navigateToDay
+        self.dayAction = dayAction
+        self.selectedDays = selectedDays
     }
 
     static func ==(lhs: MonthComponent, rhs: MonthComponent) -> Bool {
@@ -415,6 +583,9 @@ private final class MonthComponent: CombinedComponent {
         if lhs.theme !== rhs.theme {
             return false
         }
+        if lhs.selectedDays != rhs.selectedDays {
+            return false
+        }
         return true
     }
 
@@ -422,6 +593,7 @@ private final class MonthComponent: CombinedComponent {
         let title = Child(Text.self)
         let weekdayTitles = ChildMap(environment: Empty.self, keyedBy: Int.self)
         let days = ChildMap(environment: ImageCache.self, keyedBy: Int.self)
+        let selections = ChildMap(environment: Empty.self, keyedBy: Int.self)
 
         return { context in
             let sideInset: CGFloat = 14.0
@@ -437,7 +609,7 @@ private final class MonthComponent: CombinedComponent {
                 component: Text(
                     text: "\(monthName(index: context.component.model.index - 1, strings: context.component.strings)) \(context.component.model.year)",
                     font: Font.semibold(17.0),
-                    color: .black
+                    color: context.component.foregroundColor
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 100.0),
                 transition: .immediate
@@ -448,7 +620,7 @@ private final class MonthComponent: CombinedComponent {
                     component: AnyComponent(Text(
                         text: dayName(index: index, strings: context.component.strings),
                         font: Font.regular(10.0),
-                        color: .black
+                        color: context.component.foregroundColor
                     )),
                     availableSize: CGSize(width: 100.0, height: 100.0),
                     transition: .immediate
@@ -472,7 +644,18 @@ private final class MonthComponent: CombinedComponent {
                 }
 
                 let dayTimestamp = Int32(context.component.model.firstDay.timeIntervalSince1970) + 24 * 60 * 60 * Int32(index)
-                let navigateToDay = context.component.navigateToDay
+                let dayAction = context.component.dayAction
+
+                let daySelection: DayComponent.DaySelection
+                if let selectedDays = context.component.selectedDays, selectedDays.contains(dayTimestamp) {
+                    if selectedDays.lowerBound == dayTimestamp || selectedDays.upperBound == dayTimestamp {
+                        daySelection = .edge
+                    } else {
+                        daySelection = .middle
+                    }
+                } else {
+                    daySelection = .none
+                }
 
                 return days[index].update(
                     component: AnyComponent(DayComponent(
@@ -482,8 +665,10 @@ private final class MonthComponent: CombinedComponent {
                         theme: context.component.theme,
                         context: context.component.context,
                         media: context.component.model.mediaByDay[index],
+                        selection: daySelection,
+                        isSelecting: context.component.selectedDays != nil,
                         action: {
-                            navigateToDay(dayTimestamp)
+                            dayAction(dayTimestamp)
                         }
                     )),
                     environment: {
@@ -515,10 +700,88 @@ private final class MonthComponent: CombinedComponent {
             let baseDayY = maxWeekdayY + weekdayDaySpacing
             var maxDayY = baseDayY
 
+            struct LineSelection {
+                var range: ClosedRange<Int>
+                var leftTimestamp: Int32
+                var rightTimestamp: Int32
+            }
+
+            var selectionsByLine: [Int: LineSelection] = [:]
+
             for i in 0 ..< updatedDays.count {
                 let gridIndex = (context.component.model.firstDayWeekday - 1) + i
-                let gridX = sideInset + CGFloat(gridIndex % 7) * weekdayWidth
-                let gridY = baseDayY + CGFloat(gridIndex / 7) * (weekdaySize + weekdaySpacing)
+                let rowIndex = gridIndex % 7
+                let lineIndex = gridIndex / 7
+
+                if let selectedDays = context.component.selectedDays {
+                    let dayTimestamp = Int32(context.component.model.firstDay.timeIntervalSince1970) + 24 * 60 * 60 * Int32(i)
+                    if selectedDays.contains(dayTimestamp) {
+                        if var currentSelection = selectionsByLine[lineIndex] {
+                            if rowIndex < currentSelection.range.lowerBound {
+                                currentSelection.range = rowIndex ... currentSelection.range.upperBound
+                                currentSelection.leftTimestamp = dayTimestamp
+                            } else {
+                                currentSelection.range = currentSelection.range.lowerBound ... rowIndex
+                                currentSelection.rightTimestamp = dayTimestamp
+                            }
+                            selectionsByLine[lineIndex] = currentSelection
+                        } else {
+                            selectionsByLine[lineIndex] = LineSelection(
+                                range: rowIndex ... rowIndex,
+                                leftTimestamp: dayTimestamp,
+                                rightTimestamp: dayTimestamp
+                            )
+                        }
+                    }
+                }
+            }
+
+            if let selectedDays = context.component.selectedDays {
+                for (lineIndex, selection) in selectionsByLine {
+                    let imageCache = context.environment[ImageCache.self]
+
+                    let dayItemSize = updatedDays[0].size
+                    let deltaWidth = floor((weekdayWidth - dayItemSize.width) / 2.0)
+                    let deltaHeight = floor((weekdaySize - dayItemSize.width) / 2.0)
+                    let minX = sideInset + CGFloat(selection.range.lowerBound) * weekdayWidth + deltaWidth
+                    let maxX = sideInset + CGFloat(selection.range.upperBound + 1) * weekdayWidth - deltaWidth
+                    let minY = baseDayY + CGFloat(lineIndex) * (weekdaySize + weekdaySpacing) + deltaHeight
+                    let maxY = minY + dayItemSize.width
+
+                    let leftRadius: CGFloat
+                    if selectedDays.lowerBound == selection.leftTimestamp {
+                        leftRadius = dayItemSize.width
+                    } else {
+                        leftRadius = 10.0
+                    }
+                    let rightRadius: CGFloat
+                    if selectedDays.upperBound == selection.rightTimestamp {
+                        rightRadius = dayItemSize.width
+                    } else {
+                        rightRadius = 10.0
+                    }
+
+                    let monthSelectionColor = context.component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.1)
+
+                    let selectionRect = CGRect(origin: CGPoint(x: minX, y: minY), size: CGSize(width: maxX - minX, height: maxY - minY))
+                    let selection = selections[lineIndex].update(
+                        component: AnyComponent(ImageComponent(image: imageCache.value.monthSelection(leftRadius: leftRadius, rightRadius: rightRadius, maxRadius: dayItemSize.width, color: monthSelectionColor))),
+                        availableSize: selectionRect.size,
+                        transition: .immediate
+                    )
+                    context.add(selection
+                        .position(CGPoint(x: selectionRect.midX, y: selectionRect.midY))
+                    )
+                }
+            }
+
+            for i in 0 ..< updatedDays.count {
+                let gridIndex = (context.component.model.firstDayWeekday - 1) + i
+                let rowIndex = gridIndex % 7
+                let lineIndex = gridIndex / 7
+
+                let gridX = sideInset + CGFloat(rowIndex) * weekdayWidth
+                let gridY = baseDayY + CGFloat(lineIndex) * (weekdaySize + weekdaySpacing)
                 let dayItemSize = updatedDays[i].size
                 let dayFrame = CGRect(origin: CGPoint(x: gridX + floor((weekdayWidth - dayItemSize.width) / 2.0), y: gridY + floor((weekdaySize - dayItemSize.height) / 2.0)), size: dayItemSize)
                 maxDayY = max(maxDayY, gridY + weekdaySize)
@@ -602,6 +865,11 @@ private func monthMetadata(calendar: Calendar, for baseDate: Date, currentYear: 
 
 public final class CalendarMessageScreen: ViewController {
     private final class Node: ViewControllerTracingNode, UIScrollViewDelegate {
+        struct SelectionState {
+            var dayRange: ClosedRange<Int32>?
+        }
+
+        private weak var controller: CalendarMessageScreen?
         private let context: AccountContext
         private let peerId: PeerId
         private let initialTimestamp: Int32
@@ -629,7 +897,13 @@ public final class CalendarMessageScreen: ViewController {
 
         private weak var currentGestureDayView: DayComponent.View?
 
-        init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (Int32) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
+        private var selectionToolbarNode: ToolbarNode?
+        private(set) var selectionState: SelectionState?
+
+        private var ignoreContentOffset: Bool = false
+
+        init(controller: CalendarMessageScreen, context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (Int32) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
+            self.controller = controller
             self.context = context
             self.peerId = peerId
             self.initialTimestamp = initialTimestamp
@@ -652,6 +926,11 @@ public final class CalendarMessageScreen: ViewController {
             }
             self.scrollView.layer.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
             self.scrollView.disablesInteractiveModalDismiss = true
+            if self.presentationData.theme.overallDarkAppearance {
+                self.scrollView.indicatorStyle = .white
+            } else {
+                self.scrollView.indicatorStyle = .black
+            }
 
             super.init()
 
@@ -660,7 +939,7 @@ public final class CalendarMessageScreen: ViewController {
                     return false
                 }
 
-                guard let result = strongSelf.contextGestureContainerNode.view.hitTest(point, with: nil) as? HighlightableButton else {
+                guard let result = strongSelf.contextGestureContainerNode.view.hitTest(point, with: nil) as? UIButton else {
                     return false
                 }
 
@@ -793,11 +1072,90 @@ public final class CalendarMessageScreen: ViewController {
             self.stateDisposable?.dispose()
         }
 
+        func toggleSelectionMode() {
+            if self.selectionState == nil {
+                self.selectionState = SelectionState(dayRange: nil)
+            } else {
+                self.selectionState = nil
+            }
+
+            self.contextGestureContainerNode.isGestureEnabled = self.selectionState == nil
+
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.5, curve: .spring))
+            }
+        }
+
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let isFirstLayout = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
 
-            if self.updateScrollLayoutIfNeeded() {
+            var tabBarHeight: CGFloat
+            var options: ContainerViewLayoutInsetOptions = []
+            if layout.metrics.widthClass == .regular {
+                options.insert(.input)
+            }
+            let bottomInset: CGFloat = layout.insets(options: options).bottom
+            if !layout.safeInsets.left.isZero {
+                tabBarHeight = 34.0 + bottomInset
+            } else {
+                tabBarHeight = 49.0 + bottomInset
+            }
+
+            let tabBarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight))
+
+            if let _ = self.selectionState {
+                let selectionToolbarNode: ToolbarNode
+                if let currrent = self.selectionToolbarNode {
+                    selectionToolbarNode = currrent
+
+                    transition.updateFrame(node: selectionToolbarNode, frame: tabBarFrame)
+                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: self.presentationData.strings.DialogList_ClearHistoryConfirmation, isEnabled: self.selectionState?.dayRange != nil, color: .custom(self.presentationData.theme.list.itemDestructiveColor))), transition: transition)
+                } else {
+                    selectionToolbarNode = ToolbarNode(
+                        theme: TabBarControllerTheme(
+                        rootControllerTheme: self.presentationData.theme),
+                        displaySeparator: true,
+                        left: {
+                        },
+                        right: {
+                        },
+                        middle: { [weak self] in
+                            self?.selectionToolbarActionSelected()
+                        }
+                    )
+                    selectionToolbarNode.frame = tabBarFrame
+                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: self.presentationData.strings.DialogList_ClearHistoryConfirmation, isEnabled: self.selectionState?.dayRange != nil, color: .custom(self.presentationData.theme.list.itemDestructiveColor))), transition: .immediate)
+                    self.addSubnode(selectionToolbarNode)
+                    self.selectionToolbarNode = selectionToolbarNode
+                    transition.animatePositionAdditive(node: selectionToolbarNode, offset: CGPoint(x: 0.0, y: tabBarFrame.height))
+                }
+            } else if let selectionToolbarNode = self.selectionToolbarNode {
+                self.selectionToolbarNode = nil
+                transition.updatePosition(node: selectionToolbarNode, position: CGPoint(x: selectionToolbarNode.position.x, y: selectionToolbarNode.position.y + tabBarFrame.height), completion: { [weak selectionToolbarNode] _ in
+                    selectionToolbarNode?.removeFromSupernode()
+                })
+            }
+
+            let _ = self.updateScrollLayoutIfNeeded()
+
+            let previousInset = self.scrollView.contentInset.top
+            let updatedInset = self.selectionToolbarNode?.bounds.height ?? 0.0
+            if previousInset != updatedInset {
+                let delta = updatedInset - previousInset
+                self.ignoreContentOffset = true
+                let contentOffset = self.scrollView.contentOffset
+                self.scrollView.contentInset = UIEdgeInsets(top: updatedInset, left: 0.0, bottom: 0.0, right: 0.0)
+                var updatedContentOffset = CGPoint(x: contentOffset.x, y: contentOffset.y - delta)
+                if updatedContentOffset.y > self.scrollView.contentSize.height - self.scrollView.bounds.height {
+                    updatedContentOffset.y = self.scrollView.contentSize.height - self.scrollView.bounds.height
+                }
+                if updatedContentOffset.y < -self.scrollView.contentInset.top {
+                    updatedContentOffset.y = -self.scrollView.contentInset.top
+                }
+                self.scrollView.contentOffset = updatedContentOffset
+                self.ignoreContentOffset = false
+                transition.animateOffsetAdditive(layer: self.scrollView.layer, offset: contentOffset.y - updatedContentOffset.y)
             }
 
             if isFirstLayout {
@@ -813,7 +1171,7 @@ public final class CalendarMessageScreen: ViewController {
                     }
                 }
 
-                if isFirstLayout, let initialMonthIndex = initialMonthIndex, let frame = self.scrollLayout?.frames[initialMonthIndex] {
+                if let initialMonthIndex = initialMonthIndex, let frame = self.scrollLayout?.frames[initialMonthIndex] {
                     var contentOffset = floor(frame.midY - self.scrollView.bounds.height / 2.0)
                     if contentOffset < 0 {
                         contentOffset = 0
@@ -821,11 +1179,202 @@ public final class CalendarMessageScreen: ViewController {
                     if contentOffset > self.scrollView.contentSize.height - self.scrollView.bounds.height {
                         contentOffset = self.scrollView.contentSize.height - self.scrollView.bounds.height
                     }
+                    self.ignoreContentOffset = true
                     self.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
+                    self.ignoreContentOffset = false
                 }
+            } else {
+
             }
 
             updateMonthViews()
+        }
+
+        private func selectionToolbarActionSelected() {
+            guard let selectionState = self.selectionState, let dayRange = selectionState.dayRange else {
+                return
+            }
+            var selectedCount = 0
+            var minTimestamp: Int32?
+            var maxTimestamp: Int32?
+            for i in 0 ..< self.months.count {
+                let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
+
+                for day in 0 ..< self.months[i].numberOfDays {
+                    let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
+                    let nextDayTimestamp = dayTimestamp + 24 * 60 * 60
+
+                    let minDayTimestamp = dayTimestamp - 24 * 60 * 60
+                    let maxDayTimestamp = nextDayTimestamp - 24 * 60 * 60
+
+                    if dayRange.contains(dayTimestamp) {
+                        if let currentMinTimestamp = minTimestamp {
+                            minTimestamp = min(minDayTimestamp, currentMinTimestamp)
+                        } else {
+                            minTimestamp = minDayTimestamp
+                        }
+                        if let currentMaxTimestamp = maxTimestamp {
+                            maxTimestamp = max(maxDayTimestamp, currentMaxTimestamp)
+                        } else {
+                            maxTimestamp = maxDayTimestamp
+                        }
+                        selectedCount += 1
+                    }
+                }
+            }
+
+            guard let minTimestampValue = minTimestamp, let maxTimestampValue = maxTimestamp else {
+                return
+            }
+
+            if selectedCount == 0 {
+                return
+            }
+
+            enum ClearType {
+                case savedMessages
+                case secretChat
+                case group
+                case channel
+                case user
+            }
+
+            struct ClearInfo {
+                var canClearForMyself: ClearType?
+                var canClearForEveryone: ClearType?
+                var mainPeer: Peer
+            }
+
+            let peerId = self.peerId
+            if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
+            } else {
+                return
+            }
+            let _ = (self.context.account.postbox.transaction { transaction -> ClearInfo? in
+                guard let chatPeer = transaction.getPeer(peerId) else {
+                    return nil
+                }
+
+                let canClearForMyself: ClearType?
+                let canClearForEveryone: ClearType?
+
+                if peerId == self.context.account.peerId {
+                    canClearForMyself = .savedMessages
+                    canClearForEveryone = nil
+                } else if chatPeer is TelegramSecretChat {
+                    canClearForMyself = .secretChat
+                    canClearForEveryone = nil
+                } else if let group = chatPeer as? TelegramGroup {
+                    switch group.role {
+                    case .creator:
+                        canClearForMyself = .group
+                        canClearForEveryone = nil
+                    case .admin, .member:
+                        canClearForMyself = .group
+                        canClearForEveryone = nil
+                    }
+                } else if let channel = chatPeer as? TelegramChannel {
+                    if channel.hasPermission(.deleteAllMessages) {
+                        if case .group = channel.info {
+                            canClearForEveryone = .group
+                        } else {
+                            canClearForEveryone = .channel
+                        }
+                    } else {
+                        canClearForEveryone = nil
+                    }
+                    canClearForMyself = nil
+                } else {
+                    canClearForMyself = .user
+
+                    if let user = chatPeer as? TelegramUser, user.botInfo != nil {
+                        canClearForEveryone = nil
+                    } else {
+                        canClearForEveryone = .user
+                    }
+                }
+
+                return ClearInfo(
+                    canClearForMyself: canClearForMyself,
+                    canClearForEveryone: canClearForEveryone,
+                    mainPeer: chatPeer
+                )
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] info in
+                guard let strongSelf = self, let info = info else {
+                    return
+                }
+
+                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                var items: [ActionSheetItem] = []
+
+                let beginClear: (InteractiveHistoryClearingType) -> Void = { type in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = strongSelf.calendarSource.removeMessagesInRange(minTimestamp: minTimestampValue, maxTimestamp: maxTimestampValue, type: type, completion: {
+                    })
+                }
+
+                if let _ = info.canClearForMyself ?? info.canClearForEveryone {
+                    //TODO:localize
+                    items.append(ActionSheetTextItem(title: "Are you sure you want to delete all messages for the \(selectedCount) selected days?"))
+
+                    if let canClearForEveryone = info.canClearForEveryone {
+                        let text: String
+                        let confirmationText: String
+                        switch canClearForEveryone {
+                        case .user:
+                            text = strongSelf.presentationData.strings.ChatList_DeleteForEveryone(EnginePeer(info.mainPeer).compactDisplayTitle).string
+                            confirmationText = strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationText
+                        default:
+                            text = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
+                            confirmationText = strongSelf.presentationData.strings.ChatList_DeleteForAllMembersConfirmationText
+                        }
+                        let _ = confirmationText
+                        items.append(ActionSheetButtonItem(title: text, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+
+                            beginClear(.forEveryone)
+
+                            /*guard let strongSelf = self else {
+                                return
+                            }
+
+                            strongSelf.controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationTitle, text: confirmationText, actions: [
+                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                }),
+                                TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationAction, action: {
+                                    beginClear(.forEveryone)
+                                })
+                            ], parseMarkdown: true), in: .window(.root))*/
+                        }))
+                    }
+                    if let canClearForMyself = info.canClearForMyself {
+                        let text: String
+                        switch canClearForMyself {
+                        case .savedMessages, .secretChat:
+                            text = strongSelf.presentationData.strings.Conversation_DeleteManyMessages
+                        default:
+                            text = strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser
+                        }
+                        items.append(ActionSheetButtonItem(title: text, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            beginClear(.forLocalPeer)
+                        }))
+                    }
+                }
+
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+
+                strongSelf.controller?.present(actionSheet, in: .window(.root))
+            })
+
+            self.controller?.toggleSelectPressed()
         }
 
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -833,11 +1382,13 @@ public final class CalendarMessageScreen: ViewController {
         }
 
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            if let indicator = scrollView.value(forKey: "_verticalScrollIndicator") as? UIView {
-                indicator.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
-            }
+            if !self.ignoreContentOffset {
+                if let indicator = scrollView.value(forKey: "_verticalScrollIndicator") as? UIView {
+                    indicator.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
+                }
 
-            self.updateMonthViews()
+                self.updateMonthViews()
+            }
         }
 
         func updateScrollLayoutIfNeeded() -> Bool {
@@ -862,8 +1413,9 @@ public final class CalendarMessageScreen: ViewController {
                         foregroundColor: .black,
                         strings: self.presentationData.strings,
                         theme: self.presentationData.theme,
-                        navigateToDay: { _ in
-                        }
+                        dayAction: { _ in
+                        },
+                        selectedDays: nil
                     )),
                     environment: {
                         imageCache
@@ -883,7 +1435,7 @@ public final class CalendarMessageScreen: ViewController {
             self.contextGestureContainerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationHeight))
             self.scrollView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height - navigationHeight))
             self.scrollView.contentSize = CGSize(width: layout.size.width, height: contentHeight)
-            self.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: layout.intrinsicInsets.bottom, left: 0.0, bottom: 0.0, right: layout.size.width - 3.0 - 6.0)
+            self.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: max(layout.intrinsicInsets.bottom, self.scrollView.contentInset.top), left: 0.0, bottom: 0.0, right: layout.size.width - 3.0 - 6.0)
 
             return true
         }
@@ -922,12 +1474,45 @@ public final class CalendarMessageScreen: ViewController {
                         foregroundColor: self.presentationData.theme.list.itemPrimaryTextColor,
                         strings: self.presentationData.strings,
                         theme: self.presentationData.theme,
-                        navigateToDay: { [weak self] timestamp in
+                        dayAction: { [weak self] timestamp in
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.navigateToDay(timestamp)
-                        }
+                            if var selectionState = strongSelf.selectionState {
+                                if let dayRange = selectionState.dayRange {
+                                    if dayRange.lowerBound == dayRange.upperBound {
+                                        if timestamp < dayRange.lowerBound {
+                                            selectionState.dayRange = timestamp ... dayRange.upperBound
+                                        } else {
+                                            selectionState.dayRange = dayRange.lowerBound ... timestamp
+                                        }
+                                    } else {
+                                        selectionState.dayRange = timestamp ... timestamp
+                                    }
+                                } else {
+                                    selectionState.dayRange = timestamp ... timestamp
+                                }
+                                strongSelf.selectionState = selectionState
+
+                                strongSelf.updateSelectionState()
+                            } else {
+                                outer: for month in strongSelf.months {
+                                    let firstDayTimestamp = Int32(month.firstDay.timeIntervalSince1970)
+
+                                    for day in 0 ..< month.numberOfDays {
+                                        let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
+                                        if dayTimestamp == timestamp {
+                                            if month.mediaByDay[day] != nil {
+                                                strongSelf.navigateToDay(timestamp)
+                                            }
+
+                                            break outer
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        selectedDays: self.selectionState?.dayRange
                     )),
                     environment: {
                         self.imageCache
@@ -949,6 +1534,38 @@ public final class CalendarMessageScreen: ViewController {
             }
         }
 
+        private func updateSelectionState() {
+            //TODO:localize
+            var title = "Calendar"
+            if let selectionState = self.selectionState, let dayRange = selectionState.dayRange {
+                var selectedCount = 0
+                for i in 0 ..< self.months.count {
+                    let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
+
+                    for day in 0 ..< self.months[i].numberOfDays {
+                        let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
+                        if dayRange.contains(dayTimestamp) {
+                            selectedCount += 1
+                        }
+                    }
+                }
+
+                if selectedCount != 0 {
+                    if selectedCount == 1 {
+                        title = "1 day selected"
+                    } else {
+                        title = "\(selectedCount) days selected"
+                    }
+                }
+            }
+
+            self.controller?.navigationItem.title = title
+
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.5, curve: .spring))
+            }
+        }
+
         private func reloadMediaInfo() {
             guard let calendarState = self.calendarState else {
                 return
@@ -960,6 +1577,10 @@ public final class CalendarMessageScreen: ViewController {
 
             var updatedMedia: [Int: [Int: DayMedia]] = [:]
             for i in 0 ..< self.months.count {
+                if updatedMedia[i] == nil {
+                    updatedMedia[i] = [:]
+                }
+
                 for day in 0 ..< self.months[i].numberOfDays {
                     let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
 
@@ -971,9 +1592,6 @@ public final class CalendarMessageScreen: ViewController {
                             mediaLoop: for media in message.media {
                                 switch media {
                                 case _ as TelegramMediaImage, _ as TelegramMediaFile:
-                                    if updatedMedia[i] == nil {
-                                        updatedMedia[i] = [:]
-                                    }
                                     updatedMedia[i]![day] = DayMedia(message: EngineMessage(message), media: EngineMedia(media))
                                     break mediaLoop
                                 default:
@@ -1005,6 +1623,8 @@ public final class CalendarMessageScreen: ViewController {
     private let navigateToDay: (CalendarMessageScreen, Int32) -> Void
     private let previewDay: (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void
 
+    private var presentationData: PresentationData
+
     public init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (CalendarMessageScreen, Int32) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
         self.context = context
         self.peerId = peerId
@@ -1013,15 +1633,19 @@ public final class CalendarMessageScreen: ViewController {
         self.navigateToDay = navigateToDay
         self.previewDay = previewDay
 
-        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
 
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
 
         self.navigationPresentation = .modal
 
-        self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(dismissPressed)), animated: false)
+        self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(dismissPressed)), animated: false)
         //TODO:localize
         self.navigationItem.setTitle("Calendar", animated: false)
+
+        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
+            self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.toggleSelectPressed)), animated: false)
+        }
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -1032,8 +1656,18 @@ public final class CalendarMessageScreen: ViewController {
         self.dismiss()
     }
 
+    @objc fileprivate func toggleSelectPressed() {
+        self.node.toggleSelectionMode()
+
+        if self.node.selectionState != nil {
+            self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.toggleSelectPressed)), animated: true)
+        } else {
+            self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.toggleSelectPressed)), animated: true)
+        }
+    }
+
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, peerId: self.peerId, calendarSource: self.calendarSource, initialTimestamp: self.initialTimestamp, navigateToDay: { [weak self] timestamp in
+        self.displayNode = Node(controller: self, context: self.context, peerId: self.peerId, calendarSource: self.calendarSource, initialTimestamp: self.initialTimestamp, navigateToDay: { [weak self] timestamp in
             guard let strongSelf = self else {
                 return
             }

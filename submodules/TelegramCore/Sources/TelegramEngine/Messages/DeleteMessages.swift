@@ -87,7 +87,24 @@ func _internal_clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId
             let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
         }
     }
-    transaction.clearHistory(peerId, namespaces: namespaces, forEachMedia: { _ in
+    transaction.clearHistory(peerId, minTimestamp: nil, maxTimestamp: nil, namespaces: namespaces, forEachMedia: { _ in
+    })
+}
+
+func _internal_clearHistoryInRange(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, minTimestamp: Int32, maxTimestamp: Int32, namespaces: MessageIdNamespaces) {
+    if peerId.namespace == Namespaces.Peer.SecretChat {
+        var resourceIds: [MediaResourceId] = []
+        transaction.withAllMessages(peerId: peerId, { message in
+            if message.timestamp >= minTimestamp && message.timestamp <= maxTimestamp {
+                addMessageMediaResourceIdsToRemove(message: message, resourceIds: &resourceIds)
+            }
+            return true
+        })
+        if !resourceIds.isEmpty {
+            let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
+        }
+    }
+    transaction.clearHistory(peerId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, namespaces: namespaces, forEachMedia: { _ in
     })
 }
 

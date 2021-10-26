@@ -581,6 +581,24 @@ public final class SparseMessageCalendar {
             self.loadMore()
         }
 
+        func removeMessagesInRange(minTimestamp: Int32, maxTimestamp: Int32, type: InteractiveHistoryClearingType, completion: @escaping () -> Void) -> Disposable {
+            var removeKeys: [Int32] = []
+            for (id, message) in self.state.messagesByDay {
+                if message.timestamp >= minTimestamp && message.timestamp <= maxTimestamp {
+                    removeKeys.append(id)
+                }
+            }
+            for id in removeKeys {
+                self.state.messagesByDay.removeValue(forKey: id)
+            }
+
+            self.statePromise.set(.single(self.state))
+
+            return _internal_clearHistoryInRangeInteractively(postbox: self.account.postbox, peerId: self.peerId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type).start(completed: {
+                completion()
+            })
+        }
+
         private func loadMore() {
             guard let nextRequestOffset = self.state.nextRequestOffset else {
                 return
@@ -753,5 +771,15 @@ public final class SparseMessageCalendar {
         self.impl.with { impl in
             impl.maybeLoadMore()
         }
+    }
+
+    public func removeMessagesInRange(minTimestamp: Int32, maxTimestamp: Int32, type: InteractiveHistoryClearingType, completion: @escaping () -> Void) -> Disposable {
+        let disposable = MetaDisposable()
+
+        self.impl.with { impl in
+            disposable.set(impl.removeMessagesInRange(minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type, completion: completion))
+        }
+
+        return disposable
     }
 }
