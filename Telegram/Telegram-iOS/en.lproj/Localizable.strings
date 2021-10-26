@@ -6873,7 +6873,7 @@ Sorry for the inconvenience.";
 "InviteLink.Create.RequestApprovalOnInfoChannel" = "New users will be able to join the channel only after having been approved by the admins.";
 
 "InviteLink.Create.LinkName" = "Link Name (Optional)";
-"InviteLink.Create.LinkNameInfo" = "You can provide an optional name for this link.";
+"InviteLink.Create.LinkNameInfo" = "Only you and other admins will see this name.";
 
 "MemberRequests.Title" = "Member Requests";
 "MemberRequests.DescriptionGroup" = "Some [additional links]() are set up to accept requests to join the group.";
@@ -6962,3 +6962,19 @@ Sorry for the inconvenience.";
 "Time.AtDate" = "last seen %@";
 
 "Stickers.ShowMore" = "Show More";
+
+"Notifications.PrivateChats" = "Private Chats";
+"Notifications.GroupChats" = "Group Chats";
+"Notifications.Channels" = "Channels";
+
+"Notifications.CategoryExceptions_0" = "%@ exceptions";
+"Notifications.CategoryExceptions_1" = "%@ exception";
+"Notifications.CategoryExceptions_2" = "%@ exceptions";
+"Notifications.CategoryExceptions_3_10" = "%@ exceptions";
+"Notifications.CategoryExceptions_many" = "%@ exceptions";
+"Notifications.CategoryExceptions_any" = "%@ exceptions";
+
+"Notifications.DeleteAllExceptions" = "Delete All Exceptions";
+
+"Notifications.On" = "On";
+"Notifications.Off" = "Off";

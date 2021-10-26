@@ -61,18 +61,8 @@ private final class NotificationsAndSoundsArguments {
     let authorizeNotifications: () -> Void
     let suppressWarning: () -> Void
     
-    let updateMessageAlerts: (Bool) -> Void
-    let updateMessagePreviews: (Bool) -> Void
-    let updateMessageSound: (PeerMessageSound) -> Void
-    
-    let updateGroupAlerts: (Bool) -> Void
-    let updateGroupPreviews: (Bool) -> Void
-    let updateGroupSound: (PeerMessageSound) -> Void
-    
-    let updateChannelAlerts: (Bool) -> Void
-    let updateChannelPreviews: (Bool) -> Void
-    let updateChannelSound: (PeerMessageSound) -> Void
-    
+    let openPeerCategory: (NotificationsPeerCategory) -> Void
+        
     let updateInAppSounds: (Bool) -> Void
     let updateInAppVibration: (Bool) -> Void
     let updateInAppPreviews: (Bool) -> Void
@@ -84,29 +74,19 @@ private final class NotificationsAndSoundsArguments {
     let updateJoinedNotifications: (Bool) -> Void
     
     let resetNotifications: () -> Void
-    
-    let updatedExceptionMode: (NotificationExceptionMode) -> Void
-    
+        
     let openAppSettings: () -> Void
     
     let updateNotificationsFromAllAccounts: (Bool) -> Void
     
-    init(context: AccountContext, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, authorizeNotifications: @escaping () -> Void, suppressWarning: @escaping () -> Void, updateMessageAlerts: @escaping (Bool) -> Void, updateMessagePreviews: @escaping (Bool) -> Void, updateMessageSound: @escaping (PeerMessageSound) -> Void, updateGroupAlerts: @escaping (Bool) -> Void, updateGroupPreviews: @escaping (Bool) -> Void, updateGroupSound: @escaping (PeerMessageSound) -> Void, updateChannelAlerts: @escaping (Bool) -> Void, updateChannelPreviews: @escaping (Bool) -> Void, updateChannelSound: @escaping (PeerMessageSound) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateIncludeTag: @escaping (CounterTagSettings, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, updatedExceptionMode: @escaping(NotificationExceptionMode) -> Void, openAppSettings: @escaping () -> Void, updateJoinedNotifications: @escaping (Bool) -> Void, updateNotificationsFromAllAccounts: @escaping (Bool) -> Void) {
+    init(context: AccountContext, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping(ViewController)->Void, soundSelectionDisposable: MetaDisposable, authorizeNotifications: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeerCategory: @escaping (NotificationsPeerCategory) -> Void, updateInAppSounds: @escaping (Bool) -> Void, updateInAppVibration: @escaping (Bool) -> Void, updateInAppPreviews: @escaping (Bool) -> Void, updateDisplayNameOnLockscreen: @escaping (Bool) -> Void, updateIncludeTag: @escaping (CounterTagSettings, Bool) -> Void, updateTotalUnreadCountCategory: @escaping (Bool) -> Void, resetNotifications: @escaping () -> Void, openAppSettings: @escaping () -> Void, updateJoinedNotifications: @escaping (Bool) -> Void, updateNotificationsFromAllAccounts: @escaping (Bool) -> Void) {
         self.context = context
         self.presentController = presentController
         self.pushController = pushController
         self.soundSelectionDisposable = soundSelectionDisposable
         self.authorizeNotifications = authorizeNotifications
         self.suppressWarning = suppressWarning
-        self.updateMessageAlerts = updateMessageAlerts
-        self.updateMessagePreviews = updateMessagePreviews
-        self.updateMessageSound = updateMessageSound
-        self.updateGroupAlerts = updateGroupAlerts
-        self.updateGroupPreviews = updateGroupPreviews
-        self.updateGroupSound = updateGroupSound
-        self.updateChannelAlerts = updateChannelAlerts
-        self.updateChannelPreviews = updateChannelPreviews
-        self.updateChannelSound = updateChannelSound
+        self.openPeerCategory = openPeerCategory
         self.updateInAppSounds = updateInAppSounds
         self.updateInAppVibration = updateInAppVibration
         self.updateInAppPreviews = updateInAppPreviews
@@ -114,7 +94,6 @@ private final class NotificationsAndSoundsArguments {
         self.updateIncludeTag = updateIncludeTag
         self.updateTotalUnreadCountCategory = updateTotalUnreadCountCategory
         self.resetNotifications = resetNotifications
-        self.updatedExceptionMode = updatedExceptionMode
         self.openAppSettings = openAppSettings
         self.updateJoinedNotifications = updateJoinedNotifications
         self.updateNotificationsFromAllAccounts = updateNotificationsFromAllAccounts
@@ -124,9 +103,7 @@ private final class NotificationsAndSoundsArguments {
 private enum NotificationsAndSoundsSection: Int32 {
     case accounts
     case permission
-    case messages
-    case groups
-    case channels
+    case categories
     case inApp
     case displayNamesOnLockscreen
     case badge
@@ -136,12 +113,6 @@ private enum NotificationsAndSoundsSection: Int32 {
 
 public enum NotificationsAndSoundsEntryTag: ItemListItemTag {
     case allAccounts
-    case messageAlerts
-    case messagePreviews
-    case groupAlerts
-    case groupPreviews
-    case channelAlerts
-    case channelPreviews
     case inAppSounds
     case inAppVibrate
     case inAppPreviews
@@ -168,27 +139,10 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
     case permissionInfo(PresentationTheme, String, String, Bool)
     case permissionEnable(PresentationTheme, String)
     
-    case messageHeader(PresentationTheme, String)
-    case messageAlerts(PresentationTheme, String, Bool)
-    case messagePreviews(PresentationTheme, String, Bool)
-    case messageSound(PresentationTheme, String, String, PeerMessageSound)
-    case userExceptions(PresentationTheme, PresentationStrings, String, NotificationExceptionMode)
-
-    case messageNotice(PresentationTheme, String)
-    
-    case groupHeader(PresentationTheme, String)
-    case groupAlerts(PresentationTheme, String, Bool)
-    case groupPreviews(PresentationTheme, String, Bool)
-    case groupSound(PresentationTheme, String, String, PeerMessageSound)
-    case groupExceptions(PresentationTheme, PresentationStrings, String, NotificationExceptionMode)
-    case groupNotice(PresentationTheme, String)
-    
-    case channelHeader(PresentationTheme, String)
-    case channelAlerts(PresentationTheme, String, Bool)
-    case channelPreviews(PresentationTheme, String, Bool)
-    case channelSound(PresentationTheme, String, String, PeerMessageSound)
-    case channelExceptions(PresentationTheme, PresentationStrings, String, NotificationExceptionMode)
-    case channelNotice(PresentationTheme, String)
+    case categoriesHeader(PresentationTheme, String)
+    case privateChats(PresentationTheme, String, String, String)
+    case groupChats(PresentationTheme, String, String, String)
+    case channels(PresentationTheme, String, String, String)
     
     case inAppHeader(PresentationTheme, String)
     case inAppSounds(PresentationTheme, String, Bool)
@@ -215,12 +169,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return NotificationsAndSoundsSection.accounts.rawValue
             case .permissionInfo, .permissionEnable:
                 return NotificationsAndSoundsSection.permission.rawValue
-            case .messageHeader, .messageAlerts, .messagePreviews, .messageSound, .messageNotice, .userExceptions:
-                return NotificationsAndSoundsSection.messages.rawValue
-            case .groupHeader, .groupAlerts, .groupPreviews, .groupSound, .groupNotice, .groupExceptions:
-                return NotificationsAndSoundsSection.groups.rawValue
-            case .channelHeader, .channelAlerts, .channelPreviews, .channelSound, .channelNotice, .channelExceptions:
-                return NotificationsAndSoundsSection.channels.rawValue
+            case .categoriesHeader, .privateChats, .groupChats, .channels:
+                return NotificationsAndSoundsSection.categories.rawValue
             case .inAppHeader, .inAppSounds, .inAppVibrate, .inAppPreviews:
                 return NotificationsAndSoundsSection.inApp.rawValue
             case .displayNamesOnLockscreen, .displayNamesOnLockscreenInfo:
@@ -246,70 +196,42 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return 3
             case .permissionEnable:
                 return 4
-            case .messageHeader:
+            case .categoriesHeader:
                 return 5
-            case .messageAlerts:
+            case .privateChats:
                 return 6
-            case .messagePreviews:
+            case .groupChats:
                 return 7
-            case .messageSound:
+            case .channels:
                 return 8
-            case .userExceptions:
-                return 9
-            case .messageNotice:
-                return 10
-            case .groupHeader:
-                return 11
-            case .groupAlerts:
-                return 12
-            case .groupPreviews:
-                return 13
-            case .groupSound:
-                return 14
-            case .groupExceptions:
-                return 15
-            case .groupNotice:
-                return 16
-            case .channelHeader:
-                return 17
-            case .channelAlerts:
-                return 18
-            case .channelPreviews:
-                return 19
-            case .channelSound:
-                return 20
-            case .channelExceptions:
-                return 21
-            case .channelNotice:
-                return 22
             case .inAppHeader:
-                return 23
+                return 14
             case .inAppSounds:
-                return 24
+                return 15
             case .inAppVibrate:
-                return 25
+                return 16
             case .inAppPreviews:
-                return 26
+                return 17
             case .displayNamesOnLockscreen:
-                return 27
+                return 18
             case .displayNamesOnLockscreenInfo:
-                return 28
+                return 19
             case .badgeHeader:
-                return 29
+                return 20
             case .includeChannels:
-                return 32
+                return 21
             case .unreadCountCategory:
-                return 33
+                return 22
             case .unreadCountCategoryInfo:
-                return 34
+                return 23
             case .joinedNotifications:
-                return 35
+                return 24
             case .joinedNotificationsInfo:
-                return 36
+                return 25
             case .reset:
-                return 37
+                return 26
             case .resetNotice:
-                return 38
+                return 27
         }
     }
     
@@ -317,18 +239,6 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
         switch self {
             case .allAccounts:
                 return NotificationsAndSoundsEntryTag.allAccounts
-            case .messageAlerts:
-                return NotificationsAndSoundsEntryTag.messageAlerts
-            case .messagePreviews:
-                return NotificationsAndSoundsEntryTag.messagePreviews
-            case .groupAlerts:
-                return NotificationsAndSoundsEntryTag.groupAlerts
-            case .groupPreviews:
-                return NotificationsAndSoundsEntryTag.groupPreviews
-            case .channelAlerts:
-                return NotificationsAndSoundsEntryTag.channelAlerts
-            case .channelPreviews:
-                return NotificationsAndSoundsEntryTag.channelPreviews
             case .inAppSounds:
                 return NotificationsAndSoundsEntryTag.inAppSounds
             case .inAppVibrate:
@@ -382,110 +292,26 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .messageHeader(lhsTheme, lhsText):
-                if case let .messageHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .categoriesHeader(lhsTheme, lhsText):
+                if case let .categoriesHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
                 }
-            case let .messageAlerts(lhsTheme, lhsText, lhsValue):
-                if case let .messageAlerts(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .privateChats(lhsTheme, lhsTitle, lhsSubtitle, lhsLabel):
+                if case let .privateChats(rhsTheme, rhsTitle, rhsSubtitle, rhsLabel) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsLabel == rhsLabel {
                     return true
                 } else {
                     return false
                 }
-            case let .messagePreviews(lhsTheme, lhsText, lhsValue):
-                if case let .messagePreviews(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .groupChats(lhsTheme, lhsTitle, lhsSubtitle, lhsLabel):
+                if case let .groupChats(rhsTheme, rhsTitle, rhsSubtitle, rhsLabel) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsLabel == rhsLabel {
                     return true
                 } else {
                     return false
                 }
-            case let .messageSound(lhsTheme, lhsText, lhsValue, lhsSound):
-                if case let .messageSound(rhsTheme, rhsText, rhsValue, rhsSound) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsSound == rhsSound {
-                    return true
-                } else {
-                    return false
-                }
-            case let .userExceptions(lhsTheme, lhsStrings, lhsText, lhsValue):
-                if case let .userExceptions(rhsTheme, rhsStrings, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .messageNotice(lhsTheme, lhsText):
-                if case let .messageNotice(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .groupHeader(lhsTheme, lhsText):
-                if case let .groupHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .groupAlerts(lhsTheme, lhsText, lhsValue):
-                if case let .groupAlerts(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .groupPreviews(lhsTheme, lhsText, lhsValue):
-                if case let .groupPreviews(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .groupSound(lhsTheme, lhsText, lhsValue, lhsSound):
-                if case let .groupSound(rhsTheme, rhsText, rhsValue, rhsSound) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsSound == rhsSound {
-                    return true
-                } else {
-                    return false
-                }
-            case let .groupExceptions(lhsTheme, lhsStrings, lhsText, lhsValue):
-                if case let .groupExceptions(rhsTheme, rhsStrings, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .groupNotice(lhsTheme, lhsText):
-                if case let .groupNotice(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .channelHeader(lhsTheme, lhsText):
-                if case let .channelHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .channelAlerts(lhsTheme, lhsText, lhsValue):
-                if case let .channelAlerts(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .channelPreviews(lhsTheme, lhsText, lhsValue):
-                if case let .channelPreviews(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .channelSound(lhsTheme, lhsText, lhsValue, lhsSound):
-                if case let .channelSound(rhsTheme, rhsText, rhsValue, rhsSound) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsSound == rhsSound {
-                    return true
-                } else {
-                    return false
-                }
-            case let .channelExceptions(lhsTheme, lhsStrings, lhsText, lhsValue):
-                if case let .channelExceptions(rhsTheme, rhsStrings, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .channelNotice(lhsTheme, lhsText):
-                if case let .channelNotice(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .channels(lhsTheme, lhsTitle, lhsSubtitle, lhsLabel):
+                if case let .channels(rhsTheme, rhsTitle, rhsSubtitle, rhsLabel) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsLabel == rhsLabel {
                     return true
                 } else {
                     return false
@@ -600,81 +426,20 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.authorizeNotifications()
                 })
-            case let .messageHeader(_, text):
+            case let .categoriesHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .messageAlerts(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                    arguments.updateMessageAlerts(updatedValue)
-                }, tag: self.tag)
-            case let .messagePreviews(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                    arguments.updateMessagePreviews(updatedValue)
-                }, tag: self.tag)
-            case let .messageSound(_, text, value, sound):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    let controller = notificationSoundSelectionController(context: arguments.context, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
-                        arguments?.updateMessageSound(value)
-                    })
-                    arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case let .privateChats(_, title, subtitle, label):
+                return NotificationsCategoryItemListItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/EditProfile"), title: title, subtitle: subtitle, label: label, sectionId: self.section, style: .blocks, action: {
+                    arguments.openPeerCategory(.privateChat)
                 })
-            case let .userExceptions(_, strings, text, value):
-                let label = value.settings.count > 0 ? strings.Notifications_Exceptions(Int32(value.settings.count)) : strings.Notification_Exceptions_Add
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: label, sectionId: self.section, style: .blocks, action: {
-                    let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
-                    arguments.pushController(controller)
+            case let .groupChats(_, title, subtitle, label):
+                return NotificationsCategoryItemListItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/GroupChats"), title: title, subtitle: subtitle, label: label, sectionId: self.section, style: .blocks, action: {
+                    arguments.openPeerCategory(.group)
                 })
-            case let .messageNotice(_, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .groupHeader(_, text):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .groupAlerts(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                    arguments.updateGroupAlerts(updatedValue)
-                }, tag: self.tag)
-            case let .groupPreviews(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                    arguments.updateGroupPreviews(updatedValue)
-                }, tag: self.tag)
-            case let .groupSound(_, text, value, sound):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    let controller = notificationSoundSelectionController(context: arguments.context, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
-                        arguments?.updateGroupSound(value)
-                    })
-                    arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            case let .channels(_, title, subtitle, label):
+                return NotificationsCategoryItemListItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Channels"), title: title, subtitle: subtitle, label: label, sectionId: self.section, style: .blocks, action: {
+                    arguments.openPeerCategory(.channel)
                 })
-            case let .groupExceptions(_, strings, text, value):
-                let label = value.settings.count > 0 ? strings.Notifications_Exceptions(Int32(value.settings.count)) : strings.Notification_Exceptions_Add
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: label, sectionId: self.section, style: .blocks, action: {
-                    let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
-                    arguments.pushController(controller)
-                })
-            case let .groupNotice(_, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .channelHeader(_, text):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .channelAlerts(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                    arguments.updateChannelAlerts(updatedValue)
-                }, tag: self.tag)
-            case let .channelPreviews(_, text, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
-                    arguments.updateChannelPreviews(updatedValue)
-                }, tag: self.tag)
-            case let .channelSound(_, text, value, sound):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    let controller = notificationSoundSelectionController(context: arguments.context, isModal: true, currentSound: sound, defaultSound: nil, completion: { [weak arguments] value in
-                        arguments?.updateChannelSound(value)
-                    })
-                    arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                })
-            case let .channelExceptions(_, strings, text, value):
-                let label = value.settings.count > 0 ? strings.Notifications_Exceptions(Int32(value.settings.count)) : strings.Notification_Exceptions_Add
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: label, sectionId: self.section, style: .blocks, action: {
-                    let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
-                    arguments.pushController(controller)
-                })
-            case let .channelNotice(_, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .inAppHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .inAppSounds(_, text, value):
@@ -768,32 +533,10 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
         }
     }
     
-    entries.append(.messageHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotifications.uppercased()))
-    entries.append(.messageAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.privateChats.enabled))
-    if globalSettings.privateChats.enabled || !exceptions.users.isEmpty {
-        entries.append(.messagePreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.privateChats.displayPreviews))
-        entries.append(.messageSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.privateChats.sound)), filteredGlobalSound(globalSettings.privateChats.sound)))
-    }
-    entries.append(.userExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.users))
-    entries.append(.messageNotice(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsExceptionsHelp))
-    
-    entries.append(.groupHeader(presentationData.theme, presentationData.strings.Notifications_GroupNotifications.uppercased()))
-    entries.append(.groupAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.groupChats.enabled))
-    if globalSettings.groupChats.enabled || !exceptions.groups.isEmpty {
-        entries.append(.groupPreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.groupChats.displayPreviews))
-        entries.append(.groupSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.groupChats.sound)), filteredGlobalSound(globalSettings.groupChats.sound)))
-    }
-    entries.append(.groupExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.groups))
-    entries.append(.groupNotice(presentationData.theme, presentationData.strings.Notifications_GroupNotificationsExceptionsHelp))
-    
-    entries.append(.channelHeader(presentationData.theme, presentationData.strings.Notifications_ChannelNotifications.uppercased()))
-    entries.append(.channelAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.channels.enabled))
-    if globalSettings.channels.enabled || !exceptions.channels.isEmpty {
-        entries.append(.channelPreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.channels.displayPreviews))
-        entries.append(.channelSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.channels.sound)), filteredGlobalSound(globalSettings.channels.sound)))
-    }
-    entries.append(.channelExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.channels))
-    entries.append(.channelNotice(presentationData.theme, presentationData.strings.Notifications_ChannelNotificationsExceptionsHelp))
+    entries.append(.categoriesHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotifications.uppercased()))
+    entries.append(.privateChats(presentationData.theme, presentationData.strings.Notifications_PrivateChats, !exceptions.users.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.users.peerIds.count)) : "", globalSettings.privateChats.enabled ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
+    entries.append(.groupChats(presentationData.theme, presentationData.strings.Notifications_GroupChats, !exceptions.groups.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.groups.peerIds.count)) : "", globalSettings.groupChats.enabled ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
+    entries.append(.channels(presentationData.theme, presentationData.strings.Notifications_Channels, !exceptions.channels.isEmpty ? presentationData.strings.Notifications_CategoryExceptions(Int32(exceptions.channels.peerIds.count)) : "", globalSettings.channels.enabled ? presentationData.strings.Notifications_On : presentationData.strings.Notifications_Off))
     
     entries.append(.inAppHeader(presentationData.theme, presentationData.strings.Notifications_InAppNotifications.uppercased()))
     entries.append(.inAppSounds(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsSounds, inAppSettings.playSounds))
@@ -858,60 +601,30 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
         }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Notifications_PermissionsEnable, action: {
             context.sharedContext.applicationBindings.openSettings()
         })]), nil)
-    }, updateMessageAlerts: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            settings.privateChats.enabled = value
-            return settings
-        }).start()
-    }, updateMessagePreviews: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            settings.privateChats.displayPreviews = value
-            return settings
-        }).start()
-    }, updateMessageSound: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            settings.privateChats.sound = value
-            return settings
-        }).start()
-    }, updateGroupAlerts: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            settings.groupChats.enabled = value
-            return settings
-        }).start()
-    }, updateGroupPreviews: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            settings.groupChats.displayPreviews = value
-            return settings
-        }).start()
-    }, updateGroupSound: {value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            settings.groupChats.sound = value
-            return settings
-        }).start()
-    }, updateChannelAlerts: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            settings.channels.enabled = value
-            return settings
-        }).start()
-    }, updateChannelPreviews: { value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            settings.channels.displayPreviews = value
-            return settings
-        }).start()
-    }, updateChannelSound: {value in
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
-            var settings = settings
-            settings.channels.sound = value
-            return settings
-        }).start()
+    }, openPeerCategory: { category in
+        _ = (notificationExceptions.get() |> take(1) |> deliverOnMainQueue).start(next: { (users, groups, channels) in
+            let mode: NotificationExceptionMode
+            switch category {
+                case .privateChat:
+                    mode = users
+                case .group:
+                    mode = groups
+                case .channel:
+                    mode = channels
+            }
+            pushControllerImpl?(notificationsPeerCategoryController(context: context, category: category, mode: mode, updatedMode: { mode in
+                _ = (notificationExceptions.get() |> take(1) |> deliverOnMainQueue).start(next: { (users, groups, channels) in
+                    switch mode {
+                        case .users:
+                            updateNotificationExceptions((mode, groups, channels))
+                        case .groups:
+                            updateNotificationExceptions((users, mode, channels))
+                        case .channels:
+                            updateNotificationExceptions((users, groups, mode))
+                    }
+                })
+            }, focusOnItemTag: nil))
+        })
     }, updateInAppSounds: { value in
         let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
@@ -977,17 +690,6 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             })
         ])])
         presentControllerImpl?(actionSheet, nil)
-    }, updatedExceptionMode: { mode in
-        _ = (notificationExceptions.get() |> take(1) |> deliverOnMainQueue).start(next: { (users, groups, channels) in
-            switch mode {
-                case .users:
-                    updateNotificationExceptions((mode, groups, channels))
-                case .groups:
-                    updateNotificationExceptions((users, mode, channels))
-                case .channels:
-                    updateNotificationExceptions((users, groups, mode))
-            }
-        })
     }, openAppSettings: {
         context.sharedContext.applicationBindings.openSettings()
     }, updateJoinedNotifications: { value in

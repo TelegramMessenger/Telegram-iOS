@@ -328,7 +328,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                             }
                             if strongSelf.maskNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                                strongSelf.insertSubnode(strongSelf.maskNode, aboveSubnode: strongSelf.switchGestureNode)
                             }
                             
                             let hasCorners = itemListHasRoundedBlockLayout(params) && !item.noCorners

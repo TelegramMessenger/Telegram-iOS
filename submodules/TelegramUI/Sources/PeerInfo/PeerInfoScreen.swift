@@ -6356,7 +6356,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages)
             
             contentHeight += headerHeight
-            contentHeight += sectionSpacing
+            if !(self.isSettings && self.state.isEditing) {
+                contentHeight += sectionSpacing
+            }
               
             for (sectionId, sectionItems) in items {
                 validRegularSections.append(sectionId)
