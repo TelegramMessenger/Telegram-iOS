@@ -115,6 +115,14 @@ private final class PeerInfoScreenItemSectionContainerNode: ASDisplayNode {
         self.topSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
+        if safeInsets.left > 0.0 {
+            self.topSeparatorNode.isHidden = true
+            self.bottomSeparatorNode.isHidden = true
+        } else {
+            self.topSeparatorNode.isHidden = false
+            self.bottomSeparatorNode.isHidden = false
+        }
+        
         var contentHeight: CGFloat = 0.0
         var contentWithBackgroundHeight: CGFloat = 0.0
         var contentWithBackgroundOffset: CGFloat = 0.0
@@ -1522,6 +1530,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     fileprivate let cachedDataPromise = Promise<CachedPeerData?>()
     
     let scrollNode: ASScrollNode
+    private let leftOverlayNode: ASDisplayNode
+    private let rightOverlayNode: ASDisplayNode
     
     let headerNode: PeerInfoHeaderNode
     private var regularSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
@@ -1616,6 +1626,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.scrollNode = ASScrollNode()
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.canCancelAllTouchesInViews = true
+        
+        self.leftOverlayNode = ASDisplayNode()
+        self.leftOverlayNode.isUserInteractionEnabled = false
+        self.rightOverlayNode = ASDisplayNode()
+        self.rightOverlayNode.isUserInteractionEnabled = false
         
         self.headerNode = PeerInfoHeaderNode(context: context, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, isSettings: isSettings)
         self.paneContainerNode = PeerInfoPaneContainerNode(context: context, updatedPresentationData: controller.updatedPresentationData, peerId: peerId, isMediaOnly: self.isMediaOnly)
@@ -2242,6 +2257,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.scrollNode.view.delegate = self
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.paneContainerNode)
+        
+        
+        self.leftOverlayNode.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
+        self.rightOverlayNode.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
+            
+        self.addSubnode(self.leftOverlayNode)
+        self.addSubnode(self.rightOverlayNode)
+    
         self.addSubnode(self.headerNode)
         self.scrollNode.view.isScrollEnabled = !self.isMediaOnly
         
@@ -6270,6 +6293,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.presentationData = presentationData
         
         self.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
+        self.leftOverlayNode.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
+        self.rightOverlayNode.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
         
         self.updateNavigationExpansionPresentation(isExpanded: self.headerNode.isAvatarExpanded, animated: false)
         
@@ -6312,17 +6337,29 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             contentHeight += navigationHeight
         }
         
+        var currentInsets = UIEdgeInsets()
         var validRegularSections: [AnyHashable] = []
         if !self.isMediaOnly {
+            var insets = UIEdgeInsets()
+            let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+            if self.isSettings {
+                insets.left += inset
+                insets.right += inset
+            } else {
+                insets = layout.safeInsets
+            }
+            
+            if !self.state.isEditing {
+                currentInsets = insets
+            }
+            
             let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages)
             
             contentHeight += headerHeight
-            if !self.isSettings {
-                contentHeight += sectionSpacing
-            } else if let (section, _) = items.first, let sectionValue = section.base as? SettingsSection, sectionValue != .edit && !self.state.isEditing {
+            if !(self.isSettings && self.state.isEditing) {
                 contentHeight += sectionSpacing
             }
-                        
+              
             for (sectionId, sectionItems) in items {
                 validRegularSections.append(sectionId)
                 
@@ -6334,8 +6371,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     self.regularSections[sectionId] = sectionNode
                     self.scrollNode.addSubnode(sectionNode)
                 }
-                
-                let sectionHeight = sectionNode.update(width: layout.size.width, safeInsets: layout.safeInsets, presentationData: self.presentationData, items: sectionItems, transition: transition)
+                                
+                let sectionHeight = sectionNode.update(width: layout.size.width, safeInsets: insets, presentationData: self.presentationData, items: sectionItems, transition: transition)
                 let sectionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: sectionHeight))
                 if additive {
                     transition.updateFrameAdditive(node: sectionNode, frame: sectionFrame)
@@ -6367,6 +6404,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             let editItems = self.isSettings ? settingsEditingItems(data: self.data, state: self.state, context: self.context, presentationData: self.presentationData, interaction: self.interaction) : editingItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction)
 
             for (sectionId, sectionItems) in editItems {
+                var insets = UIEdgeInsets()
+                let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+                insets.left += inset
+                insets.right += inset
+                
+                if self.state.isEditing {
+                    currentInsets = insets
+                }
+
                 validEditingSections.append(sectionId)
                 
                 var wasAdded = false
@@ -6380,7 +6426,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     self.scrollNode.addSubnode(sectionNode)
                 }
                                 
-                let sectionHeight = sectionNode.update(width: layout.size.width, safeInsets: layout.safeInsets, presentationData: self.presentationData, items: sectionItems, transition: transition)
+                let sectionHeight = sectionNode.update(width: layout.size.width, safeInsets: insets, presentationData: self.presentationData, items: sectionItems, transition: transition)
                 let sectionFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: sectionHeight))
                 
                 if wasAdded {
@@ -6507,6 +6553,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         if let restoreContentOffset = restoreContentOffset {
             self.scrollNode.view.contentOffset = restoreContentOffset
         }
+        
+        let relativeHeaderFrame = self.headerNode.view.convert(self.headerNode.bounds, to: self.view)
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: relativeHeaderFrame.maxY + UIScreenPixel - self.scrollNode.view.contentOffset.y, width: currentInsets.left, height: layout.size.height * 2.0)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - currentInsets.right, y: relativeHeaderFrame.maxY + UIScreenPixel - self.scrollNode.view.contentOffset.y, width: currentInsets.right, height: layout.size.height * 2.0)
         
         if additive {
             transition.updateFrameAdditive(node: self.paneContainerNode, frame: paneContainerFrame)
@@ -6636,6 +6686,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         if self.ignoreScrolling {
             return
         }
+        
+        let headerFrame = self.headerNode.view.convert(self.headerNode.bounds, to: self.view)
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: headerFrame.maxY + UIScreenPixel - scrollView.contentOffset.y, width: self.leftOverlayNode.frame.width, height: self.leftOverlayNode.frame.height)
+        self.rightOverlayNode.frame = CGRect(x: self.rightOverlayNode.frame.minX, y: headerFrame.maxY + UIScreenPixel - scrollView.contentOffset.y, width: self.rightOverlayNode.frame.width, height: self.rightOverlayNode.frame.height)
         
         if !self.state.isEditing {
             if self.canAddVelocity {

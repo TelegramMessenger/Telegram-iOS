@@ -331,12 +331,12 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
         SettingsSearchableItem(id: .notifications(0), title: strings.Settings_NotificationsAndSounds, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_Title), icon: icon, breadcrumbs: [], present: { context, _, present in
             presentNotificationSettings(context, present, nil)
         }),
-        SettingsSearchableItem(id: .notifications(1), title: strings.Notifications_MessageNotificationsAlert, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsAlert), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications], present: { context, _, present in
-            presentNotificationSettings(context, present, .messageAlerts)
-        }),
-        SettingsSearchableItem(id: .notifications(2), title: strings.Notifications_MessageNotificationsPreview, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsPreview), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications], present: { context, _, present in
-            presentNotificationSettings(context, present, .messagePreviews)
-        }),
+//        SettingsSearchableItem(id: .notifications(1), title: strings.Notifications_MessageNotificationsAlert, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsAlert), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications], present: { context, _, present in
+//            presentNotificationSettings(context, present, .messageAlerts)
+//        }),
+//        SettingsSearchableItem(id: .notifications(2), title: strings.Notifications_MessageNotificationsPreview, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsPreview), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications], present: { context, _, present in
+//            presentNotificationSettings(context, present, .messagePreviews)
+//        }),
         SettingsSearchableItem(id: .notifications(3), title: strings.Notifications_MessageNotificationsSound, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsSound), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications], present: { context, _, present in
             
             let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: filteredGlobalSound(settings.privateChats.sound), defaultSound: nil, completion: { value in
@@ -351,12 +351,12 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
         SettingsSearchableItem(id: .notifications(4), title: strings.Notifications_MessageNotificationsExceptions, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_MessageNotificationsExceptions), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_MessageNotifications], present: { context, _, present in
             present(.push, NotificationExceptionsController(context: context, mode: exceptions().0, updatedMode: { _ in}))
         }),
-        SettingsSearchableItem(id: .notifications(5), title: strings.Notifications_GroupNotificationsAlert, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsAlert), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications], present: { context, _, present in
-            presentNotificationSettings(context, present, .groupAlerts)
-        }),
-        SettingsSearchableItem(id: .notifications(6), title: strings.Notifications_GroupNotificationsPreview, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsPreview), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications], present: { context, _, present in
-            presentNotificationSettings(context, present, .groupPreviews)
-        }),
+//        SettingsSearchableItem(id: .notifications(5), title: strings.Notifications_GroupNotificationsAlert, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsAlert), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications], present: { context, _, present in
+//            presentNotificationSettings(context, present, .groupAlerts)
+//        }),
+//        SettingsSearchableItem(id: .notifications(6), title: strings.Notifications_GroupNotificationsPreview, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsPreview), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications], present: { context, _, present in
+//            presentNotificationSettings(context, present, .groupPreviews)
+//        }),
         SettingsSearchableItem(id: .notifications(7), title: strings.Notifications_GroupNotificationsSound, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsSound), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications], present: { context, _, present in
             let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: filteredGlobalSound(settings.groupChats.sound), defaultSound: nil, completion: { value in
                 let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
@@ -370,12 +370,12 @@ private func notificationSearchableItems(context: AccountContext, settings: Glob
         SettingsSearchableItem(id: .notifications(8), title: strings.Notifications_GroupNotificationsExceptions, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_GroupNotificationsExceptions), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_GroupNotifications], present: { context, _, present in
             present(.push, NotificationExceptionsController(context: context, mode: exceptions().1, updatedMode: { _ in}))
         }),
-        SettingsSearchableItem(id: .notifications(9), title: strings.Notifications_ChannelNotificationsAlert, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ChannelNotificationsAlert), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications], present: { context, _, present in
-            presentNotificationSettings(context, present, .channelAlerts)
-        }),
-        SettingsSearchableItem(id: .notifications(10), title: strings.Notifications_ChannelNotificationsPreview, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ChannelNotificationsPreview), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications], present: { context, _, present in
-            presentNotificationSettings(context, present, .channelPreviews)
-        }),
+//        SettingsSearchableItem(id: .notifications(9), title: strings.Notifications_ChannelNotificationsAlert, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ChannelNotificationsAlert), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications], present: { context, _, present in
+//            presentNotificationSettings(context, present, .channelAlerts)
+//        }),
+//        SettingsSearchableItem(id: .notifications(10), title: strings.Notifications_ChannelNotificationsPreview, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ChannelNotificationsPreview), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications], present: { context, _, present in
+//            presentNotificationSettings(context, present, .channelPreviews)
+//        }),
         SettingsSearchableItem(id: .notifications(11), title: strings.Notifications_ChannelNotificationsSound, alternate: synonyms(strings.SettingsSearch_Synonyms_Notifications_ChannelNotificationsSound), icon: icon, breadcrumbs: [strings.Settings_NotificationsAndSounds, strings.Notifications_ChannelNotifications], present: { context, _, present in
             let controller = notificationSoundSelectionController(context: context, isModal: true, currentSound: filteredGlobalSound(settings.channels.sound), defaultSound: nil, completion: { value in
                 let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in

@@ -219,13 +219,13 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         let _ = (context.engine.data.get(
             TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
         )
-        |> deliverOnMainQueue).start(next: { peer in
-            guard let peer = peer else {
+        |> deliverOnMainQueue).start(next: { chatPeer in
+            guard let chatPeer = chatPeer else {
                 return
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let addString: String
-            if case let .channel(channel) = peer, case .broadcast = channel.info {
+            if case let .channel(channel) = chatPeer, case .broadcast = channel.info {
                 addString = presentationData.strings.MemberRequests_AddToChannel
             } else {
                 addString = presentationData.strings.MemberRequests_AddToGroup

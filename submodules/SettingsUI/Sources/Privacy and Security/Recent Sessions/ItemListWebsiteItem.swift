@@ -407,7 +407,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
             return
         }
         
-        let leftInset: CGFloat = 15.0 + params.leftInset
+        let leftInset: CGFloat = 59.0 + params.leftInset
         
         let editingOffset: CGFloat
         if let editableControlNode = self.editableControlNode {

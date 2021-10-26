@@ -201,8 +201,8 @@ private final class ItemListInviteLinkTimeLimitItemNode: ListViewItemNode {
         
         let sliderView = TGPhotoEditorSliderView()
         sliderView.enablePanHandling = true
-        sliderView.trackCornerRadius = 1.0
-        sliderView.lineSize = 2.0
+        sliderView.trackCornerRadius = 2.0
+        sliderView.lineSize = 4.0
         sliderView.dotSize = 5.0
         sliderView.minimumValue = 0.0
         sliderView.startValue = 0.0
