@@ -101,6 +101,8 @@ private final class FetchManagerStatusContext {
                 return .Fetching(isActive: false, progress: 0.0)
             } else if self.hasEntry {
                 return originalStatus
+            } else if case .Local = originalStatus {
+                return originalStatus
             } else {
                 return .Remote
             }
