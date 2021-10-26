@@ -389,7 +389,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
             controlColor: UIColor(rgb: 0x98989e)
         ),
         mediaPlaceholderColor: UIColor(rgb: 0xffffff).mixedWith(UIColor(rgb: 0x1c1c1d), alpha: 0.9),
-        scrollIndicatorColor: UIColor(rgb: 0xffffff, alpha: 0.3),
+        scrollIndicatorColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         pageIndicatorInactiveColor: UIColor(white: 1.0, alpha: 0.3),
         inputClearButtonColor: UIColor(rgb: 0x8b9197),
         itemBarChart: PresentationThemeItemBarChart(color1: UIColor(rgb: 0xffffff), color2: UIColor(rgb: 0x929196), color3: UIColor(rgb: 0x333333)),

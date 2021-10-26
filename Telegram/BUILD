@@ -372,7 +372,6 @@ plist_fragment(
 
 official_apple_pay_merchants = [
     "merchant.ph.telegra.Telegraph",
-    "merchant.yandex.ph.telegra.Telegraph",
     "merchant.sberbank.ph.telegra.Telegraph",
     "merchant.sberbank.test.ph.telegra.Telegraph",
     "merchant.privatbank.test.telergramios",
@@ -380,6 +379,7 @@ official_apple_pay_merchants = [
     "merchant.paymaster.test.telegramios",
     "merchant.smartglocal.prod.telegramios",
     "merchant.smartglocal.test.telegramios",
+    "merchant.yoomoney.test.telegramios",
 ]
 
 official_bundle_ids = [

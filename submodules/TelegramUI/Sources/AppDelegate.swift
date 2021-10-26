@@ -2277,6 +2277,8 @@ private func notificationPayloadKey(data: Data) -> Data? {
 private func accountIdFromNotification(_ notification: UNNotification, sharedContext: Signal<SharedApplicationContext, NoError>) -> Signal<AccountRecordId?, NoError> {
     if let id = notification.request.content.userInfo["accountId"] as? Int64 {
         return .single(AccountRecordId(rawValue: id))
+    } else if let idString = notification.request.content.userInfo["accountId"] as? String, let id = Int64(idString) {
+        return .single(AccountRecordId(rawValue: id))
     } else {
         var encryptedData: Data?
         if var encryptedPayload = notification.request.content.userInfo["p"] as? String {
@@ -2335,6 +2337,8 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
 @available(iOS 10.0, *)
 private func peerIdFromNotification(_ notification: UNNotification) -> PeerId? {
     if let peerId = notification.request.content.userInfo["peerId"] as? Int64 {
+        return PeerId(peerId)
+    } else if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerId = Int64(peerIdString) {
         return PeerId(peerId)
     } else {
         let payload = notification.request.content.userInfo
