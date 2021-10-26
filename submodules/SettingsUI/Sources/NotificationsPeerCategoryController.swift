@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
@@ -375,47 +376,41 @@ public enum NotificationsPeerCategory {
 
 private final class NotificationExceptionState : Equatable {
     let mode: NotificationExceptionMode
-    let isSearchMode: Bool
     let revealedPeerId: PeerId?
     let editing: Bool
     
-    init(mode: NotificationExceptionMode, isSearchMode: Bool = false, revealedPeerId: PeerId? = nil, editing: Bool = false) {
+    init(mode: NotificationExceptionMode, revealedPeerId: PeerId? = nil, editing: Bool = false) {
         self.mode = mode
-        self.isSearchMode = isSearchMode
         self.revealedPeerId = revealedPeerId
         self.editing = editing
     }
     
     func withUpdatedMode(_ mode: NotificationExceptionMode) -> NotificationExceptionState {
-        return NotificationExceptionState(mode: mode, isSearchMode: self.isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
-    }
-    
-    func withUpdatedSearchMode(_ isSearchMode: Bool) -> NotificationExceptionState {
-        return NotificationExceptionState(mode: self.mode, isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
+        return NotificationExceptionState(mode: mode, revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
     
     func withUpdatedEditing(_ editing: Bool) -> NotificationExceptionState {
-        return NotificationExceptionState(mode: self.mode, isSearchMode: self.isSearchMode, revealedPeerId: self.revealedPeerId, editing: editing)
+        return NotificationExceptionState(mode: self.mode, revealedPeerId: self.revealedPeerId, editing: editing)
     }
     
     func withUpdatedRevealedPeerId(_ revealedPeerId: PeerId?) -> NotificationExceptionState {
-        return NotificationExceptionState(mode: self.mode, isSearchMode: self.isSearchMode, revealedPeerId: revealedPeerId, editing: self.editing)
+        return NotificationExceptionState(mode: self.mode, revealedPeerId: revealedPeerId, editing: self.editing)
     }
     
     func withUpdatedPeerSound(_ peer: Peer, _ sound: PeerMessageSound) -> NotificationExceptionState {
-        return NotificationExceptionState(mode: mode.withUpdatedPeerSound(peer, sound), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
+        return NotificationExceptionState(mode: mode.withUpdatedPeerSound(peer, sound), revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
     
     func withUpdatedPeerMuteInterval(_ peer: Peer, _ muteInterval: Int32?) -> NotificationExceptionState {
-        return NotificationExceptionState(mode: mode.withUpdatedPeerMuteInterval(peer, muteInterval), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
+        return NotificationExceptionState(mode: mode.withUpdatedPeerMuteInterval(peer, muteInterval), revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
     
     func withUpdatedPeerDisplayPreviews(_ peer: Peer, _ displayPreviews: PeerNotificationDisplayPreviews) -> NotificationExceptionState {
-        return NotificationExceptionState(mode: mode.withUpdatedPeerDisplayPreviews(peer, displayPreviews), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
+        return NotificationExceptionState(mode: mode.withUpdatedPeerDisplayPreviews(peer, displayPreviews), revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
     
     static func == (lhs: NotificationExceptionState, rhs: NotificationExceptionState) -> Bool {
-        return lhs.mode == rhs.mode && lhs.isSearchMode == rhs.isSearchMode && lhs.revealedPeerId == rhs.revealedPeerId && lhs.editing == rhs.editing
+        return lhs.mode == rhs.mode && lhs.revealedPeerId == rhs.revealedPeerId && lhs.editing == rhs.editing
     }
 }
 
@@ -714,7 +709,30 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
             }
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Notifications_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let leftNavigationButton: ItemListNavigationButton?
+        let rightNavigationButton: ItemListNavigationButton?
+        if !state.mode.peerIds.isEmpty {
+            if state.editing {
+                leftNavigationButton = ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {})
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+                    updateState { value in
+                        return value.withUpdatedEditing(false)
+                    }
+                })
+            } else {
+                leftNavigationButton = nil
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Edit), style: .regular, enabled: true, action: {
+                    updateState { value in
+                        return value.withUpdatedEditing(true)
+                    }
+                })
+            }
+        } else {
+            leftNavigationButton = nil
+            rightNavigationButton = nil
+        }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Notifications_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, ensureVisibleItemTag: focusOnItemTag, initialScrollToItem: scrollToItem)
         
         return (controllerState, (listState, arguments))

@@ -350,13 +350,17 @@ open class ItemListControllerNode: ASDisplayNode {
             
             if let strongSelf = self {
                 var previousContentOffsetValue: CGFloat?
-                if let previousContentOffset = strongSelf.previousContentOffset, case let .known(value) = previousContentOffset {
-                    previousContentOffsetValue = value
+                if let previousContentOffset = strongSelf.previousContentOffset {
+                    if case let .known(value) = previousContentOffset {
+                        previousContentOffsetValue = value
+                    } else {
+                        previousContentOffsetValue = 30.0
+                    }
                 }
                 switch offset {
                     case let .known(value):
                         let transition: ContainedViewLayoutTransition
-                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > 30.0 {
+                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue >= 30.0 {
                             transition = .animated(duration: 0.2, curve: .easeInOut)
                         } else {
                             transition = .immediate
