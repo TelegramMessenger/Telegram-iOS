@@ -693,35 +693,47 @@ private func masterNotificationsKey(masterNotificationKeyValue: Atomic<MasterNot
     if let key = masterNotificationKeyValue.with({ $0 }) {
         return .single(key)
     }
-    
+
     return postbox.transaction(ignoreDisabled: ignoreDisabled, { transaction -> MasterNotificationKey? in
-        if let value = transaction.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
-            let authKeyHash = sha1Digest(value)
-            let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
-            let keyData = MasterNotificationKey(id: authKeyId, data: value)
-            let _ = masterNotificationKeyValue.swap(keyData)
-            return keyData
-        } else if createIfNotExists {
-            var secretData = Data(count: 256)
-            let secretDataCount = secretData.count
-            if !secretData.withUnsafeMutableBytes({ rawBytes -> Bool in
-                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
-                let copyResult = SecRandomCopyBytes(nil, secretDataCount, bytes)
-                return copyResult == errSecSuccess
-            }) {
-                assertionFailure()
-            }
-            
-            transaction.setKeychainEntry(secretData, forKey: "master-notification-secret")
-            let authKeyHash = sha1Digest(secretData)
-            let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
-            let keyData = MasterNotificationKey(id: authKeyId, data: secretData)
-            let _ = masterNotificationKeyValue.swap(keyData)
-            return keyData
-        } else {
-            return nil
-        }
+        let result = masterNotificationsKey(transaction: transaction, createIfNotExists: createIfNotExists)
+        let _ = masterNotificationKeyValue.swap(result)
+        return result
     })
+}
+
+func masterNotificationsKey(transaction: Transaction, createIfNotExists: Bool) -> MasterNotificationKey? {
+    if let value = transaction.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
+        let authKeyHash = sha1Digest(value)
+        let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
+        let keyData = MasterNotificationKey(id: authKeyId, data: value)
+        return keyData
+    } else if createIfNotExists {
+        var secretData = Data(count: 256)
+        let secretDataCount = secretData.count
+        if !secretData.withUnsafeMutableBytes({ rawBytes -> Bool in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+            let copyResult = SecRandomCopyBytes(nil, secretDataCount, bytes)
+            return copyResult == errSecSuccess
+        }) {
+            assertionFailure()
+        }
+
+        transaction.setKeychainEntry(secretData, forKey: "master-notification-secret")
+        let authKeyHash = sha1Digest(secretData)
+        let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
+        let keyData = MasterNotificationKey(id: authKeyId, data: secretData)
+        return keyData
+    } else {
+        return nil
+    }
+}
+
+public func notificationPayloadKeyId(data: Data) -> Data? {
+    if data.count < 8 {
+        return nil
+    }
+
+    return data.subdata(in: 0 ..< 8)
 }
 
 public func decryptedNotificationPayload(key: MasterNotificationKey, data: Data) -> Data? {
@@ -792,7 +804,14 @@ public func accountBackupData(postbox: Postbox) -> Signal<AccountBackupData?, No
         guard let authKey = datacenterAuthInfo.authKey else {
             return nil
         }
-        return AccountBackupData(masterDatacenterId: state.masterDatacenterId, peerId: state.peerId.toInt64(), masterDatacenterKey: authKey, masterDatacenterKeyId: datacenterAuthInfo.authKeyId)
+        let notificationsKey = masterNotificationsKey(transaction: transaction, createIfNotExists: true)
+        return AccountBackupData(
+            masterDatacenterId: state.masterDatacenterId,
+            peerId: state.peerId.toInt64(),
+            masterDatacenterKey: authKey,
+            masterDatacenterKeyId: datacenterAuthInfo.authKeyId,
+            notificationEncryptionKeyId: notificationsKey?.id
+        )
     }
 }
 

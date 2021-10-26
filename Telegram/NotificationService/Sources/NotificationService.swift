@@ -598,17 +598,40 @@ private final class NotificationServiceHandler {
             return nil
         }
 
-        let _ = (self.accountManager.currentAccountRecord(allocateIfNotExists: false)
+        let _ = (self.accountManager.accountRecords()
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records in
-            guard let strongSelf = self, let record = records else {
+            var recordId: AccountRecordId?
+            var isCurrentAccount: Bool = false
+
+            if let keyId = notificationPayloadKeyId(data: payloadData) {
+                outer: for listRecord in records.records {
+                    for attribute in listRecord.attributes {
+                        if case let .backupData(backupData) = attribute {
+                            if let notificationEncryptionKeyId = backupData.data?.notificationEncryptionKeyId {
+                                if keyId == notificationEncryptionKeyId {
+                                    recordId = listRecord.id
+                                    isCurrentAccount = records.currentRecord?.id == listRecord.id
+                                    break outer
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            guard let strongSelf = self, let recordId = recordId else {
+                let content = NotificationContent()
+                updateCurrentContent(content)
+                completed()
+
                 return
             }
 
             let _ = (standaloneStateManager(
                 accountManager: strongSelf.accountManager,
                 networkArguments: networkArguments,
-                id: record.0,
+                id: recordId,
                 encryptionParameters: strongSelf.encryptionParameters,
                 rootPath: rootPath,
                 auxiliaryMethods: accountAuxiliaryMethods
@@ -618,6 +641,8 @@ private final class NotificationServiceHandler {
                     return
                 }
                 guard let stateManager = stateManager else {
+                    let content = NotificationContent()
+                    updateCurrentContent(content)
                     completed()
                     return
                 }
@@ -626,18 +651,31 @@ private final class NotificationServiceHandler {
                 strongSelf.notificationKeyDisposable.set((existingMasterNotificationsKey(postbox: stateManager.postbox)
                 |> deliverOn(strongSelf.queue)).start(next: { notificationsKey in
                     guard let strongSelf = self else {
+                        let content = NotificationContent()
+                        updateCurrentContent(content)
+                        completed()
+
                         return
                     }
                     guard let notificationsKey = notificationsKey else {
+                        let content = NotificationContent()
+                        updateCurrentContent(content)
                         completed()
+
                         return
                     }
                     guard let decryptedPayload = decryptedNotificationPayload(key: notificationsKey, data: payloadData) else {
+                        let content = NotificationContent()
+                        updateCurrentContent(content)
                         completed()
+
                         return
                     }
                     guard let payloadJson = try? JSONSerialization.jsonObject(with: decryptedPayload, options: []) as? [String: Any] else {
+                        let content = NotificationContent()
+                        updateCurrentContent(content)
                         completed()
+
                         return
                     }
 
@@ -662,6 +700,10 @@ private final class NotificationServiceHandler {
                     } else if let channelIdString = payloadJson["channel_id"] as? String {
                         if let channelIdValue = Int64(channelIdString) {
                             peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelIdValue))
+                        }
+                    } else if let encryptionIdString = payloadJson["encryption_id"] as? String {
+                        if let encryptionIdValue = Int64(encryptionIdString) {
+                            peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(encryptionIdValue))
                         }
                     }
 
@@ -735,7 +777,7 @@ private final class NotificationServiceHandler {
                             }
 
                             content.userInfo["peerId"] = "\(peerId.toInt64())"
-                            content.userInfo["accountId"] = "\(record.0.int64)"
+                            content.userInfo["accountId"] = "\(recordId.int64)"
 
                             if let silentString = payloadJson["silent"] as? String {
                                 if let silentValue = Int(silentString), silentValue != 0 {
@@ -888,7 +930,9 @@ private final class NotificationServiceHandler {
                                                     return
                                                 }
 
-                                                content.badge = Int(value.0)
+                                                if isCurrentAccount {
+                                                    content.badge = Int(value.0)
+                                                }
 
                                                 if let image = mediaAttachment as? TelegramMediaImage, let resource = largestImageRepresentation(image.representations)?.resource {
                                                     if let mediaData = mediaData {
@@ -1037,7 +1081,9 @@ private final class NotificationServiceHandler {
                                         )
                                         |> deliverOn(strongSelf.queue)).start(next: { value in
                                             var content = NotificationContent()
-                                            content.badge = Int(value.0)
+                                            if isCurrentAccount {
+                                                content.badge = Int(value.0)
+                                            }
 
                                             updateCurrentContent(content)
 
@@ -1080,7 +1126,9 @@ private final class NotificationServiceHandler {
                                         )
                                         |> deliverOn(strongSelf.queue)).start(next: { value in
                                             var content = NotificationContent()
-                                            content.badge = Int(value.0)
+                                            if isCurrentAccount {
+                                                content.badge = Int(value.0)
+                                            }
 
                                             updateCurrentContent(content)
 
