@@ -4963,12 +4963,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.chatDisplayNode.historyNode.contentPositionChanged = { [weak self] offset in
             guard let strongSelf = self else { return }
+
+            var minOffsetForNavigation: CGFloat = 40.0
+            strongSelf.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
+                if let itemNode = itemNode as? ChatMessageBubbleItemNode {
+                    if itemNode.item?.content.firstMessage.adAttribute != nil {
+                        minOffsetForNavigation += itemNode.bounds.height
+                    }
+                }
+                return false
+            }
             
             let offsetAlpha: CGFloat
             let plainInputSeparatorAlpha: CGFloat
             switch offset {
                 case let .known(offset):
-                    if offset < 40.0 {
+                    if offset < minOffsetForNavigation {
                         offsetAlpha = 0.0
                     } else {
                         offsetAlpha = 1.0
