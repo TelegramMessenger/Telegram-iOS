@@ -265,7 +265,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListNode.controlsClippingNode.frame = CGRect(x: -targetRect.width / 2.0, y: -targetRect.width / 2.0, width: targetRect.width, height: targetRect.width)
             self.avatarListNode.controlsClippingOffsetNode.frame = CGRect(origin: CGPoint(x: targetRect.width / 2.0, y: targetRect.width / 2.0), size: CGSize())
             self.avatarListNode.stripContainerNode.frame = CGRect(x: 0.0, y: 13.0, width: targetRect.width, height: 2.0)
-            self.avatarListNode.shadowNode.frame = CGRect(x: 0.0, y: 0.0, width: targetRect.width, height: 44.0)
+            self.avatarListNode.topShadowNode.frame = CGRect(x: 0.0, y: 0.0, width: targetRect.width, height: 44.0)
             
             self.avatarListNode.updateCustomItemsOnlySynchronously = true
             self.avatarListNode.update(size: targetSize, peer: self.peer, customNode: self.customNode, additionalEntry: self.additionalEntry, isExpanded: true, transition: .immediate)
@@ -359,7 +359,7 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListNode.controlsClippingNode.frame = CGRect(x: -targetRect.width / 2.0, y: -targetRect.width / 2.0, width: targetRect.width, height: targetRect.width)
             self.avatarListNode.controlsClippingOffsetNode.frame = CGRect(origin: CGPoint(x: targetRect.width / 2.0, y: targetRect.width / 2.0), size: CGSize())
             self.avatarListNode.stripContainerNode.frame = CGRect(x: 0.0, y: 13.0, width: targetRect.width, height: 2.0)
-            self.avatarListNode.shadowNode.frame = CGRect(x: 0.0, y: 0.0, width: targetRect.width, height: 44.0)
+            self.avatarListNode.topShadowNode.frame = CGRect(x: 0.0, y: 0.0, width: targetRect.width, height: 44.0)
             
             self.avatarListNode.updateCustomItemsOnlySynchronously = true
             self.avatarListNode.update(size: targetSize, peer: self.peer, customNode: self.customNode, additionalEntry: self.additionalEntry, isExpanded: true, transition: .immediate)
@@ -432,8 +432,8 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListNode.stripContainerNode.alpha = 0.0
             self.avatarListNode.stripContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
             
-            self.avatarListNode.shadowNode.alpha = 0.0
-            self.avatarListNode.shadowNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+            self.avatarListNode.topShadowNode.alpha = 0.0
+            self.avatarListNode.topShadowNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
             
             self.infoNode.alpha = 0.0
             self.infoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
@@ -492,8 +492,8 @@ final class VoiceChatPeerProfileNode: ASDisplayNode {
             self.avatarListNode.stripContainerNode.alpha = 0.0
             self.avatarListNode.stripContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
            
-            self.avatarListNode.shadowNode.alpha = 0.0
-            self.avatarListNode.shadowNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+            self.avatarListNode.topShadowNode.alpha = 0.0
+            self.avatarListNode.topShadowNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
             
             self.infoNode.alpha = 0.0
             self.infoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)

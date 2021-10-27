@@ -139,6 +139,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         self.bottomStripeNode.isLayerBacked = true
         
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -315,7 +316,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     if strongSelf.maskNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        strongSelf.addSubnode(strongSelf.maskNode)
                     }
                     
                     let hasCorners = itemListHasRoundedBlockLayout(params)

@@ -42,8 +42,9 @@ final class ItemListWebsiteItem: ListViewItem, ItemListItem {
     let sectionId: ItemListSectionId
     let setSessionIdWithRevealedOptions: (Int64?, Int64?) -> Void
     let removeSession: (Int64) -> Void
+    let action: (() -> Void)?
     
-    init(context: AccountContext, presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void) {
+    init(context: AccountContext, presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool, sectionId: ItemListSectionId, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, action: (() -> Void)?) {
         self.context = context
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
@@ -56,6 +57,7 @@ final class ItemListWebsiteItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.setSessionIdWithRevealedOptions = setSessionIdWithRevealedOptions
         self.removeSession = removeSession
+        self.action = action
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -95,9 +97,25 @@ final class ItemListWebsiteItem: ListViewItem, ItemListItem {
             }
         }
     }
+    
+    public var selectable: Bool = true
+    public func selected(listView: ListView){
+        listView.clearHighlightAnimated(true)
+        
+        if self.enabled {
+            self.action?()
+        }
+    }
 }
 
 private let avatarFont = avatarPlaceholderFont(size: 11.0)
+
+private func trimmedLocationName(_ session: WebAuthorization) -> String {
+    var country = session.region
+    country = country.replacingOccurrences(of: "United Arab Emirates", with: "UAE")
+    return country
+}
+
 
 class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
@@ -111,11 +129,18 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
     private let titleNode: TextNode
     private let appNode: TextNode
     private let locationNode: TextNode
-    private let labelNode: TextNode
     
     private var layoutParams: (ItemListWebsiteItem, ListViewItemLayoutParams, ItemListNeighbors)?
     
     private var editableControlNode: ItemListEditableControlNode?
+    
+    override public var canBeSelected: Bool {
+        if let item = self.layoutParams?.0, let _ = item.action {
+            return true
+        } else {
+            return false
+        }
+    }
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -128,6 +153,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.cornerRadius = 7.0
@@ -148,11 +174,6 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
         self.locationNode.contentMode = .left
         self.locationNode.contentsScale = UIScreen.main.scale
         
-        self.labelNode = TextNode()
-        self.labelNode.isUserInteractionEnabled = false
-        self.labelNode.contentMode = .left
-        self.labelNode.contentsScale = UIScreen.main.scale
-        
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
@@ -162,7 +183,6 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.appNode)
         self.addSubnode(self.locationNode)
-        self.addSubnode(self.labelNode)
     }
     
     func asyncLayout() -> (_ item: ItemListWebsiteItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
@@ -221,7 +241,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             let label = stringForRelativeActivityTimestamp(strings: item.presentationData.strings, dateTimeFormat: item.dateTimeFormat, relativeTimestamp: item.website.dateActive, relativeTo: timestamp)
             
-            locationAttributedString = NSAttributedString(string: "\(item.website.region) • \(label)", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            locationAttributedString = NSAttributedString(string: "\(trimmedLocationName(item.website)) • \(label)", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
             
             let leftInset: CGFloat = 59.0 + params.leftInset
             
@@ -341,7 +361,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     if strongSelf.maskNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        strongSelf.addSubnode(strongSelf.maskNode)
                     }
                     
                     let hasCorners = itemListHasRoundedBlockLayout(params)
@@ -381,7 +401,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.appNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 30.0), size: appLayout.size))
                     transition.updateFrame(node: strongSelf.locationNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 50.0), size: locationLayout.size))
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 75.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
@@ -389,6 +409,44 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.setRevealOptionsOpened(item.revealed, animated: animated)
                 }
             })
+        }
+    }
+    
+    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+        super.setHighlighted(highlighted, at: point, animated: animated)
+        
+        if highlighted && (self.layoutParams?.0.enabled ?? false) {
+            self.highlightedBackgroundNode.alpha = 1.0
+            if self.highlightedBackgroundNode.supernode == nil {
+                var anchorNode: ASDisplayNode?
+                if self.bottomStripeNode.supernode != nil {
+                    anchorNode = self.bottomStripeNode
+                } else if self.topStripeNode.supernode != nil {
+                    anchorNode = self.topStripeNode
+                } else if self.backgroundNode.supernode != nil {
+                    anchorNode = self.backgroundNode
+                }
+                if let anchorNode = anchorNode {
+                    self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: anchorNode)
+                } else {
+                    self.addSubnode(self.highlightedBackgroundNode)
+                }
+            }
+        } else {
+            if self.highlightedBackgroundNode.supernode != nil {
+                if animated {
+                    self.highlightedBackgroundNode.layer.animateAlpha(from: self.highlightedBackgroundNode.alpha, to: 0.0, duration: 0.4, completion: { [weak self] completed in
+                        if let strongSelf = self {
+                            if completed {
+                                strongSelf.highlightedBackgroundNode.removeFromSupernode()
+                            }
+                        }
+                        })
+                    self.highlightedBackgroundNode.alpha = 0.0
+                } else {
+                    self.highlightedBackgroundNode.removeFromSupernode()
+                }
+            }
         }
     }
     
@@ -420,8 +478,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
         }
         
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + self.revealOffset + editingOffset + 16.0, y: self.avatarNode.frame.minY), size: self.avatarNode.bounds.size))
-        transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: self.revealOffset + params.width - params.rightInset - self.labelNode.bounds.size.width - 15.0, y: self.labelNode.frame.minY), size: self.labelNode.bounds.size))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + self.revealOffset + editingOffset + 20.0, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + self.revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
         transition.updateFrame(node: self.appNode, frame: CGRect(origin: CGPoint(x: leftInset + self.revealOffset + editingOffset, y: self.appNode.frame.minY), size: self.appNode.bounds.size))
         transition.updateFrame(node: self.locationNode, frame: CGRect(origin: CGPoint(x: leftInset + self.revealOffset + editingOffset, y: self.locationNode.frame.minY), size: self.locationNode.bounds.size))
     }

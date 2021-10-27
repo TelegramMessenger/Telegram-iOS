@@ -447,7 +447,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public let controlsContainerNode: ASDisplayNode
     public let controlsClippingNode: ASDisplayNode
     public let controlsClippingOffsetNode: ASDisplayNode
-    public let shadowNode: ASImageNode
+    public let topShadowNode: ASImageNode
+    public let bottomShadowNode: ASImageNode
     
     public let contentNode: ASDisplayNode
     let leftHighlightNode: ASDisplayNode
@@ -631,10 +632,15 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.controlsClippingNode.isUserInteractionEnabled = false
         self.controlsClippingNode.clipsToBounds = true
         
-        self.shadowNode = ASImageNode()
-        self.shadowNode.displaysAsynchronously = false
-        self.shadowNode.displayWithoutProcessing = true
-        self.shadowNode.contentMode = .scaleToFill
+        self.topShadowNode = ASImageNode()
+        self.topShadowNode.displaysAsynchronously = false
+        self.topShadowNode.displayWithoutProcessing = true
+        self.topShadowNode.contentMode = .scaleToFill
+        
+        self.bottomShadowNode = ASImageNode()
+        self.bottomShadowNode.displaysAsynchronously = false
+        self.bottomShadowNode.displayWithoutProcessing = true
+        self.bottomShadowNode.contentMode = .scaleToFill
         
         do {
             let size = CGSize(width: 88.0, height: 88.0)
@@ -656,10 +662,17 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 let image = UIGraphicsGetImageFromCurrentImageContext()
                 UIGraphicsEndImageContext()
                 if let image = image {
-                    self.shadowNode.image = generateImage(image.size, contextGenerator: { size, context in
+                    self.topShadowNode.image = generateImage(image.size, contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                         context.rotate(by: -CGFloat.pi / 2.0)
+                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                    })
+                    self.bottomShadowNode.image = generateImage(image.size, contextGenerator: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                        context.rotate(by: CGFloat.pi / 2.0)
                         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                         context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
                     })
@@ -674,7 +687,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.addSubnode(self.contentNode)
         
         self.controlsContainerNode.addSubnode(self.highlightContainerNode)
-        self.controlsContainerNode.addSubnode(self.shadowNode)
+        self.controlsContainerNode.addSubnode(self.topShadowNode)
+        self.addSubnode(self.bottomShadowNode)
         self.controlsContainerNode.addSubnode(self.stripContainerNode)
         self.controlsClippingNode.addSubnode(self.controlsContainerNode)
         self.controlsClippingOffsetNode.addSubnode(self.controlsClippingNode)

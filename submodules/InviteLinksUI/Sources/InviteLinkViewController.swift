@@ -841,7 +841,7 @@ public final class InviteLinkViewController: ViewController {
             
             self.historyBackgroundContentNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             self.headerBackgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_InviteLink, font: titleFont, textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: titleFont, textColor: self.presentationData.theme.actionSheet.primaryTextColor)
             self.subtitleNode.attributedText = NSAttributedString(string: self.subtitleNode.attributedText?.string ?? "", font: subtitleFont, textColor: self.presentationData.theme.list.itemSecondaryTextColor)
             
             let accentColor = self.presentationData.theme.actionSheet.controlAccentColor
@@ -935,6 +935,7 @@ public final class InviteLinkViewController: ViewController {
             transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 68.0))
             
             var titleText = self.presentationData.strings.InviteLink_InviteLink
+            
   
             var subtitleText = ""
             var subtitleColor = self.presentationData.theme.list.itemSecondaryTextColor
@@ -968,6 +969,10 @@ public final class InviteLinkViewController: ViewController {
                         }
                     }
                 }
+            }
+            
+            if let title = self.invite.title, !title.isEmpty {
+                titleText = title
             }
             
             self.titleNode.attributedText = NSAttributedString(string: titleText, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
