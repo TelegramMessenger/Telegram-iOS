@@ -1507,7 +1507,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 guard let strongSelf = self else {
                     return
                 }
-                if count < 1 || true {
+                if count < 1 {
                     let _ = ApplicationSpecificNotice.incrementSharedMediaFastScrollingTooltip(accountManager: strongSelf.context.sharedContext.accountManager).start()
 
                     var currentNode: ASDisplayNode = strongSelf
