@@ -197,10 +197,25 @@ public final class DirectMediaImageCache {
                 continueInBackground: false
             ).start()
 
-            let data = self.account.postbox.mediaBox.resourceData(resource.resource, size: resourceSizeLimit, in: 0 ..< resourceSizeLimit).start(next: { data, _ in
-                let dataValue = data
+            let dataSignal: Signal<Data?, NoError>
+            if resourceSizeLimit < Int(Int32.max) {
+                dataSignal = self.account.postbox.mediaBox.resourceData(resource.resource, size: resourceSizeLimit, in: 0 ..< resourceSizeLimit)
+                |> map { data, _ -> Data? in
+                    return data
+                }
+            } else {
+                dataSignal = self.account.postbox.mediaBox.resourceData(resource.resource)
+                |> filter { data in
+                    return data.complete
+                }
+                |> take(1)
+                |> map { data -> Data? in
+                    return try? Data(contentsOf: URL(fileURLWithPath: data.path))
+                }
+            }
 
-                if let image = UIImage(data: dataValue) {
+            let data = dataSignal.start(next: { data in
+                if let data = data, let image = UIImage(data: data) {
                     let scaledSize = CGSize(width: CGFloat(width), height: CGFloat(width))
                     let scaledContext = DrawingContext(size: scaledSize, scale: 1.0, opaque: true)
                     scaledContext.withFlippedContext { context in
@@ -242,6 +257,9 @@ public final class DirectMediaImageCache {
                 if Int(Float(representation.dimensions.width) * 1.2) >= width {
                     return (mediaReference.resourceReference(representation.resource), Int(Int32.max))
                 }
+            }
+            if let representation = representations.last {
+                return (mediaReference.resourceReference(representation.resource), Int(Int32.max))
             }
             return nil
         }
