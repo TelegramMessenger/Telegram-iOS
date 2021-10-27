@@ -6343,7 +6343,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         
         var contentHeight: CGFloat = 0.0
         
-        let sectionInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+        let sectionInset: CGFloat
+        if layout.size.width >= 375.0 {
+            sectionInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+        } else {
+            sectionInset = 0.0
+        }
         let headerInset: CGFloat
         if self.isSettings {
             headerInset = sectionInset
@@ -6639,7 +6644,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
         if let (layout, navigationHeight) = self.validLayout {
             if !additive {
-                let sectionInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+                let sectionInset: CGFloat
+                if layout.size.width >= 375.0 {
+                    sectionInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+                } else {
+                    sectionInset = 0.0
+                }
                 let headerInset: CGFloat
                 if self.isSettings {
                     headerInset = sectionInset
@@ -7541,7 +7551,12 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             var topHeight = topNavigationBar.backgroundNode.bounds.height
             
             if let (layout, _) = self.screenNode.validLayout {
-                let sectionInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+                let sectionInset: CGFloat
+                if layout.size.width >= 375.0 {
+                    sectionInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+                } else {
+                    sectionInset = 0.0
+                }
                 let headerInset: CGFloat
                 if screenNode.isSettings {
                     headerInset = sectionInset

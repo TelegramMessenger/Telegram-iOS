@@ -148,7 +148,7 @@ public func itemListNeighborsGroupedInsets(_ neighbors: ItemListNeighbors) -> UI
 }
 
 public func itemListHasRoundedBlockLayout(_ params: ListViewItemLayoutParams) -> Bool {
-    return true
+    return params.width >= 375.0
 }
 
 public final class ItemListPresentationData: Equatable {

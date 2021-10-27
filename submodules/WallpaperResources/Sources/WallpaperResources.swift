@@ -1422,7 +1422,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                                     
                                     return patternWallpaperImage(account: account, accountManager: accountManager, representations: convertedPreviewRepresentations, mode: .thumbnail, autoFetchFullSize: true)
                                     |> mapToSignal { generator -> Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Bool, Bool, CGFloat, Int32?), NoError> in
-                                        let imageSize = CGSize(width: 120, height: 254)
+                                        let imageSize = CGSize(width: 148, height: 320)
                                         let imageArguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil, custom: arguments)
                                         let context = generator?(imageArguments)
                                         let image = context?.generateImage()
