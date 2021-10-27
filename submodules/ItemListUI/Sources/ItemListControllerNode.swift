@@ -473,8 +473,10 @@ open class ItemListControllerNode: ASDisplayNode {
         
         var addedInsets: UIEdgeInsets?
         let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
-        insets.left += inset
-        insets.right += inset
+        if layout.size.width >= 375.0 {
+            insets.left += inset
+            insets.right += inset
+        }
         addedInsets = UIEdgeInsets(top: 0.0, left: inset, bottom: 0.0, right: inset)
         
         if self.rightOverlayNode.supernode == nil {

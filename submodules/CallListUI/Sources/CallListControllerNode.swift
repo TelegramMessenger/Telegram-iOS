@@ -125,7 +125,7 @@ private func mappedInsertEntries(context: AccountContext, presentationData: Item
             case let .groupCall(peer, _, isActive):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListGroupCallItem(presentationData: presentationData, context: context, style: showSettings ? .blocks : .plain, peer: peer, isActive: isActive, editing: false, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .messageEntry(topMessage, messages, _, _, dateTimeFormat, editing, hasActiveRevealControls, displayHeader, _):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, context: context, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, displayHeader: displayHeader, interaction: nodeInteraction), directionHint: entry.directionHint)
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListCallItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, context: context, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, displayHeader: displayHeader, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListHoleItem(theme: theme), directionHint: entry.directionHint)
         }
@@ -876,7 +876,12 @@ final class CallListControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)
         
-        let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+        let inset: CGFloat
+        if layout.size.width >= 375.0 {
+            inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+        } else {
+            inset = 0.0
+        }
         if case .navigation = self.mode {
             insets.left += inset
             insets.right += inset
