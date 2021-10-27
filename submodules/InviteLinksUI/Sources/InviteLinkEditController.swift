@@ -20,12 +20,14 @@ import UndoUI
 private final class InviteLinkEditControllerArguments {
     let context: AccountContext
     let updateState: ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void
+    let scrollToUsage: () -> Void
     let dismissInput: () -> Void
     let revoke: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void, dismissInput: @escaping () -> Void, revoke: @escaping () -> Void) {
+    init(context: AccountContext, updateState: @escaping ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void,  scrollToUsage: @escaping () -> Void, dismissInput: @escaping () -> Void, revoke: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
+        self.scrollToUsage = scrollToUsage
         self.dismissInput = dismissInput
         self.revoke = revoke
     }
@@ -37,6 +39,18 @@ private enum InviteLinksEditSection: Int32 {
     case time
     case usage
     case revoke
+}
+
+private enum InviteLinksEditEntryTag: ItemListItemTag {
+    case usage
+
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? InviteLinksEditEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 private let invalidAmountCharacters = CharacterSet(charactersIn: "01234567890.,").inverted
@@ -298,7 +312,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     text = focused ? "" : presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsersUnlimited
                 }
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsers, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .number, alignment: .right, selectAllOnFocus: true, secondaryStyle: !customValue, tag: nil, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsers, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .number, alignment: .right, selectAllOnFocus: true, secondaryStyle: !customValue, tag: InviteLinksEditEntryTag.usage, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateState { state in
                         var updatedState = state
                         if updatedText.isEmpty {
@@ -318,6 +332,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                             updatedState.pickingUsageLimit = true
                             return updatedState
                         }
+                        arguments.scrollToUsage()
                     } else {
                         arguments.updateState { state in
                             var updatedState = state
@@ -344,14 +359,16 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     entries.append(.title(presentationData.theme, presentationData.strings.InviteLink_Create_LinkName, state.title))
     entries.append(.titleInfo(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameInfo))
     
-    entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval))
-    var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
-    if state.requestApproval {
-        requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel
-    } else {
-        requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+    if !isPublic {
+        entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval))
+        var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+        if state.requestApproval {
+            requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel
+        } else {
+            requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+        }
+        entries.append(.requestApprovalInfo(presentationData.theme, requestApprovalInfoText))
     }
-    entries.append(.requestApprovalInfo(presentationData.theme, requestApprovalInfoText))
     
     entries.append(.timeHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_TimeLimit.uppercased()))
     entries.append(.timePicker(presentationData.theme, state.time))
@@ -434,9 +451,12 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
 
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
+    var scrollToUsageImpl: (() -> Void)?
     
     let arguments = InviteLinkEditControllerArguments(context: context, updateState: { f in
         updateState(f)
+    }, scrollToUsage: {
+        scrollToUsageImpl?()
     }, dismissInput: {
        dismissInputImpl?()
     }, revoke: {
@@ -596,6 +616,27 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
         }
+    }
+    scrollToUsageImpl = { [weak controller] in
+        controller?.afterLayout({
+            guard let controller = controller else {
+                return
+            }
+            
+            var resultItemNode: ListViewItemNode?
+            let _ = controller.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListSingleLineInputItemNode {
+                    if let tag = itemNode.tag as? InviteLinksEditEntryTag, tag == .usage {
+                        resultItemNode = itemNode
+                        return true
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                controller.ensureItemNodeVisible(resultItemNode)
+            }
+        })
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)

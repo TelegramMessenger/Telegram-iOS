@@ -375,7 +375,7 @@ public final class InviteLinkViewController: ViewController {
         
         private let context: AccountContext
         private let peerId: EnginePeer.Id
-        private let invite: ExportedInvitation
+        private var invite: ExportedInvitation
         
         private let importersContext: PeerInvitationImportersContext
         private let requestsContext: PeerInvitationImportersContext?
@@ -823,6 +823,11 @@ public final class InviteLinkViewController: ViewController {
                             self?.controller?.dismiss()
                         } else {
                             invitationsContext?.update(invite)
+                            
+                            if let strongSelf = self, let layout = strongSelf.validLayout {
+                                strongSelf.invite = invite
+                                strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                            }
                         }
                     }
                 })
@@ -936,7 +941,6 @@ public final class InviteLinkViewController: ViewController {
             
             var titleText = self.presentationData.strings.InviteLink_InviteLink
             
-  
             var subtitleText = ""
             var subtitleColor = self.presentationData.theme.list.itemSecondaryTextColor
             if self.invite.isRevoked {

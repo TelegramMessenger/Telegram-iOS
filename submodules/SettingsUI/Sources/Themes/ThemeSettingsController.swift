@@ -114,7 +114,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case themes(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, Bool, [String: [StickerPackItem]])
     case chatTheme(PresentationTheme, String)
     case wallpaper(PresentationTheme, String)
-    case autoNight(PresentationTheme, String, Bool)
+    case autoNight(PresentationTheme, String, Bool, Bool)
     case autoNightTheme(PresentationTheme, String, String)
     case textSize(PresentationTheme, String, String)
     case bubbleSettings(PresentationTheme, String, String)
@@ -201,8 +201,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .autoNight(lhsTheme, lhsText, lhsValue):
-                if case let .autoNight(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+            case let .autoNight(lhsTheme, lhsText, lhsValue, lhsEnabled):
+                if case let .autoNight(rhsTheme, rhsText, rhsValue, rhsEnabled) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsEnabled == rhsEnabled {
                     return true
                 } else {
                     return false
@@ -293,8 +293,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openWallpaperSettings()
                 })
-            case let .autoNight(_, title, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+            case let .autoNight(_, title, value, enabled):
+                return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleNightTheme(value)
                 }, tag: nil)
             case let .autoNightTheme(_, text, value):
@@ -380,7 +380,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.chatTheme(presentationData.theme, "Chat Themes"))
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
     
-    entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force))
+    entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force, !presentationData.autoNightModeTriggered || presentationThemeSettings.automaticThemeSwitchSetting.force))
     let autoNightMode: String
     switch presentationThemeSettings.automaticThemeSwitchSetting.trigger {
         case .system:

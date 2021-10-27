@@ -16,18 +16,20 @@ class BubbleSettingsRadiusItem: ListViewItem, ItemListItem {
     let value: Int
     let disableLeadingInset: Bool
     let displayIcons: Bool
+    let disableDecorations: Bool
     let force: Bool
     let enabled: Bool
     let sectionId: ItemListSectionId
     let updated: (Int) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, value: Int, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (Int) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, value: Int, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, disableDecorations: Bool = false, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (Int) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.value = value
         self.enabled = enabled
         self.disableLeadingInset = disableLeadingInset
         self.displayIcons = displayIcons
+        self.disableDecorations = disableDecorations
         self.force = force
         self.sectionId = sectionId
         self.updated = updated
@@ -213,7 +215,7 @@ class BubbleSettingsRadiusItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
-                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    let hasCorners = itemListHasRoundedBlockLayout(params) && !item.disableDecorations
                     var hasTopCorners = false
                     var hasBottomCorners = false
                     switch neighbors.top {

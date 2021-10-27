@@ -182,6 +182,7 @@ final class PeerInfoScreenData {
     let globalSettings: TelegramGlobalSettings?
     let invitations: PeerExportedInvitationsState?
     let requests: PeerInvitationImportersState?
+    let requestsContext: PeerInvitationImportersContext?
     
     init(
         peer: Peer?,
@@ -197,7 +198,8 @@ final class PeerInfoScreenData {
         encryptionKeyFingerprint: SecretChatKeyFingerprint?,
         globalSettings: TelegramGlobalSettings?,
         invitations: PeerExportedInvitationsState?,
-        requests: PeerInvitationImportersState?
+        requests: PeerInvitationImportersState?,
+        requestsContext: PeerInvitationImportersContext?
     ) {
         self.peer = peer
         self.cachedData = cachedData
@@ -213,6 +215,7 @@ final class PeerInfoScreenData {
         self.globalSettings = globalSettings
         self.invitations = invitations
         self.requests = requests
+        self.requestsContext = requestsContext
     }
 }
 
@@ -437,12 +440,13 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
                 encryptionKeyFingerprint: nil,
                 globalSettings: globalSettings,
                 invitations: nil,
-                requests: nil
+                requests: nil,
+                requestsContext: nil
             )
     }
 }
 
-func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, isSettings: Bool, ignoreGroupInCommon: PeerId?) -> Signal<PeerInfoScreenData, NoError> {
+func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, isSettings: Bool, ignoreGroupInCommon: PeerId?, existingRequestsContext: PeerInvitationImportersContext?) -> Signal<PeerInfoScreenData, NoError> {
     return peerInfoScreenInputData(context: context, peerId: peerId, isSettings: isSettings)
     |> mapToSignal { inputData -> Signal<PeerInfoScreenData, NoError> in
         switch inputData {
@@ -461,7 +465,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 encryptionKeyFingerprint: nil,
                 globalSettings: nil,
                 invitations: nil,
-                requests: nil
+                requests: nil,
+                requestsContext: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -602,7 +607,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     encryptionKeyFingerprint: encryptionKeyFingerprint,
                     globalSettings: nil,
                     invitations: nil,
-                    requests: nil
+                    requests: nil,
+                    requestsContext: nil
                 )
             }
         case .channel:
@@ -666,7 +672,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 if currentRequestsContext == nil {
                     if canManageInvitations {
-                        let requestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: nil))
+                        let requestsContext = existingRequestsContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: nil))
                         requestsContextPromise.set(.single(requestsContext))
                         requestsStatePromise.set(requestsContext.state |> map(Optional.init))
                     }
@@ -686,7 +692,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     encryptionKeyFingerprint: nil,
                     globalSettings: nil,
                     invitations: invitations,
-                    requests: requests
+                    requests: requests,
+                    requestsContext: currentRequestsContext
                 )
             }
         case let .group(groupId):
@@ -843,7 +850,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 if currentRequestsContext == nil {
                     if canManageInvitations {
-                        let requestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: nil))
+                        let requestsContext = existingRequestsContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: nil))
                         requestsContextPromise.set(.single(requestsContext))
                         requestsStatePromise.set(requestsContext.state |> map(Optional.init))
                     }
@@ -863,7 +870,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     encryptionKeyFingerprint: nil,
                     globalSettings: nil,
                     invitations: invitations,
-                    requests: requests
+                    requests: requests,
+                    requestsContext: currentRequestsContext
                 )
             }
         }
