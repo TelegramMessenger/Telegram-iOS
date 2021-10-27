@@ -1119,7 +1119,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         return (list.map(\.0), list.map(\.1))
     }()
 
-    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], synchronous: Bool) {
+    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], synchronous: SparseItemGrid.Synchronous) {
         for i in 0 ..< items.count {
             guard let item = items[i] as? VisualMediaItem else {
                 continue
@@ -1170,22 +1170,37 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 }
 
                 if let selectedMedia = selectedMedia {
-                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, synchronous: synchronous) {
+                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, synchronous: synchronous == .full) {
                         if let image = result.image {
                             layer.contents = image.cgImage
                             layer.hasContents = true
-                            if !synchronous {
+                            switch synchronous {
+                            case .none:
                                 layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            default:
+                                break
                             }
                         }
                         if let loadSignal = result.loadSignal {
                             layer.disposable?.dispose()
+                            let startTimestamp = CFAbsoluteTimeGetCurrent()
                             layer.disposable = (loadSignal
                             |> deliverOnMainQueue).start(next: { [weak self, weak layer, weak displayItem] image in
                                 guard let layer = layer else {
                                     return
                                 }
-                                if layer.hasContents {
+                                let deltaTime = CFAbsoluteTimeGetCurrent() - startTimestamp
+                                let synchronousValue: Bool
+                                switch synchronous {
+                                case .none:
+                                    synchronousValue = false
+                                case .semi:
+                                    synchronousValue = deltaTime < 0.1
+                                case .full:
+                                    synchronousValue = true
+                                }
+
+                                if layer.hasContents && !synchronousValue {
                                     let copyLayer = ItemLayer()
                                     copyLayer.contents = layer.contents
                                     copyLayer.contentsRect = layer.contentsRect
@@ -1201,7 +1216,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                                     layer.contents = image?.cgImage
                                     layer.hasContents = true
 
-                                    layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    if !synchronousValue {
+                                        layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    }
 
                                     if let displayItem = displayItem {
                                         self?.updateShimmerLayersImpl?(displayItem)
@@ -2145,7 +2162,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 fixedItemHeight = nil
             }
 
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime)
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none)
         }
     }
 
