@@ -183,16 +183,24 @@ public final class DirectMediaImageCache {
         return self.account.postbox.mediaBox.cachedRepresentationPathForId(resourceId.stringRepresentation, representationId: representationId, keepDuration: .general)
     }
 
-    private func getLoadSignal(resource: MediaResourceReference, width: Int) -> Signal<UIImage?, NoError>? {
-        let cachePath = self.getCachePath(resourceId: resource.resource.id, imageType: .square(width: width))
+    private func getLoadSignal(width: Int, resource: MediaResourceReference, resourceSizeLimit: Int) -> Signal<UIImage?, NoError>? {
         return Signal { subscriber in
-            let fetch = fetchedMediaResource(mediaBox: self.account.postbox.mediaBox, reference: resource).start()
-            let data = (self.account.postbox.mediaBox.resourceData(resource.resource)
-            |> filter { data in
-                return data.complete
-            }
-            |> take(1)).start(next: { data in
-                if let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)), let image = UIImage(data: dataValue) {
+            let cachePath = self.getCachePath(resourceId: resource.resource.id, imageType: .square(width: width))
+
+            let fetch = fetchedMediaResource(
+                mediaBox: self.account.postbox.mediaBox,
+                reference: resource,
+                ranges: [(0 ..< resourceSizeLimit, .default)],
+                statsCategory: .image,
+                reportResultStatus: false,
+                preferBackgroundReferenceRevalidation: false,
+                continueInBackground: false
+            ).start()
+
+            let data = self.account.postbox.mediaBox.resourceData(resource.resource, size: resourceSizeLimit, in: 0 ..< resourceSizeLimit).start(next: { data, _ in
+                let dataValue = data
+
+                if let image = UIImage(data: dataValue) {
                     let scaledSize = CGSize(width: CGFloat(width), height: CGFloat(width))
                     let scaledContext = DrawingContext(size: scaledSize, scale: 1.0, opaque: true)
                     scaledContext.withFlippedContext { context in
@@ -215,94 +223,99 @@ public final class DirectMediaImageCache {
         }
     }
 
-    private func getResource(message: Message, image: TelegramMediaImage) -> MediaResourceReference? {
-        guard let representation = image.representations.last else {
-            return nil
-        }
-        return MediaReference.message(message: MessageReference(message), media: image).resourceReference(representation.resource)
-    }
-
-    private func getResource(message: Message, file: TelegramMediaFile) -> MediaResourceReference? {
-        if let representation = file.previewRepresentations.last {
-            return MediaReference.message(message: MessageReference(message), media: file).resourceReference(representation.resource)
-        } else {
-            return nil
-        }
-    }
-
-    public func getImage(message: Message, media: Media, width: Int, synchronous: Bool) -> GetMediaResult? {
-        if synchronous {
-            var immediateThumbnailData: Data?
-            var resource: MediaResourceReference?
-            if let image = media as? TelegramMediaImage {
-                immediateThumbnailData = image.immediateThumbnailData
-                resource = self.getResource(message: message, image: image)
-            } else if let file = media as? TelegramMediaFile {
-                immediateThumbnailData = file.immediateThumbnailData
-                resource = self.getResource(message: message, file: file)
+    private func getProgressiveSize(mediaReference: AnyMediaReference, width: Int, representations: [TelegramMediaImageRepresentation]) -> (resource: MediaResourceReference, size: Int)? {
+        if let representation = representations.first(where: { !$0.progressiveSizes.isEmpty }) {
+            let selectedSize: Int32
+            let progressiveSizes = representation.progressiveSizes
+            if progressiveSizes.count > 0 && width <= 64 {
+                selectedSize = progressiveSizes[0]
+            } else if progressiveSizes.count > 1 && width <= 160 {
+                selectedSize = progressiveSizes[2]
+            } else if progressiveSizes.count > 2 && width <= 400 {
+                selectedSize = progressiveSizes[3]
+            } else {
+                selectedSize = Int32.max
             }
+            return (mediaReference.resourceReference(representation.resource), Int(selectedSize))
+        } else {
+            for representation in representations.sorted(by: { $0.dimensions.width < $1.dimensions.width }) {
+                if Int(Float(representation.dimensions.width) * 1.2) >= width {
+                    return (mediaReference.resourceReference(representation.resource), Int(Int32.max))
+                }
+            }
+            return nil
+        }
+    }
 
-            if let resource = resource {
-                if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.id, imageType: .square(width: width)))), let image = loadImage(data: data) {
+    private func getResource(message: Message, image: TelegramMediaImage, width: Int) -> (resource: MediaResourceReference, size: Int)? {
+        return self.getProgressiveSize(mediaReference: MediaReference.message(message: MessageReference(message), media: image).abstract, width: width, representations: image.representations)
+    }
+
+    private func getResource(message: Message, file: TelegramMediaFile, width: Int) -> (resource: MediaResourceReference, size: Int)? {
+        return self.getProgressiveSize(mediaReference: MediaReference.message(message: MessageReference(message), media: file).abstract, width: width, representations: file.previewRepresentations)
+    }
+
+    private func getImageSynchronous(message: Message, media: Media, width: Int, possibleWidths: [Int]) -> GetMediaResult? {
+        var immediateThumbnailData: Data?
+        var resource: (resource: MediaResourceReference, size: Int)?
+        if let image = media as? TelegramMediaImage {
+            immediateThumbnailData = image.immediateThumbnailData
+            resource = self.getResource(message: message, image: image, width: width)
+        } else if let file = media as? TelegramMediaFile {
+            immediateThumbnailData = file.immediateThumbnailData
+            resource = self.getResource(message: message, file: file, width: width)
+        }
+
+        guard let resource = resource else {
+            return nil
+        }
+
+        var blurredImage: UIImage?
+        for otherWidth in possibleWidths.reversed() {
+            if otherWidth == width {
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.resource.id, imageType: .square(width: otherWidth)))), let image = loadImage(data: data) {
                     return GetMediaResult(image: image, loadSignal: nil)
                 }
-
-                var blurredImage: UIImage?
-                if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.id, imageType: .blurredThumbnail))), let image = loadImage(data: data) {
-                    blurredImage = image
-                } else if let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data) {
-                    if let blurredImageValue = generateBlurredThumbnail(image: image) {
-                        blurredImage = blurredImageValue
-                    }
-                }
-
-                return GetMediaResult(image: blurredImage, loadSignal: self.getLoadSignal(resource: resource, width: width))
             } else {
-                return nil
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.resource.id, imageType: .square(width: otherWidth)))), let image = loadImage(data: data) {
+                    blurredImage = image
+                }
             }
+        }
+
+        if blurredImage == nil {
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.resource.id, imageType: .blurredThumbnail))), let image = loadImage(data: data) {
+                blurredImage = image
+            } else if let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data) {
+                if let blurredImageValue = generateBlurredThumbnail(image: image) {
+                    blurredImage = blurredImageValue
+                }
+            }
+        }
+
+        return GetMediaResult(image: blurredImage, loadSignal: self.getLoadSignal(width: width, resource: resource.resource, resourceSizeLimit: resource.size))
+    }
+
+    public func getImage(message: Message, media: Media, width: Int, possibleWidths: [Int], synchronous: Bool) -> GetMediaResult? {
+        if synchronous {
+            return self.getImageSynchronous(message: message, media: media, width: width, possibleWidths: possibleWidths)
         } else {
             return GetMediaResult(image: nil, loadSignal: Signal { subscriber in
-                var immediateThumbnailData: Data?
-                var resource: MediaResourceReference?
-                if let image = media as? TelegramMediaImage {
-                    immediateThumbnailData = image.immediateThumbnailData
-                    resource = self.getResource(message: message, image: image)
-                } else if let file = media as? TelegramMediaFile {
-                    immediateThumbnailData = file.immediateThumbnailData
-                    resource = self.getResource(message: message, file: file)
+                let result = self.getImageSynchronous(message: message, media: media, width: width, possibleWidths: possibleWidths)
+                guard let result = result else {
+                    subscriber.putNext(nil)
+                    subscriber.putCompletion()
+
+                    return EmptyDisposable
                 }
 
-                if let resource = resource {
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.id, imageType: .square(width: width)))), let image = loadImage(data: data) {
-                        subscriber.putNext(image)
-                        subscriber.putCompletion()
+                if let image = result.image {
+                    subscriber.putNext(image)
+                }
 
-                        return EmptyDisposable
-                    }
-
-                    var blurredImage: UIImage?
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.id, imageType: .blurredThumbnail))), let image = loadImage(data: data) {
-                        blurredImage = image
-                    } else if let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data) {
-                        if let blurredImageValue = generateBlurredThumbnail(image: image) {
-                            blurredImage = blurredImageValue
-                        }
-                    }
-
-                    if let blurredImage = blurredImage {
-                        subscriber.putNext(blurredImage)
-                    }
-
-                    if let signal = self.getLoadSignal(resource: resource, width: width) {
-                        return signal.start(next: subscriber.putNext, completed: subscriber.putCompletion)
-                    } else {
-                        subscriber.putNext(nil)
-                        subscriber.putCompletion()
-
-                        return EmptyDisposable
-                    }
+                if let signal = result.loadSignal {
+                    return signal.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
                 } else {
-                    subscriber.putNext(nil)
                     subscriber.putCompletion()
 
                     return EmptyDisposable

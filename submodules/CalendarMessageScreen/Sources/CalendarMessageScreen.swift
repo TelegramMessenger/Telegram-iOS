@@ -26,6 +26,7 @@ private final class MediaPreviewView: UIView {
         self.media = media
 
         self.imageView = TransformImageView()
+        self.imageView.contentAnimations = .subsequentUpdates
 
         super.init(frame: CGRect())
 
