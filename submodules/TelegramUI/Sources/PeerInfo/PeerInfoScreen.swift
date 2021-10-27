@@ -6617,7 +6617,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         let offsetY = self.scrollNode.view.contentOffset.y
         
         if self.isSettings, !(self.controller?.movingInHierarchy == true) {
-            let bottomOffsetY = max(0.0, self.scrollNode.view.contentSize.height - offsetY - self.scrollNode.frame.height)
+            let bottomOffsetY = max(0.0, self.scrollNode.view.contentSize.height + min(83.0, self.scrollNode.view.contentInset.bottom) - offsetY - self.scrollNode.frame.height)
             let backgroundAlpha: CGFloat = min(30.0, bottomOffsetY) / 30.0
             
             if let tabBarController = self.controller?.parent as? TabBarController {
