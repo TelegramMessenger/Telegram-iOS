@@ -494,7 +494,7 @@ private final class BubbleSettingsToolbarNode: ASDisplayNode {
         let switchItem = ItemListSwitchItem(presentationData: ItemListPresentationData(self.presentationData), title: self.presentationData.strings.Appearance_BubbleCorners_AdjustAdjacent, value: self.presentationThemeSettings.chatBubbleSettings.mergeBubbleCorners, disableLeadingInset: true, sectionId: 0, style: .blocks, updated: { [weak self] value in
             self?.updateMergeBubbleCorners?(value)
         })
-        let cornerRadiusItem = BubbleSettingsRadiusItem(theme: self.presentationData.theme, value: Int(self.presentationData.chatBubbleCorners.mainRadius), enabled: true, disableLeadingInset: false, displayIcons: false, force: false, sectionId: 0, updated: { [weak self] value in
+        let cornerRadiusItem = BubbleSettingsRadiusItem(theme: self.presentationData.theme, value: Int(self.presentationData.chatBubbleCorners.mainRadius), enabled: true, disableLeadingInset: false, displayIcons: false, disableDecorations: true, force: false, sectionId: 0, updated: { [weak self] value in
             self?.updateCornerRadius?(Int32(max(8, min(16, value))))
         })
         

@@ -598,7 +598,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         controller?.clearItemNodesHighlight(animated: true)
     }
     navigateToProfileImpl = { [weak controller] peer, distance in
-        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .nearbyPeer(distance: distance), avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false) {
+        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .nearbyPeer(distance: distance), avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false, requestsContext: nil) {
             navigationController.pushViewController(controller)
         }
     }

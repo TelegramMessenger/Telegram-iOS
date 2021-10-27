@@ -1612,7 +1612,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreenImpl, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool, ignoreGroupInCommon: PeerId?) {
+    init(controller: PeerInfoScreenImpl, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool, ignoreGroupInCommon: PeerId?, requestsContext: PeerInvitationImportersContext?) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
@@ -2883,7 +2883,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }))
             }
         } else {
-            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, ignoreGroupInCommon: ignoreGroupInCommon)
+            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, ignoreGroupInCommon: ignoreGroupInCommon, existingRequestsContext: requestsContext)
                         
             self.headerNode.displayAvatarContextMenu = { [weak self] node, gesture in
                 guard let strongSelf = self, let peer = strongSelf.data?.peer else {
@@ -3255,7 +3255,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] peer in
                         if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
-                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                                 strongSelf.controller?.push(infoController)
                             }
                         }
@@ -3329,7 +3329,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                     if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
-                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                             (strongSelf.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
                         }
                     }
@@ -4824,7 +4824,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         case .banned:
             self.controller?.push(channelBlacklistController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId))
         case .memberRequests:
-            self.controller?.push(inviteRequestsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId))
+            self.controller?.push(inviteRequestsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, existingContext: self.data?.requestsContext))
         }
     }
     
@@ -4928,7 +4928,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         if isMember {
             mode = .group(self.peerId)
         }
-        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer, mode: mode, avatarInitiallyExpanded: false, fromChat: false) {
+        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer, mode: mode, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
             (self.controller?.navigationController as? NavigationController)?.pushViewController(infoController)
         }
     }
@@ -6585,8 +6585,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         
         let relativeHeaderFrame = self.headerNode.view.convert(self.headerNode.bounds, to: self.view)
-        self.leftOverlayNode.frame = CGRect(x: 0.0, y: relativeHeaderFrame.maxY + UIScreenPixel - self.scrollNode.view.contentOffset.y, width: currentInsets.left, height: layout.size.height * 2.0)
-        self.rightOverlayNode.frame = CGRect(x: layout.size.width - currentInsets.right, y: relativeHeaderFrame.maxY + UIScreenPixel - self.scrollNode.view.contentOffset.y, width: currentInsets.right, height: layout.size.height * 2.0)
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: relativeHeaderFrame.maxY + UIScreenPixel - self.scrollNode.view.contentOffset.y, width: currentInsets.left, height: layout.size.height * 10.0)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - currentInsets.right, y: relativeHeaderFrame.maxY + UIScreenPixel - self.scrollNode.view.contentOffset.y, width: currentInsets.right, height: layout.size.height * 10.0)
         
         if additive {
             transition.updateFrameAdditive(node: self.paneContainerNode, frame: paneContainerFrame)
@@ -6934,6 +6934,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     private let callMessages: [Message]
     private let isSettings: Bool
     private let ignoreGroupInCommon: PeerId?
+    private weak var requestsContext: PeerInvitationImportersContext?
     
     fileprivate var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -6958,7 +6959,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, ignoreGroupInCommon: PeerId? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, ignoreGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
@@ -6968,6 +6969,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         self.callMessages = callMessages
         self.isSettings = isSettings
         self.ignoreGroupInCommon = ignoreGroupInCommon
+        self.requestsContext = requestsContext
         
         self.presentationData = updatedPresentationData?.0 ?? context.sharedContext.currentPresentationData.with { $0 }
         
@@ -7253,7 +7255,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages, isSettings: self.isSettings, ignoreGroupInCommon: self.ignoreGroupInCommon)
+        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages, isSettings: self.isSettings, ignoreGroupInCommon: self.ignoreGroupInCommon, requestsContext: requestsContext)
         self.controllerNode.accountsAndPeers.set(self.accountsAndPeers.get() |> map { $0.1 })
         self.controllerNode.activeSessionsContextAndCount.set(self.activeSessionsContextAndCount.get())
         self.cachedDataPromise.set(self.controllerNode.cachedDataPromise.get())

@@ -183,13 +183,13 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         let _ = (context.engine.data.get(
             TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
         )
-        |> deliverOnMainQueue).start(next: { peer in
-            guard let peer = peer else {
+        |> deliverOnMainQueue).start(next: { chatPeer in
+            guard let chatPeer = chatPeer else {
                 return
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let string: String
-            if case let .channel(channel) = peer, case .broadcast = channel.info {
+            if case let .channel(channel) = chatPeer, case .broadcast = channel.info {
                 string = presentationData.strings.MemberRequests_UserAddedToChannel(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
             } else {
                 string = presentationData.strings.MemberRequests_UserAddedToGroup(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
@@ -371,7 +371,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
         }
     }
     navigateToProfileImpl = { [weak controller] peer in
-        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false) {
+        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false, requestsContext: nil) {
             navigationController.pushViewController(controller)
         }
     }

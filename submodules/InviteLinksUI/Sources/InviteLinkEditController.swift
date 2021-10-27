@@ -344,14 +344,16 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     entries.append(.title(presentationData.theme, presentationData.strings.InviteLink_Create_LinkName, state.title))
     entries.append(.titleInfo(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameInfo))
     
-    entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval))
-    var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
-    if state.requestApproval {
-        requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel
-    } else {
-        requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+    if !isPublic {
+        entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval))
+        var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+        if state.requestApproval {
+            requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel
+        } else {
+            requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+        }
+        entries.append(.requestApprovalInfo(presentationData.theme, requestApprovalInfoText))
     }
-    entries.append(.requestApprovalInfo(presentationData.theme, requestApprovalInfoText))
     
     entries.append(.timeHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_TimeLimit.uppercased()))
     entries.append(.timePicker(presentationData.theme, state.time))

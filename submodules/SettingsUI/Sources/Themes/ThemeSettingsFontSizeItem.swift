@@ -16,19 +16,21 @@ class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     let fontSize: PresentationFontSize
     let disableLeadingInset: Bool
     let displayIcons: Bool
+    let disableDecorations: Bool
     let force: Bool
     let enabled: Bool
     let sectionId: ItemListSectionId
     let updated: (PresentationFontSize) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, disableDecorations: Bool = false, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.fontSize = fontSize
         self.enabled = enabled
         self.disableLeadingInset = disableLeadingInset
         self.displayIcons = displayIcons
         self.force = force
+        self.disableDecorations = disableDecorations
         self.sectionId = sectionId
         self.updated = updated
         self.tag = tag
@@ -222,7 +224,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
-                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    let hasCorners = itemListHasRoundedBlockLayout(params) && !item.disableDecorations
                     var hasTopCorners = false
                     var hasBottomCorners = false
                     switch neighbors.top {

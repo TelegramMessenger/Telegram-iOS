@@ -477,11 +477,11 @@ open class ItemListControllerNode: ASDisplayNode {
         insets.right += inset
         addedInsets = UIEdgeInsets(top: 0.0, left: inset, bottom: 0.0, right: inset)
         
-        if self.leftOverlayNode.supernode == nil {
-            self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
-        }
         if self.rightOverlayNode.supernode == nil {
             self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.listNode)
+        }
+        if self.leftOverlayNode.supernode == nil {
+            self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
         }
 
         if let toolbarItem = self.toolbarItem {
