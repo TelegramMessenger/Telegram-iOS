@@ -1111,7 +1111,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.currentItems = items
         self.currentActionsMinHeight = minHeight
-        
+
         let previousActionsContainerNode = self.actionsContainerNode
         let previousActionsContainerFrame = previousActionsContainerNode.view.convert(previousActionsContainerNode.bounds, to: self.view)
         self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: items, getController: { [weak self] in
@@ -1690,9 +1690,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             switch maybePassthrough {
             case .ignore:
                 break
-            case let .dismiss(consume):
+            case let .dismiss(consume, hitTestResult):
                 self.getController()?.dismiss(completion: nil)
 
+                if let hitTestResult = hitTestResult {
+                    return hitTestResult
+                }
                 if !consume {
                     return nil
                 }
@@ -1862,7 +1865,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
 
     public enum HandledTouchEvent {
         case ignore
-        case dismiss(consume: Bool)
+        case dismiss(consume: Bool, result: UIView?)
     }
 
     public var passthroughTouchEvent: ((UIView, CGPoint) -> HandledTouchEvent)?

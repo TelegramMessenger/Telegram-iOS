@@ -9,24 +9,27 @@ import AccountContext
 import TelegramPresentationData
 import ComponentFlow
 import PhotoResources
+import DirectMediaImageCache
 
 private final class MediaPreviewView: UIView {
     private let context: AccountContext
     private let message: EngineMessage
     private let media: EngineMedia
+    private let imageCache: DirectMediaImageCache
 
-    private let imageView: TransformImageView
+    private let imageView: UIImageView
 
     private var requestedImage: Bool = false
     private var disposable: Disposable?
 
-    init(context: AccountContext, message: EngineMessage, media: EngineMedia) {
+    init(context: AccountContext, message: EngineMessage, media: EngineMedia, imageCache: DirectMediaImageCache) {
         self.context = context
         self.message = message
         self.media = media
+        self.imageCache = imageCache
 
-        self.imageView = TransformImageView()
-        self.imageView.contentAnimations = .subsequentUpdates
+        self.imageView = UIImageView()
+        self.imageView.contentMode = .scaleToFill
 
         super.init(frame: CGRect())
 
@@ -42,7 +45,53 @@ private final class MediaPreviewView: UIView {
     }
 
     func updateLayout(size: CGSize, synchronousLoads: Bool) {
-        var dimensions = CGSize(width: 100.0, height: 100.0)
+        let processImage: (UIImage) -> UIImage = { image in
+            return generateImage(size, rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.addEllipse(in: CGRect(origin: CGPoint(), size: size))
+                context.clip()
+
+                UIGraphicsPushContext(context)
+                image.draw(in: CGRect(origin: CGPoint(), size: size))
+                UIGraphicsPopContext()
+            })!
+        }
+
+        if !self.requestedImage {
+            self.requestedImage = true
+            if let result = self.imageCache.getImage(message: self.message._asMessage(), media: self.media._asMedia(), width: 100, possibleWidths: [100], synchronous: false) {
+                if let image = result.image {
+                    self.imageView.image = processImage(image)
+                }
+                if let signal = result.loadSignal {
+                    self.disposable = (signal
+                    |> map { image in
+                        return image.flatMap(processImage)
+                    }
+                    |> deliverOnMainQueue).start(next: { [weak self] image in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let image = image {
+                            if strongSelf.imageView.image != nil {
+                                let tempView = UIImageView()
+                                tempView.image = strongSelf.imageView.image
+                                tempView.frame = strongSelf.imageView.frame
+                                tempView.contentMode = strongSelf.imageView.contentMode
+                                strongSelf.addSubview(tempView)
+                                tempView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak tempView] _ in
+                                    tempView?.removeFromSuperview()
+                                })
+                            }
+                            strongSelf.imageView.image = image
+                        }
+                    })
+                }
+            }
+        }
+
+        self.imageView.frame = CGRect(origin: CGPoint(), size: size)
+        /*var dimensions = CGSize(width: 100.0, height: 100.0)
         if case let .image(image) = self.media {
             if let largest = largestImageRepresentation(image.representations) {
                 dimensions = largest.dimensions.cgSize
@@ -66,7 +115,7 @@ private final class MediaPreviewView: UIView {
         let makeLayout = self.imageView.asyncLayout()
         self.imageView.frame = CGRect(origin: CGPoint(), size: size)
         let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: size.width / 2.0), imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
-        apply()
+        apply()*/
     }
 }
 
@@ -250,6 +299,20 @@ private final class ImageCache: Equatable {
     }
 }
 
+private final class DayEnvironment: Equatable {
+    let imageCache: ImageCache
+    let directImageCache: DirectMediaImageCache
+
+    init(imageCache: ImageCache, directImageCache: DirectMediaImageCache) {
+        self.imageCache = imageCache
+        self.directImageCache = directImageCache
+    }
+
+    static func ==(lhs: DayEnvironment, rhs: DayEnvironment) -> Bool {
+        return lhs === rhs
+    }
+}
+
 private final class ImageComponent: Component {
     let image: UIImage?
 
@@ -292,7 +355,7 @@ private final class ImageComponent: Component {
 }
 
 private final class DayComponent: Component {
-    typealias EnvironmentType = ImageCache
+    typealias EnvironmentType = DayEnvironment
 
     enum DaySelection {
         case none
@@ -410,7 +473,9 @@ private final class DayComponent: Component {
             self.action?()
         }
 
-        func update(component: DayComponent, availableSize: CGSize, environment: Environment<ImageCache>, transition: Transition) -> CGSize {
+        func update(component: DayComponent, availableSize: CGSize, environment: Environment<DayEnvironment>, transition: Transition) -> CGSize {
+            let isFirstTime = self.action == nil
+
             self.action = component.action
             self.index = component.media?.message.index
             self.isHighlightingEnabled = component.isEnabled && component.media != nil && !component.isSelecting
@@ -418,23 +483,26 @@ private final class DayComponent: Component {
             let diameter = min(availableSize.width, availableSize.height)
             let contentFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - diameter) / 2.0), y: floor((availableSize.height - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter))
 
-            let imageCache = environment[ImageCache.self]
+            let dayEnvironment = environment[DayEnvironment.self].value
             if component.media != nil {
-                self.highlightView.image = imageCache.value.filledCircle(diameter: diameter, innerDiameter: nil, color: UIColor(white: 0.0, alpha: 0.2))
+                self.highlightView.image = dayEnvironment.imageCache.filledCircle(diameter: diameter, innerDiameter: nil, color: UIColor(white: 0.0, alpha: 0.2))
             } else {
                 self.highlightView.image = nil
             }
 
+            var animateMediaIn = false
             if self.currentMedia != component.media {
                 self.currentMedia = component.media
 
                 if let mediaPreviewView = self.mediaPreviewView {
                     self.mediaPreviewView = nil
                     mediaPreviewView.removeFromSuperview()
+                } else {
+                    animateMediaIn = !isFirstTime
                 }
 
                 if let media = component.media {
-                    let mediaPreviewView = MediaPreviewView(context: component.context, message: media.message, media: media.media)
+                    let mediaPreviewView = MediaPreviewView(context: component.context, message: media.message, media: media.media, imageCache: dayEnvironment.directImageCache)
                     mediaPreviewView.isUserInteractionEnabled = false
                     self.mediaPreviewView = mediaPreviewView
                     self.button.insertSubview(mediaPreviewView, belowSubview: self.highlightView)
@@ -490,9 +558,9 @@ private final class DayComponent: Component {
                 }
                 selectionView.frame = contentFrame
                 if self.mediaPreviewView != nil {
-                    selectionView.image = imageCache.value.filledCircle(diameter: diameter, innerDiameter: diameter - 2.0 * 2.0, color: component.theme.list.itemCheckColors.fillColor)
+                    selectionView.image = dayEnvironment.imageCache.filledCircle(diameter: diameter, innerDiameter: diameter - 2.0 * 2.0, color: component.theme.list.itemCheckColors.fillColor)
                 } else {
-                    selectionView.image = imageCache.value.filledCircle(diameter: diameter, innerDiameter: nil, color: component.theme.list.itemCheckColors.fillColor)
+                    selectionView.image = dayEnvironment.imageCache.filledCircle(diameter: diameter, innerDiameter: nil, color: component.theme.list.itemCheckColors.fillColor)
                 }
             case .middle, .none:
                 if let selectionView = self.selectionView {
@@ -509,7 +577,7 @@ private final class DayComponent: Component {
                 contentScale = 1.0
             }
 
-            let titleImage = imageCache.value.text(fontSize: titleFontSize, isSemibold: titleFontIsSemibold, color: titleColor, string: component.title)
+            let titleImage = dayEnvironment.imageCache.text(fontSize: titleFontSize, isSemibold: titleFontIsSemibold, color: titleColor, string: component.title)
             self.titleView.image = titleImage
             let titleSize = titleImage.size
 
@@ -524,6 +592,10 @@ private final class DayComponent: Component {
                 mediaPreviewView.updateLayout(size: contentFrame.size, synchronousLoads: false)
 
                 mediaPreviewView.layer.sublayerTransform = CATransform3DMakeScale(contentScale, contentScale, 1.0)
+
+                if animateMediaIn {
+                    mediaPreviewView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
 
             return availableSize
@@ -534,13 +606,13 @@ private final class DayComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, environment: Environment<ImageCache>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, environment: Environment<DayEnvironment>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
 
 private final class MonthComponent: CombinedComponent {
-    typealias EnvironmentType = ImageCache
+    typealias EnvironmentType = DayEnvironment
 
     let context: AccountContext
     let model: MonthModel
@@ -593,7 +665,7 @@ private final class MonthComponent: CombinedComponent {
     static var body: Body {
         let title = Child(Text.self)
         let weekdayTitles = ChildMap(environment: Empty.self, keyedBy: Int.self)
-        let days = ChildMap(environment: ImageCache.self, keyedBy: Int.self)
+        let days = ChildMap(environment: DayEnvironment.self, keyedBy: Int.self)
         let selections = ChildMap(environment: Empty.self, keyedBy: Int.self)
 
         return { context in
@@ -673,7 +745,7 @@ private final class MonthComponent: CombinedComponent {
                         }
                     )),
                     environment: {
-                        context.environment[ImageCache.self]
+                        context.environment[DayEnvironment.self]
                     },
                     availableSize: CGSize(width: usableWeekdayWidth, height: weekdaySize),
                     transition: .immediate
@@ -739,7 +811,7 @@ private final class MonthComponent: CombinedComponent {
 
             if let selectedDays = context.component.selectedDays {
                 for (lineIndex, selection) in selectionsByLine {
-                    let imageCache = context.environment[ImageCache.self]
+                    let dayEnvironment = context.environment[DayEnvironment.self].value
 
                     let dayItemSize = updatedDays[0].size
                     let deltaWidth = floor((weekdayWidth - dayItemSize.width) / 2.0)
@@ -766,7 +838,7 @@ private final class MonthComponent: CombinedComponent {
 
                     let selectionRect = CGRect(origin: CGPoint(x: minX, y: minY), size: CGSize(width: maxX - minX, height: maxY - minY))
                     let selection = selections[lineIndex].update(
-                        component: AnyComponent(ImageComponent(image: imageCache.value.monthSelection(leftRadius: leftRadius, rightRadius: rightRadius, maxRadius: dayItemSize.width, color: monthSelectionColor))),
+                        component: AnyComponent(ImageComponent(image: dayEnvironment.imageCache.monthSelection(leftRadius: leftRadius, rightRadius: rightRadius, maxRadius: dayItemSize.width, color: monthSelectionColor))),
                         availableSize: selectionRect.size,
                         transition: .immediate
                     )
@@ -883,10 +955,10 @@ public final class CalendarMessageScreen: ViewController {
         private let calendarSource: SparseMessageCalendar
 
         private var months: [MonthModel] = []
-        private var monthViews: [Int: ComponentHostView<ImageCache>] = [:]
+        private var monthViews: [Int: ComponentHostView<DayEnvironment>] = [:]
         private let contextGestureContainerNode: ContextControllerSourceNode
 
-        private let imageCache = ImageCache()
+        private let dayEnvironment: DayEnvironment
 
         private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
         private var scrollLayout: (width: CGFloat, contentHeight: CGFloat, frames: [Int: CGRect])?
@@ -932,6 +1004,8 @@ public final class CalendarMessageScreen: ViewController {
             } else {
                 self.scrollView.indicatorStyle = .black
             }
+
+            self.dayEnvironment = DayEnvironment(imageCache: ImageCache(), directImageCache: DirectMediaImageCache(account: context.account))
 
             super.init()
 
@@ -1403,8 +1477,7 @@ public final class CalendarMessageScreen: ViewController {
             var contentHeight: CGFloat = layout.intrinsicInsets.bottom
             var frames: [Int: CGRect] = [:]
 
-            let measureView = ComponentHostView<ImageCache>()
-            let imageCache = ImageCache()
+            let measureView = ComponentHostView<DayEnvironment>()
             for i in 0 ..< self.months.count {
                 let monthSize = measureView.update(
                     transition: .immediate,
@@ -1419,7 +1492,7 @@ public final class CalendarMessageScreen: ViewController {
                         selectedDays: nil
                     )),
                     environment: {
-                        imageCache
+                        self.dayEnvironment
                     },
                     containerSize: CGSize(width: layout.size.width, height: 10000.0
                 ))
@@ -1458,7 +1531,7 @@ public final class CalendarMessageScreen: ViewController {
                 }
                 validMonths.insert(i)
 
-                let monthView: ComponentHostView<ImageCache>
+                let monthView: ComponentHostView<DayEnvironment>
                 if let current = self.monthViews[i] {
                     monthView = current
                 } else {
@@ -1516,7 +1589,7 @@ public final class CalendarMessageScreen: ViewController {
                         selectedDays: self.selectionState?.dayRange
                     )),
                     environment: {
-                        self.imageCache
+                        self.dayEnvironment
                     },
                     containerSize: CGSize(width: width, height: 10000.0
                 ))
@@ -1582,14 +1655,14 @@ public final class CalendarMessageScreen: ViewController {
                     updatedMedia[i] = [:]
                 }
 
-                for day in 0 ..< self.months[i].numberOfDays {
-                    let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
+                let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
 
+                for day in 0 ..< self.months[i].numberOfDays {
                     let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
-                    let nextDayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day - 1)
+                    let nextDayTimestamp = dayTimestamp + 24 * 60 * 60
 
                     for message in messageMap {
-                        if message.timestamp <= dayTimestamp && message.timestamp >= nextDayTimestamp {
+                        if message.timestamp >= dayTimestamp && message.timestamp < nextDayTimestamp {
                             mediaLoop: for media in message.media {
                                 switch media {
                                 case _ as TelegramMediaImage, _ as TelegramMediaFile:
@@ -1644,9 +1717,9 @@ public final class CalendarMessageScreen: ViewController {
         //TODO:localize
         self.navigationItem.setTitle("Calendar", animated: false)
 
-        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
+        /*if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
             self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.toggleSelectPressed)), animated: false)
-        }
+        }*/
     }
 
     required public init(coder aDecoder: NSCoder) {

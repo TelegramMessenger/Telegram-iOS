@@ -1554,6 +1554,13 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.itemGrid.cancelExternalContentGestures = { [weak self] in
             self?.contextGestureContainerNode.cancelGesture()
         }
+
+        self.itemGrid.zoomLevelUpdated = { [weak self] zoomLevel in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = updateVisualMediaStoredState(postbox: strongSelf.context.account.postbox, peerId: strongSelf.peerId, messageTag: strongSelf.stateTag, state: VisualMediaStoredState(zoomLevel: Int32(zoomLevel.rawValue))).start()
+        }
         
         self._itemInteraction = VisualMediaItemInteraction(
             openMessage: { [weak self] message in
@@ -1644,7 +1651,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             }
             let rect = strongSelf.itemGrid.frameForItem(layer: itemLayer)
 
-            let proxyNode = ASDisplayNode()
+            /*let proxyNode = ASDisplayNode()
             proxyNode.frame = rect
             proxyNode.contents = itemLayer.contents
             proxyNode.isHidden = true
@@ -1656,9 +1663,9 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
             Queue.mainQueue().after(1.0, {
                 escapeNotification.keep()
-            })
+            })*/
 
-            strongSelf.chatControllerInteraction.openMessageContextActions(message, proxyNode, proxyNode.bounds, gesture)
+            strongSelf.chatControllerInteraction.openMessageContextActions(message, strongSelf, rect, gesture)
 
             strongSelf.itemGrid.cancelGestures()
         }
@@ -1957,6 +1964,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     func scrollToTop() -> Bool {
         return self.itemGrid.scrollToTop()
     }
+
+    func hitTestResultForScrolling() -> UIView? {
+        return self.itemGrid.hitTestResultForScrolling()
+    }
+
+    func brieflyDisableTouchActions() {
+        self.itemGrid.brieflyDisableTouchActions()
+    }
     
     func findLoadedMessage(id: MessageId) -> Message? {
         guard let items = self.items else {
@@ -1991,45 +2006,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     func transferVelocity(_ velocity: CGFloat) {
-        /*if velocity > 0.0 {
-            self.decelerationAnimator?.isPaused = true
-            let startTime = CACurrentMediaTime()
-            var currentOffset = self.scrollNode.view.contentOffset
-            let decelerationRate: CGFloat = 0.998
-            self.scrollViewDidEndDragging(self.scrollNode.view, willDecelerate: true)
-            self.decelerationAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                let t = CACurrentMediaTime() - startTime
-                var currentVelocity = velocity * 15.0 * CGFloat(pow(Double(decelerationRate), 1000.0 * t))
-                currentOffset.y += currentVelocity
-                let maxOffset = strongSelf.scrollNode.view.contentSize.height - strongSelf.scrollNode.bounds.height
-                if currentOffset.y >= maxOffset {
-                    currentOffset.y = maxOffset
-                    currentVelocity = 0.0
-                }
-                if currentOffset.y < 0.0 {
-                    currentOffset.y = 0.0
-                    currentVelocity = 0.0
-                }
-                
-                var didEnd = false
-                if abs(currentVelocity) < 0.1 {
-                    strongSelf.decelerationAnimator?.isPaused = true
-                    strongSelf.decelerationAnimator = nil
-                    didEnd = true
-                }
-                var contentOffset = strongSelf.scrollNode.view.contentOffset
-                contentOffset.y = floorToScreenPixels(currentOffset.y)
-                strongSelf.scrollNode.view.setContentOffset(contentOffset, animated: false)
-                strongSelf.scrollViewDidScroll(strongSelf.scrollNode.view)
-                if didEnd {
-                    strongSelf.scrollViewDidEndDecelerating(strongSelf.scrollNode.view)
-                }
-            })
-            self.decelerationAnimator?.isPaused = false
-        }*/
+        self.itemGrid.transferVelocity(velocity)
     }
     
     func cancelPreviewGestures() {

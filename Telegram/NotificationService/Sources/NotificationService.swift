@@ -411,7 +411,7 @@ private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) -
         }
     }
 
-    let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar-\(peer.displayLetters.joined(separator: ","))", representationId: "intents.png", keepDuration: .shortLived)
+    let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar2-\(peer.displayLetters.joined(separator: ","))", representationId: "intents.png", keepDuration: .shortLived)
     if let _ = fileSize(cachedPath) {
         return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
     } else {

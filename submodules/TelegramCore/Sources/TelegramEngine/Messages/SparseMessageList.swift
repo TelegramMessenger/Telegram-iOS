@@ -670,8 +670,8 @@ public final class SparseMessageCalendar {
                             var messagesByDay: [Int32: Message] = [:]
                             for period in periods {
                                 switch period {
-                                case let .searchResultsCalendarPeriod(date, minMsgId, maxMsgId, _):
-                                    if let message = transaction.getMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: maxMsgId)) {
+                                case let .searchResultsCalendarPeriod(date, minMsgId, _, _):
+                                    if let message = transaction.getMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: minMsgId)) {
                                         messagesByDay[date] = message
                                     }
                                     if let minMessageIdValue = minMessageId {

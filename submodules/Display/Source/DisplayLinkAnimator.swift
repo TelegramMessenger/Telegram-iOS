@@ -101,6 +101,9 @@ public final class ConstantDisplayLinkAnimator {
         self.displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
             self?.tick()
         }), selector: #selector(DisplayLinkTarget.event))
+        if #available(iOS 15.0, *) {
+            self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
+        }
         self.displayLink.isPaused = true
         self.displayLink.add(to: RunLoop.main, forMode: .common)
     }
