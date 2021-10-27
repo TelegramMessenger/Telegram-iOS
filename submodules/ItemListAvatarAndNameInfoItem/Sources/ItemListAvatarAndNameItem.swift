@@ -780,7 +780,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                     strongSelf.addSubnode(strongSelf.inputSecondClearButton!)
                                 }
                                 
-                                strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 46.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 100.0, height: separatorHeight))
+                                strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 46.0), size: CGSize(width: params.width - params.leftInset - 100.0, height: separatorHeight))
                                 strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 12.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 36.0, height: 30.0))
                                 strongSelf.inputSecondField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 52.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 36.0, height: 30.0))
                                 
@@ -841,7 +841,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                     strongSelf.addSubnode(strongSelf.inputFirstClearButton!)
                                 }
                                 
-                                strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 64.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 100.0, height: separatorHeight))
+                                strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: params.leftInset + 100.0, y: 64.0), size: CGSize(width: params.width - params.leftInset - 100.0, height: separatorHeight))
                                 strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: params.leftInset + 111.0, y: 28.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 111.0 - 36.0, height: 35.0))
                                 
                                 if let image = strongSelf.inputFirstClearButton?.image(for: []), let inputFieldFrame = strongSelf.inputFirstField?.frame {

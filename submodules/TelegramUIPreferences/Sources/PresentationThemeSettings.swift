@@ -366,10 +366,8 @@ public struct AutomaticThemeSwitchSetting: Codable, Equatable {
         self.trigger = try container.decode(AutomaticThemeSwitchTrigger.self, forKey: "trigger")
         if let themeData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "theme_v2") {
             self.theme = PresentationThemeReference(decoder: PostboxDecoder(buffer: MemoryBuffer(data: themeData.data)))
-        } else if let legacyValue = try container.decodeIfPresent(Int32.self, forKey: "theme") {
-            self.theme = .builtin(PresentationBuiltinThemeReference(rawValue: legacyValue) ?? .nightAccent)
         } else {
-            self.theme = .builtin(.nightAccent)
+            self.theme = .builtin(.night)
         }
     }
     
