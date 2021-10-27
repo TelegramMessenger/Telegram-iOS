@@ -253,7 +253,9 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
             }, action: { _, f in
                 f(.dismissWithoutContent)
                 
-                denyRequestImpl(peer)
+                Queue.mainQueue().after(0.3, {
+                    denyRequestImpl(peer)
+                })
             })))
             
             let dismissPromise = ValuePromise<Bool>(false)

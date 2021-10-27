@@ -386,7 +386,7 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     }
     entries.append(.timeInfo(presentationData.theme, presentationData.strings.InviteLink_Create_TimeLimitInfo))
     
-    if !state.requestApproval {
+    if !state.requestApproval || isPublic {
         entries.append(.usageHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_UsersLimit.uppercased()))
         entries.append(.usagePicker(presentationData.theme, presentationData.dateTimeFormat, state.usage))
         
@@ -524,6 +524,8 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         ))
     |> deliverOnMainQueue
     |> map { presentationData, state, peer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let isPublic = !(peer?.addressName?.isEmpty ?? true)
+        
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
@@ -548,7 +550,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
             let titleString = state.title.trimmingCharacters(in: .whitespacesAndNewlines)
             let title = titleString.isEmpty ? nil : titleString
             let usageLimit = state.usage.value
-            let requestNeeded = state.requestApproval
+            let requestNeeded = state.requestApproval && !isPublic
             
             if invite == nil {
                 let _ = (context.engine.peers.createPeerExportedInvitation(peerId: peerId, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
@@ -600,7 +602,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(invite == nil ? presentationData.strings.InviteLink_Create_Title : presentationData.strings.InviteLink_Create_EditTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, isGroup: isGroup, isPublic: !(peer?.addressName?.isEmpty ?? true), presentationData: presentationData), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, isGroup: isGroup, isPublic: isPublic, presentationData: presentationData), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
