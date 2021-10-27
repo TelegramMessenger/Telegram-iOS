@@ -638,14 +638,14 @@ final class SharedApplicationContext {
         }, getAvailableAlternateIcons: {
             if #available(iOS 10.3, *) {
                 var icons = [
-                    PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
+                    PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
                     PresentationAppIcon(name: "New2", imageName: "New2"),
                     PresentationAppIcon(name: "New1", imageName: "New1"),
-                    PresentationAppIcon(name: "Black", imageName: "BlackIcon"),
-                    PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon"),
-                    PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon"),
-                    PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon"),
-                    PresentationAppIcon(name: "BlackFilled", imageName: "BlackFilledIcon")
+                    PresentationAppIcon(name: "BlackIcon", imageName: "BlackIcon"),
+                    PresentationAppIcon(name: "BlueClassicIcon", imageName: "BlueClassicIcon"),
+                    PresentationAppIcon(name: "BlackClassicIcon", imageName: "BlackClassicIcon"),
+                    PresentationAppIcon(name: "BlueFilledIcon", imageName: "BlueFilledIcon"),
+                    PresentationAppIcon(name: "BlackFilledIcon", imageName: "BlackFilledIcon")
                 ]
                 if buildConfig.isInternalBuild {
                     icons.append(PresentationAppIcon(name: "WhiteFilled", imageName: "WhiteFilledIcon"))
@@ -701,70 +701,6 @@ final class SharedApplicationContext {
             })
         }
         
-        #if ENABLE_WALLET
-        let tonKeychain: TonKeychain
-        
-        #if targetEnvironment(simulator)
-        tonKeychain = TonKeychain(encryptionPublicKey: {
-            //return .single(nil)
-            //return .single("1".data(using: .utf8)!)
-            return .single(Data())
-        }, encrypt: { data in
-            return Signal { subscriber in
-                subscriber.putNext(TonKeychainEncryptedData(publicKey: Data(), data: data))
-                subscriber.putCompletion()
-                return EmptyDisposable
-            }
-        }, decrypt: { data in
-            return Signal { subscriber in
-                subscriber.putNext(data.data)
-                subscriber.putCompletion()
-                return EmptyDisposable
-            }
-        })
-        #else
-        tonKeychain = TonKeychain(encryptionPublicKey: {
-            return Signal { subscriber in
-                BuildConfig.getHardwareEncryptionAvailable(withBaseAppBundleId: baseAppBundleId, completion: { value in
-                    subscriber.putNext(value)
-                    subscriber.putCompletion()
-                })
-                return EmptyDisposable
-            }
-        }, encrypt: { data in
-            return Signal { subscriber in
-                BuildConfig.encryptApplicationSecret(data, baseAppBundleId: baseAppBundleId, completion: { result, publicKey in
-                    if let result = result, let publicKey = publicKey {
-                        subscriber.putNext(TonKeychainEncryptedData(publicKey: publicKey, data: result))
-                        subscriber.putCompletion()
-                    } else {
-                        subscriber.putError(.generic)
-                    }
-                })
-                return EmptyDisposable
-            }
-        }, decrypt: { encryptedData in
-            return Signal { subscriber in
-                BuildConfig.decryptApplicationSecret(encryptedData.data, publicKey: encryptedData.publicKey, baseAppBundleId: baseAppBundleId, completion: { result, cancelled in
-                    if let result = result {
-                        subscriber.putNext(result)
-                    } else {
-                        let error: TonKeychainDecryptDataError
-                        if cancelled {
-                            error = .cancelled
-                        } else {
-                            error = .generic
-                        }
-                        subscriber.putError(error)
-                    }
-                    subscriber.putCompletion()
-                })
-                return EmptyDisposable
-            }
-        })
-        #endif
-        #endif
-        
         let sharedContextSignal = accountManagerSignal
         |> deliverOnMainQueue
         |> take(1)
@@ -815,15 +751,6 @@ final class SharedApplicationContext {
                     }
                 }
             })
-
-            /*self.mainWindow.debugAction = {
-                self.mainWindow.debugAction = nil
-                
-                let presentationData = sharedContext.currentPresentationData.with { $0 }
-                let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
-                navigationController.viewControllers = [debugController(sharedContext: sharedContext, context: nil)]
-                self.mainWindow.present(navigationController, on: .root)
-            }*/
             
             presentationDataPromise.set(sharedContext.presentationData)
             
@@ -1490,131 +1417,129 @@ final class SharedApplicationContext {
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
-        if #available(iOS 9.0, *) {
-            /*guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
-                return
-            }
-            encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
-            encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
-            while encryptedPayload.count % 4 != 0 {
-                encryptedPayload.append("=")
-            }
-            guard let data = Data(base64Encoded: encryptedPayload) else {
-                return
-            }
-            
-            let semaphore = DispatchSemaphore(value: 0)
-            var accountAndDecryptedPayload: (Account, Data)?
-            
-            var sharedApplicationContextValue: SharedApplicationContext?
-            
-            let accountsAndKeys = self.sharedContextPromise.get()
+        /*guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
+            return
+        }
+        encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+        encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+        while encryptedPayload.count % 4 != 0 {
+            encryptedPayload.append("=")
+        }
+        guard let data = Data(base64Encoded: encryptedPayload) else {
+            return
+        }
+
+        let semaphore = DispatchSemaphore(value: 0)
+        var accountAndDecryptedPayload: (Account, Data)?
+
+        var sharedApplicationContextValue: SharedApplicationContext?
+
+        let accountsAndKeys = self.sharedContextPromise.get()
+        |> take(1)
+        |> mapToSignal { sharedApplicationContext -> Signal<[(Account, MasterNotificationKey)], NoError> in
+            sharedApplicationContextValue = sharedApplicationContext
+
+            return sharedApplicationContext.sharedContext.activeAccounts
             |> take(1)
-            |> mapToSignal { sharedApplicationContext -> Signal<[(Account, MasterNotificationKey)], NoError> in
-                sharedApplicationContextValue = sharedApplicationContext
-                
-                return sharedApplicationContext.sharedContext.activeAccounts
-                |> take(1)
-                |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
-                    return combineLatest(activeAccounts.accounts.map { account -> Signal<(Account, MasterNotificationKey), NoError> in
-                        return masterNotificationsKey(account: account.1, ignoreDisabled: true)
-                        |> map { key -> (Account, MasterNotificationKey) in
-                            return (account.1, key)
+            |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
+                return combineLatest(activeAccounts.accounts.map { account -> Signal<(Account, MasterNotificationKey), NoError> in
+                    return masterNotificationsKey(account: account.1, ignoreDisabled: true)
+                    |> map { key -> (Account, MasterNotificationKey) in
+                        return (account.1, key)
+                    }
+                })
+            }
+        }
+
+        let _ = accountsAndKeys.start(next: { accountsAndKeys in
+            for (account, key) in accountsAndKeys {
+                if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
+                    accountAndDecryptedPayload = (account, decryptedData)
+                    break
+                }
+            }
+            semaphore.signal()
+        })
+        semaphore.wait()
+
+        if let sharedApplicationContextValue = sharedApplicationContextValue, let (account, decryptedData) = accountAndDecryptedPayload {
+            if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
+                if var updateString = decryptedDict["updates"] as? String {
+                    updateString = updateString.replacingOccurrences(of: "-", with: "+")
+                    updateString = updateString.replacingOccurrences(of: "_", with: "/")
+                    while updateString.count % 4 != 0 {
+                        updateString.append("=")
+                    }
+                    if let updateData = Data(base64Encoded: updateString) {
+                        var result: (CallSessionRingingState, CallSession)?
+                        let semaphore = DispatchSemaphore(value: 0)
+                        account.stateManager.processIncomingCallUpdate(data: updateData, completion: { ringingState in
+                            result = ringingState
+                            semaphore.signal()
+                        })
+                        semaphore.wait()
+
+                        if let (ringingState, callSession) = result {
+                            (sharedApplicationContextValue.sharedContext.callManager as? PresentationCallManagerImpl)?.injectRingingStateSynchronously(account: account, ringingState: ringingState, callSession: callSession)
+                        }
+                    }
+                }
+            }
+        }*/
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            if var encryptedPayload = payload.dictionaryPayload["p"] as? String {
+                encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+                encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+                while encryptedPayload.count % 4 != 0 {
+                    encryptedPayload.append("=")
+                }
+                if let data = Data(base64Encoded: encryptedPayload) {
+                    let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+                    |> take(1)
+                    |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
+                        return combineLatest(activeAccounts.accounts.map { context -> Signal<(Account, MasterNotificationKey), NoError> in
+                            return masterNotificationsKey(account: context.1.account, ignoreDisabled: true)
+                            |> map { key -> (Account, MasterNotificationKey) in
+                                return (context.1.account, key)
+                            }
+                        })
+                    }
+                    |> deliverOnMainQueue).start(next: { accountsAndKeys in
+                        var accountAndDecryptedPayload: (Account, Data)?
+                        for (account, key) in accountsAndKeys {
+                            if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
+                                accountAndDecryptedPayload = (account, decryptedData)
+                                break
+                            }
+                        }
+
+                        if let (account, decryptedData) = accountAndDecryptedPayload {
+                            if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
+                                if var updateString = decryptedDict["updates"] as? String {
+                                    updateString = updateString.replacingOccurrences(of: "-", with: "+")
+                                    updateString = updateString.replacingOccurrences(of: "_", with: "/")
+                                    while updateString.count % 4 != 0 {
+                                        updateString.append("=")
+                                    }
+                                    if let updateData = Data(base64Encoded: updateString) {
+                                        account.stateManager.processIncomingCallUpdate(data: updateData, completion: { _ in
+                                        })
+                                    }
+                                }
+                            }
                         }
                     })
                 }
             }
-            
-            let _ = accountsAndKeys.start(next: { accountsAndKeys in
-                for (account, key) in accountsAndKeys {
-                    if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
-                        accountAndDecryptedPayload = (account, decryptedData)
-                        break
-                    }
-                }
-                semaphore.signal()
-            })
-            semaphore.wait()
-            
-            if let sharedApplicationContextValue = sharedApplicationContextValue, let (account, decryptedData) = accountAndDecryptedPayload {
-                if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
-                    if var updateString = decryptedDict["updates"] as? String {
-                        updateString = updateString.replacingOccurrences(of: "-", with: "+")
-                        updateString = updateString.replacingOccurrences(of: "_", with: "/")
-                        while updateString.count % 4 != 0 {
-                            updateString.append("=")
-                        }
-                        if let updateData = Data(base64Encoded: updateString) {
-                            var result: (CallSessionRingingState, CallSession)?
-                            let semaphore = DispatchSemaphore(value: 0)
-                            account.stateManager.processIncomingCallUpdate(data: updateData, completion: { ringingState in
-                                result = ringingState
-                                semaphore.signal()
-                            })
-                            semaphore.wait()
-                            
-                            if let (ringingState, callSession) = result {
-                                (sharedApplicationContextValue.sharedContext.callManager as? PresentationCallManagerImpl)?.injectRingingStateSynchronously(account: account, ringingState: ringingState, callSession: callSession)
-                            }
-                        }
-                    }
-                }
-            }*/
-            let _ = (self.sharedContextPromise.get()
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-                if var encryptedPayload = payload.dictionaryPayload["p"] as? String {
-                    encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
-                    encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
-                    while encryptedPayload.count % 4 != 0 {
-                        encryptedPayload.append("=")
-                    }
-                    if let data = Data(base64Encoded: encryptedPayload) {
-                        let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
-                        |> take(1)
-                        |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
-                            return combineLatest(activeAccounts.accounts.map { context -> Signal<(Account, MasterNotificationKey), NoError> in
-                                return masterNotificationsKey(account: context.1.account, ignoreDisabled: true)
-                                |> map { key -> (Account, MasterNotificationKey) in
-                                    return (context.1.account, key)
-                                }
-                            })
-                        }
-                        |> deliverOnMainQueue).start(next: { accountsAndKeys in
-                            var accountAndDecryptedPayload: (Account, Data)?
-                            for (account, key) in accountsAndKeys {
-                                if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
-                                    accountAndDecryptedPayload = (account, decryptedData)
-                                    break
-                                }
-                            }
-                            
-                            if let (account, decryptedData) = accountAndDecryptedPayload {
-                                if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
-                                    if var updateString = decryptedDict["updates"] as? String {
-                                        updateString = updateString.replacingOccurrences(of: "-", with: "+")
-                                        updateString = updateString.replacingOccurrences(of: "_", with: "/")
-                                        while updateString.count % 4 != 0 {
-                                            updateString.append("=")
-                                        }
-                                        if let updateData = Data(base64Encoded: updateString) {
-                                            account.stateManager.processIncomingCallUpdate(data: updateData, completion: { _ in
-                                            })
-                                        }
-                                    }
-                                }
-                            }
-                        })
-                    }
-                }
-                sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
-                
-                if case PKPushType.voIP = type {
-                    Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
-                    sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
-                }
-            })
-        }
+            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
+
+            if case PKPushType.voIP = type {
+                Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
+                sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
+            }
+        })
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
