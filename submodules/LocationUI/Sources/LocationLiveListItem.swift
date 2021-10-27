@@ -254,6 +254,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                         if strongSelf.drivingButtonNode == nil {
                             strongSelf.drivingButtonNode = SolidRoundedButtonNode(icon: generateTintedImage(image: UIImage(bundleImageName: "Location/DirectionsDriving"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
                             strongSelf.drivingButtonNode?.alpha = 0.0
+                            strongSelf.drivingButtonNode?.iconSpacing = 5.0
                             strongSelf.drivingButtonNode?.allowsGroupOpacity = true
                             strongSelf.drivingButtonNode?.pressed = { [weak self] in
                                 if let item = self?.item {
@@ -264,6 +265,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             
                             strongSelf.transitButtonNode = SolidRoundedButtonNode(icon: generateTintedImage(image: UIImage(bundleImageName: "Location/DirectionsTransit"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
                             strongSelf.transitButtonNode?.alpha = 0.0
+                            strongSelf.transitButtonNode?.iconSpacing = 2.0
                             strongSelf.transitButtonNode?.allowsGroupOpacity = true
                             strongSelf.transitButtonNode?.pressed = { [weak self] in
                                 if let item = self?.item {
@@ -274,6 +276,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                             
                             strongSelf.walkingButtonNode = SolidRoundedButtonNode(icon: generateTintedImage(image: UIImage(bundleImageName: "Location/DirectionsWalking"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor), theme: buttonTheme, fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
                             strongSelf.walkingButtonNode?.alpha = 0.0
+                            strongSelf.walkingButtonNode?.iconSpacing = 2.0
                             strongSelf.walkingButtonNode?.allowsGroupOpacity = true
                             strongSelf.walkingButtonNode?.pressed = { [weak self] in
                                 if let item = self?.item {

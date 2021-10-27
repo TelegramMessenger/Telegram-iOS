@@ -1067,7 +1067,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 themeItemNode?.prepareCrossfadeTransition()
             }
             
-            let crossfadeController = ThemeSettingsCrossfadeController(view: view, topOffset: topOffset, bottomOffset: bottomOffset, leftOffset: leftOffset)
+            let sectionInset = max(16.0, floor((controller.displayNode.frame.width - 674.0) / 2.0))
+            
+            let crossfadeController = ThemeSettingsCrossfadeController(view: view, topOffset: topOffset, bottomOffset: bottomOffset, leftOffset: leftOffset, sideInset: sectionInset)
             crossfadeController.didAppear = { [weak themeItemNode] in
                 if view != nil {
                     themeItemNode?.animateCrossfadeTransition()
@@ -1248,9 +1250,12 @@ public final class ThemeSettingsCrossfadeController: ViewController {
     private var bottomSnapshotView: UIView?
     private var sideSnapshotView: UIView?
     
+    private var leftSnapshotView: UIView?
+    private var rightSnapshotView: UIView?
+    
     var didAppear: (() -> Void)?
     
-    public init(view: UIView? = nil, topOffset: CGFloat? = nil, bottomOffset: CGFloat? = nil, leftOffset: CGFloat? = nil) {
+    public init(view: UIView? = nil, topOffset: CGFloat? = nil, bottomOffset: CGFloat? = nil, leftOffset: CGFloat? = nil, sideInset: CGFloat = 0.0) {
         if let view = view {
             if var leftOffset = leftOffset {
                 leftOffset += UIScreenPixel
@@ -1278,6 +1283,58 @@ public final class ThemeSettingsCrossfadeController: ViewController {
                     }
                 
                     self.sideSnapshotView = clipView
+                }
+            }
+            
+            if sideInset > 0.0 {
+                if let view = view.snapshotView(afterScreenUpdates: false) {
+                    let clipView = UIView()
+                    clipView.clipsToBounds = true
+                    clipView.addSubview(view)
+                    
+                    view.clipsToBounds = true
+                    view.contentMode = .topLeft
+                    
+                    if let topOffset = topOffset, let bottomOffset = bottomOffset {
+                        var frame = view.frame
+                        frame.origin.y = topOffset
+                        frame.size.width = sideInset
+                        frame.size.height = bottomOffset - topOffset
+                        clipView.frame = frame
+                        
+                        frame = view.frame
+                        frame.origin.y = -topOffset
+                        frame.size.width = sideInset
+                        frame.size.height = bottomOffset
+                        view.frame = frame
+                    }
+                
+                    self.leftSnapshotView = clipView
+                }
+                if let view = view.snapshotView(afterScreenUpdates: false) {
+                    let clipView = UIView()
+                    clipView.clipsToBounds = true
+                    clipView.addSubview(view)
+                    
+                    view.clipsToBounds = true
+                    view.contentMode = .topRight
+                    
+                    if let topOffset = topOffset, let bottomOffset = bottomOffset {
+                        var frame = view.frame
+                        frame.origin.x = frame.width - sideInset
+                        frame.origin.y = topOffset
+                        frame.size.width = sideInset
+                        frame.size.height = bottomOffset - topOffset
+                        clipView.frame = frame
+                        
+                        frame = view.frame
+                        frame.origin.y = -topOffset
+                        frame.size.width = sideInset
+                        frame.size.height = bottomOffset
+                        view.frame = frame
+                    }
+                
+                    self.rightSnapshotView = clipView
                 }
             }
             
@@ -1332,7 +1389,13 @@ public final class ThemeSettingsCrossfadeController: ViewController {
         }
         if let sideSnapshotView = self.sideSnapshotView {
              self.displayNode.view.addSubview(sideSnapshotView)
-         }
+        }
+        if let leftSnapshotView = self.leftSnapshotView {
+             self.displayNode.view.addSubview(leftSnapshotView)
+        }
+        if let rightSnapshotView = self.rightSnapshotView {
+             self.displayNode.view.addSubview(rightSnapshotView)
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {

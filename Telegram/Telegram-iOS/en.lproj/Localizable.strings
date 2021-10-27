@@ -6978,3 +6978,9 @@ Sorry for the inconvenience.";
 
 "Notifications.On" = "On";
 "Notifications.Off" = "Off";
+
+"AuthSessions.View.Device" = "Device";
+"AuthSessions.View.Location" = "Location";
+"AuthSessions.View.IP" = "IP";
+"AuthSessions.View.TerminateSession" = "Terminate Session";
+"AuthSessions.View.Logout" = "Log Out";

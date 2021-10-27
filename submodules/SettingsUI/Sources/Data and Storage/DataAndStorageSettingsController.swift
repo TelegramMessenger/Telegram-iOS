@@ -11,6 +11,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import OpenInExternalAppUI
+import ItemListPeerActionItem
 
 private final class DataAndStorageControllerArguments {
     let openStorageUsage: () -> Void
@@ -322,12 +323,16 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/WiFi")?.precomposed(), title: text, label: value, labelStyle: .detailText, sectionId: self.section, style: .blocks, action: {
                     arguments.openAutomaticDownloadConnectionType(.wifi)
                 })
-            case let .automaticDownloadReset(_, text, enabled):
-                return ItemListActionItem(presentationData: presentationData, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .automaticDownloadReset(theme, text, enabled):
+                var icon = PresentationResourcesItemList.resetIcon(theme)
+                if !enabled {
+                    icon = generateTintedImage(image: icon, color: theme.list.itemDisabledTextColor)
+                }
+                return ItemListPeerActionItem(presentationData: presentationData, icon: icon, title: text, sectionId: self.section, height: .generic, color: enabled ? .accent : .disabled, editing: false, action: {
                     if enabled {
                         arguments.resetAutomaticDownload()
                     }
-                }, tag: DataAndStorageEntryTag.automaticDownloadReset)
+                })
             case let .autoplayHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .autoplayGifs(_, text, value):

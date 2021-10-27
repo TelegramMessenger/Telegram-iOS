@@ -6616,7 +6616,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     fileprivate func updateNavigation(transition: ContainedViewLayoutTransition, additive: Bool) {
         let offsetY = self.scrollNode.view.contentOffset.y
         
-        if self.isSettings {
+        if self.isSettings, !(self.controller?.movingInHierarchy == true) {
             let bottomOffsetY = self.scrollNode.view.contentSize.height + self.scrollNode.view.contentInset.bottom - offsetY - self.scrollNode.frame.height
             let backgroundAlpha: CGFloat = min(30.0, bottomOffsetY) / 30.0
             
@@ -7262,10 +7262,12 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         super.displayNodeDidLoad()
     }
     
+    fileprivate var movingInHierarchy = false
     public override func willMove(toParent viewController: UIViewController?) {
         super.willMove(toParent: parent)
         
         if self.isSettings, viewController == nil, let tabBarController = self.parent as? TabBarController {
+            self.movingInHierarchy = true
             tabBarController.updateBackgroundAlpha(1.0, transition: .immediate)
         }
     }
@@ -7275,6 +7277,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         
         if self.isSettings {
             if viewController == nil {
+                self.movingInHierarchy = false
                 Queue.mainQueue().after(0.1) {
                     self.controllerNode.resetHeaderExpansion()
                 }

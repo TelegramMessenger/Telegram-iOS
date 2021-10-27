@@ -141,7 +141,9 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.iconNode = TransformImageNode()
         

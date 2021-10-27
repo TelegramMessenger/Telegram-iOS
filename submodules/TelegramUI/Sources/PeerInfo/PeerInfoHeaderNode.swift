@@ -1044,6 +1044,7 @@ struct PeerInfoHeaderNavigationButtonSpec: Equatable {
 }
 
 final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
+    private var presentationData: PresentationData?
     private(set) var buttonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
     
     private var currentButtons: [PeerInfoHeaderNavigationButtonSpec] = []
@@ -1060,14 +1061,10 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
     
     var performAction: ((PeerInfoHeaderNavigationButtonKey, ContextReferenceContentNode?) -> Void)?
     
-    override init() {
-        super.init()
-    }
-    
     func update(size: CGSize, presentationData: PresentationData, buttons: [PeerInfoHeaderNavigationButtonSpec], expandFraction: CGFloat, transition: ContainedViewLayoutTransition) {
         let maximumExpandOffset: CGFloat = 14.0
         let expandOffset: CGFloat = -expandFraction * maximumExpandOffset
-        if self.currentButtons != buttons {
+        if self.currentButtons != buttons || presentationData.strings !== self.presentationData?.strings {
             self.currentButtons = buttons
             
             var nextRegularButtonOrigin = size.width - 16.0
@@ -1145,6 +1142,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
                 }
             }
         }
+        self.presentationData = presentationData
     }
 }
 
@@ -2210,7 +2208,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 10.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
             if self.isSettings {
-                titleFrame = titleFrame.offsetBy(dx: 0.0, dy: 6.0)
+                titleFrame = titleFrame.offsetBy(dx: 0.0, dy: 13.0)
             }
             let totalSubtitleWidth = subtitleSize.width + usernameSpacing + usernameSize.width
             twoLineInfo = false

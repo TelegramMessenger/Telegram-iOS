@@ -220,7 +220,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
         let arguments = arguments as! InviteLinkEditControllerArguments
         switch self {
             case let .title(_, placeholder, value):
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, maxLength: 32, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { state in
                         var updatedState = state
                         updatedState.title = value

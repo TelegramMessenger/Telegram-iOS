@@ -1012,7 +1012,9 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
                 colorItemNode?.prepareCrossfadeTransition()
             }
             
-            let crossfadeController = ThemeSettingsCrossfadeController(view: view, topOffset: topOffset, bottomOffset: bottomOffset, leftOffset: leftOffset)
+            let sectionInset = max(16.0, floor((controller.displayNode.frame.width - 674.0) / 2.0))
+            
+            let crossfadeController = ThemeSettingsCrossfadeController(view: view, topOffset: topOffset, bottomOffset: bottomOffset, leftOffset: leftOffset, sideInset: sectionInset)
             crossfadeController.didAppear = { [weak themeItemNode, weak colorItemNode] in
                 if view != nil {
                     themeItemNode?.animateCrossfadeTransition()
