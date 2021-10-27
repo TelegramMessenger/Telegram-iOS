@@ -28,8 +28,28 @@ public final class CallKitIntegration {
     var audioSessionActive: Signal<Bool, NoError> {
         return self.audioSessionActivePromise.get()
     }
+
+    private static let sharedInstance: CallKitIntegration? = CallKitIntegration()
+    public static var shared: CallKitIntegration? {
+        return self.sharedInstance
+    }
+
+    func setup(
+        startCall: @escaping (AccountContext, UUID, String, Bool) -> Signal<Bool, NoError>,
+        answerCall: @escaping (UUID) -> Void,
+        endCall: @escaping (UUID) -> Signal<Bool, NoError>,
+        setCallMuted: @escaping (UUID, Bool) -> Void,
+        audioSessionActivationChanged: @escaping (Bool) -> Void
+    ) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            if sharedProviderDelegate == nil {
+                sharedProviderDelegate = CallKitProviderDelegate()
+            }
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.setup(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged)
+        }
+    }
     
-    init?(startCall: @escaping (AccountContext, UUID, String, Bool) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    private init?() {
         if !CallKitIntegration.isAvailable {
             return nil
         }
@@ -39,10 +59,6 @@ public final class CallKitIntegration {
         #else
         
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            if sharedProviderDelegate == nil {
-                sharedProviderDelegate = CallKitProviderDelegate()
-            }
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.setup(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged)
         } else {
             return nil
         }
@@ -68,9 +84,9 @@ public final class CallKitIntegration {
         }
     }
     
-    func reportIncomingCall(uuid: UUID, handle: String, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
+    public func reportIncomingCall(uuid: UUID, stableId: Int64, handle: String, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            (sharedProviderDelegate as? CallKitProviderDelegate)?.reportIncomingCall(uuid: uuid, handle: handle, isVideo: isVideo, displayTitle: displayTitle, completion: completion)
+            (sharedProviderDelegate as? CallKitProviderDelegate)?.reportIncomingCall(uuid: uuid, stableId: stableId, handle: handle, isVideo: isVideo, displayTitle: displayTitle, completion: completion)
         }
     }
     
@@ -101,6 +117,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private let callController = CXCallController()
     
     private var currentStartCallAccount: (UUID, AccountContext)?
+
+    private var alreadyReportedIncomingCalls = Set<UUID>()
     
     private var startCall: ((AccountContext, UUID, String, Bool) -> Signal<Bool, NoError>)?
     private var answerCall: ((UUID) -> Void)?
@@ -163,7 +181,9 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func answerCall(uuid: UUID) {
-        
+        let answerCallAction = CXAnswerCallAction(call: uuid)
+        let transaction = CXTransaction(action: answerCallAction)
+        self.requestTransaction(transaction)
     }
     
     func startCall(context: AccountContext, peerId: PeerId, isVideo: Bool, displayTitle: String) {
@@ -189,7 +209,13 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         })
     }
     
-    func reportIncomingCall(uuid: UUID, handle: String, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
+    func reportIncomingCall(uuid: UUID, stableId: Int64, handle: String, isVideo: Bool, displayTitle: String, completion: ((NSError?) -> Void)?) {
+        if self.alreadyReportedIncomingCalls.contains(uuid) {
+            completion?(nil)
+            return
+        }
+        self.alreadyReportedIncomingCalls.insert(uuid)
+
         let update = CXCallUpdate()
         update.remoteHandle = CXHandle(type: .generic, value: handle)
         update.localizedCallerName = displayTitle

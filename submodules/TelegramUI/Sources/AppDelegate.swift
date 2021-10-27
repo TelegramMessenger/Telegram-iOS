@@ -175,6 +175,35 @@ final class SharedApplicationContext {
     }
 }
 
+private struct AccountManagerState {
+    struct NotificationKey {
+        var accountId: AccountRecordId
+        var id: Data
+        var key: Data
+    }
+
+    var notificationKeys: [NotificationKey]
+}
+
+private func extractAccountManagerState(records: AccountRecordsView<TelegramAccountManagerTypes>) -> AccountManagerState {
+    return AccountManagerState(
+        notificationKeys: records.records.compactMap { record -> AccountManagerState.NotificationKey? in
+            for attribute in record.attributes {
+                if case let .backupData(backupData) = attribute {
+                    if let notificationEncryptionKeyId = backupData.data?.notificationEncryptionKeyId, let notificationEncryptionKey = backupData.data?.notificationEncryptionKey {
+                        return AccountManagerState.NotificationKey(
+                            accountId: record.id,
+                            id: notificationEncryptionKeyId,
+                            key: notificationEncryptionKey
+                        )
+                    }
+                }
+            }
+            return nil
+        }
+    )
+}
+
 @objc(AppDelegate) class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, UNUserNotificationCenterDelegate {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
@@ -192,6 +221,9 @@ final class SharedApplicationContext {
     
     private let sharedContextPromise = Promise<SharedApplicationContext>()
     private let watchCommunicationManagerPromise = Promise<WatchCommunicationManager?>()
+
+    private var accountManager: AccountManager<TelegramAccountManagerTypes>?
+    private var accountManagerState: AccountManagerState?
     
     private var contextValue: AuthorizedApplicationContext?
     private let context = Promise<AuthorizedApplicationContext?>()
@@ -486,16 +518,12 @@ final class SharedApplicationContext {
             UNUserNotificationCenter.current().delegate = self
         }
         
-        telegramUIDeclareEncodables()
-        
         GlobalExperimentalSettings.isAppStoreBuild = buildConfig.isAppStoreBuild
         GlobalExperimentalSettings.enableFeed = false
         
         self.window?.makeKeyAndVisible()
         
         self.hasActiveAudioSession.set(MediaManagerImpl.globalAudioSession.isActive())
-        
-        initializeAccountManagement()
         
         let applicationBindings = TelegramApplicationBindings(isMainApp: true, appBundleId: baseAppBundleId, containerPath: appGroupUrl.path, appSpecificScheme: buildConfig.appSpecificUrlScheme, openUrl: { url in
             var parsedUrl = URL(string: url)
@@ -676,47 +704,29 @@ final class SharedApplicationContext {
             UIDevice.current.setValue(value, forKey: "orientation")
             UINavigationController.attemptRotationToDeviceOrientation()
         })
-        
-        let accountManagerSignal = Signal<AccountManager<TelegramAccountManagerTypes>, NoError> { subscriber in
-            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true)
-            return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
-            |> deliverOnMainQueue).start(next: { progress in
-                if self.dataImportSplash == nil {
-                    self.dataImportSplash = makeLegacyDataImportSplash(theme: nil, strings: nil)
-                    self.dataImportSplash?.serviceAction = {
-                        self.debugPressed()
-                    }
-                    self.mainWindow.coveringView = self.dataImportSplash
-                }
-                self.dataImportSplash?.progress = (.generic, progress)
-            }, completed: {
-                if let dataImportSplash = self.dataImportSplash {
-                    self.dataImportSplash = nil
-                    if self.mainWindow.coveringView === dataImportSplash {
-                        self.mainWindow.coveringView = nil
-                    }
-                }
-                subscriber.putNext(accountManager)
-                subscriber.putCompletion()
-            })
+
+        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true)
+        self.accountManager = accountManager
+
+        telegramUIDeclareEncodables()
+        initializeAccountManagement()
+
+        self.accountManagerState = extractAccountManagerState(records: accountManager._internalAccountRecordsSync())
+        let _ = (accountManager.accountRecords()
+        |> deliverOnMainQueue).start(next: { view in
+            self.accountManagerState = extractAccountManagerState(records: view)
+        })
+
+        var systemUserInterfaceStyle: WindowUserInterfaceStyle = .light
+        if #available(iOS 13.0, *) {
+            if let traitCollection = window.rootViewController?.traitCollection {
+                systemUserInterfaceStyle = WindowUserInterfaceStyle(style: traitCollection.userInterfaceStyle)
+            }
         }
         
-        let sharedContextSignal = accountManagerSignal
-        |> deliverOnMainQueue
-        |> take(1)
-        |> deliverOnMainQueue
-        |> take(1)
-        |> mapToSignal { accountManager -> Signal<(AccountManager<TelegramAccountManagerTypes>, InitialPresentationDataAndSettings), NoError> in
-            var systemUserInterfaceStyle: WindowUserInterfaceStyle = .light
-            if #available(iOS 13.0, *) {
-                if let traitCollection = window.rootViewController?.traitCollection {
-                    systemUserInterfaceStyle = WindowUserInterfaceStyle(style: traitCollection.userInterfaceStyle)
-                }
-            }
-            return currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle)
-            |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
-                return (accountManager, initialPresentationDataAndSettings)
-            }
+        let sharedContextSignal = currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle)
+        |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
+            return (accountManager, initialPresentationDataAndSettings)
         }
         |> deliverOnMainQueue
         |> mapToSignal { accountManager, initialPresentationDataAndSettings -> Signal<(SharedApplicationContext, LoggingSettings), NoError> in
@@ -1417,7 +1427,7 @@ final class SharedApplicationContext {
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
-        /*guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
+        guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
             return
         }
         encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
@@ -1425,11 +1435,81 @@ final class SharedApplicationContext {
         while encryptedPayload.count % 4 != 0 {
             encryptedPayload.append("=")
         }
-        guard let data = Data(base64Encoded: encryptedPayload) else {
+        guard let payloadData = Data(base64Encoded: encryptedPayload) else {
+            return
+        }
+        guard let keyId = notificationPayloadKeyId(data: payloadData) else {
             return
         }
 
-        let semaphore = DispatchSemaphore(value: 0)
+        guard let accountManagerState = self.accountManagerState else {
+            return
+        }
+
+        var maybeAccountId: AccountRecordId?
+        var maybeNotificationKey: MasterNotificationKey?
+
+        for key in accountManagerState.notificationKeys {
+            if key.id == keyId {
+                maybeAccountId = key.accountId
+                maybeNotificationKey = MasterNotificationKey(id: key.id, data: key.key)
+                break
+            }
+        }
+
+        guard let accountId = maybeAccountId, let notificationKey = maybeNotificationKey else {
+            return
+        }
+        guard let decryptedPayload = decryptedNotificationPayload(key: notificationKey, data: payloadData) else {
+            return
+        }
+        guard let payloadJson = try? JSONSerialization.jsonObject(with: decryptedPayload, options: []) as? [String: Any] else {
+            return
+        }
+        guard var updateString = payloadJson["updates"] as? String else {
+            return
+        }
+
+        updateString = updateString.replacingOccurrences(of: "-", with: "+")
+        updateString = updateString.replacingOccurrences(of: "_", with: "/")
+        while updateString.count % 4 != 0 {
+            updateString.append("=")
+        }
+        guard let updateData = Data(base64Encoded: updateString) else {
+            return
+        }
+        guard let callUpdate = AccountStateManager.extractIncomingCallUpdate(data: updateData) else {
+            return
+        }
+        guard let callKitIntegration = CallKitIntegration.shared else {
+            return
+        }
+
+        callKitIntegration.reportIncomingCall(
+            uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId),
+            stableId: callUpdate.callId,
+            handle: "\(callUpdate.peer.id.id)",
+            isVideo: false,
+            displayTitle: callUpdate.peer.debugDisplayTitle,
+            completion: { error in
+                if let error = error {
+                    if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
+                        Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
+                    } else {
+                        Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
+                        /*Queue.mainQueue().async {
+                            if let strongSelf = self {
+                                strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .hangUp, debugLog: .single(nil))
+                            }
+                        }*/
+                    }
+                }
+            }
+        )
+
+        let _ = accountId
+
+        /*let semaphore = DispatchSemaphore(value: 0)
         var accountAndDecryptedPayload: (Account, Data)?
 
         var sharedApplicationContextValue: SharedApplicationContext?
@@ -1486,6 +1566,7 @@ final class SharedApplicationContext {
                 }
             }
         }*/
+        
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
