@@ -50,8 +50,8 @@ extension _AdaptedPostboxEncoder.KeyedContainer: KeyedEncodingContainerProtocol 
             let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
             try! value.encode(to: innerEncoder)
 
-            let type = type(of: value)
-            let typeString = "\(type)"
+            let typeOfValue = type(of: value)
+            let typeString = "\(typeOfValue)"
             var isDictionary = false
             if typeString.hasPrefix("Dictionary<") {
                 isDictionary = true
