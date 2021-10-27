@@ -675,6 +675,11 @@ public struct AccountRunningImportantTasks: OptionSet {
 public struct MasterNotificationKey: Codable {
     public let id: Data
     public let data: Data
+
+    public init(id: Data, data: Data) {
+        self.id = id
+        self.data = data
+    }
 }
 
 public func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
@@ -810,7 +815,8 @@ public func accountBackupData(postbox: Postbox) -> Signal<AccountBackupData?, No
             peerId: state.peerId.toInt64(),
             masterDatacenterKey: authKey,
             masterDatacenterKeyId: datacenterAuthInfo.authKeyId,
-            notificationEncryptionKeyId: notificationsKey?.id
+            notificationEncryptionKeyId: notificationsKey?.id,
+            notificationEncryptionKey: notificationsKey?.data
         )
     }
 }

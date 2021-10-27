@@ -135,90 +135,95 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
     deinit {
         assert(self.queue.isCurrent())
     }
+
+    fileprivate func transactionSync<T>(ignoreDisabled: Bool, _ f: (AccountManagerModifier<Types>) -> T) -> T {
+        self.valueBox.begin()
+
+        let transaction = AccountManagerModifier<Types>(getRecords: {
+            return self.currentAtomicState.records.map { $0.1 }
+        }, updateRecord: { id, update in
+            let current = self.currentAtomicState.records[id]
+            let updated = update(current)
+            if updated != current {
+                if let updated = updated {
+                    self.currentAtomicState.records[id] = updated
+                } else {
+                    self.currentAtomicState.records.removeValue(forKey: id)
+                }
+                self.currentAtomicStateUpdated = true
+                self.currentRecordOperations.append(.set(id: id, record: updated))
+            }
+        }, getCurrent: {
+            if let id = self.currentAtomicState.currentRecordId, let record = self.currentAtomicState.records[id] {
+                return (record.id, record.attributes)
+            } else {
+                return nil
+            }
+        }, setCurrentId: { id in
+            self.currentAtomicState.currentRecordId = id
+            self.currentMetadataOperations.append(.updateCurrentAccountId(id))
+            self.currentAtomicStateUpdated = true
+        }, getCurrentAuth: {
+            if let record = self.currentAtomicState.currentAuthRecord {
+                return record
+            } else {
+                return nil
+            }
+        }, createAuth: { attributes in
+            let record = AuthAccountRecord<Types.Attribute>(id: generateAccountRecordId(), attributes: attributes)
+            self.currentAtomicState.currentAuthRecord = record
+            self.currentAtomicStateUpdated = true
+            self.currentMetadataOperations.append(.updateCurrentAuthAccountRecord(record))
+            return record
+        }, removeAuth: {
+            self.currentAtomicState.currentAuthRecord = nil
+            self.currentMetadataOperations.append(.updateCurrentAuthAccountRecord(nil))
+            self.currentAtomicStateUpdated = true
+        }, createRecord: { attributes in
+            let id = generateAccountRecordId()
+            let record = AccountRecord<Types.Attribute>(id: id, attributes: attributes, temporarySessionId: nil)
+            self.currentAtomicState.records[id] = record
+            self.currentRecordOperations.append(.set(id: id, record: record))
+            self.currentAtomicStateUpdated = true
+            return id
+        }, getSharedData: { key in
+            return self.sharedDataTable.get(key: key)
+        }, updateSharedData: { key, f in
+            let updated = f(self.sharedDataTable.get(key: key))
+            self.sharedDataTable.set(key: key, value: updated, updatedKeys: &self.currentUpdatedSharedDataKeys)
+        }, getAccessChallengeData: {
+            return self.legacyMetadataTable.getAccessChallengeData()
+        }, setAccessChallengeData: { data in
+            self.currentUpdatedAccessChallengeData = data
+            self.currentAtomicStateUpdated = true
+            self.legacyMetadataTable.setAccessChallengeData(data)
+            self.currentAtomicState.accessChallengeData = data
+        }, getVersion: {
+            return self.legacyMetadataTable.getVersion()
+        }, setVersion: { version in
+            self.legacyMetadataTable.setVersion(version)
+        }, getNotice: { key in
+            self.noticeTable.get(key: key)
+        }, setNotice: { key, value in
+            self.noticeTable.set(key: key, value: value)
+            self.currentUpdatedNoticeEntryKeys.insert(key)
+        }, clearNotices: {
+            self.noticeTable.clear()
+        })
+
+        let result = f(transaction)
+
+        self.beforeCommit()
+
+        self.valueBox.commit()
+
+        return result
+    }
     
     fileprivate func transaction<T>(ignoreDisabled: Bool, _ f: @escaping (AccountManagerModifier<Types>) -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
             self.queue.justDispatch {
-                self.valueBox.begin()
-                
-                let transaction = AccountManagerModifier<Types>(getRecords: {
-                    return self.currentAtomicState.records.map { $0.1 }
-                }, updateRecord: { id, update in
-                    let current = self.currentAtomicState.records[id]
-                    let updated = update(current)
-                    if updated != current {
-                        if let updated = updated {
-                            self.currentAtomicState.records[id] = updated
-                        } else {
-                            self.currentAtomicState.records.removeValue(forKey: id)
-                        }
-                        self.currentAtomicStateUpdated = true
-                        self.currentRecordOperations.append(.set(id: id, record: updated))
-                    }
-                }, getCurrent: {
-                    if let id = self.currentAtomicState.currentRecordId, let record = self.currentAtomicState.records[id] {
-                        return (record.id, record.attributes)
-                    } else {
-                        return nil
-                    }
-                }, setCurrentId: { id in
-                    self.currentAtomicState.currentRecordId = id
-                    self.currentMetadataOperations.append(.updateCurrentAccountId(id))
-                    self.currentAtomicStateUpdated = true
-                }, getCurrentAuth: {
-                    if let record = self.currentAtomicState.currentAuthRecord {
-                        return record
-                    } else {
-                        return nil
-                    }
-                }, createAuth: { attributes in
-                    let record = AuthAccountRecord<Types.Attribute>(id: generateAccountRecordId(), attributes: attributes)
-                    self.currentAtomicState.currentAuthRecord = record
-                    self.currentAtomicStateUpdated = true
-                    self.currentMetadataOperations.append(.updateCurrentAuthAccountRecord(record))
-                    return record
-                }, removeAuth: {
-                    self.currentAtomicState.currentAuthRecord = nil
-                    self.currentMetadataOperations.append(.updateCurrentAuthAccountRecord(nil))
-                    self.currentAtomicStateUpdated = true
-                }, createRecord: { attributes in
-                    let id = generateAccountRecordId()
-                    let record = AccountRecord<Types.Attribute>(id: id, attributes: attributes, temporarySessionId: nil)
-                    self.currentAtomicState.records[id] = record
-                    self.currentRecordOperations.append(.set(id: id, record: record))
-                    self.currentAtomicStateUpdated = true
-                    return id
-                }, getSharedData: { key in
-                    return self.sharedDataTable.get(key: key)
-                }, updateSharedData: { key, f in
-                    let updated = f(self.sharedDataTable.get(key: key))
-                    self.sharedDataTable.set(key: key, value: updated, updatedKeys: &self.currentUpdatedSharedDataKeys)
-                }, getAccessChallengeData: {
-                    return self.legacyMetadataTable.getAccessChallengeData()
-                }, setAccessChallengeData: { data in
-                    self.currentUpdatedAccessChallengeData = data
-                    self.currentAtomicStateUpdated = true
-                    self.legacyMetadataTable.setAccessChallengeData(data)
-                    self.currentAtomicState.accessChallengeData = data
-                }, getVersion: {
-                    return self.legacyMetadataTable.getVersion()
-                }, setVersion: { version in
-                    self.legacyMetadataTable.setVersion(version)
-                }, getNotice: { key in
-                    self.noticeTable.get(key: key)
-                }, setNotice: { key, value in
-                    self.noticeTable.set(key: key, value: value)
-                    self.currentUpdatedNoticeEntryKeys.insert(key)
-                }, clearNotices: {
-                    self.noticeTable.clear()
-                })
-                
-                let result = f(transaction)
-               
-                self.beforeCommit()
-                
-                self.valueBox.commit()
-                //self.valueBox.checkpoint()
+                let result = self.transactionSync(ignoreDisabled: ignoreDisabled, f)
                 
                 subscriber.putNext(result)
                 subscriber.putCompletion()
@@ -292,6 +297,13 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             return self.accountRecordsInternal(transaction: transaction)
         })
         |> switchToLatest
+    }
+
+    fileprivate func _internalAccountRecordsSync() -> AccountRecordsView<Types> {
+        let mutableView = MutableAccountRecordsView<Types>(getRecords: {
+            return self.currentAtomicState.records.map { $0.1 }
+        }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
+        return AccountRecordsView<Types>(mutableView)
     }
     
     fileprivate func sharedData(keys: Set<ValueBoxKey>) -> Signal<AccountSharedDataView<Types>, NoError> {
@@ -516,6 +528,14 @@ public final class AccountManager<Types: AccountManagerTypes> {
             }
             return disposable
         }
+    }
+
+    public func _internalAccountRecordsSync() -> AccountRecordsView<Types> {
+        var result: AccountRecordsView<Types>?
+        self.impl.syncWith { impl in
+            result = impl._internalAccountRecordsSync()
+        }
+        return result!
     }
     
     public func sharedData(keys: Set<ValueBoxKey>) -> Signal<AccountSharedDataView<Types>, NoError> {

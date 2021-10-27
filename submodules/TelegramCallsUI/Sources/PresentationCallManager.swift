@@ -113,7 +113,14 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return OngoingCallContext.versions(includeExperimental: includeExperimental, includeReference: includeReference)
     }
     
-    public init(accountManager: AccountManager<TelegramAccountManagerTypes>, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), isMediaPlaying: @escaping () -> Bool, resumeMediaPlayback: @escaping () -> Void, audioSession: ManagedAudioSession, activeAccounts: Signal<[AccountContext], NoError>) {
+    public init(
+        accountManager: AccountManager<TelegramAccountManagerTypes>,
+        getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void),
+        isMediaPlaying: @escaping () -> Bool,
+        resumeMediaPlayback: @escaping () -> Void,
+        audioSession: ManagedAudioSession,
+        activeAccounts: Signal<[AccountContext], NoError>
+    ) {
         self.getDeviceAccessData = getDeviceAccessData
         self.accountManager = accountManager
         self.audioSession = audioSession
@@ -127,7 +134,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         var setCallMutedImpl: ((UUID, Bool) -> Void)?
         var audioSessionActivationChangedImpl: ((Bool) -> Void)?
         
-        self.callKitIntegration = CallKitIntegration(startCall: { context, uuid, handle, isVideo in
+        self.callKitIntegration = CallKitIntegration.shared
+        self.callKitIntegration?.setup(startCall: { context, uuid, handle, isVideo in
             if let startCallImpl = startCallImpl {
                 return startCallImpl(context, uuid, handle, isVideo)
             } else {

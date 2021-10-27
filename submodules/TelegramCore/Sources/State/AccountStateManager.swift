@@ -1170,6 +1170,74 @@ public final class AccountStateManager {
     func notifyDeletedMessages(messageIds: [MessageId]) {
         self.deletedMessagesPipe.putNext(messageIds.map { .messageId($0) })
     }
+
+    public final class IncomingCallUpdate {
+        public let callId: Int64
+        public let callAccessHash: Int64
+        public let timestamp: Int32
+        public let peer: EnginePeer
+
+        init(
+            callId: Int64,
+            callAccessHash: Int64,
+            timestamp: Int32,
+            peer: EnginePeer
+        ) {
+            self.callId = callId
+            self.callAccessHash = callAccessHash
+            self.timestamp = timestamp
+            self.peer = peer
+        }
+    }
+
+    public static func extractIncomingCallUpdate(data: Data) -> IncomingCallUpdate? {
+        var rawData = data
+        let reader = BufferReader(Buffer(data: data))
+        if let signature = reader.readInt32(), signature == 0x3072cfa1 {
+            if let compressedData = parseBytes(reader) {
+                if let decompressedData = MTGzip.decompress(compressedData.makeData()) {
+                    rawData = decompressedData
+                }
+            }
+        }
+
+        guard let updates = Api.parse(Buffer(data: rawData)) as? Api.Updates else {
+            return nil
+        }
+        switch updates {
+        case let .updates(updates, users, _, _, _):
+            var peers: [Peer] = []
+            for user in users {
+                peers.append(TelegramUser(user: user))
+            }
+
+            for update in updates {
+                switch update {
+                case let .updatePhoneCall(phoneCall):
+                    switch phoneCall {
+                    case let .phoneCallRequested(_, id, accessHash, date, adminId, _, _, _):
+                        guard let peer = peers.first(where: { $0.id == PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(adminId)) }) else {
+                            return nil
+                        }
+                        return IncomingCallUpdate(
+                            callId: id,
+                            callAccessHash: accessHash,
+                            timestamp: date,
+                            peer: EnginePeer(peer)
+                        )
+                    default:
+                        break
+                    }
+                default:
+                    break
+                }
+            }
+
+            return nil
+        default:
+            return nil
+        }
+    }
     
     public func processIncomingCallUpdate(data: Data, completion: @escaping ((CallSessionRingingState, CallSession)?) -> Void) {
         var rawData = data

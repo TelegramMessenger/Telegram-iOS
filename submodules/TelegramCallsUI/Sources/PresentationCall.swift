@@ -608,27 +608,34 @@ public final class PresentationCallImpl: PresentationCall {
             case .ringing:
                 presentationState = PresentationCallState(state: .ringing, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)
                 if previous == nil || previousControl == nil {
-                    if !self.reportedIncomingCall {
+                    if !self.reportedIncomingCall, let stableId = sessionState.stableId {
                         self.reportedIncomingCall = true
-                        self.callKitIntegration?.reportIncomingCall(uuid: self.internalId, handle: "\(self.peerId.id)", isVideo: sessionState.type == .video, displayTitle: self.peer?.debugDisplayTitle ?? "Unknown", completion: { [weak self] error in
-                            if let error = error {
-                                if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
-                                    Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
-                                    Queue.mainQueue().async {
-                                        /*if let strongSelf = self {
-                                            strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .busy, debugLog: .single(nil))
-                                        }*/
-                                    }
-                                } else {
-                                    Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
-                                    Queue.mainQueue().async {
-                                        if let strongSelf = self {
-                                            strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .hangUp, debugLog: .single(nil))
+                        self.callKitIntegration?.reportIncomingCall(
+                            uuid: self.internalId,
+                            stableId: stableId,
+                            handle: "\(self.peerId.id)",
+                            isVideo: sessionState.type == .video,
+                            displayTitle: self.peer?.debugDisplayTitle ?? "Unknown",
+                            completion: { [weak self] error in
+                                if let error = error {
+                                    if error.domain == "com.apple.CallKit.error.incomingcall" && (error.code == -3 || error.code == 3) {
+                                        Logger.shared.log("PresentationCall", "reportIncomingCall device in DND mode")
+                                        Queue.mainQueue().async {
+                                            /*if let strongSelf = self {
+                                                strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .busy, debugLog: .single(nil))
+                                            }*/
+                                        }
+                                    } else {
+                                        Logger.shared.log("PresentationCall", "reportIncomingCall error \(error)")
+                                        Queue.mainQueue().async {
+                                            if let strongSelf = self {
+                                                strongSelf.callSessionManager.drop(internalId: strongSelf.internalId, reason: .hangUp, debugLog: .single(nil))
+                                            }
                                         }
                                     }
                                 }
                             }
-                        })
+                        )
                     }
                 }
             case .accepting:
