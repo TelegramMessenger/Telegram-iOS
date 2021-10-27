@@ -2059,7 +2059,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     switch previewData {
                     case let .gallery(gallery):
                         gallery.setHintWillBePresentedInPreviewingContext(true)
-                        let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: node)), items: items |> map { ContextController.Items(items: $0) }, gesture: gesture)
+                        let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: node, sourceRect: rect)), items: items |> map { ContextController.Items(items: $0) }, gesture: gesture)
                         strongSelf.controller?.presentInGlobalOverlay(contextController)
                     case .instantPage:
                         break
@@ -6120,9 +6120,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             items.append(.action(generateAction(true)))
             items.append(.action(generateAction(false)))
 
+            var ignoreNextActions = false
             items.append(.action(ContextMenuActionItem(text: "Show Calendar", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
             }, action: { _, a in
+                if ignoreNextActions {
+                    return
+                }
+                ignoreNextActions = true
                 a(.default)
 
                 self?.openMediaCalendar()
@@ -6204,14 +6209,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
                 let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
                 guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
-                    return .dismiss(consume: true)
+                    return .dismiss(consume: true, result: nil)
                 }
 
                 var testView: UIView? = localResult
                 while true {
                     if let testViewValue = testView {
-                        if testViewValue.asyncdisplaykit_node is PeerInfoVisualMediaPaneNode {
-                            return .dismiss(consume: false)
+                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                            node.brieflyDisableTouchActions()
+                            return .dismiss(consume: false, result: nil)
                         } else {
                             testView = testViewValue.superview
                         }
@@ -6220,7 +6226,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                 }
 
-                return .dismiss(consume: true)
+                return .dismiss(consume: true, result: nil)
             }
             strongSelf.mediaGalleryContextMenu = contextController
             controller.presentInGlobalOverlay(contextController)

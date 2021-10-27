@@ -1119,7 +1119,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         return (list.map(\.0), list.map(\.1))
     }()
 
-    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], synchronous: Bool) {
+    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], synchronous: SparseItemGrid.Synchronous) {
         for i in 0 ..< items.count {
             guard let item = items[i] as? VisualMediaItem else {
                 continue
@@ -1170,22 +1170,37 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 }
 
                 if let selectedMedia = selectedMedia {
-                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, synchronous: synchronous) {
+                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, synchronous: synchronous == .full) {
                         if let image = result.image {
                             layer.contents = image.cgImage
                             layer.hasContents = true
-                            if !synchronous {
+                            switch synchronous {
+                            case .none:
                                 layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            default:
+                                break
                             }
                         }
                         if let loadSignal = result.loadSignal {
                             layer.disposable?.dispose()
+                            let startTimestamp = CFAbsoluteTimeGetCurrent()
                             layer.disposable = (loadSignal
                             |> deliverOnMainQueue).start(next: { [weak self, weak layer, weak displayItem] image in
                                 guard let layer = layer else {
                                     return
                                 }
-                                if layer.hasContents {
+                                let deltaTime = CFAbsoluteTimeGetCurrent() - startTimestamp
+                                let synchronousValue: Bool
+                                switch synchronous {
+                                case .none:
+                                    synchronousValue = false
+                                case .semi:
+                                    synchronousValue = deltaTime < 0.1
+                                case .full:
+                                    synchronousValue = true
+                                }
+
+                                if layer.hasContents && !synchronousValue {
                                     let copyLayer = ItemLayer()
                                     copyLayer.contents = layer.contents
                                     copyLayer.contentsRect = layer.contentsRect
@@ -1201,7 +1216,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                                     layer.contents = image?.cgImage
                                     layer.hasContents = true
 
-                                    layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    if !synchronousValue {
+                                        layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    }
 
                                     if let displayItem = displayItem {
                                         self?.updateShimmerLayersImpl?(displayItem)
@@ -1554,6 +1571,13 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.itemGrid.cancelExternalContentGestures = { [weak self] in
             self?.contextGestureContainerNode.cancelGesture()
         }
+
+        self.itemGrid.zoomLevelUpdated = { [weak self] zoomLevel in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = updateVisualMediaStoredState(postbox: strongSelf.context.account.postbox, peerId: strongSelf.peerId, messageTag: strongSelf.stateTag, state: VisualMediaStoredState(zoomLevel: Int32(zoomLevel.rawValue))).start()
+        }
         
         self._itemInteraction = VisualMediaItemInteraction(
             openMessage: { [weak self] message in
@@ -1644,7 +1668,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             }
             let rect = strongSelf.itemGrid.frameForItem(layer: itemLayer)
 
-            let proxyNode = ASDisplayNode()
+            /*let proxyNode = ASDisplayNode()
             proxyNode.frame = rect
             proxyNode.contents = itemLayer.contents
             proxyNode.isHidden = true
@@ -1656,9 +1680,9 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
             Queue.mainQueue().after(1.0, {
                 escapeNotification.keep()
-            })
+            })*/
 
-            strongSelf.chatControllerInteraction.openMessageContextActions(message, proxyNode, proxyNode.bounds, gesture)
+            strongSelf.chatControllerInteraction.openMessageContextActions(message, strongSelf, rect, gesture)
 
             strongSelf.itemGrid.cancelGestures()
         }
@@ -1957,6 +1981,14 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     func scrollToTop() -> Bool {
         return self.itemGrid.scrollToTop()
     }
+
+    func hitTestResultForScrolling() -> UIView? {
+        return self.itemGrid.hitTestResultForScrolling()
+    }
+
+    func brieflyDisableTouchActions() {
+        self.itemGrid.brieflyDisableTouchActions()
+    }
     
     func findLoadedMessage(id: MessageId) -> Message? {
         guard let items = self.items else {
@@ -1991,45 +2023,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     func transferVelocity(_ velocity: CGFloat) {
-        /*if velocity > 0.0 {
-            self.decelerationAnimator?.isPaused = true
-            let startTime = CACurrentMediaTime()
-            var currentOffset = self.scrollNode.view.contentOffset
-            let decelerationRate: CGFloat = 0.998
-            self.scrollViewDidEndDragging(self.scrollNode.view, willDecelerate: true)
-            self.decelerationAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                let t = CACurrentMediaTime() - startTime
-                var currentVelocity = velocity * 15.0 * CGFloat(pow(Double(decelerationRate), 1000.0 * t))
-                currentOffset.y += currentVelocity
-                let maxOffset = strongSelf.scrollNode.view.contentSize.height - strongSelf.scrollNode.bounds.height
-                if currentOffset.y >= maxOffset {
-                    currentOffset.y = maxOffset
-                    currentVelocity = 0.0
-                }
-                if currentOffset.y < 0.0 {
-                    currentOffset.y = 0.0
-                    currentVelocity = 0.0
-                }
-                
-                var didEnd = false
-                if abs(currentVelocity) < 0.1 {
-                    strongSelf.decelerationAnimator?.isPaused = true
-                    strongSelf.decelerationAnimator = nil
-                    didEnd = true
-                }
-                var contentOffset = strongSelf.scrollNode.view.contentOffset
-                contentOffset.y = floorToScreenPixels(currentOffset.y)
-                strongSelf.scrollNode.view.setContentOffset(contentOffset, animated: false)
-                strongSelf.scrollViewDidScroll(strongSelf.scrollNode.view)
-                if didEnd {
-                    strongSelf.scrollViewDidEndDecelerating(strongSelf.scrollNode.view)
-                }
-            })
-            self.decelerationAnimator?.isPaused = false
-        }*/
+        self.itemGrid.transferVelocity(velocity)
     }
     
     func cancelPreviewGestures() {
@@ -2168,7 +2162,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 fixedItemHeight = nil
             }
 
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime)
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none)
         }
     }
 

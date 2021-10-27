@@ -769,7 +769,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         self.offsetBarTimer = nil
 
         let transition: ContainedViewLayoutTransition = .animated(duration: 0.1, curve: .easeInOut)
-        transition.updateSublayerTransformOffset(layer: self.dateIndicator.layer, offset: self.beganAtDateIndicator ? CGPoint(x: -80.0, y: 0.0) : CGPoint(x: -3.0, y: 0.0))
+        transition.updateSublayerTransformOffset(layer: self.dateIndicator.layer, offset: CGPoint(x: -80.0, y: 0.0))
         self.updateLineIndicator(transition: transition)
     }
 
