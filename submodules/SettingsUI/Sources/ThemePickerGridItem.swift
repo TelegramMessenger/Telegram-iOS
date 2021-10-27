@@ -19,6 +19,7 @@ import TelegramAnimatedStickerNode
 import ShimmerEffect
 import StickerResources
 
+
 private var cachedBorderImages: [String: UIImage] = [:]
 private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selected: Bool) -> UIImage? {
     let key = "\(theme.list.itemBlocksBackgroundColor.hexString)_\(selected ? "s" + theme.list.itemAccentColor.hexString : theme.list.disclosureArrowColor.hexString)"
@@ -72,19 +73,18 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
     private let stickerFetchedDisposable = MetaDisposable()
     
     private var item: ThemeCarouselThemeIconItem?
+    private var size: CGSize?
 
     override init() {
         self.containerNode = ASDisplayNode()
         self.emojiContainerNode = ASDisplayNode()
 
         self.imageNode = TransformImageNode()
-        self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 120.0, height: 150.0))
         self.imageNode.isLayerBacked = true
         self.imageNode.cornerRadius = 8.0
         self.imageNode.clipsToBounds = true
         
         self.overlayNode = ASImageNode()
-        self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 122.0, height: 152.0))
         self.overlayNode.isLayerBacked = true
 
         self.textNode = TextNode()
@@ -161,7 +161,9 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
         
     func setup(item: ThemeCarouselThemeIconItem, size: CGSize) {
         let currentItem = self.item
+        let currentSize = self.size
         self.item = item
+        self.size = size
         
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let makeEmojiLayout = TextNode.asyncLayout(self.emojiNode)
@@ -172,6 +174,7 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
         var updatedNightMode = false
         var updatedWallpaper = false
         var updatedSelected = false
+        let updatedSize = currentSize != size
         
         if currentItem?.themeReference != item.themeReference {
             updatedThemeReference = true
@@ -195,7 +198,7 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
         } else {
             string = themeDisplayName(strings: item.strings, reference: item.themeReference)
         }
-        
+                
         let text = NSAttributedString(string: string ?? item.strings.Conversation_Theme_NoTheme, font: Font.bold(14.0), textColor: .white)
         let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: text, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: 70.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
         
@@ -203,7 +206,7 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
         let title = NSAttributedString(string: "", font: Font.regular(22.0), textColor: .black)
         let (_, emojiApply) = makeEmojiLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: size.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
         
-        if updatedThemeReference || updatedWallpaper || updatedNightMode {
+        if updatedThemeReference || updatedWallpaper || updatedNightMode || updatedSize {
             var themeReference = item.themeReference
             if case .builtin = themeReference, item.nightMode {
                 themeReference = .builtin(.night)
@@ -226,13 +229,13 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
         self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((90.0 - textLayout.size.width) / 2.0), y: 83.0), size: textLayout.size)
         self.textNode.isHidden = string == nil
         
-        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 120.0, height: 150.0))
-        self.emojiContainerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 120.0, height: 150.0))
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.emojiContainerNode.frame = CGRect(origin: CGPoint(), size: size)
         
         let _ = textApply()
         let _ = emojiApply()
 
-        let imageSize = CGSize(width: 120.0, height: 150.0)
+        let imageSize = size
         self.imageNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: imageSize)
         let applyLayout = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: .clear))
         applyLayout()
@@ -240,7 +243,7 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
         self.overlayNode.frame = self.imageNode.frame.insetBy(dx: -1.0, dy: -1.0)
         self.emojiNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 79.0), size: CGSize(width: 90.0, height: 30.0))
         
-        let emojiFrame = CGRect(origin: CGPoint(x: 39.0, y: 98.0), size: CGSize(width: 42.0, height: 42.0))
+        let emojiFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - 42.0) / 2.0), y: 98.0), size: CGSize(width: 42.0, height: 42.0))
         if let file = item.emojiFile, currentItem == nil {
             let imageApply = self.emojiImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: emojiFrame.size, boundingSize: emojiFrame.size, intrinsicInsets: UIEdgeInsets()))
             imageApply()
@@ -401,17 +404,34 @@ class ThemeGridThemeItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     func asyncLayout() -> (_ item: ThemeGridThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let currentItem = self.item
         return { item, params, neighbors in
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            let itemSize = CGSize(width: 120.0, height: 150.0)
-            let itemSpacing: CGFloat = 7.0
-            let rows = ceil(CGFloat(item.themes.count) / 3.0)
+            let minSpacing: CGFloat = 6.0
             
-            contentSize = CGSize(width: params.width, height: itemSpacing + rows * (itemSize.height + itemSpacing) + 2.0)
+            let referenceImageSize: CGSize
+            let screenWidth = min(params.width, params.availableHeight)
+            if screenWidth >= 375.0 {
+                referenceImageSize = CGSize(width: 110.0, height: 150.0)
+            } else {
+                referenceImageSize = CGSize(width: 91.0, height: 150.0)
+            }
+            let totalWidth = params.width - params.leftInset - params.rightInset
+            let imageCount = Int((totalWidth - minSpacing) / (referenceImageSize.width + minSpacing))
+            var itemSize = referenceImageSize.aspectFilled(CGSize(width: floorToScreenPixels((totalWidth - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
+            itemSize.height = referenceImageSize.height
+            let itemSpacing = floorToScreenPixels((totalWidth - CGFloat(imageCount) * itemSize.width) / CGFloat(imageCount + 1))
+            
+            var spacingOffset: CGFloat = 0.0
+            if totalWidth - CGFloat(imageCount) * itemSize.width - CGFloat(imageCount + 1) * itemSpacing == 1.0 {
+                spacingOffset = UIScreenPixel
+            }
+            
+            let rows = ceil(CGFloat(item.themes.count) / CGFloat(imageCount))
+            
+            contentSize = CGSize(width: params.width, height: minSpacing + rows * (itemSize.height + itemSpacing))
             insets = itemListNeighborsGroupedInsets(neighbors)
 
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -439,8 +459,6 @@ class ThemeGridThemeItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.containerNode.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
-                    let updated = item.currentTheme != currentItem?.currentTheme || item.nightMode != currentItem?.nightMode
-
                     let hasCorners = itemListHasRoundedBlockLayout(params)
                     var hasTopCorners = false
                     var hasBottomCorners = false
@@ -485,9 +503,7 @@ class ThemeGridThemeItemNode: ListViewItemNode, ItemListItemNode {
                         var itemNode: ThemeGridThemeItemIconNode
                         if let current = strongSelf.itemNodes[theme.index] {
                             itemNode = current
-                            if updated {
-                                itemNode.setup(item: iconItem, size: itemSize)
-                            }
+                            itemNode.setup(item: iconItem, size: itemSize)
                         } else {
                             let addedItemNode = ThemeGridThemeItemIconNode()
                             itemNode = addedItemNode
@@ -496,9 +512,9 @@ class ThemeGridThemeItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.addSubnode(addedItemNode)
                         }
                         
-                        let col = CGFloat(index % 3)
-                        let row = floor(CGFloat(index) / 3.0)
-                        let itemFrame = CGRect(origin: CGPoint(x: params.leftInset + itemSpacing + 1.0 + (itemSize.width + itemSpacing) * col, y: itemSpacing + 1.0 + (itemSize.height + itemSpacing) * row), size: itemSize)
+                        let col = CGFloat(index % imageCount)
+                        let row = floor(CGFloat(index) / CGFloat(imageCount))
+                        let itemFrame = CGRect(origin: CGPoint(x: params.leftInset + spacingOffset + itemSpacing + (itemSize.width + itemSpacing) * col, y: minSpacing + (itemSize.height + itemSpacing) * row), size: itemSize)
                         itemNode.frame = itemFrame
                         
                         index += 1

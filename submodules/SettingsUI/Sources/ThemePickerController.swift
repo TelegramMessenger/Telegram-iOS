@@ -578,52 +578,54 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
                         presentControllerImpl?(shareController, nil)
                     })
                 })))
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_RemoveTheme, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { c, f in
-                    c.dismiss(completion: {
-                        let actionSheet = ActionSheetController(presentationData: presentationData)
-                        var items: [ActionSheetItem] = []
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_RemoveThemeConfirmation, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            let _ = (cloudThemes.get()
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { themes in
-                                removedThemeIndexesPromise.set(.single(removedThemeIndexes.modify({ value in
-                                    var updated = value
-                                    updated.insert(theme.theme.id)
-                                    return updated
-                                })))
-                                
-                                if isCurrent, let currentThemeIndex = themes.firstIndex(where: { $0.id == theme.theme.id }) {
-                                    if let settings = theme.theme.settings?.first {
-                                        if settings.baseTheme == .night {
-                                            selectAccentColorImpl?(nil, PresentationThemeAccentColor(baseColor: .blue))
-                                        } else {
-                                            selectAccentColorImpl?(nil, nil)
-                                        }
-                                    } else {
-                                        let previousThemeIndex = themes.prefix(upTo: currentThemeIndex).reversed().firstIndex(where: { $0.file != nil })
-                                        let newTheme: PresentationThemeReference
-                                        if let previousThemeIndex = previousThemeIndex {
-                                            let theme = themes[themes.index(before: previousThemeIndex.base)]
-                                            newTheme = .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: theme.isCreator ? context.account.id : nil))
-                                        } else {
-                                            newTheme = .builtin(.nightAccent)
-                                        }
-                                        selectThemeImpl?(nil, newTheme)
-                                    }
-                                }
-                                
-                                let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme.theme).start()
-                            })
-                        }))
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                if !theme.theme.isDefault {
+                    items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_RemoveTheme, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { c, f in
+                        c.dismiss(completion: {
+                            let actionSheet = ActionSheetController(presentationData: presentationData)
+                            var items: [ActionSheetItem] = []
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_RemoveThemeConfirmation, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        presentControllerImpl?(actionSheet, nil)
-                    })
-                })))
+                                let _ = (cloudThemes.get()
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { themes in
+                                    removedThemeIndexesPromise.set(.single(removedThemeIndexes.modify({ value in
+                                        var updated = value
+                                        updated.insert(theme.theme.id)
+                                        return updated
+                                    })))
+                                    
+                                    if isCurrent, let currentThemeIndex = themes.firstIndex(where: { $0.id == theme.theme.id }) {
+                                        if let settings = theme.theme.settings?.first {
+                                            if settings.baseTheme == .night {
+                                                selectAccentColorImpl?(nil, PresentationThemeAccentColor(baseColor: .blue))
+                                            } else {
+                                                selectAccentColorImpl?(nil, nil)
+                                            }
+                                        } else {
+                                            let previousThemeIndex = themes.prefix(upTo: currentThemeIndex).reversed().firstIndex(where: { $0.file != nil })
+                                            let newTheme: PresentationThemeReference
+                                            if let previousThemeIndex = previousThemeIndex {
+                                                let theme = themes[themes.index(before: previousThemeIndex.base)]
+                                                newTheme = .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: theme.isCreator ? context.account.id : nil))
+                                            } else {
+                                                newTheme = .builtin(.nightAccent)
+                                            }
+                                            selectThemeImpl?(nil, newTheme)
+                                        }
+                                    }
+                                    
+                                    let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme.theme).start()
+                                })
+                            }))
+                            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])])
+                            presentControllerImpl?(actionSheet, nil)
+                        })
+                    })))
+                }
             } else {
                 items.append(.action(ContextMenuActionItem(text: strings.Theme_Context_ChangeColors, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor)
                 }, action: { c, f in
@@ -817,7 +819,7 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
                             presentControllerImpl?(shareController, nil)
                         })
                     })))
-                    if cloudThemeExists {
+                    if cloudThemeExists && !cloudTheme.theme.isDefault {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_RemoveTheme, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { c, f in
                             c.dismiss(completion: {
                                 let actionSheet = ActionSheetController(presentationData: presentationData)

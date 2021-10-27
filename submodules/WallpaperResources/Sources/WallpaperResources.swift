@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import Display
+import CoreImage
 import Postbox
 import TelegramCore
 import MediaResources
@@ -1425,7 +1426,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                                         let imageArguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil, custom: arguments)
                                         let context = generator?(imageArguments)
                                         let image = context?.generateImage()
-                                     
+                                        
                                         if !file.settings.colors.isEmpty {
                                             return .single((effectiveBackgroundColor, incomingColors, outgoingColors, image, false, isMask, alpha, rotation))
                                         } else {
@@ -1475,24 +1476,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                         }
                     }
                 }
-                
-                var masking = false
-                if let image = colors.3, colors.5 {
-                    c.setFillColor(UIColor.black.cgColor)
-                    c.fill(drawingRect)
-                    
-                    if let cgImage = image.cgImage {
-                        let fittedSize = image.size.aspectFilled(CGSize(width: drawingRect.size.width + 1.0, height: drawingRect.size.height + 1.0))
-                        
-                        c.saveGState()
-                        c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
-                        c.scaleBy(x: 1.0, y: -1.0)
-                        c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                        c.clip(to: CGRect(origin: CGPoint(x: (drawingRect.size.width - fittedSize.width) / 2.0, y: (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize), mask: cgImage)
-                        masking = true
-                    }
-                }
-                
+                                
                 if colors.0.2.count >= 3 {
                     let image = GradientBackgroundNode.generatePreview(size: CGSize(width: 60.0, height: 60.0), colors: colors.0.2.map(UIColor.init(rgb:)))
                     c.draw(image.cgImage!, in: drawingRect)
@@ -1513,12 +1497,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                     c.setFillColor(colors.0.0.cgColor)
                     c.fill(drawingRect)
                 }
-                
-                if masking {
-                    c.restoreGState()
-                }
-                
-                if let image = colors.3, !colors.5 {
+                                
+                if let image = colors.3 {
                     if colors.4 {
                         let initialThumbnailContextFittingSize = arguments.imageSize.fitted(CGSize(width: 90.0, height: 90.0))
                         let thumbnailContextSize = image.size.aspectFilled(initialThumbnailContextFittingSize)
@@ -1538,18 +1518,33 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                             c.restoreGState()
                         }
                     } else if let cgImage = image.cgImage {
-                        let fittedSize = image.size.aspectFilled(CGSize(width: drawingRect.size.width + 1.0, height: drawingRect.size.height + 1.0))
-                        
-                        c.saveGState()
-                        if !isBlack && patternIntensity > 0.0 {
-                            c.setBlendMode(.softLight)
+                        if colors.5 {
+                            let fittedSize = image.size.aspectFilled(CGSize(width: drawingRect.size.width + 1.0, height: drawingRect.size.height + 1.0))
+                            
+                            c.saveGState()
+                            c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                            c.scaleBy(x: 1.0, y: -1.0)
+                            c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                            c.clip(to: CGRect(origin: CGPoint(x: (drawingRect.size.width - fittedSize.width) / 2.0, y: (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize), mask: cgImage)
+                            
+                            c.setFillColor(UIColor.black.cgColor)
+                            c.fill(drawingRect)
+                            
+                            c.restoreGState()
+                        } else {
+                            let fittedSize = image.size.aspectFilled(CGSize(width: drawingRect.size.width + 1.0, height: drawingRect.size.height + 1.0))
+                            
+                            c.saveGState()
+                            if !isBlack && patternIntensity > 0.0 {
+                                c.setBlendMode(.softLight)
+                            }
+                            c.setAlpha(colors.6)
+                            c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                            c.scaleBy(x: 1.0, y: -1.0)
+                            c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                            c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - fittedSize.width) / 2.0, y: (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize))
+                            c.restoreGState()
                         }
-                        c.setAlpha(colors.6)
-                        c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
-                        c.scaleBy(x: 1.0, y: -1.0)
-                        c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                        c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - fittedSize.width) / 2.0, y: (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize))
-                        c.restoreGState()
                     }
                 }
                 
@@ -1627,8 +1622,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                 if emoticon {
                     if large {
                         c.saveGState()
-
-                        c.translateBy(x: -71.0, y: 66.0)
+                        
+                        c.translateBy(x: (drawingRect.width - 120) - 71, y: 66.0)
                         c.translateBy(x: 114.0, y: 32.0)
                         c.scaleBy(x: 1.0, y: -1.0)
                         c.translateBy(x: 0.0, y: -32.0)

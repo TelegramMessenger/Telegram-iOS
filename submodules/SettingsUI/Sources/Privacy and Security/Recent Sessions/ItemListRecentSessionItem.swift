@@ -113,6 +113,10 @@ final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
 private func iconForSession(_ session: RecentAccountSession) -> UIImage? {
     let platform = session.platform.lowercased()
     let device = session.deviceModel.lowercased()
+    let systemVersion = session.systemVersion.lowercased()
+    if device.contains("xbox") {
+        return UIImage(bundleImageName: "Settings/Devices/Xbox")
+    }
     if device.contains("chrome") && !device.contains("chromebook") {
         return UIImage(bundleImageName: "Settings/Devices/Chrome")
     }
@@ -140,7 +144,7 @@ private func iconForSession(_ session: RecentAccountSession) -> UIImage? {
     if platform.contains("linux") {
         return UIImage(bundleImageName: "Settings/Devices/Linux")
     }
-    if platform.contains("windows") {
+    if platform.contains("windows") || systemVersion.contains("windows") {
         return UIImage(bundleImageName: "Settings/Devices/Windows")
     }
     return nil
