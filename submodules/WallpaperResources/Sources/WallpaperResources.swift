@@ -1627,8 +1627,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                 if emoticon {
                     if large {
                         c.saveGState()
-
-                        c.translateBy(x: -71.0, y: 66.0)
+                        
+                        c.translateBy(x: (drawingRect.width - 120) - 71, y: 66.0)
                         c.translateBy(x: 114.0, y: 32.0)
                         c.scaleBy(x: 1.0, y: -1.0)
                         c.translateBy(x: 0.0, y: -32.0)
