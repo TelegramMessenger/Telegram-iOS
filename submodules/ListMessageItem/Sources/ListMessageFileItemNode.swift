@@ -911,6 +911,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             iconStatusBackgroundColor = item.presentationData.theme.theme.list.itemAccentColor
             iconStatusForegroundColor = item.presentationData.theme.theme.list.itemCheckColors.foregroundColor
         } else if isAudio {
+            iconStatusBackgroundColor = item.presentationData.theme.theme.list.itemAccentColor
             iconStatusForegroundColor = item.presentationData.theme.theme.list.itemCheckColors.foregroundColor
         }
         

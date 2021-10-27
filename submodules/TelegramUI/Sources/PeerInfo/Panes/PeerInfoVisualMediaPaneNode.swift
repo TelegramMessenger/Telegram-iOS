@@ -1109,6 +1109,16 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         return nil
     }
 
+    private static let widthSpecs: ([Int], [Int]) = {
+        let list: [(Int, Int)] = [
+            (50, 64),
+            (100, 150),
+            (140, 200),
+            (Int.max, 280)
+        ]
+        return (list.map(\.0), list.map(\.1))
+    }()
+
     func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], synchronous: Bool) {
         for i in 0 ..< items.count {
             guard let item = items[i] as? VisualMediaItem else {
@@ -1138,15 +1148,12 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                     continue
                 }
 
-                let imageWidthSpec: Int
-                if layer.bounds.width <= 50 {
-                    imageWidthSpec = 64
-                } else if layer.bounds.width <= 100 {
-                    imageWidthSpec = 150
-                } else if layer.bounds.width <= 140 {
-                    imageWidthSpec = 200
-                } else {
-                    imageWidthSpec = 280
+                var imageWidthSpec: Int = SparseItemGridBindingImpl.widthSpecs.1[0]
+                for i in 0 ..< SparseItemGridBindingImpl.widthSpecs.0.count {
+                    if Int(layer.bounds.width) <= SparseItemGridBindingImpl.widthSpecs.0[i] {
+                        imageWidthSpec = SparseItemGridBindingImpl.widthSpecs.1[i]
+                        break
+                    }
                 }
 
                 let message = item.message
@@ -1163,7 +1170,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 }
 
                 if let selectedMedia = selectedMedia {
-                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, synchronous: synchronous) {
+                    if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, synchronous: synchronous) {
                         if let image = result.image {
                             layer.contents = image.cgImage
                             layer.hasContents = true
