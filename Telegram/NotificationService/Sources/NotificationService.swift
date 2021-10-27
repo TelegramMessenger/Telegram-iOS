@@ -453,7 +453,7 @@ private struct NotificationContent {
                 displayName: peer.debugDisplayTitle,
                 image: image,
                 contactIdentifier: nil,
-                customIdentifier: nil,
+                customIdentifier: "\(peer.id.toInt64())",
                 isMe: false,
                 suggestionType: .none
             )
@@ -492,7 +492,7 @@ private struct NotificationContent {
         }
 
         if #available(iOS 15.0, *) {
-            if let senderPerson = self.senderPerson {
+            if let senderPerson = self.senderPerson, let customIdentifier = senderPerson.customIdentifier {
                 let mePerson = INPerson(
                     personHandle: INPersonHandle(value: "0", type: .unknown),
                     nameComponents: nil,
@@ -508,8 +508,8 @@ private struct NotificationContent {
                     recipients: [mePerson],
                     outgoingMessageType: .outgoingMessageText,
                     content: content.body,
-                    speakableGroupName: INSpeakableString(spokenPhrase: "Sender Name"),
-                    conversationIdentifier: "sampleConversationIdentifier",
+                    speakableGroupName: INSpeakableString(spokenPhrase: senderPerson.displayName),
+                    conversationIdentifier: "\(customIdentifier)",
                     serviceName: nil,
                     sender: senderPerson,
                     attachments: nil
