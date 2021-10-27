@@ -624,11 +624,17 @@ open class ItemListControllerNode: ASDisplayNode {
                             self.listNode.backgroundColor = transition.theme.list.plainBackgroundColor
                             self.leftOverlayNode.backgroundColor = transition.theme.list.plainBackgroundColor
                             self.rightOverlayNode.backgroundColor = transition.theme.list.plainBackgroundColor
+                        
+                            self.leftOverlayNode.isHidden = true
+                            self.rightOverlayNode.isHidden = true
                         case .blocks:
                             self.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.leftOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.rightOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
+                        
+                            self.leftOverlayNode.isHidden = false
+                            self.rightOverlayNode.isHidden = false
                     }
                 }
             }

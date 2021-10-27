@@ -260,7 +260,6 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
             
             strongSelf.isExtracted = isExtracted
             
-            let inset: CGFloat = 0.0
             if isExtracted {
                 strongSelf.contextSourceNode.contentNode.customHitTest = { [weak self] point in
                     if let strongSelf = self {
@@ -432,7 +431,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     alphaTransition.updateAlpha(node: strongSelf.dismissButton, alpha: isExtracted ? 0.0 : 1.0, delay: isExtracted ? 0.0 : 0.1)
                     
                     let offsetInitialSublayerTransform = strongSelf.offsetContainerNode.layer.sublayerTransform
-                    strongSelf.offsetContainerNode.layer.sublayerTransform = CATransform3DMakeTranslation(isExtracted ? -48.0 : 0.0, isExtracted ? extractedVerticalOffset : 0.0, 0.0)
+                    strongSelf.offsetContainerNode.layer.sublayerTransform = CATransform3DMakeTranslation(isExtracted ? -64.0 : 0.0, isExtracted ? extractedVerticalOffset : 0.0, 0.0)
                     
                     let initialExtractedBackgroundPosition = strongSelf.extractedBackgroundImageNode.position
                     strongSelf.extractedBackgroundImageNode.layer.position = rect.center
@@ -464,17 +463,27 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     if isExtracted {
                         strongSelf.extractedBackgroundImageNode.alpha = 1.0
                         strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: backgroundCornerRadius * 2.0, color: item.presentationData.theme.list.itemBlocksBackgroundColor)
+                        strongSelf.extractedBackgroundImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.1, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                    } else {
+                        strongSelf.extractedBackgroundImageNode.alpha = 0.0
+                        strongSelf.extractedBackgroundImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
+                            if let strongSelf = self {
+                                strongSelf.extractedBackgroundImageNode.image = nil
+                                strongSelf.extractedBackgroundImageNode.layer.removeAllAnimations()
+                            }
+                        })
                     }
                     
                     transition.updateFrame(node: strongSelf.extractedBackgroundImageNode, frame: CGRect(origin: CGPoint(), size: rect.size))
                     
                     transition.updateAlpha(node: strongSelf.subtitleNode, alpha: isExtracted ? 0.0 : 1.0)
                     transition.updateAlpha(node: strongSelf.expandedSubtitleNode, alpha: isExtracted ? 1.0 : 0.0)
+                    transition.updateAlpha(node: strongSelf.dateNode, alpha: isExtracted ? 0.0 : 1.0)
                     
                     transition.updateAlpha(node: strongSelf.addButton, alpha: isExtracted ? 0.0 : 1.0, delay: isExtracted ? 0.0 : 0.1)
                     transition.updateAlpha(node: strongSelf.dismissButton, alpha: isExtracted ? 0.0 : 1.0, delay: isExtracted ? 0.0 : 0.1)
                     
-                    transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? inset : 0.0, y: isExtracted ? extractedVerticalOffset : 0.0))
+                    transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? -16.0 : 0.0, y: 0.0))
                 }
             }
         }
@@ -500,21 +509,25 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                         
             var titleText: String
             var subtitleText: String
+            var expandedSubtitleText: String
             var dateText: String
           
             if let importer = item.importer, let peer = importer.peer.peer.flatMap({ EnginePeer($0) }) {
                 titleText = peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.nameDisplayOrder)
                 subtitleText = importer.about ?? ""
+                expandedSubtitleText = importer.about ?? " "
                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                 dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: importer.date, relativeTo: timestamp, dateTimeFormat: item.dateTimeFormat)
             } else {
                 titleText = " "
                 subtitleText = " "
+                expandedSubtitleText = " "
                 dateText = " "
             }
             
             let titleAttributedString = NSAttributedString(string: titleText, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             let subtitleAttributedString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            let expnadedSubtitleAttributedString = NSAttributedString(string: expandedSubtitleText, font: subtitleFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
             let dateAttributedString = NSAttributedString(string: dateText, font: subtitleFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
             
             let leftInset: CGFloat = 62.0 + params.leftInset
@@ -523,7 +536,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
            
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 44.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (expandedSubtitleLayout, expandedSubtitleApply) = makeExpandedSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleAttributedString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (expandedSubtitleLayout, expandedSubtitleApply) = makeExpandedSubtitleLayout(TextNodeLayoutArguments(attributedString: expnadedSubtitleAttributedString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (dateLayout, dateApply) = makeDateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let titleSpacing: CGFloat = 1.0
@@ -568,14 +581,20 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
                     
-                    let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
-                    var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: params.leftInset + 16.0, dy: 0.0)
+                    var nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
+                    if case .blocks = item.style {
+                        nonExtractedRect = nonExtractedRect.inset(by: UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset))
+                    }
+                    var extractedRect = CGRect(origin: CGPoint(), size: layout.contentSize).insetBy(dx: params.leftInset, dy: 0.0)
                     var extractedHeight = extractedRect.height + expandedSubtitleLayout.size.height - subtitleLayout.size.height
                     var extractedVerticalOffset: CGFloat = 0.0
                     if item.importer?.peer.peer?.smallProfileImage != nil {
                         extractedRect.size.width = min(extractedRect.width, params.availableHeight - 20.0)
                         extractedVerticalOffset = extractedRect.width
                         extractedHeight += extractedVerticalOffset
+                    } else {
+                        nonExtractedRect.size.width += 16.0
+                        extractedHeight = max(108.0, extractedHeight)
                     }
                     
                     extractedRect.size.height = extractedHeight - 46.0
