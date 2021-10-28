@@ -209,6 +209,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.context = context
         
         self.imageNode = TransformImageNode()
+        self.imageNode.contentAnimations = .subsequentUpdates
         self.footerContentNode = ChatItemGalleryFooterContentNode(context: context, presentationData: presentationData, present: present)
         self.footerContentNode.performAction = performAction
         self.footerContentNode.openActionOptions = openActionOptions
