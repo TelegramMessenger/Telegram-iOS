@@ -64,21 +64,33 @@ private enum RecentSessionsEntryStableId: Hashable {
     case devicesInfo
 }
 
+private struct SortIndex: Comparable {
+    var section: Int
+    var item: Int
+
+    static func <(lhs: SortIndex, rhs: SortIndex) -> Bool {
+        if lhs.section != rhs.section {
+            return lhs.section < rhs.section
+        }
+        return lhs.item < rhs.item
+    }
+}
+
 private enum RecentSessionsEntry: ItemListNodeEntry {
-    case currentSessionHeader(PresentationTheme, String)
-    case currentSession(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, RecentAccountSession)
-    case terminateOtherSessions(PresentationTheme, String)
-    case terminateAllWebSessions(PresentationTheme, String)
-    case currentAddDevice(PresentationTheme, String)
-    case currentSessionInfo(PresentationTheme, String)
-    case pendingSessionsHeader(PresentationTheme, String)
-    case pendingSession(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
-    case pendingSessionsInfo(PresentationTheme, String)
-    case otherSessionsHeader(PresentationTheme, String)
-    case addDevice(PresentationTheme, String)
-    case session(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
-    case website(index: Int32, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool)
-    case devicesInfo(PresentationTheme, String)
+    case currentSessionHeader(SortIndex, String)
+    case currentSession(SortIndex, PresentationStrings, PresentationDateTimeFormat, RecentAccountSession)
+    case terminateOtherSessions(SortIndex, String)
+    case terminateAllWebSessions(SortIndex, String)
+    case currentAddDevice(SortIndex, String)
+    case currentSessionInfo(SortIndex, String)
+    case pendingSessionsHeader(SortIndex, String)
+    case pendingSession(index: Int32, sortIndex: SortIndex, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
+    case pendingSessionsInfo(SortIndex, String)
+    case otherSessionsHeader(SortIndex, String)
+    case addDevice(SortIndex, String)
+    case session(index: Int32, sortIndex: SortIndex, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
+    case website(index: Int32, sortIndex: SortIndex, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool)
+    case devicesInfo(SortIndex, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -102,7 +114,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
         case .terminateAllWebSessions:
             return .index(3)
         case .currentAddDevice:
-            return .index(3)
+            return .index(4)
         case .currentSessionInfo:
             return .index(5)
         case .pendingSessionsHeader:
@@ -123,89 +135,122 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             return .devicesInfo
         }
     }
+
+    var sortIndex: SortIndex {
+        switch self {
+        case let .currentSessionHeader(index, _):
+            return index
+        case let .currentSession(index, _, _, _):
+            return index
+        case let .terminateOtherSessions(index, _):
+            return index
+        case let .terminateAllWebSessions(index, _):
+            return index
+        case let .currentAddDevice(index, _):
+            return index
+        case let .currentSessionInfo(index, _):
+            return index
+        case let .pendingSessionsHeader(index, _):
+            return index
+        case let .pendingSession(_, index, _, _, _, _, _, _):
+            return index
+        case let .pendingSessionsInfo(index, _):
+            return index
+        case let .otherSessionsHeader(index, _):
+            return index
+        case let .addDevice(index, _):
+            return index
+        case let .session(_, index, _, _, _, _, _, _):
+            return index
+        case let .website(_, index, _, _, _, _, _, _, _, _):
+            return index
+        case let .devicesInfo(index, _):
+            return index
+        }
+    }
     
     static func ==(lhs: RecentSessionsEntry, rhs: RecentSessionsEntry) -> Bool {
         switch lhs {
-        case let .currentSessionHeader(lhsTheme, lhsText):
-            if case let .currentSessionHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .currentSessionHeader(lhsSortIndex, lhsText):
+            if case let .currentSessionHeader(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
             } else {
                 return false
             }
-        case let .terminateOtherSessions(lhsTheme, lhsText):
-            if case let .terminateOtherSessions(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .terminateOtherSessions(lhsSortIndex, lhsText):
+            if case let .terminateOtherSessions(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
             } else {
                 return false
             }
-        case let .terminateAllWebSessions(lhsTheme, lhsText):
-            if case let .terminateAllWebSessions(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .terminateAllWebSessions(lhsSortIndex, lhsText):
+            if case let .terminateAllWebSessions(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
             } else {
                 return false
             }
-        case let .currentAddDevice(lhsTheme, lhsText):
-            if case let .currentAddDevice(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .currentAddDevice(lhsSortIndex, lhsText):
+            if case let .currentAddDevice(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
             } else {
                 return false
             }
-        case let .currentSessionInfo(lhsTheme, lhsText):
-            if case let .currentSessionInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .currentSessionInfo(lhsSortIndex, lhsText):
+            if case let .currentSessionInfo(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
             } else {
                 return false
             }
-        case let .pendingSessionsHeader(lhsTheme, lhsText):
-            if case let .pendingSessionsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .pendingSessionsHeader(lhsSortIndex, lhsText):
+            if case let .pendingSessionsHeader(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
             } else {
                 return false
             }
-        case let .pendingSession(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsSession, lhsEnabled, lhsEditing, lhsRevealed):
-            if case let .pendingSession(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsSession, rhsEnabled, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsSession == rhsSession, lhsEnabled == rhsEnabled, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
+        case let .pendingSession(lhsIndex, lhsSortIndex, lhsStrings, lhsDateTimeFormat, lhsSession, lhsEnabled, lhsEditing, lhsRevealed):
+            if case let .pendingSession(rhsIndex, rhsSortIndex, rhsStrings, rhsDateTimeFormat, rhsSession, rhsEnabled, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsSortIndex == rhsSortIndex, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsSession == rhsSession, lhsEnabled == rhsEnabled, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
                 return true
             } else {
                 return false
             }
-        case let .pendingSessionsInfo(lhsTheme, lhsText):
-            if case let .pendingSessionsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .pendingSessionsInfo(lhsSortIndex, lhsText):
+            if case let .pendingSessionsInfo(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
             } else {
                 return false
             }
-        case let .otherSessionsHeader(lhsTheme, lhsText):
-            if case let .otherSessionsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .otherSessionsHeader(lhsSortIndex, lhsText):
+            if case let .otherSessionsHeader(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
             } else {
                 return false
             }
-        case let .addDevice(lhsTheme, lhsText):
-            if case let .addDevice(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .addDevice(lhsSortIndex, lhsText):
+            if case let .addDevice(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
             } else {
                 return false
             }
-        case let .currentSession(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsSession):
-            if case let .currentSession(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsSession) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsSession == rhsSession {
+        case let .currentSession(lhsSortIndex, lhsStrings, lhsDateTimeFormat, lhsSession):
+            if case let .currentSession(rhsSortIndex, rhsStrings, rhsDateTimeFormat, rhsSession) = rhs, lhsSortIndex == rhsSortIndex, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsSession == rhsSession {
                 return true
             } else {
                 return false
             }
-        case let .session(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsSession, lhsEnabled, lhsEditing, lhsRevealed):
-            if case let .session(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsSession, rhsEnabled, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsSession == rhsSession, lhsEnabled == rhsEnabled, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
+        case let .session(lhsIndex, lhsSortIndex, lhsStrings, lhsDateTimeFormat, lhsSession, lhsEnabled, lhsEditing, lhsRevealed):
+            if case let .session(rhsIndex, rhsSortIndex, rhsStrings, rhsDateTimeFormat, rhsSession, rhsEnabled, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsSortIndex == rhsSortIndex, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsSession == rhsSession, lhsEnabled == rhsEnabled, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
                 return true
             } else {
                 return false
             }
-        case let .website(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsWebsite, lhsPeer, lhsEnabled, lhsEditing, lhsRevealed):
-            if case let .website(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsWebsite, rhsPeer, rhsEnabled, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsNameOrder == rhsNameOrder, lhsWebsite == rhsWebsite, arePeersEqual(lhsPeer, rhsPeer), lhsEnabled == rhsEnabled, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
+        case let .website(lhsIndex, lhsSortIndex, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsWebsite, lhsPeer, lhsEnabled, lhsEditing, lhsRevealed):
+            if case let .website(rhsIndex, rhsSortIndex, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsWebsite, rhsPeer, rhsEnabled, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsSortIndex == rhsSortIndex, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsNameOrder == rhsNameOrder, lhsWebsite == rhsWebsite, arePeersEqual(lhsPeer, rhsPeer), lhsEnabled == rhsEnabled, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
                 return true
             } else {
                 return false
             }
-        case let .devicesInfo(lhsTheme, lhsText):
-            if case let .devicesInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .devicesInfo(lhsSortIndex, lhsText):
+            if case let .devicesInfo(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
             } else {
                 return false
@@ -214,59 +259,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     }
     
     static func <(lhs: RecentSessionsEntry, rhs: RecentSessionsEntry) -> Bool {
-        switch lhs.stableId {
-        case let .index(lhsIndex):
-            if case let .index(rhsIndex) = rhs.stableId {
-                return lhsIndex <= rhsIndex
-            } else {
-                if case .pendingSession = rhs, lhsIndex > 5 {
-                    return false
-                } else {
-                    return true
-                }
-            }
-        case .session:
-            switch lhs {
-            case let .session(lhsIndex, _, _, _, _, _, _, _):
-                if case let .session(rhsIndex, _, _, _, _, _, _, _) = rhs {
-                    return lhsIndex <= rhsIndex
-                } else if case .devicesInfo = rhs.stableId {
-                    return true
-                } else {
-                    return false
-                }
-            case let .pendingSession(lhsIndex, _, _, _, _, _, _, _):
-                if case let .pendingSession(rhsIndex, _, _, _, _, _, _, _) = rhs {
-                    return lhsIndex <= rhsIndex
-                } else if case .session = rhs {
-                    return true
-                } else if case .devicesInfo = rhs.stableId {
-                    return true
-                } else {
-                    if case let .index(rhsIndex) = rhs.stableId {
-                        return rhsIndex == 6
-                    } else {
-                        return false
-                    }
-                }
-            case let .website(lhsIndex, _, _, _, _, _, _, _, _, _):
-                if case let .website(rhsIndex, _, _, _, _, _, _, _, _, _) = rhs {
-                    return lhsIndex <= rhsIndex
-                } else if case .devicesInfo = rhs.stableId {
-                    return true
-                } else {
-                    return false
-                }
-            default:
-                preconditionFailure()
-            }
-        case .devicesInfo:
-            if case .devicesInfo = rhs.stableId {
-                return false
-            } else {
-                return false
-            }
-        }
+        return lhs.sortIndex < rhs.sortIndex
     }
     
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
@@ -280,16 +273,16 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             }, action: {
                 arguments.openSession(session)
             })
-        case let .terminateOtherSessions(theme, text):
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.blockDestructiveIcon(theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
+        case let .terminateOtherSessions(_, text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.blockDestructiveIcon(presentationData.theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
                 arguments.terminateOtherSessions()
             })
-        case let .terminateAllWebSessions(theme, text):
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.blockDestructiveIcon(theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
+        case let .terminateAllWebSessions(_, text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.blockDestructiveIcon(presentationData.theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
                 arguments.terminateAllWebSessions()
             })
-        case let .currentAddDevice(theme, text):
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addDeviceIcon(theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
+        case let .currentAddDevice(_, text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addDeviceIcon(presentationData.theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
                 arguments.addDevice()
             })
         case let .currentSessionInfo(_, text):
@@ -313,8 +306,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .otherSessionsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .addDevice(theme, text):
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addDeviceIcon(theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
+        case let .addDevice(_, text):
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addDeviceIcon(presentationData.theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
                 arguments.addDevice()
             })
         case let .session(_, _, _, dateTimeFormat, session, enabled, editing, revealed):
@@ -403,41 +396,41 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
     
     if !sessionsState.sessions.isEmpty {
         var existingSessionIds = Set<Int64>()
-        entries.append(.currentSessionHeader(presentationData.theme, presentationData.strings.AuthSessions_CurrentSession))
+        entries.append(.currentSessionHeader(SortIndex(section: 0, item: 0), presentationData.strings.AuthSessions_CurrentSession))
         if let index = sessionsState.sessions.firstIndex(where: { $0.hash == 0 }) {
             existingSessionIds.insert(sessionsState.sessions[index].hash)
-            entries.append(.currentSession(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
+            entries.append(.currentSession(SortIndex(section: 0, item: 1), presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
         }
         
         var hasAddDevice = false
         if sessionsState.sessions.count > 1 || enableQRLogin {
             if sessionsState.sessions.count > 1 {
-                entries.append(.terminateOtherSessions(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessions))
-                entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
+                entries.append(.terminateOtherSessions(SortIndex(section: 0, item: 2), presentationData.strings.AuthSessions_TerminateOtherSessions))
+                entries.append(.currentSessionInfo(SortIndex(section: 0, item: 3), presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
             } else if enableQRLogin {
                 hasAddDevice = true
-                entries.append(.currentAddDevice(presentationData.theme, presentationData.strings.AuthSessions_AddDevice))
-                entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_OtherDevices))
+                entries.append(.currentAddDevice(SortIndex(section: 0, item: 4), presentationData.strings.AuthSessions_AddDevice))
+                entries.append(.currentSessionInfo(SortIndex(section: 0, item: 5), presentationData.strings.AuthSessions_OtherDevices))
             }
             
             let filteredPendingSessions: [RecentAccountSession] = sessionsState.sessions.filter({ $0.flags.contains(.passwordPending) })
             if !filteredPendingSessions.isEmpty {
-                entries.append(.pendingSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_IncompleteAttempts))
+                entries.append(.pendingSessionsHeader(SortIndex(section: 0, item: 6), presentationData.strings.AuthSessions_IncompleteAttempts))
                 for i in 0 ..< filteredPendingSessions.count {
                     if !existingSessionIds.contains(filteredPendingSessions[i].hash) {
                         existingSessionIds.insert(filteredPendingSessions[i].hash)
-                        entries.append(.pendingSession(index: Int32(i), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredPendingSessions[i], enabled: state.removingSessionId != filteredPendingSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredPendingSessions[i].hash))
+                        entries.append(.pendingSession(index: Int32(i), sortIndex: SortIndex(section: 1, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredPendingSessions[i], enabled: state.removingSessionId != filteredPendingSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredPendingSessions[i].hash))
                     }
                 }
-                entries.append(.pendingSessionsInfo(presentationData.theme, presentationData.strings.AuthSessions_IncompleteAttemptsInfo))
+                entries.append(.pendingSessionsInfo(SortIndex(section: 2, item: 0), presentationData.strings.AuthSessions_IncompleteAttemptsInfo))
             }
             
             if sessionsState.sessions.count > 1 {
-                entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_OtherSessions))
+                entries.append(.otherSessionsHeader(SortIndex(section: 3, item: 0), presentationData.strings.AuthSessions_OtherSessions))
             }
             
             if enableQRLogin && !hasAddDevice {
-                entries.append(.addDevice(presentationData.theme, presentationData.strings.AuthSessions_AddDevice))
+                entries.append(.addDevice(SortIndex(section: 3, item: 1), presentationData.strings.AuthSessions_AddDevice))
             }
             
             let filteredSessions: [RecentAccountSession] = sessionsState.sessions.sorted(by: { lhs, rhs in
@@ -447,12 +440,12 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             for i in 0 ..< filteredSessions.count {
                 if !existingSessionIds.contains(filteredSessions[i].hash) {
                     existingSessionIds.insert(filteredSessions[i].hash)
-                    entries.append(.session(index: Int32(i), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredSessions[i], enabled: state.removingSessionId != filteredSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredSessions[i].hash))
+                    entries.append(.session(index: Int32(i), sortIndex: SortIndex(section: 4, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredSessions[i], enabled: state.removingSessionId != filteredSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredSessions[i].hash))
                 }
             }
             
             if enableQRLogin && !hasAddDevice {
-                entries.append(.devicesInfo(presentationData.theme, presentationData.strings.AuthSessions_OtherDevices))
+                entries.append(.devicesInfo(SortIndex(section: 5, item: 0), presentationData.strings.AuthSessions_OtherDevices))
             }
         }
     }
@@ -466,10 +459,10 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
     if let websites = websites, let peers = peers {
         var existingSessionIds = Set<Int64>()
         if websites.count > 0 {
-            entries.append(.terminateAllWebSessions(presentationData.theme, presentationData.strings.AuthSessions_LogOutApplications))
-            entries.append(.currentSessionInfo(presentationData.theme, presentationData.strings.AuthSessions_LogOutApplicationsHelp))
+            entries.append(.terminateAllWebSessions(SortIndex(section: 0, item: 0), presentationData.strings.AuthSessions_LogOutApplications))
+            entries.append(.currentSessionInfo(SortIndex(section: 0, item: 1), presentationData.strings.AuthSessions_LogOutApplicationsHelp))
             
-            entries.append(.otherSessionsHeader(presentationData.theme, presentationData.strings.AuthSessions_LoggedInWithTelegram))
+            entries.append(.otherSessionsHeader(SortIndex(section: 0, item: 2), presentationData.strings.AuthSessions_LoggedInWithTelegram))
             
             let filteredWebsites: [WebAuthorization] = websites.sorted(by: { lhs, rhs in
                 return lhs.dateActive > rhs.dateActive
@@ -479,7 +472,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
                 let website = websites[i]
                 if !existingSessionIds.contains(website.hash) {
                     existingSessionIds.insert(website.hash)
-                    entries.append(.website(index: Int32(i), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, website: website, peer: peers[website.botId], enabled: state.removingSessionId != website.hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == website.hash))
+                    entries.append(.website(index: Int32(i), sortIndex: SortIndex(section: 1, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, website: website, peer: peers[website.botId], enabled: state.removingSessionId != website.hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == website.hash))
                 }
             }
         }
