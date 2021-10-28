@@ -614,7 +614,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let minSpacing: CGFloat = 8.0
         let referenceImageSize: CGSize
         let screenWidth = min(layout.size.width, layout.size.height)
-        if screenWidth >= 375.0 {
+        if screenWidth >= 390.0 {
             referenceImageSize = CGSize(width: 108.0, height: 230.0)
         } else {
             referenceImageSize = CGSize(width: 91.0, height: 161.0)

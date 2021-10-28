@@ -7024,3 +7024,11 @@ Sorry for the inconvenience.";
 "SharedMedia.ShowCalendar" = "Show Calendar";
 "SharedMedia.ShowPhotos" = "Show Photos";
 "SharedMedia.ShowVideos" = "Show Videos";
+
+"Settings.ChatThemes" = "Chat Themes";
+
+"Themes.Title" = "Chat Themes";
+"Themes.SelectTheme" = "Select Theme";
+"Themes.BuildOwn" = "Build Your Own Theme";
+"Themes.EditCurrentTheme" = "Edit Current Theme";
+"Themes.CreateNewTheme" = "Create a New Theme";

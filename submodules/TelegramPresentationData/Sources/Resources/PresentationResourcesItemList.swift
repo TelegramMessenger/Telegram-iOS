@@ -217,7 +217,7 @@ public struct PresentationResourcesItemList {
     }
     
     public static func resetIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.itemListEditThemeIcon.rawValue, { theme in
+        return theme.image(PresentationResourceKey.itemListResetIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Settings/Reset"), color: theme.list.itemAccentColor)
         })
     }

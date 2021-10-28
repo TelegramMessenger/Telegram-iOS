@@ -413,10 +413,10 @@ class ThemeGridThemeItemNode: ListViewItemNode, ItemListItemNode {
             
             let referenceImageSize: CGSize
             let screenWidth = min(params.width, params.availableHeight)
-            if screenWidth >= 375.0 {
+            if screenWidth >= 390.0 {
                 referenceImageSize = CGSize(width: 110.0, height: 150.0)
             } else {
-                referenceImageSize = CGSize(width: 91.0, height: 150.0)
+                referenceImageSize = CGSize(width: 90.0, height: 150.0)
             }
             let totalWidth = params.width - params.leftInset - params.rightInset
             let imageCount = Int((totalWidth - minSpacing) / (referenceImageSize.width + minSpacing))

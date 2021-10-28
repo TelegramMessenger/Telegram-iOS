@@ -342,42 +342,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.chatPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.chatFontSize, presentationData.chatBubbleCorners, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
     
     entries.append(.themes(presentationData.theme, presentationData.strings, chatThemes, themeReference, presentationThemeSettings.automaticThemeSwitchSetting.force, animatedEmojiStickers))
-//    let generalThemes: [PresentationThemeReference] = availableThemes.filter { reference in
-//        if case let .cloud(theme) = reference {
-//            return theme.theme.settings == nil
-//        } else {
-//            return true
-//        }
-//    }
-//
-//    let generalThemeReference: PresentationThemeReference
-//    if case let .cloud(theme) = themeReference, let settings = theme.theme.settings {
-//        generalThemeReference = .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
-//    } else {
-//        generalThemeReference = themeReference
-//    }
-    
-//    entries.append(.themeItem(presentationData.theme, presentationData.strings, generalThemes, availableThemes, themeReference, presentationThemeSettings.themeSpecificAccentColors, presentationThemeSettings.themeSpecificChatWallpapers, presentationThemeSettings.themeSpecificAccentColors[themeReference.index]))
-//
-//    if case let .builtin(builtinTheme) = generalThemeReference {
-//        let colorThemes = availableThemes.filter { reference in
-//            if case let .cloud(theme) = reference, let settings = theme.theme.settings, settings.baseTheme == builtinTheme.baseTheme {
-//                return true
-//            } else {
-//                return false
-//            }
-//        }
-//
-//        var colorOption: ThemeSettingsColorOption?
-//        if case .builtin = themeReference {
-//            colorOption = presentationThemeSettings.themeSpecificAccentColors[themeReference.index].flatMap { .accentColor($0) }
-//        } else {
-//            colorOption = .theme(themeReference)
-//        }
-//
-//        entries.append(.accentColor(presentationData.theme, generalThemeReference, themeReference, colorThemes, colorOption))
-//    }
-    entries.append(.chatTheme(presentationData.theme, "Chat Themes"))
+    entries.append(.chatTheme(presentationData.theme, strings.Settings_ChatThemes))
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
     
     entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force, !presentationData.autoNightModeTriggered || presentationThemeSettings.automaticThemeSwitchSetting.force))
