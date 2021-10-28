@@ -397,7 +397,7 @@ public final class InviteLinkQRCodeController: ViewController {
             
             let _ = imageApply()
             
-            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
             
             let imageFrame = CGRect(origin: CGPoint(x: floor((width - imageSize.width) / 2.0), y: insets.top + 16.0), size: imageSize)
             transition.updateFrame(node: self.qrImageNode, frame: imageFrame)

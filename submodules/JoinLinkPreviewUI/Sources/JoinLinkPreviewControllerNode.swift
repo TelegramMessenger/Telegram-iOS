@@ -218,7 +218,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         
         let maximumContentHeight = layout.size.height - insets.top - max(bottomInset, insets.bottom)
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         let sideInset = floor((layout.size.width - width) / 2.0)
         
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
@@ -251,7 +251,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
                 bottomInset -= 12.0
             }
             
-            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
             let sideInset = floor((layout.size.width - width) / 2.0)
             
             let maximumContentHeight = layout.size.height - insets.top - max(bottomInset, insets.bottom)

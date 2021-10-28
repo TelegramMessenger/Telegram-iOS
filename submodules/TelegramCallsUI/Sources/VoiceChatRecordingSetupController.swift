@@ -461,7 +461,7 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         let titleHeight: CGFloat = 54.0
         var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
         let innerContentHeight: CGFloat = 287.0
-        var width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        var width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         if isLandscape {
             contentHeight = layout.size.height
             width = layout.size.width
