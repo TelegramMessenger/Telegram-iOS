@@ -238,6 +238,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         let subtitle: String
         let subtitleActive: Bool
         let device: String
+        let deviceTitle: String
         let location: String
         let ip: String
         switch subject {
@@ -251,6 +252,8 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                     subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, relativeTimestamp: session.activityDate, relativeTo: timestamp)
                     subtitleActive = false
                 }
+                deviceTitle = presentationData.strings.AuthSessions_View_Device
+            
                 var deviceString = ""
                 if !session.deviceModel.isEmpty {
                     deviceString = session.deviceModel
@@ -283,18 +286,20 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 }
             case let .website(website, peer):
                 self.terminateButton.title = self.presentationData.strings.AuthSessions_View_Logout
-                title = website.domain
-                subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, relativeTimestamp: website.dateActive, relativeTo: timestamp)
+            
+                if let peer = peer {
+                    title = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                } else {
+                    title = ""
+                }
+            
+                subtitle = website.domain
                 subtitleActive = false
             
+                deviceTitle = presentationData.strings.AuthSessions_View_Browser
+            
                 var deviceString = ""
-                if !website.domain.isEmpty {
-                    deviceString = website.domain
-                }
                 if !website.browser.isEmpty {
-                    if !deviceString.isEmpty {
-                        deviceString += ", "
-                    }
                     deviceString += website.browser
                 }
                 if !website.platform.isEmpty {
@@ -308,8 +313,10 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 ip = website.ip
             
                 let avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 12.0))
+                avatarNode.clipsToBounds = true
+                avatarNode.cornerRadius = 17.0
                 if let peer = peer.flatMap({ EnginePeer($0) }) {
-                    avatarNode.setPeer(context: context, theme: presentationData.theme, peer: peer, authorOfMessage: nil, overrideImage: nil, emptyColor: nil, clipStyle: .round, synchronousLoad: false, displayDimensions: CGSize(width: 72.0, height: 72.0), storeUnrounded: false)
+                    avatarNode.setPeer(context: context, theme: presentationData.theme, peer: peer, authorOfMessage: nil, overrideImage: nil, emptyColor: nil, clipStyle: .none, synchronousLoad: false, displayDimensions: CGSize(width: 72.0, height: 72.0), storeUnrounded: false)
                 }
                 self.avatarNode = avatarNode
         }
@@ -317,7 +324,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.regular(30.0), textColor: textColor)
         self.textNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(17.0), textColor: subtitleActive ? accentColor : secondaryTextColor)
         
-        self.deviceTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_Device, font: Font.regular(17.0), textColor: textColor)
+        self.deviceTitleNode.attributedText = NSAttributedString(string: deviceTitle, font: Font.regular(17.0), textColor: textColor)
         self.deviceValueNode.attributedText = NSAttributedString(string: device, font: Font.regular(17.0), textColor: secondaryTextColor)
       
         self.firstSeparatorNode = ASDisplayNode()
@@ -374,7 +381,6 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         self.terminateButton.pressed = { [weak self] in
             if let strongSelf = self {
-                strongSelf.terminateButton.isUserInteractionEnabled = false
                 strongSelf.remove?()
             }
         }
