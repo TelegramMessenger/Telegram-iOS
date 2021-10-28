@@ -24,7 +24,7 @@ import ShimmerEffect
 import WallpaperBackgroundNode
 import LocalMediaResources
 import AppBundle
-import LottieMeshSwift
+//import LottieMeshSwift
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -1435,7 +1435,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
 
-        if #available(iOS 13.0, *), item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers, let meshAnimation = item.context.meshAnimationCache.get(resource: file.resource) {
+        /*if #available(iOS 13.0, *), item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers, let meshAnimation = item.context.meshAnimationCache.get(resource: file.resource) {
             var overlayMeshAnimationNode: ChatMessageTransitionNode.DecorationItemNode?
             if let current = self.overlayMeshAnimationNode {
                 overlayMeshAnimationNode = current
@@ -1466,7 +1466,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if let meshRenderer = overlayMeshAnimationNode?.contentView as? MeshRenderer {
                 meshRenderer.add(mesh: meshAnimation, offset: CGPoint(x: CGFloat.random(in: -30.0 ... 30.0), y: CGFloat.random(in: -30.0 ... 30.0)))
             }
-        } else {
+        } else*/ do {
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
             let additionalAnimationNode = AnimatedStickerNode()
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2.0), height: Int(animationSize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))

@@ -240,6 +240,7 @@ public final class SparseMessageList {
             }
 
             var loadRange: ClosedRange<Int32>?
+            var loadCount: Int?
 
             centralItemSearch: for i in 0 ..< sparseItems.items.count {
                 switch sparseItems.items[i] {
@@ -323,6 +324,7 @@ public final class SparseMessageList {
                         }
 
                         loadRange = holeRange
+                        loadCount = holeCount
 
                         break centralItemSearch
                     }
@@ -331,7 +333,7 @@ public final class SparseMessageList {
                 }
             }
 
-            guard let range = loadRange else {
+            guard let range = loadRange, let expectedCount = loadCount else {
                 completion()
                 return
             }
@@ -343,7 +345,7 @@ public final class SparseMessageList {
             }
             self.loadingHole = loadingHole
 
-            let mappedDirection: MessageHistoryViewRelativeHoleDirection = .range(start: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: range.lowerBound - 1), end: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: range.upperBound + 1))
+            let mappedDirection: MessageHistoryViewRelativeHoleDirection = .range(start: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: range.upperBound), end: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: range.lowerBound - 1))
 
             let account = self.account
             self.loadHoleDisposable.set((fetchMessageHistoryHole(
@@ -368,6 +370,10 @@ public final class SparseMessageList {
                 guard let strongSelf = self else {
                     completion()
                     return
+                }
+
+                if messages.count != expectedCount {
+                    Logger.shared.log("SparseMessageList", "unexpected message count")
                 }
 
                 var lowerIndex: Int?
@@ -400,6 +406,15 @@ public final class SparseMessageList {
                         insertIndex += 1
                     }
                 }
+
+                let anchors = strongSelf.sparseItems!.items.compactMap { item -> MessageId? in
+                    if case let .anchor(id, _, _) = item {
+                        return id
+                    } else {
+                        return nil
+                    }
+                }
+                assert(anchors.sorted(by: >) == anchors)
 
                 strongSelf.updateState()
 
@@ -594,9 +609,9 @@ public final class SparseMessageList {
 
             let topItemCount = items.count
             var totalCount = items.count
-            if let minMessageId = minMessageId, let sparseItems = self.sparseItems {
+            if let sparseItems = self.sparseItems {
                 var sparseIndex = 0
-                let _ = minMessageId
+
                 for i in 0 ..< sparseItems.items.count {
                     switch sparseItems.items[i] {
                     case let .anchor(id, timestamp, message):
@@ -699,7 +714,7 @@ public final class SparseMessageCalendar {
         struct InternalState {
             var nextRequestOffset: Int32?
             var minTimestamp: Int32?
-            var messagesByDay: [Int32: Message]
+            var messagesByDay: [Int32: SparseMessageCalendar.Entry]
         }
 
         private let queue: Queue
@@ -747,8 +762,8 @@ public final class SparseMessageCalendar {
 
         func removeMessagesInRange(minTimestamp: Int32, maxTimestamp: Int32, type: InteractiveHistoryClearingType, completion: @escaping () -> Void) -> Disposable {
             var removeKeys: [Int32] = []
-            for (id, message) in self.state.messagesByDay {
-                if message.timestamp >= minTimestamp && message.timestamp <= maxTimestamp {
+            for (id, entry) in self.state.messagesByDay {
+                if entry.message.timestamp >= minTimestamp && entry.message.timestamp <= maxTimestamp {
                     removeKeys.append(id)
                 }
             }
@@ -771,7 +786,7 @@ public final class SparseMessageCalendar {
             self.isLoadingMore = true
 
             struct LoadResult {
-                var messagesByDay: [Int32: Message]
+                var messagesByDay: [Int32: SparseMessageCalendar.Entry]
                 var nextOffset: Int32?
                 var minMessageId: MessageId?
                 var minTimestamp: Int32?
@@ -831,12 +846,12 @@ public final class SparseMessageCalendar {
                             let _ = transaction.addMessages(parsedMessages, location: .Random)
 
                             var minMessageId: Int32?
-                            var messagesByDay: [Int32: Message] = [:]
+                            var messagesByDay: [Int32: SparseMessageCalendar.Entry] = [:]
                             for period in periods {
                                 switch period {
-                                case let .searchResultsCalendarPeriod(date, minMsgId, _, _):
+                                case let .searchResultsCalendarPeriod(date, minMsgId, _, count):
                                     if let message = transaction.getMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: minMsgId)) {
-                                        messagesByDay[date] = message
+                                        messagesByDay[date] = SparseMessageCalendar.Entry(message: message, count: Int(count))
                                     }
                                     if let minMessageIdValue = minMessageId {
                                         if minMsgId < minMessageIdValue {
@@ -863,8 +878,8 @@ public final class SparseMessageCalendar {
                 }
                 strongSelf.state.nextRequestOffset = result.nextOffset
 
-                for (timestamp, message) in result.messagesByDay {
-                    strongSelf.state.messagesByDay[timestamp] = message
+                for (timestamp, entry) in result.messagesByDay {
+                    strongSelf.state.messagesByDay[timestamp] = entry
                 }
 
                 strongSelf.statePromise.set(.single(strongSelf.state))
@@ -873,8 +888,13 @@ public final class SparseMessageCalendar {
         }
     }
 
+    public struct Entry {
+        public var message: Message
+        public var count: Int
+    }
+
     public struct State {
-        public var messagesByDay: [Int32: Message]
+        public var messagesByDay: [Int32: Entry]
         public var minTimestamp: Int32?
         public var hasMore: Bool
     }

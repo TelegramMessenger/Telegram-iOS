@@ -578,6 +578,15 @@ private final class DayComponent: Component {
             }
 
             let titleImage = dayEnvironment.imageCache.text(fontSize: titleFontSize, isSemibold: titleFontIsSemibold, color: titleColor, string: component.title)
+            if animateMediaIn {
+                let previousTitleView = UIImageView(image: self.titleView.image)
+                previousTitleView.frame = self.titleView.frame
+                self.titleView.superview?.insertSubview(previousTitleView, aboveSubview: self.titleView)
+                previousTitleView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousTitleView] _ in
+                    previousTitleView?.removeFromSuperview()
+                })
+                self.titleView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.16)
+            }
             self.titleView.image = titleImage
             let titleSize = titleImage.size
 
@@ -595,6 +604,7 @@ private final class DayComponent: Component {
 
                 if animateMediaIn {
                     mediaPreviewView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.highlightView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             }
 
@@ -946,7 +956,7 @@ public final class CalendarMessageScreen: ViewController {
         private let context: AccountContext
         private let peerId: PeerId
         private let initialTimestamp: Int32
-        private let navigateToDay: (Int32) -> Void
+        private let navigateToOffset: (Int) -> Void
         private let previewDay: (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void
 
         private var presentationData: PresentationData
@@ -975,13 +985,13 @@ public final class CalendarMessageScreen: ViewController {
 
         private var ignoreContentOffset: Bool = false
 
-        init(controller: CalendarMessageScreen, context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (Int32) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
+        init(controller: CalendarMessageScreen, context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToOffset: @escaping (Int) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
             self.controller = controller
             self.context = context
             self.peerId = peerId
             self.initialTimestamp = initialTimestamp
             self.calendarSource = calendarSource
-            self.navigateToDay = navigateToDay
+            self.navigateToOffset = navigateToOffset
             self.previewDay = previewDay
             
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -1569,7 +1579,7 @@ public final class CalendarMessageScreen: ViewController {
                                 strongSelf.selectionState = selectionState
 
                                 strongSelf.updateSelectionState()
-                            } else {
+                            } else if let calendarState = strongSelf.calendarState {
                                 outer: for month in strongSelf.months {
                                     let firstDayTimestamp = Int32(month.firstDay.timeIntervalSince1970)
 
@@ -1577,7 +1587,15 @@ public final class CalendarMessageScreen: ViewController {
                                         let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
                                         if dayTimestamp == timestamp {
                                             if month.mediaByDay[day] != nil {
-                                                strongSelf.navigateToDay(timestamp)
+                                                var offset = 0
+                                                for key in calendarState.messagesByDay.keys.sorted(by: { $0 > $1 }) {
+                                                    if key == dayTimestamp {
+                                                        break
+                                                    } else if let item = calendarState.messagesByDay[key] {
+                                                        offset += item.count
+                                                    }
+                                                }
+                                                strongSelf.navigateToOffset(offset)
                                             }
 
                                             break outer
@@ -1645,8 +1663,8 @@ public final class CalendarMessageScreen: ViewController {
                 return
             }
             var messageMap: [Message] = []
-            for (_, message) in calendarState.messagesByDay {
-                messageMap.append(message)
+            for (_, entry) in calendarState.messagesByDay {
+                messageMap.append(entry.message)
             }
 
             var updatedMedia: [Int: [Int: DayMedia]] = [:]
@@ -1694,12 +1712,12 @@ public final class CalendarMessageScreen: ViewController {
     private let peerId: PeerId
     private let calendarSource: SparseMessageCalendar
     private let initialTimestamp: Int32
-    private let navigateToDay: (CalendarMessageScreen, Int32) -> Void
+    private let navigateToDay: (CalendarMessageScreen, Int) -> Void
     private let previewDay: (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void
 
     private var presentationData: PresentationData
 
-    public init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (CalendarMessageScreen, Int32) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
+    public init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (CalendarMessageScreen, Int) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
         self.context = context
         self.peerId = peerId
         self.calendarSource = calendarSource
@@ -1741,11 +1759,11 @@ public final class CalendarMessageScreen: ViewController {
     }
 
     override public func loadDisplayNode() {
-        self.displayNode = Node(controller: self, context: self.context, peerId: self.peerId, calendarSource: self.calendarSource, initialTimestamp: self.initialTimestamp, navigateToDay: { [weak self] timestamp in
+        self.displayNode = Node(controller: self, context: self.context, peerId: self.peerId, calendarSource: self.calendarSource, initialTimestamp: self.initialTimestamp, navigateToOffset: { [weak self] index in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.navigateToDay(strongSelf, timestamp)
+            strongSelf.navigateToDay(strongSelf, index)
         }, previewDay: self.previewDay)
 
         self.displayNodeDidLoad()

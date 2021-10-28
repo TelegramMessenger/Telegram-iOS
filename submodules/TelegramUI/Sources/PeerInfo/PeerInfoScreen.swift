@@ -6249,7 +6249,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
         var dismissCalendarScreen: (() -> Void)?
 
-        let calendarScreen = CalendarMessageScreen(context: self.context, peerId: self.peerId, calendarSource: calendarSource, initialTimestamp: initialTimestamp, navigateToDay: { [weak self] c, timestamp in
+        let calendarScreen = CalendarMessageScreen(context: self.context, peerId: self.peerId, calendarSource: calendarSource, initialTimestamp: initialTimestamp, navigateToDay: { [weak self] c, index in
             guard let strongSelf = self else {
                 c.dismiss()
                 return
@@ -6259,7 +6259,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 return
             }
 
-            pane.scrollToTimestamp(timestamp: timestamp)
+            pane.scrollToItem(index: index)
 
             c.dismiss()
         }, previewDay: { [weak self] index, sourceNode, sourceRect, gesture in

@@ -4,6 +4,8 @@ import Postbox
 import SwiftSignalKit
 import GZip
 
+#error("Exclude")
+
 public final class MeshAnimationCache {
     private final class Item {
         var isPending: Bool = false
