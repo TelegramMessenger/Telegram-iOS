@@ -140,7 +140,7 @@ class CreatePollOptionActionItemNode: ListViewItemNode, ItemListItemNode {
             
             let separatorHeight = UIScreenPixel
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: 44.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)

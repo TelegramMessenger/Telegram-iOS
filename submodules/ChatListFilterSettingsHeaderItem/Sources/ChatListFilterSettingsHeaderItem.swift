@@ -140,7 +140,7 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height)
-            var insets = itemListNeighborsGroupedInsets(neighbors)
+            var insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             if isHidden {
                 insets = UIEdgeInsets()

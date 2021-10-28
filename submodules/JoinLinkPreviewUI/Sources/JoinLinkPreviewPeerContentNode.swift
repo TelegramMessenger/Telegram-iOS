@@ -95,7 +95,10 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         let itemTheme = SelectablePeerNodeTheme(textColor: theme.actionSheet.primaryTextColor, secretTextColor: .green, selectedTextColor: theme.actionSheet.controlAccentColor, checkBackgroundColor: theme.actionSheet.opaqueItemBackgroundColor, checkFillColor: theme.actionSheet.controlAccentColor, checkColor: theme.actionSheet.opaqueItemBackgroundColor, avatarPlaceholderColor: theme.list.mediaPlaceholderColor)
         
         if case let .invite(isGroup, _, _, memberCount, members) = content {
-            self.peerNodes = members.map { peer in
+            self.peerNodes = members.compactMap { peer in
+                guard peer.id != context.account.peerId else {
+                    return nil
+                }
                 let node = SelectablePeerNode()
                 node.setup(context: context, theme: theme, strings: strings, peer: EngineRenderedPeer(peer: peer), synchronousLoad: false)
                 node.theme = itemTheme

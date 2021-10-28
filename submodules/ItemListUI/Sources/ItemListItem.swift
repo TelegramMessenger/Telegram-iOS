@@ -120,11 +120,15 @@ public func itemListNeighborsPlainInsets(_ neighbors: ItemListNeighbors) -> UIEd
     return insets
 }
 
-public func itemListNeighborsGroupedInsets(_ neighbors: ItemListNeighbors) -> UIEdgeInsets {
+public func itemListNeighborsGroupedInsets(_ neighbors: ItemListNeighbors, _ params: ListViewItemLayoutParams) -> UIEdgeInsets {
     let topInset: CGFloat
     switch neighbors.top {
     case .none:
-        topInset = UIScreenPixel + 35.0
+        if itemListHasRoundedBlockLayout(params) {
+            topInset = UIScreenPixel + 24.0
+        } else {
+            topInset = UIScreenPixel + 35.0
+        }
     case .sameSection:
         topInset = 0.0
     case let .otherSection(otherInset):

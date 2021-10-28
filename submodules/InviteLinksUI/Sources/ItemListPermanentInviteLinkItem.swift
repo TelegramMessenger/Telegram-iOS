@@ -338,7 +338,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
             case .blocks:
                 itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                insets = itemListNeighborsGroupedInsets(neighbors)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             if !item.displayImporters {

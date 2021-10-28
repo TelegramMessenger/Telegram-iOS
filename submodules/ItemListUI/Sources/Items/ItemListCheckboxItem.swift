@@ -151,7 +151,7 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
             
             let separatorHeight = UIScreenPixel
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)

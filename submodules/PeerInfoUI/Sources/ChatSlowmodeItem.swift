@@ -198,7 +198,7 @@ class ChatSlowmodeItemNode: ListViewItemNode {
             }
             
             contentSize = CGSize(width: params.width, height: 88.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size

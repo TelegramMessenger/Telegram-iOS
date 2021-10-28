@@ -187,7 +187,7 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
                 itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                 contentSize = CGSize(width: params.width, height: 22.0 + titleLayout.size.height)
-                insets = itemListNeighborsGroupedInsets(neighbors)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)

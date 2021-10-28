@@ -187,7 +187,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let valueFont = Font.semibold(item.presentationData.fontSize.itemListBaseFontSize)

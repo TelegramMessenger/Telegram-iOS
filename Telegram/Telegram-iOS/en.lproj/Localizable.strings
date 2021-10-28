@@ -6872,6 +6872,7 @@ Sorry for the inconvenience.";
 "InviteLink.Create.RequestApprovalOnInfoGroup" = "New users will be able to join the group only after having been approved by the admins.";
 "InviteLink.Create.RequestApprovalOnInfoChannel" = "New users will be able to join the channel only after having been approved by the admins.";
 
+"InviteLink.Create.LinkNameTitle" = "Link Name";
 "InviteLink.Create.LinkName" = "Link Name (Optional)";
 "InviteLink.Create.LinkNameInfo" = "Only you and other admins will see this name.";
 

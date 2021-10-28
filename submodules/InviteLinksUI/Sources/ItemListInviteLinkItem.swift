@@ -456,7 +456,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let contentSize = CGSize(width: params.width, height: max(minHeight, rawHeight))

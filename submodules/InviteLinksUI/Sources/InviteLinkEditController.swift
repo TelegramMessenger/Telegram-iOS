@@ -70,6 +70,7 @@ func isValidNumberOfUsers(_ number: String) -> Bool {
 }
 
 private enum InviteLinksEditEntry: ItemListNodeEntry {
+    case titleHeader(PresentationTheme, String)
     case title(PresentationTheme, String, String)
     case titleInfo(PresentationTheme, String)
     
@@ -91,7 +92,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
    
     var section: ItemListSectionId {
         switch self {
-            case .title, .titleInfo:
+            case .titleHeader, .title, .titleInfo:
                 return InviteLinksEditSection.title.rawValue
             case .requestApproval, .requestApprovalInfo:
                 return InviteLinksEditSection.requestApproval.rawValue
@@ -106,39 +107,47 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .title:
+            case .titleHeader:
                 return 0
-            case .titleInfo:
+            case .title:
                 return 1
-            case .requestApproval:
+            case .titleInfo:
                 return 2
-            case .requestApprovalInfo:
+            case .requestApproval:
                 return 3
-            case .timeHeader:
+            case .requestApprovalInfo:
                 return 4
-            case .timePicker:
+            case .timeHeader:
                 return 5
-            case .timeExpiryDate:
+            case .timePicker:
                 return 6
-            case .timeCustomPicker:
+            case .timeExpiryDate:
                 return 7
-            case .timeInfo:
+            case .timeCustomPicker:
                 return 8
-            case .usageHeader:
+            case .timeInfo:
                 return 9
-            case .usagePicker:
+            case .usageHeader:
                 return 10
-            case .usageCustomPicker:
+            case .usagePicker:
                 return 11
-            case .usageInfo:
+            case .usageCustomPicker:
                 return 12
-            case .revoke:
+            case .usageInfo:
                 return 13
+            case .revoke:
+                return 14
         }
     }
     
     static func ==(lhs: InviteLinksEditEntry, rhs: InviteLinksEditEntry) -> Bool {
         switch lhs {
+            case let .titleHeader(lhsTheme, lhsText):
+                if case let .titleHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .title(lhsTheme, lhsPlaceholder, lhsValue):
                 if case let .title(rhsTheme, rhsPlaceholder, rhsValue) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue {
                     return true
@@ -233,6 +242,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! InviteLinkEditControllerArguments
         switch self {
+            case let .titleHeader(_, text):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .title(_, placeholder, value):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, maxLength: 32, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { state in
@@ -356,6 +367,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
 private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, isGroup: Bool, isPublic: Bool, presentationData: PresentationData) -> [InviteLinksEditEntry] {
     var entries: [InviteLinksEditEntry] = []
     
+    entries.append(.titleHeader(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameTitle.uppercased()))
     entries.append(.title(presentationData.theme, presentationData.strings.InviteLink_Create_LinkName, state.title))
     entries.append(.titleInfo(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameInfo))
     

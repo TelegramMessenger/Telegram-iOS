@@ -243,7 +243,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
             }
             
             let contentSize = CGSize(width: params.width, height: contentHeight)
-            let insets = item.noInsets ? UIEdgeInsets() : itemListNeighborsGroupedInsets(neighbors)
+            let insets = item.noInsets ? UIEdgeInsets() : itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size

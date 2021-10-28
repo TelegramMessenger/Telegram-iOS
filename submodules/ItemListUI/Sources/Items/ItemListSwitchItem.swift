@@ -221,7 +221,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                 itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                 contentSize = CGSize(width: params.width, height: 44.0)
-                insets = itemListNeighborsGroupedInsets(neighbors)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             if item.disableLeadingInset {

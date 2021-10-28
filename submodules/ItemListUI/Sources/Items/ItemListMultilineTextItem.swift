@@ -211,7 +211,7 @@ public class ItemListMultilineTextItemNode: ListViewItemNode {
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
                     contentSize = CGSize(width: params.width, height: titleLayout.size.height + 22.0)
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)

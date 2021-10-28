@@ -172,7 +172,7 @@ class BubbleSettingsRadiusItemNode: ListViewItemNode, ItemListItemNode {
             let separatorHeight = UIScreenPixel
             
             contentSize = CGSize(width: params.width, height: 60.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             if item.disableLeadingInset {
                 insets.top = 0.0

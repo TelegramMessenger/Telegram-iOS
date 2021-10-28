@@ -200,7 +200,7 @@ private final class AutodownloadSizeLimitItemNode: ListViewItemNode {
             let (maxTextLayout, maxTextApply) = makeMaxTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dataSizeString(1536 * 1024 * 1024, formatting: formatting), font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
             contentSize = CGSize(width: params.width, height: 88.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size

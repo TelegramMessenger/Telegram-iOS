@@ -432,7 +432,7 @@ class ThemeGridThemeItemNode: ListViewItemNode, ItemListItemNode {
             let rows = ceil(CGFloat(item.themes.count) / CGFloat(imageCount))
             
             contentSize = CGSize(width: params.width, height: minSpacing + rows * (itemSize.height + itemSpacing))
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
 
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size

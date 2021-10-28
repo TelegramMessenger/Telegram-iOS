@@ -501,7 +501,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                 let baseHeight = nameNodeLayout.size.height + nameSpacing + statusNodeLayout.size.height + 30.0
                 contentSize = CGSize(width: params.width, height: max(baseHeight, verticalInset * 2.0 + 66.0))
                 if withTopInset || hasCorners {
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
                 } else {
                     let topInset: CGFloat
                     switch neighbors.top {
