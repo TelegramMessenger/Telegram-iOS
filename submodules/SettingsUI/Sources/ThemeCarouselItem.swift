@@ -659,7 +659,7 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
         self.enqueuedTransitions.remove(at: 0)
         
         var options = ListViewDeleteAndInsertOptions()
-        if self.initialized && transition.crossfade {
+        if transition.crossfade {
             options.insert(.AnimateCrossfade)
         }
         options.insert(.Synchronous)
@@ -695,6 +695,7 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
 
+                    strongSelf.listNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
@@ -782,7 +783,7 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
                         }
                     }
                     let previousEntries = strongSelf.entries ?? []
-                    let crossfade = previousEntries.count != entries.count
+                    let crossfade = (previousEntries.count > 0 && previousEntries.count != entries.count) || (previousEntries.count > 0 && previousEntries.count < 3 && entries.count > 3)
                     let transition = preparedTransition(context: item.context, action: action, contextAction: item.contextAction, from: previousEntries, to: entries, crossfade: crossfade, updatePosition: false)
                     strongSelf.enqueueTransition(transition)
                     
