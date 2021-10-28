@@ -1214,6 +1214,12 @@ public final class SparseItemGrid: ASDisplayNode {
     public var cancelExternalContentGestures: (() -> Void)?
     public var zoomLevelUpdated: ((ZoomLevel) -> Void)?
 
+    public var pinchEnabled: Bool = true {
+        didSet {
+            self.pinchRecognizer?.isEnabled = self.pinchEnabled
+        }
+    }
+
     public init(theme: PresentationTheme) {
         self.theme = theme
 

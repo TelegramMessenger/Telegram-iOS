@@ -296,6 +296,14 @@
 "Weekday.Today" = "Today";
 "Weekday.Yesterday" = "Yesterday";
 
+"Calendar.ShortMonday" = "M";
+"Calendar.ShortTuesday" = "T";
+"Calendar.ShortWednesday" = "W";
+"Calendar.ShortThursday" = "T";
+"Calendar.ShortFriday" = "F";
+"Calendar.ShortSaturday" = "S";
+"Calendar.ShortSunday" = "S";
+
 "Time.TodayAt" = "today at %@";
 "Time.YesterdayAt" = "yesterday at %@";
 
@@ -6986,3 +6994,33 @@ Sorry for the inconvenience.";
 "AuthSessions.View.IP" = "IP Address";
 "AuthSessions.View.TerminateSession" = "Terminate Session";
 "AuthSessions.View.Logout" = "Log Out";
+
+"MessageCalendar.Title" = "Calendar";
+"MessageCalendar.DaysSelectedTitle_1" = "1 day selected";
+"MessageCalendar.DaysSelectedTitle_any" = "%@ days selected";
+"MessageCalendar.DeleteConfirmation_1" = "Are you sure you want to delete all messages for the selected day?";
+"MessageCalendar.DeleteConfirmation_1" = "Are you sure you want to delete all messages for the selected %@ days?";
+
+"SharedMedia.PhotoCount_1" = "1 photo";
+"SharedMedia.PhotoCount_any" = "%@ photos";
+"SharedMedia.VideoCount_1" = "1 video";
+"SharedMedia.VideoCount_any" = "%@ videos";
+"SharedMedia.GifCount_1" = "1 gif";
+"SharedMedia.GifCount_any" = "%@ gifs";
+"SharedMedia.FileCount_1" = "1 file";
+"SharedMedia.FileCount_any" = "%@ files";
+"SharedMedia.MusicCount_1" = "1 music file";
+"SharedMedia.MusicCount_any" = "%@ music files";
+"SharedMedia.VoiceMessageCount_1" = "1 voice message";
+"SharedMedia.VoiceMessageCount_any" = "%@ voice messages";
+"SharedMedia.LinkCount_1" = "1 link";
+"SharedMedia.LinkCount_any" = "%@ links";
+
+"SharedMedia.FastScrollTooltip" = "You can hold and move this bar for faster scrolling";
+"SharedMedia.CalendarTooltip" = "Tap on this icon for calendar view";
+
+"SharedMedia.ZoomIn" = "Zoom In";
+"SharedMedia.ZoomOut" = "Zoom Out";
+"SharedMedia.ShowCalendar" = "Show Calendar";
+"SharedMedia.ShowPhotos" = "Show Photos";
+"SharedMedia.ShowVideos" = "Show Videos";

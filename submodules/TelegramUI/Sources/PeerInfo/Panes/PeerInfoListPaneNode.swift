@@ -148,16 +148,17 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 return nil
             }
 
-            //TODO:localize
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
             switch tagMask {
             case MessageTags.file:
-                return PeerInfoStatusData(text: "\(count) files", isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_FileCount(Int32(count)), isActivity: false)
             case MessageTags.music:
-                return PeerInfoStatusData(text: "\(count) music files", isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_MusicCount(Int32(count)), isActivity: false)
             case MessageTags.voiceOrInstantVideo:
-                return PeerInfoStatusData(text: "\(count) voice messages", isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VoiceMessageCount(Int32(count)), isActivity: false)
             case MessageTags.webPage:
-                return PeerInfoStatusData(text: "\(count) links", isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_LinkCount(Int32(count)), isActivity: false)
             default:
                 return nil
             }

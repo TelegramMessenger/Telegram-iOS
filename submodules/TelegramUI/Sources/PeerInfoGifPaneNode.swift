@@ -798,8 +798,9 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
     
     private var animationTimer: SwiftSignalKit.Timer?
 
+    private let statusPromise = Promise<PeerInfoStatusData?>(nil)
     var status: Signal<PeerInfoStatusData?, NoError> {
-        return .single(nil)
+        self.statusPromise.get()
     }
 
     var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)?
@@ -872,6 +873,23 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
         }, queue: .mainQueue())
         self.animationTimer = animationTimer
         animationTimer.start()
+
+        self.statusPromise.set(context.account.postbox.combinedView(keys: [PostboxViewKey.historyTagSummaryView(tag: tagMaskForType(self.contentType), peerId: peerId, namespace: Namespaces.Message.Cloud)])
+        |> map { views -> PeerInfoStatusData? in
+            let count: Int32 = (views.views[PostboxViewKey.historyTagSummaryView(tag: tagMaskForType(self.contentType), peerId: peerId, namespace: Namespaces.Message.Cloud)] as? MessageHistoryTagSummaryView)?.count ?? 0
+            if count == 0 {
+                return nil
+            }
+
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+            switch contentType {
+            case .gifs:
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_GifCount(Int32(count)), isActivity: false)
+            default:
+                return nil
+            }
+        })
     }
     
     deinit {

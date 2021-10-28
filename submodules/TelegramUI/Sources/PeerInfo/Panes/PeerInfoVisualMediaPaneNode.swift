@@ -20,6 +20,7 @@ import DirectMediaImageCache
 import ComponentFlow
 import TelegramNotices
 import TelegramUIPreferences
+import CheckNode
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext
@@ -754,6 +755,7 @@ private final class DurationLayer: CALayer {
 private final class ItemLayer: CALayer, SparseItemGridLayer {
     var item: VisualMediaItem?
     var durationLayer: DurationLayer?
+    var selectionLayer: GridMessageSelectionLayer?
     var disposable: Disposable?
 
     var hasContents: Bool = false
@@ -793,6 +795,35 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
         } else if let durationLayer = self.durationLayer {
             self.durationLayer = nil
             durationLayer.removeFromSuperlayer()
+        }
+    }
+
+    func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool) {
+        if let isSelected = isSelected {
+            if let selectionLayer = self.selectionLayer {
+                selectionLayer.updateSelected(isSelected, animated: animated)
+            } else {
+                let selectionLayer = GridMessageSelectionLayer(theme: theme)
+                selectionLayer.updateSelected(isSelected, animated: false)
+                self.selectionLayer = selectionLayer
+                self.addSublayer(selectionLayer)
+                if !self.bounds.isEmpty {
+                    selectionLayer.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+                    selectionLayer.updateLayout(size: self.bounds.size)
+                    if animated {
+                        selectionLayer.animateIn()
+                    }
+                }
+            }
+        } else if let selectionLayer = self.selectionLayer {
+            self.selectionLayer = nil
+            if animated {
+                selectionLayer.animateOut { [weak selectionLayer] in
+                    selectionLayer?.removeFromSuperlayer()
+                }
+            } else {
+                selectionLayer.removeFromSuperlayer()
+            }
         }
     }
 
@@ -975,6 +1006,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     let listItemInteraction: ListMessageItemInteraction
     let chatControllerInteraction: ChatControllerInteraction
     let chatPresentationData: ChatPresentationData
+    let checkNodeTheme: CheckNodeTheme
 
     var loadHoleImpl: ((SparseItemGrid.HoleAnchor, SparseItemGrid.HoleLocation) -> Signal<Never, NoError>)?
     var onTapImpl: ((VisualMediaItem) -> Void)?
@@ -1000,6 +1032,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
 
         let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
         self.chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: 1.0)
+
+        self.checkNodeTheme = CheckNodeTheme(theme: presentationData.theme, style: .overlay, hasInset: true)
     }
 
     func getListShimmerImage(height: CGFloat) -> UIImage {
@@ -1250,6 +1284,12 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                     layer.updateDuration(duration: duration)
                 }
 
+                if let selectionState = self.chatControllerInteraction.selectionState {
+                    layer.updateSelection(theme: self.checkNodeTheme, isSelected: selectionState.selectedIds.contains(message.id), animated: false)
+                } else {
+                    layer.updateSelection(theme: self.checkNodeTheme, isSelected: nil, animated: false)
+                }
+
                 layer.bind(item: item)
             }
         }
@@ -1484,8 +1524,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 return
             }
             if count < 1 {
-                //TODO:localize
-                strongSelf.itemGrid.updateScrollingAreaTooltip(tooltip: SparseItemGridScrollingArea.DisplayTooltip(animation: "anim_infotip", text: "You can hold and move this bar for faster scrolling", completed: {
+                strongSelf.itemGrid.updateScrollingAreaTooltip(tooltip: SparseItemGridScrollingArea.DisplayTooltip(animation: "anim_infotip", text: strongSelf.itemGridBinding.chatPresentationData.strings.SharedMedia_FastScrollTooltip, completed: {
                     guard let strongSelf = self else {
                         return
                     }
@@ -1505,7 +1544,15 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             guard let strongSelf = self else {
                 return
             }
-            let _ = strongSelf.chatControllerInteraction.openMessage(item.message, .default)
+            if let selectionState = strongSelf.chatControllerInteraction.selectionState {
+                var toggledValue = true
+                if selectionState.selectedIds.contains(item.message.id) {
+                    toggledValue = false
+                }
+                strongSelf.chatControllerInteraction.toggleMessagesSelection([item.message.id], toggledValue)
+            } else {
+                let _ = strongSelf.chatControllerInteraction.openMessage(item.message, .default)
+            }
         }
 
         self.itemGridBinding.onTagTapImpl = { [weak self] in
@@ -1813,72 +1860,67 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             return true
         })
         |> map { contentType, dict -> PeerInfoStatusData? in
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
             switch contentType {
             case .photoOrVideo:
                 let photoCount: Int32 = dict[.photo] ?? 0
                 let videoCount: Int32 = dict[.video] ?? 0
 
-                //TODO:localize
                 if photoCount != 0 && videoCount != 0 {
-                    return PeerInfoStatusData(text: "\(photoCount) photos, \(videoCount) videos", isActivity: false)
+                    return PeerInfoStatusData(text: "\(presentationData.strings.SharedMedia_PhotoCount(Int32(photoCount))), \(presentationData.strings.SharedMedia_VideoCount(Int32(videoCount)))", isActivity: false)
                 } else if photoCount != 0 {
-                    return PeerInfoStatusData(text: "\(photoCount) photos", isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_PhotoCount(Int32(photoCount)), isActivity: false)
                 } else if videoCount != 0 {
-                    return PeerInfoStatusData(text: "\(videoCount) videos", isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VideoCount(Int32(videoCount)), isActivity: false)
                 } else {
                     return nil
                 }
             case .photo:
                 let photoCount: Int32 = dict[.photo] ?? 0
 
-                //TODO:localize
                 if photoCount != 0 {
-                    return PeerInfoStatusData(text: "\(photoCount) photos", isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_PhotoCount(Int32(photoCount)), isActivity: false)
                 } else {
                     return nil
                 }
             case .video:
                 let videoCount: Int32 = dict[.video] ?? 0
 
-                //TODO:localize
                 if videoCount != 0 {
-                    return PeerInfoStatusData(text: "\(videoCount) videos", isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VideoCount(Int32(videoCount)), isActivity: false)
                 } else {
                     return nil
                 }
             case .gifs:
                 let gifCount: Int32 = dict[.gif] ?? 0
 
-                //TODO:localize
                 if gifCount != 0 {
-                    return PeerInfoStatusData(text: "\(gifCount) gifs", isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_GifCount(Int32(gifCount)), isActivity: false)
                 } else {
                     return nil
                 }
             case .files:
                 let fileCount: Int32 = dict[.file] ?? 0
 
-                //TODO:localize
                 if fileCount != 0 {
-                    return PeerInfoStatusData(text: "\(fileCount) files", isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_FileCount(Int32(fileCount)), isActivity: false)
                 } else {
                     return nil
                 }
             case .voiceAndVideoMessages:
                 let itemCount: Int32 = dict[.voiceOrInstantVideo] ?? 0
 
-                //TODO:localize
                 if itemCount != 0 {
-                    return PeerInfoStatusData(text: "\(itemCount) voice messages", isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VoiceMessageCount(Int32(itemCount)), isActivity: false)
                 } else {
                     return nil
                 }
             case .music:
                 let itemCount: Int32 = dict[.music] ?? 0
 
-                //TODO:localize
                 if itemCount != 0 {
-                    return PeerInfoStatusData(text: "\(itemCount) music files", isActivity: false)
+                    return PeerInfoStatusData(text: presentationData.strings.SharedMedia_MusicCount(Int32(itemCount)), isActivity: false)
                 } else {
                     return nil
                 }
@@ -2105,21 +2147,33 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     }
     
     func updateSelectedMessages(animated: Bool) {
-        self.itemGrid.forEachVisibleItem { item in
-            guard let itemView = item.view as? ItemView else {
-                return
+        switch self.contentType {
+        case .files, .music, .voiceAndVideoMessages:
+            self.itemGrid.forEachVisibleItem { item in
+                guard let itemView = item.view as? ItemView else {
+                    return
+                }
+                if let item = itemView.item {
+                    itemView.bind(
+                        item: item,
+                        presentationData: self.itemGridBinding.chatPresentationData,
+                        context: self.itemGridBinding.context,
+                        chatLocation: self.itemGridBinding.chatLocation,
+                        interaction: self.itemGridBinding.listItemInteraction,
+                        isSelected: self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id),
+                        size: itemView.bounds.size
+                    )
+                }
             }
-            if let item = itemView.item {
-                itemView.bind(
-                    item: item,
-                    presentationData: self.itemGridBinding.chatPresentationData,
-                    context: self.itemGridBinding.context,
-                    chatLocation: self.itemGridBinding.chatLocation,
-                    interaction: self.itemGridBinding.listItemInteraction,
-                    isSelected: self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id),
-                    size: itemView.bounds.size
-                )
+        case .photo, .video, .photoOrVideo, .gifs:
+            self.itemGrid.forEachVisibleItem { item in
+                guard let itemLayer = item.layer as? ItemLayer, let item = itemLayer.item else {
+                    return
+                }
+                itemLayer.updateSelection(theme: self.itemGridBinding.checkNodeTheme, isSelected: self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id), animated: animated)
             }
+
+            self.itemGrid.pinchEnabled = self.chatControllerInteraction.selectionState == nil
         }
     }
     

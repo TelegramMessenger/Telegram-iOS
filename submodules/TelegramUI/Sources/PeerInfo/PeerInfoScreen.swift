@@ -6061,8 +6061,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             return
         }
         let buttonFrame = buttonNode.view.convert(buttonNode.bounds, to: self.view)
-        //TODO:localize
-        controller.present(TooltipScreen(account: self.context.account, text: "Tap on this icon for calendar view", style: .default, icon: .none, location: .point(buttonFrame.insetBy(dx: 0.0, dy: 5.0), .top), shouldDismissOnTouch: { point in
+        controller.present(TooltipScreen(account: self.context.account, text: self.presentationData.strings.SharedMedia_CalendarTooltip, style: .default, icon: .none, location: .point(buttonFrame.insetBy(dx: 0.0, dy: 5.0), .top), shouldDismissOnTouch: { point in
             return .dismiss(consume: false)
         }), in: .current)
     }
@@ -6099,14 +6098,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
 
             var items: [ContextMenuItem] = []
-            //TODO:localize
+
+            let strings = strongSelf.presentationData.strings
 
             var recurseGenerateAction: ((Bool) -> ContextMenuActionItem)?
             let generateAction: (Bool) -> ContextMenuActionItem = { [weak pane] isZoomIn in
                 let nextZoomLevel = isZoomIn ? pane?.availableZoomLevels().increment : pane?.availableZoomLevels().decrement
                 let canZoom: Bool = nextZoomLevel != nil
 
-                return ContextMenuActionItem(id: isZoomIn ? 0 : 1, text: isZoomIn ? "Zoom In" : "Zoom Out", textColor: canZoom ? .primary : .disabled, icon: { theme in
+                return ContextMenuActionItem(id: isZoomIn ? 0 : 1, text: isZoomIn ? strings.SharedMedia_ZoomIn : strings.SharedMedia_ZoomOut, textColor: canZoom ? .primary : .disabled, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: isZoomIn ? "Chat/Context Menu/ZoomIn" : "Chat/Context Menu/ZoomOut"), color: canZoom ? theme.contextMenu.primaryColor : theme.contextMenu.primaryColor.withMultipliedAlpha(0.4))
                 }, action: canZoom ? { action in
                     guard let pane = pane, let zoomLevel = isZoomIn ? pane.availableZoomLevels().increment : pane.availableZoomLevels().decrement else {
@@ -6127,7 +6127,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             items.append(.action(generateAction(false)))
 
             var ignoreNextActions = false
-            items.append(.action(ContextMenuActionItem(text: "Show Calendar", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowCalendar, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Calendar"), color: theme.contextMenu.primaryColor)
             }, action: { _, a in
                 if ignoreNextActions {
@@ -6157,7 +6157,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     showVideos = false
                 }
 
-                items.append(.action(ContextMenuActionItem(text: "Show Photos", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowPhotos, icon: { theme in
                     if !showPhotos {
                         return nil
                     }
@@ -6181,7 +6181,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                     pane.updateContentType(contentType: updatedContentType)
                 })))
-                items.append(.action(ContextMenuActionItem(text: "Show Videos", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ShowVideos, icon: { theme in
                     if !showVideos {
                         return nil
                     }

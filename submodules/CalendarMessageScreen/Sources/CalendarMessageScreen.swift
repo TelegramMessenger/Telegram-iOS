@@ -151,24 +151,21 @@ private func monthName(index: Int, strings: PresentationStrings) -> String {
 }
 
 private func dayName(index: Int, strings: PresentationStrings) -> String {
-    let _ = strings
-    //TODO:localize
-
     switch index {
     case 0:
-        return "M"
+        return strings.Calendar_ShortMonday
     case 1:
-        return "T"
+        return strings.Calendar_ShortTuesday
     case 2:
-        return "W"
+        return strings.Calendar_ShortWednesday
     case 3:
-        return "T"
+        return strings.Calendar_ShortThursday
     case 4:
-        return "F"
+        return strings.Calendar_ShortFriday
     case 5:
-        return "S"
+        return strings.Calendar_ShortSaturday
     case 6:
-        return "S"
+        return strings.Calendar_ShortSunday
     default:
         return ""
     }
@@ -1402,8 +1399,7 @@ public final class CalendarMessageScreen: ViewController {
                 }
 
                 if let _ = info.canClearForMyself ?? info.canClearForEveryone {
-                    //TODO:localize
-                    items.append(ActionSheetTextItem(title: "Are you sure you want to delete all messages for the \(selectedCount) selected days?"))
+                    items.append(ActionSheetTextItem(title: strongSelf.presentationData.strings.MessageCalendar_DeleteConfirmation(Int32(selectedCount))))
 
                     if let canClearForEveryone = info.canClearForEveryone {
                         let text: String
@@ -1627,8 +1623,7 @@ public final class CalendarMessageScreen: ViewController {
         }
 
         private func updateSelectionState() {
-            //TODO:localize
-            var title = "Calendar"
+            var title = self.presentationData.strings.MessageCalendar_Title
             if let selectionState = self.selectionState, let dayRange = selectionState.dayRange {
                 var selectedCount = 0
                 for i in 0 ..< self.months.count {
@@ -1643,11 +1638,7 @@ public final class CalendarMessageScreen: ViewController {
                 }
 
                 if selectedCount != 0 {
-                    if selectedCount == 1 {
-                        title = "1 day selected"
-                    } else {
-                        title = "\(selectedCount) days selected"
-                    }
+                    title = self.presentationData.strings.MessageCalendar_DaysSelectedTitle(Int32(selectedCount))
                 }
             }
 
@@ -1732,8 +1723,7 @@ public final class CalendarMessageScreen: ViewController {
         self.navigationPresentation = .modal
 
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(dismissPressed)), animated: false)
-        //TODO:localize
-        self.navigationItem.setTitle("Calendar", animated: false)
+        self.navigationItem.setTitle(self.presentationData.strings.MessageCalendar_Title, animated: false)
 
         /*if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
             self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.toggleSelectPressed)), animated: false)
