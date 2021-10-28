@@ -10,6 +10,7 @@ import TelegramPresentationData
 import ComponentFlow
 import PhotoResources
 import DirectMediaImageCache
+import TelegramStringFormatting
 
 private final class MediaPreviewView: UIView {
     private let context: AccountContext
@@ -116,37 +117,6 @@ private final class MediaPreviewView: UIView {
         self.imageView.frame = CGRect(origin: CGPoint(), size: size)
         let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: size.width / 2.0), imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
         apply()*/
-    }
-}
-
-private func monthName(index: Int, strings: PresentationStrings) -> String {
-    switch index {
-    case 0:
-        return strings.Month_GenJanuary
-    case 1:
-        return strings.Month_GenFebruary
-    case 2:
-        return strings.Month_GenMarch
-    case 3:
-        return strings.Month_GenApril
-    case 4:
-        return strings.Month_GenMay
-    case 5:
-        return strings.Month_GenJune
-    case 6:
-        return strings.Month_GenJuly
-    case 7:
-        return strings.Month_GenAugust
-    case 8:
-        return strings.Month_GenSeptember
-    case 9:
-        return strings.Month_GenOctober
-    case 10:
-        return strings.Month_GenNovember
-    case 11:
-        return strings.Month_GenDecember
-    default:
-        return ""
     }
 }
 
@@ -685,9 +655,11 @@ private final class MonthComponent: CombinedComponent {
             let usableWeekdayWidth = floor((context.availableSize.width - sideInset * 2.0 - weekdaySpacing * 6.0) / 7.0)
             let weekdayWidth = floor((context.availableSize.width - sideInset * 2.0) / 7.0)
 
+            let monthName = stringForMonth(strings: context.component.strings, month: Int32(context.component.model.index - 1), ofYear: Int32(context.component.model.year - 1900))
+
             let title = title.update(
                 component: Text(
-                    text: "\(monthName(index: context.component.model.index - 1, strings: context.component.strings)) \(context.component.model.year)",
+                    text: monthName,
                     font: Font.semibold(17.0),
                     color: context.component.foregroundColor
                 ),
