@@ -781,7 +781,7 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.tapping = true
                             strongSelf.item?.updatedTheme(themeReference)
                             let _ = ensureThemeVisible(listNode: strongSelf.listNode, themeReference: themeReference, animated: true)
-                            Queue.mainQueue().after(0.2) {
+                            Queue.mainQueue().after(0.4) {
                                 strongSelf.tapping = false
                             }
                         }

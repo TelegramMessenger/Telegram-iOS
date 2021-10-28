@@ -131,6 +131,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
         sliderView.maximumValue = 6.0
         sliderView.startValue = 0.0
         sliderView.positionsCount = 7
+        sliderView.useLinesForPositions = true
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         if let item = self.item, let params = self.layoutParams {
             sliderView.isUserInteractionEnabled = item.enabled

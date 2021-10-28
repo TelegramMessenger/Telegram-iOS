@@ -398,7 +398,9 @@ public func automaticThemeShouldSwitchNow(settings: AutomaticThemeSwitchSetting,
 }
 
 private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Signal<Bool, NoError> {
-    if case .explicitNone = settings.trigger {
+    if settings.force {
+        return .single(true)
+    } else if case .explicitNone = settings.trigger {
         return .single(false)
     } else {
         return Signal { subscriber in
@@ -616,6 +618,11 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                         if autoNightModeTriggered {
                             let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
                             effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
+                            
+                            if automaticTheme == .builtin(.night) && effectiveColors == nil {
+                                effectiveColors = PresentationThemeAccentColor(baseColor: .blue)
+                            }
+                            
                             let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
                             
                             if let themeSpecificWallpaper = themeSpecificWallpaper {

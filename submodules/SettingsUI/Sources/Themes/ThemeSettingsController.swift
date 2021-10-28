@@ -341,7 +341,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.themeListHeader(presentationData.theme, title))
     entries.append(.chatPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.chatFontSize, presentationData.chatBubbleCorners, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
     
-    entries.append(.themes(presentationData.theme, presentationData.strings, chatThemes, themeReference, presentationThemeSettings.automaticThemeSwitchSetting.force, animatedEmojiStickers))
+    entries.append(.themes(presentationData.theme, presentationData.strings, chatThemes, themeReference, presentationThemeSettings.automaticThemeSwitchSetting.force || presentationData.autoNightModeTriggered, animatedEmojiStickers))
     entries.append(.chatTheme(presentationData.theme, strings.Settings_ChatThemes))
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
     
@@ -1102,27 +1102,31 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
                 if case let .cloud(info) = updatedTheme, info.theme.settings?.contains(where: { $0.baseTheme == .night || $0.baseTheme == .tinted }) ?? false {
                     updatedAutomaticThemeSwitchSetting.theme = updatedTheme
+                } else if autoNightModeTriggered {
+                    var updatedThemeSpecificAccentColors = current.themeSpecificAccentColors
+                    if let baseThemeIndex = baseThemeIndex {
+                        updatedThemeSpecificAccentColors[baseThemeIndex] = PresentationThemeAccentColor(themeIndex: updatedTheme.index)
+                    }
+                    
+                    if autoNightModeTriggered {
+                        var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                        updatedAutomaticThemeSwitchSetting.theme = updatedTheme
+                        
+                        return current.withUpdatedAutomaticThemeSwitchSetting(updatedAutomaticThemeSwitchSetting).withUpdatedThemeSpecificAccentColors(updatedThemeSpecificAccentColors)
+                    } else {
+                        return current.withUpdatedTheme(updatedTheme).withUpdatedThemeSpecificAccentColors(updatedThemeSpecificAccentColors)
+                    }
                 } else if case let .builtin(theme) = updatedTheme {
                     if [.day, .dayClassic].contains(theme) {
-                        updatedAutomaticThemeSwitchSetting.theme = .builtin(.night)
+                        if updatedAutomaticThemeSwitchSetting.theme.emoticon != nil || [.builtin(.dayClassic), .builtin(.day)].contains(updatedAutomaticThemeSwitchSetting.theme.generalThemeReference) {
+                            updatedAutomaticThemeSwitchSetting.theme = .builtin(.night)
+                        }
                     } else {
                         updatedAutomaticThemeSwitchSetting.theme = updatedTheme
                     }
                 }
                 return current.withUpdatedTheme(updatedTheme).withUpdatedAutomaticThemeSwitchSetting(updatedAutomaticThemeSwitchSetting)
-//                var updatedThemeSpecificAccentColors = current.themeSpecificAccentColors
-//                if let baseThemeIndex = baseThemeIndex {
-//                    updatedThemeSpecificAccentColors[baseThemeIndex] = PresentationThemeAccentColor(themeIndex: updatedTheme.index)
-//                }
-//
-//                if autoNightModeTriggered {
-//                    var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
-//                    updatedAutomaticThemeSwitchSetting.theme = updatedTheme
-//
-//                    return current.withUpdatedAutomaticThemeSwitchSetting(updatedAutomaticThemeSwitchSetting).withUpdatedThemeSpecificAccentColors(updatedThemeSpecificAccentColors)
-//                } else {
-//                    return current.withUpdatedTheme(updatedTheme).withUpdatedThemeSpecificAccentColors(updatedThemeSpecificAccentColors)
-//                }
+
             }).start()
             
             return currentThemeBaseIndex != updatedThemeBaseIndex

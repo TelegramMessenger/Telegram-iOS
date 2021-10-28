@@ -916,7 +916,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             } else {
                                 strongSelf.tapping = true
                                 item.updated(color)
-                                Queue.mainQueue().after(0.2) {
+                                Queue.mainQueue().after(0.4) {
                                     strongSelf.tapping = false
                                 }
                             }

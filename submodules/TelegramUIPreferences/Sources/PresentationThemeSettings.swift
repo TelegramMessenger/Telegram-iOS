@@ -239,7 +239,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
     
     public var emoticon: String? {
         switch self {
-            case .builtin:
+            case .builtin(.dayClassic):
                 return "🏠"
             case let .cloud(theme):
                 return theme.theme.emoticon
