@@ -1195,7 +1195,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         let titleHeight: CGFloat = 54.0
         let contentHeight = titleHeight + bottomInset + 188.0
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         
         let sideInset = floor((layout.size.width - width) / 2.0)
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))

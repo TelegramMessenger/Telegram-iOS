@@ -6959,7 +6959,7 @@ Sorry for the inconvenience.";
 "Time.HoursAgo_any" = "%@ hours ago";
 "Time.HoursAgo_many" = "%@ hours ago";
 "Time.HoursAgo_0" = "%@ hours ago";
-"Time.AtDate" = "last seen %@";
+"Time.AtDate" = "%@";
 
 "Stickers.ShowMore" = "Show More";
 
@@ -6979,8 +6979,9 @@ Sorry for the inconvenience.";
 "Notifications.On" = "On";
 "Notifications.Off" = "Off";
 
+"AuthSessions.View.Browser" = "Browser";
 "AuthSessions.View.Device" = "Device";
 "AuthSessions.View.Location" = "Location";
-"AuthSessions.View.IP" = "IP";
+"AuthSessions.View.IP" = "IP Address";
 "AuthSessions.View.TerminateSession" = "Terminate Session";
 "AuthSessions.View.Logout" = "Log Out";

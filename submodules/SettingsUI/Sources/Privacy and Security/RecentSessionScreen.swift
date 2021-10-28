@@ -17,6 +17,7 @@ import MediaResources
 import StickerResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import AvatarNode
 
 private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -42,7 +43,7 @@ private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
 final class RecentSessionScreen: ViewController {
     enum Subject {
         case session(RecentAccountSession)
-        case website(WebAuthorization)
+        case website(WebAuthorization, Peer?)
     }
     private var controllerNode: RecentSessionScreenNode {
         return self.displayNode as! RecentSessionScreenNode
@@ -52,7 +53,7 @@ final class RecentSessionScreen: ViewController {
     
     private let context: AccountContext
     private let subject: RecentSessionScreen.Subject
-    private let remove: () -> Void
+    private let remove: (@escaping () -> Void) -> Void
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -67,7 +68,7 @@ final class RecentSessionScreen: ViewController {
         }
     }
     
-    init(context: AccountContext, subject: RecentSessionScreen.Subject, remove: @escaping () -> Void) {
+    init(context: AccountContext, subject: RecentSessionScreen.Subject, remove: @escaping (@escaping () -> Void) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.subject = subject
@@ -106,6 +107,11 @@ final class RecentSessionScreen: ViewController {
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
+        }
+        self.controllerNode.remove = { [weak self] in
+            self?.remove({
+                self?.controllerNode.animateOut()
+            })
         }
     }
     
@@ -149,6 +155,9 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
     private let topContentContainerNode: SparseNode
     private let backgroundNode: ASDisplayNode
     private let contentBackgroundNode: ASDisplayNode
+    private var iconNode: ASImageNode?
+    private var animationNode: AnimationNode?
+    private var avatarNode: AvatarNode?
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let fieldBackgroundNode: ASDisplayNode
@@ -201,7 +210,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
     
         self.contentBackgroundNode = ASDisplayNode()
         self.contentBackgroundNode.backgroundColor = backgroundColor
-        
+                
         self.titleNode = ImmediateTextNode()
         self.textNode = ImmediateTextNode()
         
@@ -229,6 +238,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         let subtitle: String
         let subtitleActive: Bool
         let device: String
+        let deviceTitle: String
         let location: String
         let ip: String
         switch subject {
@@ -242,6 +252,8 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                     subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, relativeTimestamp: session.activityDate, relativeTo: timestamp)
                     subtitleActive = false
                 }
+                deviceTitle = presentationData.strings.AuthSessions_View_Device
+            
                 var deviceString = ""
                 if !session.deviceModel.isEmpty {
                     deviceString = session.deviceModel
@@ -261,20 +273,33 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 device = deviceString
                 location = session.country
                 ip = session.ip
-            case let .website(website):
+            
+                let (icon, animationName) = iconForSession(session)
+                if let animationName = animationName {
+                    let animationNode = AnimationNode(animation: animationName, colors: [:], scale: 1.0)
+                    self.animationNode = animationNode
+                } else if let icon = icon {
+                    let iconNode = ASImageNode()
+                    iconNode.displaysAsynchronously = false
+                    iconNode.image = icon
+                    self.iconNode = iconNode
+                }
+            case let .website(website, peer):
                 self.terminateButton.title = self.presentationData.strings.AuthSessions_View_Logout
-                title = website.domain
-                subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, relativeTimestamp: website.dateActive, relativeTo: timestamp)
+            
+                if let peer = peer {
+                    title = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                } else {
+                    title = ""
+                }
+            
+                subtitle = website.domain
                 subtitleActive = false
             
+                deviceTitle = presentationData.strings.AuthSessions_View_Browser
+            
                 var deviceString = ""
-                if !website.domain.isEmpty {
-                    deviceString = website.domain
-                }
                 if !website.browser.isEmpty {
-                    if !deviceString.isEmpty {
-                        deviceString += ", "
-                    }
                     deviceString += website.browser
                 }
                 if !website.platform.isEmpty {
@@ -286,20 +311,30 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 device = deviceString
                 location = website.region
                 ip = website.ip
+            
+                let avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 12.0))
+                avatarNode.clipsToBounds = true
+                avatarNode.cornerRadius = 17.0
+                if let peer = peer.flatMap({ EnginePeer($0) }) {
+                    avatarNode.setPeer(context: context, theme: presentationData.theme, peer: peer, authorOfMessage: nil, overrideImage: nil, emptyColor: nil, clipStyle: .none, synchronousLoad: false, displayDimensions: CGSize(width: 72.0, height: 72.0), storeUnrounded: false)
+                }
+                self.avatarNode = avatarNode
         }
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.regular(30.0), textColor: textColor)
         self.textNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(17.0), textColor: subtitleActive ? accentColor : secondaryTextColor)
         
-        self.deviceTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_Device, font: Font.regular(17.0), textColor: textColor)
+        self.deviceTitleNode.attributedText = NSAttributedString(string: deviceTitle, font: Font.regular(17.0), textColor: textColor)
         self.deviceValueNode.attributedText = NSAttributedString(string: device, font: Font.regular(17.0), textColor: secondaryTextColor)
       
         self.firstSeparatorNode = ASDisplayNode()
+        self.firstSeparatorNode.backgroundColor = self.presentationData.theme.list.itemBlocksSeparatorColor
         
         self.locationTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_Location, font: Font.regular(17.0), textColor: textColor)
         self.locationValueNode.attributedText = NSAttributedString(string: location, font: Font.regular(17.0), textColor: secondaryTextColor)
       
         self.secondSeparatorNode = ASDisplayNode()
+        self.secondSeparatorNode.backgroundColor = self.presentationData.theme.list.itemBlocksSeparatorColor
         
         self.ipTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_IP, font: Font.regular(17.0), textColor: textColor)
         self.ipValueNode.attributedText = NSAttributedString(string: ip, font: Font.regular(17.0), textColor: secondaryTextColor)
@@ -333,13 +368,19 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.contentContainerNode.addSubnode(self.ipTitleNode)
         self.contentContainerNode.addSubnode(self.ipValueNode)
         
+        self.contentContainerNode.addSubnode(self.firstSeparatorNode)
+        self.contentContainerNode.addSubnode(self.secondSeparatorNode)
+        
         self.contentContainerNode.addSubnode(self.terminateButton)
         self.topContentContainerNode.addSubnode(self.cancelButton)
+        
+        self.iconNode.flatMap { self.contentContainerNode.addSubnode($0) }
+        self.animationNode.flatMap { self.contentContainerNode.addSubnode($0) }
+        self.avatarNode.flatMap { self.contentContainerNode.addSubnode($0) }
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         self.terminateButton.pressed = { [weak self] in
             if let strongSelf = self {
-                strongSelf.terminateButton.isUserInteractionEnabled = false
                 strongSelf.remove?()
             }
         }
@@ -353,9 +394,18 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.presentationData = presentationData
                         
         self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.regular(30.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-        self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
+        
+        let subtitleColor: UIColor
+        if case let .session(session) = self.subject, session.isCurrent {
+            subtitleColor = self.presentationData.theme.list.itemAccentColor
+        } else {
+            subtitleColor = self.presentationData.theme.list.itemSecondaryTextColor
+        }
+        self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: subtitleColor)
         
         self.fieldBackgroundNode.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
+        self.firstSeparatorNode.backgroundColor = self.presentationData.theme.list.itemBlocksSeparatorColor
+        self.secondSeparatorNode.backgroundColor = self.presentationData.theme.list.itemBlocksSeparatorColor
         
         self.deviceTitleNode.attributedText = NSAttributedString(string: self.deviceTitleNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
         self.locationTitleNode.attributedText = NSAttributedString(string: self.locationTitleNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
@@ -461,9 +511,22 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
-        let contentHeight = titleHeight + bottomInset + 188.0
+        var contentHeight = titleHeight + bottomInset + 341.0
+        let isCurrent: Bool
+        if case let .session(session) = self.subject, session.isCurrent {
+            isCurrent = true
+        } else {
+            isCurrent = false
+        }
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        if isCurrent || (layout.size.width > layout.size.height && layout.metrics.widthClass == .compact) {
+            contentHeight -= 68.0
+            self.terminateButton.isHidden = true
+        } else {
+            self.terminateButton.isHidden = false
+        }
+        
+        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         
         let sideInset = floor((layout.size.width - width) / 2.0)
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
@@ -478,21 +541,68 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: width - 90.0, height: titleHeight))
-        let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 120.0), size: titleSize)
+        let iconSize = CGSize(width: 72.0, height: 72.0)
+        let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - iconSize.width) / 2.0), y: 36.0), size: iconSize)
+        
+        if let iconNode = self.iconNode {
+            transition.updateFrame(node: iconNode, frame: iconFrame)
+        } else if let animationNode = self.animationNode {
+            transition.updateFrame(node: animationNode, frame: iconFrame)
+            animationNode.loop()
+        } else if let avatarNode = self.avatarNode {
+            transition.updateFrame(node: avatarNode, frame: iconFrame)
+        }
+        
+        let inset: CGFloat = 16.0
+        let titleSize = self.titleNode.updateLayout(CGSize(width: width - inset * 2.0, height: titleHeight))
+        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - titleSize.width) / 2.0), y: 120.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
-        let textSize = self.textNode.updateLayout(CGSize(width: width - 90.0, height: titleHeight))
-        let textFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - textSize.width) / 2.0), y: titleFrame.maxY), size: textSize)
+        let textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0, height: titleHeight))
+        let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - textSize.width) / 2.0), y: titleFrame.maxY), size: textSize)
         transition.updateFrame(node: self.textNode, frame: textFrame)
                 
         let cancelSize = CGSize(width: 44.0, height: 44.0)
         let cancelFrame = CGRect(origin: CGPoint(x: contentFrame.width - cancelSize.width - 3.0, y: 6.0), size: cancelSize)
         transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
         
-        let buttonInset: CGFloat = 16.0
-        let doneButtonHeight = self.terminateButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.terminateButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 6.0, width: contentFrame.width, height: doneButtonHeight))
+        let fieldItemHeight: CGFloat = 44.0
+        let fieldFrame = CGRect(x: inset, y: textFrame.maxY + 24.0, width: contentFrame.width - inset * 2.0, height: fieldItemHeight * 3.0)
+        transition.updateFrame(node: self.fieldBackgroundNode, frame: fieldFrame)
+        
+        let maxFieldTitleWidth = (width - inset * 4.0) * 0.333
+        let maxFieldValueWidth = (width - inset * 4.0) * 0.666
+        
+        let deviceTitleTextSize = self.deviceTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
+        let deviceTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + floorToScreenPixels((fieldItemHeight - deviceTitleTextSize.height) / 2.0)), size: deviceTitleTextSize)
+        transition.updateFrame(node: self.deviceTitleNode, frame: deviceTitleTextFrame)
+        
+        let deviceValueTextSize = self.deviceValueNode.updateLayout(CGSize(width: maxFieldValueWidth, height: fieldItemHeight))
+        let deviceValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - deviceValueTextSize.width - inset, y: fieldFrame.minY + floorToScreenPixels((fieldItemHeight - deviceValueTextSize.height) / 2.0)), size: deviceValueTextSize)
+        transition.updateFrame(node: self.deviceValueNode, frame: deviceValueTextFrame)
+        
+        transition.updateFrame(node: self.firstSeparatorNode, frame: CGRect(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight, width: fieldFrame.width - inset, height: UIScreenPixel))
+        
+        let locationTitleTextSize = self.locationTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
+        let locationTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationTitleTextSize.height) / 2.0)), size: locationTitleTextSize)
+        transition.updateFrame(node: self.locationTitleNode, frame: locationTitleTextFrame)
+        
+        let locationValueTextSize = self.locationValueNode.updateLayout(CGSize(width: maxFieldValueWidth, height: fieldItemHeight))
+        let locationValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - locationValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationValueTextSize.height) / 2.0)), size: locationValueTextSize)
+        transition.updateFrame(node: self.locationValueNode, frame: locationValueTextFrame)
+        
+        transition.updateFrame(node: self.secondSeparatorNode, frame: CGRect(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight, width: fieldFrame.width - inset, height: UIScreenPixel))
+        
+        let ipTitleTextSize = self.ipTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
+        let ipTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - ipTitleTextSize.height) / 2.0)), size: ipTitleTextSize)
+        transition.updateFrame(node: self.ipTitleNode, frame: ipTitleTextFrame)
+        
+        let ipValueTextSize = self.ipValueNode.updateLayout(CGSize(width: maxFieldValueWidth, height: fieldItemHeight))
+        let ipValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - ipValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - ipValueTextSize.height) / 2.0)), size: ipValueTextSize)
+        transition.updateFrame(node: self.ipValueNode, frame: ipValueTextFrame)
+        
+        let doneButtonHeight = self.terminateButton.updateLayout(width: contentFrame.width - inset * 2.0, transition: transition)
+        transition.updateFrame(node: self.terminateButton, frame: CGRect(x: inset, y: contentHeight - doneButtonHeight - insets.bottom - 6.0, width: contentFrame.width, height: doneButtonHeight))
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         transition.updateFrame(node: self.topContentContainerNode, frame: contentContainerFrame)

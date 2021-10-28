@@ -20,7 +20,7 @@ private final class RecentSessionsControllerArguments {
     let terminateOtherSessions: () -> Void
     
     let openSession: (RecentAccountSession) -> Void
-    let openWebSession: (WebAuthorization) -> Void
+    let openWebSession: (WebAuthorization, Peer?) -> Void
     
     let removeWebSession: (Int64) -> Void
     let terminateAllWebSessions: () -> Void
@@ -29,7 +29,7 @@ private final class RecentSessionsControllerArguments {
     
     let openOtherAppsUrl: () -> Void
     
-    init(context: AccountContext, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, openSession: @escaping (RecentAccountSession) -> Void, openWebSession: @escaping (WebAuthorization) -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void, openOtherAppsUrl: @escaping () -> Void) {
+    init(context: AccountContext, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, openSession: @escaping (RecentAccountSession) -> Void, openWebSession: @escaping (WebAuthorization, Peer?) -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void, openOtherAppsUrl: @escaping () -> Void) {
         self.context = context
         self.setSessionIdWithRevealedOptions = setSessionIdWithRevealedOptions
         self.removeSession = removeSession
@@ -278,7 +278,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             return ItemListRecentSessionItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, session: session, enabled: true, editable: false, editing: false, revealed: false, sectionId: self.section, setSessionIdWithRevealedOptions: { _, _ in
             }, removeSession: { _ in
             }, action: {
-                
+                arguments.openSession(session)
             })
         case let .terminateOtherSessions(theme, text):
             return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.blockDestructiveIcon(theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
@@ -307,7 +307,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             }, removeSession: { id in
                 arguments.removeSession(id)
             }, action: {
-                
+                arguments.openSession(session)
             })
         case let .pendingSessionsInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -331,7 +331,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             }, removeSession: { id in
                 arguments.removeWebSession(id)
             }, action: {
-                arguments.openWebSession(website)
+                arguments.openWebSession(website, peer)
             })
         case let .devicesInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { action in
@@ -532,15 +532,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     
     let mode = ValuePromise<RecentSessionsMode>(websitesOnly ? .websites : .sessions)
     
-    let arguments = RecentSessionsControllerArguments(context: context, setSessionIdWithRevealedOptions: { sessionId, fromSessionId in
-        updateState { state in
-            if (sessionId == nil && fromSessionId == state.sessionIdWithRevealedOptions) || (sessionId != nil && fromSessionId == nil) {
-                return state.withUpdatedSessionIdWithRevealedOptions(sessionId)
-            } else {
-                return state
-            }
-        }
-    }, removeSession: { sessionId in
+    let removeSessionImpl: (Int64, @escaping () -> Void) -> Void = { sessionId, completion in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
@@ -550,6 +542,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: presentationData.strings.AuthSessions_TerminateSession, color: .destructive, action: {
                     dismissAction()
+                    completion()
                     
                     updateState {
                         return $0.withUpdatedRemovingSessionId(sessionId)
@@ -571,6 +564,34 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }
+    
+    let removeWebSessionImpl: (Int64) -> Void = { sessionId in
+        updateState {
+            return $0.withUpdatedRemovingSessionId(sessionId)
+        }
+        
+        removeSessionDisposable.set(((webSessionsContext.remove(hash: sessionId)
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+        })
+        |> deliverOnMainQueue).start(error: { _ in
+        }, completed: {
+            updateState {
+                return $0.withUpdatedRemovingSessionId(nil)
+            }
+        }))
+    }
+    
+    let arguments = RecentSessionsControllerArguments(context: context, setSessionIdWithRevealedOptions: { sessionId, fromSessionId in
+        updateState { state in
+            if (sessionId == nil && fromSessionId == state.sessionIdWithRevealedOptions) || (sessionId != nil && fromSessionId == nil) {
+                return state.withUpdatedSessionIdWithRevealedOptions(sessionId)
+            } else {
+                return state
+            }
+        }
+    }, removeSession: { sessionId in
+        removeSessionImpl(sessionId, {})
     }, terminateOtherSessions: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationData: presentationData)
@@ -603,29 +624,20 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openSession: { session in
-        let controller = RecentSessionScreen(context: context, subject: .session(session), remove: {
-            
+        let controller = RecentSessionScreen(context: context, subject: .session(session), remove: { completion in
+            removeSessionImpl(session.hash, {
+                completion()
+            })
         })
         presentControllerImpl?(controller, nil)
-    }, openWebSession: { session in
-        let controller = RecentSessionScreen(context: context, subject: .website(session), remove: {
-            
+    }, openWebSession: { session, peer in
+        let controller = RecentSessionScreen(context: context, subject: .website(session, peer), remove: { completion in
+            removeWebSessionImpl(session.hash)
+            completion()
         })
         presentControllerImpl?(controller, nil)
     }, removeWebSession: { sessionId in
-        updateState {
-            return $0.withUpdatedRemovingSessionId(sessionId)
-        }
-        
-        removeSessionDisposable.set(((webSessionsContext.remove(hash: sessionId)
-        |> mapToSignal { _ -> Signal<Void, NoError> in
-        })
-        |> deliverOnMainQueue).start(error: { _ in
-        }, completed: {
-            updateState {
-                return $0.withUpdatedRemovingSessionId(nil)
-            }
-        }))
+        removeWebSessionImpl(sessionId)
     }, terminateAllWebSessions: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationData: presentationData)

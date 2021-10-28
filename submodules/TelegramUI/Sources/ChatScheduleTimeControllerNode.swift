@@ -386,7 +386,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         let pickerHeight: CGFloat = min(216.0, layout.size.height - contentHeight)
         contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + pickerHeight + buttonOffset
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         
         let sideInset = floor((layout.size.width - width) / 2.0)
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))

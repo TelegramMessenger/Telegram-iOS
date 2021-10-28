@@ -110,44 +110,44 @@ final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
     }
 }
 
-private func iconForSession(_ session: RecentAccountSession) -> UIImage? {
+func iconForSession(_ session: RecentAccountSession) -> (UIImage?, String?) {
     let platform = session.platform.lowercased()
     let device = session.deviceModel.lowercased()
     let systemVersion = session.systemVersion.lowercased()
     if device.contains("xbox") {
-        return UIImage(bundleImageName: "Settings/Devices/Xbox")
+        return (UIImage(bundleImageName: "Settings/Devices/Xbox"), nil)
     }
     if device.contains("chrome") && !device.contains("chromebook") {
-        return UIImage(bundleImageName: "Settings/Devices/Chrome")
+        return (UIImage(bundleImageName: "Settings/Devices/Chrome"), "device_chrome")
     }
     if device.contains("brave") {
-        return UIImage(bundleImageName: "Settings/Devices/Brave")
+        return (UIImage(bundleImageName: "Settings/Devices/Brave"), nil)
     }
     if device.contains("vivaldi") {
-        return UIImage(bundleImageName: "Settings/Devices/Vivaldi")
+        return (UIImage(bundleImageName: "Settings/Devices/Vivaldi"), nil)
     }
     if device.contains("safari") {
-        return UIImage(bundleImageName: "Settings/Devices/Safari")
+        return (UIImage(bundleImageName: "Settings/Devices/Safari"), "device_safari")
     }
     if device.contains("firefox") {
-        return UIImage(bundleImageName: "Settings/Devices/Firefox")
+        return (UIImage(bundleImageName: "Settings/Devices/Firefox"), nil)
     }
     if device.contains("opera") {
-        return UIImage(bundleImageName: "Settings/Devices/Opera")
+        return (UIImage(bundleImageName: "Settings/Devices/Opera"), nil)
     }
     if platform.contains("android") {
-        return UIImage(bundleImageName: "Settings/Devices/Android")
+        return (UIImage(bundleImageName: "Settings/Devices/Android"), "device_android")
     }
     if platform.contains("ios") || platform.contains("macos") {
-        return UIImage(bundleImageName: "Settings/Devices/iOS")
+        return (UIImage(bundleImageName: "Settings/Devices/iOS"), nil)
     }
     if platform.contains("linux") {
-        return UIImage(bundleImageName: "Settings/Devices/Linux")
+        return (UIImage(bundleImageName: "Settings/Devices/Linux"), nil)
     }
     if platform.contains("windows") || systemVersion.contains("windows") {
-        return UIImage(bundleImageName: "Settings/Devices/Windows")
+        return (UIImage(bundleImageName: "Settings/Devices/Windows"), nil)
     }
-    return nil
+    return (nil, nil)
 }
 
 private func trimmedLocationName(_ session: RecentAccountSession) -> String {
@@ -298,7 +298,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             
             var updatedIcon: UIImage?
             if item.session != currentItem?.session {
-                updatedIcon = iconForSession(item.session)
+                updatedIcon = iconForSession(item.session).0
             }
             
             appAttributedString = NSAttributedString(string: deviceString, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
