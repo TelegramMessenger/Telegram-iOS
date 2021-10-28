@@ -6986,3 +6986,11 @@ Sorry for the inconvenience.";
 "AuthSessions.View.IP" = "IP Address";
 "AuthSessions.View.TerminateSession" = "Terminate Session";
 "AuthSessions.View.Logout" = "Log Out";
+
+"Settings.ChatThemes" = "Chat Themes";
+
+"Themes.Title" = "Chat Themes";
+"Themes.SelectTheme" = "Select Theme";
+"Themes.BuildOwn" = "Build Your Own Theme";
+"Themes.EditCurrentTheme" = "Edit Current Theme";
+"Themes.CreateNewTheme" = "Create a New Theme";

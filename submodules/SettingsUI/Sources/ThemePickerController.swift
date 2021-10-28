@@ -285,10 +285,10 @@ private enum ThemePickerControllerEntry: ItemListNodeEntry {
 private func themePickerControllerEntries(presentationData: PresentationData, presentationThemeSettings: PresentationThemeSettings, themeReference: PresentationThemeReference, availableThemes: [PresentationThemeReference], chatThemes: [PresentationThemeReference], nightMode: Bool, animatedEmojiStickers: [String: [StickerPackItem]]) -> [ThemePickerControllerEntry] {
     var entries: [ThemePickerControllerEntry] = []
     
-    entries.append(.themesHeader(presentationData.theme, "Select Theme".uppercased()))
+    entries.append(.themesHeader(presentationData.theme, presentationData.strings.Themes_SelectTheme.uppercased()))
     entries.append(.themes(presentationData.theme, presentationData.strings, chatThemes, themeReference, nightMode, animatedEmojiStickers))
     
-    entries.append(.customHeader(presentationData.theme, "Build Your Own Theme".uppercased()))
+    entries.append(.customHeader(presentationData.theme, presentationData.strings.Themes_BuildOwn.uppercased()))
     entries.append(.chatPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.chatFontSize, presentationData.chatBubbleCorners, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
     
     let generalThemes: [PresentationThemeReference] = availableThemes.filter { reference in
@@ -333,8 +333,8 @@ private func themePickerControllerEntries(presentationData: PresentationData, pr
         entries.append(.accentColor(presentationData.theme, generalThemeReference, themeReference, colorThemes, colorOption))
     }
     
-    entries.append(.editTheme(presentationData.theme, "Edit Current Theme"))
-    entries.append(.createTheme(presentationData.theme, "Create a New Theme"))
+    entries.append(.editTheme(presentationData.theme, presentationData.strings.Themes_EditCurrentTheme))
+    entries.append(.createTheme(presentationData.theme, presentationData.strings.Themes_CreateNewTheme))
     
     return entries
 }
@@ -934,7 +934,7 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
         
         let nightMode = nightModePreview || presentationData.autoNightModeTriggered
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Chat Themes"), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Themes_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themePickerControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, themeReference: themeReference, availableThemes: availableThemes, chatThemes: chatThemes, nightMode: nightMode, animatedEmojiStickers: animatedEmojiStickers), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))

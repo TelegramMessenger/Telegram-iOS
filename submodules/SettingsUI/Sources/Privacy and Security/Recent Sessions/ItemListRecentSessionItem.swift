@@ -138,10 +138,10 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, String?) {
     if platform.contains("android") {
         return (UIImage(bundleImageName: "Settings/Devices/Android"), "device_android")
     }
-    if platform.contains("ios") || platform.contains("macos") {
+    if platform.contains("ios") || platform.contains("macos") || systemVersion.contains("macos") {
         return (UIImage(bundleImageName: "Settings/Devices/iOS"), nil)
     }
-    if platform.contains("linux") {
+    if platform.contains("linux") || systemVersion.contains("macos") {
         return (UIImage(bundleImageName: "Settings/Devices/Linux"), nil)
     }
     if platform.contains("windows") || systemVersion.contains("windows") {
