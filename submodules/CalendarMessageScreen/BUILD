@@ -19,7 +19,8 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/PhotoResources:PhotoResources",
-        "//submodules/DirectMediaImageCache:DirectMediaImageCache"
+        "//submodules/DirectMediaImageCache:DirectMediaImageCache",
+        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
     ],
     visibility = [
         "//visibility:public",
