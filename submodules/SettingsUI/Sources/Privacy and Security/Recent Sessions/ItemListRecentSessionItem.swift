@@ -144,7 +144,7 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, String?) {
     if platform.contains("ubuntu") || systemVersion.contains("ubuntu") {
         return (UIImage(bundleImageName: "Settings/Devices/Ubuntu"), nil)
     }
-    if platform.contains("linux") || systemVersion.contains("macos") {
+    if platform.contains("linux") || systemVersion.contains("linux") {
         return (UIImage(bundleImageName: "Settings/Devices/Linux"), nil)
     }
     if platform.contains("windows") || systemVersion.contains("windows") {
@@ -429,7 +429,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }
                             strongSelf.editableControlNode = editableControlNode
-                            strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.titleNode)
+                            strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.containerNode)
                             editableControlNode.frame = editableControlFrame
                             transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                             editableControlNode.alpha = 0.0
