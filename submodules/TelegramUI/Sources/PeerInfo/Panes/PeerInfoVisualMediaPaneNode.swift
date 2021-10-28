@@ -813,6 +813,7 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
                 self.addSublayer(durationLayer)
                 durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 3.0), size: CGSize())
                 durationLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
+                self.durationLayer = durationLayer
             }
         } else if let durationLayer = self.durationLayer {
             self.durationLayer = nil
@@ -1276,7 +1277,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                                     copyLayer.contents = layer.contents
                                     copyLayer.contentsRect = layer.contentsRect
                                     copyLayer.frame = layer.bounds
-                                    layer.addSublayer(copyLayer)
+                                    if let durationLayer = layer.durationLayer {
+                                        layer.insertSublayer(copyLayer, below: durationLayer)
+                                    } else {
+                                        layer.addSublayer(copyLayer)
+                                    }
                                     copyLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyLayer] _ in
                                         copyLayer?.removeFromSuperlayer()
                                     })
