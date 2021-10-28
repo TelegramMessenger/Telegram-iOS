@@ -107,7 +107,13 @@ public final class GridMessageSelectionLayer: CALayer {
     }
 
     public func updateLayout(size: CGSize) {
-        let checkSize = CGSize(width: 28.0, height: 28.0)
+        let checkWidth: CGFloat
+        if size.width <= 60.0 {
+            checkWidth = 22.0
+        } else {
+            checkWidth = 28.0
+        }
+        let checkSize = CGSize(width: checkWidth, height: checkWidth)
         let previousSize = self.checkLayer.bounds.size
         self.checkLayer.frame = CGRect(origin: CGPoint(x: self.bounds.size.width - checkSize.width - 2.0, y: 2.0), size: checkSize)
         if self.checkLayer.bounds.size != previousSize {

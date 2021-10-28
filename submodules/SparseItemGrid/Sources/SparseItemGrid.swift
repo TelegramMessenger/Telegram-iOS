@@ -809,6 +809,10 @@ public final class SparseItemGrid: ASDisplayNode {
             self.decelerationAnimator?.isPaused = false
         }
 
+        func updateShimmerColors() {
+            self.updateVisibleItems(resetScrolling: false, synchronous: .none, restoreScrollPosition: nil)
+        }
+
         private func updateVisibleItems(resetScrolling: Bool, synchronous: SparseItemGrid.Synchronous, restoreScrollPosition: (y: CGFloat, index: Int)?) {
             guard let layout = self.layout, let items = self.items else {
                 return
@@ -1694,5 +1698,13 @@ public final class SparseItemGrid: ASDisplayNode {
 
     public func transferVelocity(_ velocity: CGFloat) {
         self.currentViewport?.transferVelocity(velocity)
+    }
+
+    public func updatePresentationData(theme: PresentationTheme) {
+        self.theme = theme
+
+        if let currentViewport = self.currentViewport {
+            currentViewport.updateShimmerColors()
+        }
     }
 }
