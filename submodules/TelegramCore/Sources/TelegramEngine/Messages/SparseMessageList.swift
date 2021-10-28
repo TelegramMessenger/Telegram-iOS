@@ -331,7 +331,7 @@ public final class SparseMessageList {
                 }
             }
 
-            guard let loadRange = loadRange else {
+            guard let range = loadRange else {
                 completion()
                 return
             }
@@ -343,7 +343,7 @@ public final class SparseMessageList {
             }
             self.loadingHole = loadingHole
 
-            let mappedDirection: MessageHistoryViewRelativeHoleDirection = .range(start: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: loadRange.lowerBound - 1), end: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: loadRange.upperBound + 1))
+            let mappedDirection: MessageHistoryViewRelativeHoleDirection = .range(start: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: range.lowerBound - 1), end: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: range.upperBound + 1))
 
             let account = self.account
             self.loadHoleDisposable.set((fetchMessageHistoryHole(
@@ -375,20 +375,20 @@ public final class SparseMessageList {
                 for i in 0 ..< strongSelf.sparseItems!.items.count {
                     switch strongSelf.sparseItems!.items[i] {
                     case let .anchor(id, _, _):
-                        if id.id == loadRange.lowerBound {
+                        if id.id == range.lowerBound {
                             lowerIndex = i
                         }
-                        if id.id == loadRange.upperBound {
+                        if id.id == range.upperBound {
                             upperIndex = i
                         }
                     default:
                         break
                     }
                 }
-                if loadRange.lowerBound <= 1 {
+                if range.lowerBound <= 1 {
                     lowerIndex = strongSelf.sparseItems!.items.count - 1
                 }
-                if loadRange.upperBound >= Int32.max - 1 {
+                if range.upperBound >= Int32.max - 1 {
                     upperIndex = 0
                 }
 
