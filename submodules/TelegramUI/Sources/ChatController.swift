@@ -595,9 +595,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.commitPurposefulAction()
             strongSelf.dismissAllTooltips()
             
-            var openMessageByAction: Bool = false
-
+            var openMessageByAction = false
+            var isLocation = false
             for media in message.media {
+                if media is TelegramMediaMap {
+                    isLocation = true
+                }
                 if let file = media as? TelegramMediaFile, file.isInstantVideo {
                     if strongSelf.chatDisplayNode.isInputViewFocused {
                         strongSelf.returnInputViewFocus = true
@@ -772,7 +775,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 strongSelf.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.chatDisplayNode.historyNode.view)
             }, openUrl: { url in
-                self?.openUrl(url, concealed: false, message: nil)
+                self?.openUrl(url, concealed: false, skipConcealedAlert: isLocation, message: nil)
             }, openPeer: { peer, navigation in
                 self?.openPeer(peerId: peer.id, navigation: navigation, fromMessage: nil)
             }, callPeer: { peerId, isVideo in
@@ -12439,7 +12442,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, contentContext: nil)
     }
     
-    private func openUrl(_ url: String, concealed: Bool, skipUrlAuth: Bool = false, message: Message? = nil) {
+    private func openUrl(_ url: String, concealed: Bool, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil) {
         self.commitPurposefulAction()
         
         let _ = self.presentVoiceMessageDiscardAlert(action: {
@@ -12495,7 +12498,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, present: { [weak self] c in
+            openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
                 self?.openResolved(result: resolved, sourceMessageId: message?.id)

@@ -211,7 +211,11 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
             if case .builtin = themeReference, item.nightMode {
                 themeReference = .builtin(.night)
             }
-            self.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, nightMode: item.nightMode, emoticon: true, large: true))
+            
+            let color = item.themeSpecificAccentColors[themeReference.index]
+            let wallpaper = item.themeSpecificChatWallpapers[themeReference.index]
+            
+            self.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: color, wallpaper: wallpaper ?? item.wallpaper, nightMode: item.nightMode, emoticon: true, large: true))
             self.imageNode.backgroundColor = nil
         }
         
@@ -495,7 +499,7 @@ class ThemeGridThemeItemNode: ListViewItemNode, ItemListItemNode {
                     for theme in item.themes {
                         let selected = item.currentTheme.index == theme.index
                         
-                        let iconItem = ThemeCarouselThemeIconItem(context: item.context, emojiFile: theme.emoticon.flatMap { item.animatedEmojiStickers[$0]?.first?.file }, themeReference: theme, nightMode: item.nightMode, selected: selected, theme: item.theme, strings: item.strings, wallpaper: nil, action: { theme in
+                        let iconItem = ThemeCarouselThemeIconItem(context: item.context, emojiFile: theme.emoticon.flatMap { item.animatedEmojiStickers[$0]?.first?.file }, themeReference: theme, nightMode: item.nightMode, themeSpecificAccentColors: item.themeSpecificAccentColors, themeSpecificChatWallpapers: item.themeSpecificChatWallpapers, selected: selected, theme: item.theme, strings: item.strings, wallpaper: nil, action: { theme in
                             item.updatedTheme(theme)
                         }, contextAction: nil)
                         

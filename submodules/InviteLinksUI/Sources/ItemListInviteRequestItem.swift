@@ -150,6 +150,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
     private let subtitleNode: TextNode
     private let expandedSubtitleNode: TextNode
     private let dateNode: TextNode
+    private let measureAddNode: TextNode
     private let addButton: SolidRoundedButtonNode
     private let dismissButton: HighlightableButtonNode
     
@@ -207,6 +208,8 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
         self.dateNode.isUserInteractionEnabled = false
         self.dateNode.contentMode = .left
         self.dateNode.contentsScale = UIScreen.main.scale
+        
+        self.measureAddNode = TextNode()
         
         self.addButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), fontSize: 15.0, height: 32.0, cornerRadius: 16.0)
         self.dismissButton = HighlightableButtonNode()
@@ -514,6 +517,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         let makeExpandedSubtitleLayout = TextNode.asyncLayout(self.expandedSubtitleNode)
         let makeDateLayout = TextNode.asyncLayout(self.dateNode)
+        let makeMeasureAddLayout = TextNode.asyncLayout(self.measureAddNode)
         
         let currentItem = self.layoutParams?.0
                 
@@ -563,6 +567,10 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
             }
             let (expandedSubtitleLayout, expandedSubtitleApply) = makeExpandedSubtitleLayout(TextNodeLayoutArguments(attributedString: expnadedSubtitleAttributedString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: expandedMaxWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (dateLayout, dateApply) = makeDateLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let addButtonTitle = item.isGroup ? item.presentationData.strings.MemberRequests_AddToGroup : item.presentationData.strings.MemberRequests_AddToChannel
+            
+            let (measureAddLayout, _) = makeMeasureAddLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: addButtonTitle, font: Font.semibold(15.0), textColor: .black), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let titleSpacing: CGFloat = 1.0
             
@@ -734,17 +742,19 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                                         
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                     
-                    strongSelf.addButton.title = item.isGroup ? item.presentationData.strings.MemberRequests_AddToGroup : item.presentationData.strings.MemberRequests_AddToChannel
+                    strongSelf.addButton.title = addButtonTitle
                     if let _ = updatedTheme {
                         strongSelf.addButton.updateTheme(SolidRoundedButtonTheme(theme: item.presentationData.theme))
                     }
                     strongSelf.dismissButton.setTitle(item.presentationData.strings.MemberRequests_Dismiss, with: Font.bold(15.0), with: item.presentationData.theme.list.itemAccentColor, for: .normal)
                     
-                    let addHeight = strongSelf.addButton.updateLayout(width: 138.0, transition: .immediate)
-                    strongSelf.addButton.frame = CGRect(x: leftInset, y: contentSize.height - addHeight - 12.0, width: 138.0, height: addHeight)
+                    let addWidth = measureAddLayout.size.width + 10.0
+                    let addHeight = strongSelf.addButton.updateLayout(width: addWidth, transition: .immediate)
+                    let addButtonFrame = CGRect(x: leftInset, y: contentSize.height - addHeight - 12.0, width: addWidth, height: addHeight)
+                    strongSelf.addButton.frame = addButtonFrame
                     
                     let dismissSize = strongSelf.dismissButton.measure(layout.size)
-                    strongSelf.dismissButton.frame = CGRect(origin: CGPoint(x: leftInset + 138.0 + 24.0, y: verticalInset + contentSize.height - addHeight - 14.0), size: dismissSize)
+                    strongSelf.dismissButton.frame = CGRect(origin: CGPoint(x: leftInset + addWidth + 24.0, y: verticalInset + contentSize.height - addHeight - 14.0), size: dismissSize)
                     
                     if item.importer == nil {
                         let shimmerNode: ShimmerEffectNode
@@ -780,7 +790,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                         shapes.append(.roundedRectLine(startPoint: CGPoint(x: dateFrame.maxX - dateLineWidth, y: dateFrame.minY + floor((dateFrame.height - lineDiameter) / 2.0)), width: dateLineWidth, diameter: lineDiameter))
 
                         let addFrame = strongSelf.addButton.frame
-                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: addFrame.minX, y: addFrame.minY + floor((addFrame.height - strongSelf.addButton.frame.height) / 2.0)), width: strongSelf.addButton.frame.width, diameter: strongSelf.addButton.frame.height))
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: addFrame.minX, y: addFrame.minY + floor((addFrame.height - addFrame.height) / 2.0)), width: addFrame.width, diameter: addFrame.height))
                         
                         let dismissFrame = strongSelf.dismissButton.frame
                         shapes.append(.roundedRectLine(startPoint: CGPoint(x: dismissFrame.minX, y: dismissFrame.minY + floor((dismissFrame.height - lineDiameter) / 2.0)), width: 60.0, diameter: lineDiameter))
