@@ -21,6 +21,7 @@ import ComponentFlow
 import TelegramNotices
 import TelegramUIPreferences
 import CheckNode
+import AppBundle
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext
@@ -711,6 +712,19 @@ private struct Month: Equatable {
 }
 
 private let durationFont = Font.regular(12.0)
+private let minDurationImage: UIImage = {
+    let image = generateImage(CGSize(width: 20.0, height: 20.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        if let image = UIImage(bundleImageName: "Chat/GridPlayIcon") {
+            UIGraphicsPushContext(context)
+            image.draw(in: CGRect(origin: CGPoint(x: (size.width - image.size.width) / 2.0, y: (size.height - image.size.height) / 2.0), size: image.size))
+            UIGraphicsPopContext()
+        }
+    })
+    return image!
+}()
 
 private final class DurationLayer: CALayer {
     override init() {
@@ -728,33 +742,38 @@ private final class DurationLayer: CALayer {
         return nullAction
     }
 
-    func update(duration: Int32) {
-        let string = NSAttributedString(string: stringForDuration(duration), font: durationFont, textColor: .white)
-        let bounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-        let textSize = CGSize(width: ceil(bounds.width), height: ceil(bounds.height))
-        let sideInset: CGFloat = 6.0
-        let verticalInset: CGFloat = 2.0
-        let image = generateImage(CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height + verticalInset * 2.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
+    func update(duration: Int32, isMin: Bool) {
+        if isMin {
+            self.contents = minDurationImage.cgImage
+        } else {
+            let string = NSAttributedString(string: stringForDuration(duration), font: durationFont, textColor: .white)
+            let bounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+            let textSize = CGSize(width: ceil(bounds.width), height: ceil(bounds.height))
+            let sideInset: CGFloat = 6.0
+            let verticalInset: CGFloat = 2.0
+            let image = generateImage(CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height + verticalInset * 2.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
 
-            context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
-            context.setBlendMode(.copy)
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.height, height: size.height)))
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - size.height, y: 0.0), size: CGSize(width: size.height, height: size.height)))
-            context.fill(CGRect(origin: CGPoint(x: size.height / 2.0, y: 0.0), size: CGSize(width: size.width - size.height, height: size.height)))
+                context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
+                context.setBlendMode(.copy)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.height, height: size.height)))
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - size.height, y: 0.0), size: CGSize(width: size.height, height: size.height)))
+                context.fill(CGRect(origin: CGPoint(x: size.height / 2.0, y: 0.0), size: CGSize(width: size.width - size.height, height: size.height)))
 
-            context.setBlendMode(.normal)
-            UIGraphicsPushContext(context)
-            string.draw(in: bounds.offsetBy(dx: sideInset, dy: verticalInset))
-            UIGraphicsPopContext()
-        })
-        self.contents = image?.cgImage
+                context.setBlendMode(.normal)
+                UIGraphicsPushContext(context)
+                string.draw(in: bounds.offsetBy(dx: sideInset, dy: verticalInset))
+                UIGraphicsPopContext()
+            })
+            self.contents = image?.cgImage
+        }
     }
 }
 
 private final class ItemLayer: CALayer, SparseItemGridLayer {
     var item: VisualMediaItem?
     var durationLayer: DurationLayer?
+    var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
     var disposable: Disposable?
 
@@ -782,15 +801,18 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
         self.item = item
     }
 
-    func updateDuration(duration: Int32?) {
+    func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat) {
+        self.minFactor = minFactor
+
         if let duration = duration {
             if let durationLayer = self.durationLayer {
-                durationLayer.update(duration: duration)
+                durationLayer.update(duration: duration, isMin: isMin)
             } else {
                 let durationLayer = DurationLayer()
-                durationLayer.update(duration: duration)
+                durationLayer.update(duration: duration, isMin: isMin)
                 self.addSublayer(durationLayer)
                 durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 3.0), size: CGSize())
+                durationLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
             }
         } else if let durationLayer = self.durationLayer {
             self.durationLayer = nil
@@ -836,9 +858,9 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
     }
 
     func update(size: CGSize) {
-        if let durationLayer = self.durationLayer {
+        /*if let durationLayer = self.durationLayer {
             durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
-        }
+        }*/
     }
 }
 
@@ -1001,12 +1023,12 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     let context: AccountContext
     let chatLocation: ChatLocation
     let directMediaImageCache: DirectMediaImageCache
-    let strings: PresentationStrings
+    var strings: PresentationStrings
     let useListItems: Bool
     let listItemInteraction: ListMessageItemInteraction
     let chatControllerInteraction: ChatControllerInteraction
-    let chatPresentationData: ChatPresentationData
-    let checkNodeTheme: CheckNodeTheme
+    var chatPresentationData: ChatPresentationData
+    var checkNodeTheme: CheckNodeTheme
 
     var loadHoleImpl: ((SparseItemGrid.HoleAnchor, SparseItemGrid.HoleLocation) -> Signal<Never, NoError>)?
     var onTapImpl: ((VisualMediaItem) -> Void)?
@@ -1028,6 +1050,15 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         self.directMediaImageCache = directMediaImageCache
 
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        self.strings = presentationData.strings
+
+        let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
+        self.chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: 1.0)
+
+        self.checkNodeTheme = CheckNodeTheme(theme: presentationData.theme, style: .overlay, hasInset: true)
+    }
+
+    func updatePresentationData(presentationData: PresentationData) {
         self.strings = presentationData.strings
 
         let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
@@ -1278,10 +1309,12 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                     }
 
                     var duration: Int32?
-                    if layer.bounds.width > 80.0, let file = selectedMedia as? TelegramMediaFile, !file.isAnimated {
+                    var isMin: Bool = false
+                    if let file = selectedMedia as? TelegramMediaFile, !file.isAnimated {
                         duration = file.duration
+                        isMin = layer.bounds.width < 80.0
                     }
-                    layer.updateDuration(duration: duration)
+                    layer.updateDuration(duration: duration, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
                 }
 
                 if let selectionState = self.chatControllerInteraction.selectionState {
@@ -1454,6 +1487,9 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private var storedStateDisposable: Disposable?
 
     private weak var currentGestureItem: SparseItemGridDisplayItem?
+
+    private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
     
     init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType) {
         self.context = context
@@ -1463,8 +1499,10 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.contentTypePromise = ValuePromise<ContentType>(contentType)
         self.stateTag = tagMaskForType(contentType)
 
+        self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+
         self.contextGestureContainerNode = ContextControllerSourceNode()
-        self.itemGrid = SparseItemGrid(theme: self.context.sharedContext.currentPresentationData.with({ $0 }).theme)
+        self.itemGrid = SparseItemGrid(theme: self.presentationData.theme)
         self.directMediaImageCache = DirectMediaImageCache(account: context.account)
 
         let useListItems: Bool
@@ -1926,12 +1964,40 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 }
             }
         }))
+
+        self.presentationDataDisposable = (self.context.sharedContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.itemGridBinding.updatePresentationData(presentationData: presentationData)
+
+            strongSelf.itemGrid.updatePresentationData(theme: presentationData.theme)
+
+            strongSelf.itemGrid.forEachVisibleItem { item in
+                guard let itemView = item.view as? ItemView else {
+                    return
+                }
+                if let item = itemView.item {
+                    itemView.bind(
+                        item: item,
+                        presentationData: strongSelf.itemGridBinding.chatPresentationData,
+                        context: strongSelf.itemGridBinding.context,
+                        chatLocation: strongSelf.itemGridBinding.chatLocation,
+                        interaction: strongSelf.itemGridBinding.listItemInteraction,
+                        isSelected: strongSelf.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id),
+                        size: itemView.bounds.size
+                    )
+                }
+            }
+        })
     }
     
     deinit {
         self.listDisposable.dispose()
         self.hiddenMediaDisposable?.dispose()
         self.animationTimer?.invalidate()
+        self.presentationDataDisposable?.dispose()
     }
 
     func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError> {

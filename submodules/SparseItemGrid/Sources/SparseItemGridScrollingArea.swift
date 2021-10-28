@@ -131,6 +131,129 @@ public final class LottieAnimationComponent: Component {
     }
 }
 
+private final class ScrollingTooltipAnimationComponent: Component {
+    public init() {
+    }
+
+    public static func ==(lhs: ScrollingTooltipAnimationComponent, rhs: ScrollingTooltipAnimationComponent) -> Bool {
+        return true
+    }
+
+    public final class View: UIView {
+        private var progress: CGFloat = 0.0
+        private var previousTarget: CGFloat = 0.0
+
+        private var animator: DisplayLinkAnimator?
+
+        init() {
+            super.init(frame: CGRect())
+
+            self.isOpaque = false
+            self.backgroundColor = nil
+
+            self.previousTarget = CGFloat.random(in: 0.0 ... 1.0)
+            self.startNextAnimation()
+        }
+
+        required init?(coder aDecoder: NSCoder) {
+            preconditionFailure()
+        }
+
+        func startNextAnimation() {
+            self.animator?.invalidate()
+
+            let previous = self.previousTarget
+            let target = CGFloat.random(in: 0.0 ... 1.0)
+            self.previousTarget = target
+            let animator = DisplayLinkAnimator(duration: 1.0, from: previous, to: target, update: { [weak self] value in
+                guard let strongSelf = self else {
+                    return
+                }
+
+                strongSelf.progress = listViewAnimationCurveEaseInOut(value)
+                strongSelf.setNeedsDisplay()
+            }, completion: { [weak self] in
+                Queue.mainQueue().after(0.3, {
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    strongSelf.startNextAnimation()
+                })
+            })
+            self.animator = animator
+        }
+
+        func update(component: ScrollingTooltipAnimationComponent, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            return CGSize(width: 32.0, height: 32.0)
+        }
+
+        override func draw(_ rect: CGRect) {
+            guard let context = UIGraphicsGetCurrentContext() else {
+                return
+            }
+
+            let progressValue = self.progress
+
+            let itemSize: CGFloat = 12.0
+            let itemSpacing: CGFloat = 1.0
+            let listItemCount: CGFloat = 100.0
+            let listHeight: CGFloat = itemSize * listItemCount + itemSpacing * (listItemCount - 1)
+
+            context.setFillColor(UIColor(white: 1.0, alpha: 0.3).cgColor)
+
+            let offset: CGFloat = progressValue * listHeight
+
+            var minVisibleItemIndex: Int = Int(floor(offset / (itemSize + itemSpacing)))
+            while true {
+                let itemY: CGFloat = CGFloat(minVisibleItemIndex) * (itemSize + itemSpacing) - offset
+                if itemY >= self.bounds.height {
+                    break
+                }
+                for i in 0 ..< 2 {
+                    UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: CGFloat(i) * (itemSize + itemSpacing), y: itemY), size: CGSize(width: itemSize, height: itemSize)), cornerRadius: 2.0).fill()
+                }
+                minVisibleItemIndex += 1
+            }
+
+            let gradientFraction: CGFloat = 10.0 / self.bounds.height
+
+            let colorsArray: [CGColor] = ([
+                UIColor(white: 1.0, alpha: 1.0),
+                UIColor(white: 1.0, alpha: 0.0),
+                UIColor(white: 1.0, alpha: 0.0),
+                UIColor(white: 1.0, alpha: 1.0)
+            ] as [UIColor]).map(\.cgColor)
+            var locations: [CGFloat] = [0.0, gradientFraction, 1.0 - gradientFraction, 1.0]
+            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
+            context.setBlendMode(.destinationOut)
+
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: self.bounds.height), options: [])
+
+            context.setBlendMode(.normal)
+            context.setFillColor(UIColor.white.cgColor)
+
+            let indicatorHeight: CGFloat = 10.0
+
+            let indicatorMinY: CGFloat = 0.0
+            let indicatorMaxY: CGFloat = self.bounds.height - indicatorHeight
+            let indicatorX: CGFloat = (itemSize + itemSpacing) * 2.0
+            let indicatorY = indicatorMinY * (1.0 - progress) + indicatorMaxY * progress
+            UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: indicatorX, y: indicatorY), size: CGSize(width: 3.0, height: indicatorHeight)), cornerRadius: 1.5).fill()
+
+            UIBezierPath(roundedRect: CGRect(x: indicatorX - 4.0 - 19.0, y: indicatorY + (indicatorHeight - 8.0) / 2.0, width: 19.0, height: 8.0), cornerRadius: 4.0).fill()
+        }
+    }
+
+    public func makeView() -> View {
+        return View()
+    }
+
+    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
+    }
+}
+
 public final class TooltipComponent: Component {
     public let icon: AnyComponent<Empty>?
     public let content: AnyComponent<Empty>
@@ -942,9 +1065,12 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
         displayTooltip.completed()
 
+        //#if DEBUG
+        //#else
         Queue.mainQueue().after(2.0, { [weak self] in
             self?.dismissLineTooltip()
         })
+        //#endif
     }
 
     private func updateLineTooltip(containerSize: CGSize) {
@@ -958,9 +1084,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             transition: .immediate,
             component: AnyComponent(TooltipComponent(
                 icon: displayTooltip.animation.flatMap { animation in
-                    AnyComponent(LottieAnimationComponent(
-                        name: animation
-                    ))
+                    AnyComponent(ScrollingTooltipAnimationComponent())
                 },
                 content: AnyComponent(MultilineText(
                     text: displayTooltip.text,

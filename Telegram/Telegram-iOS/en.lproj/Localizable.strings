@@ -6998,8 +6998,8 @@ Sorry for the inconvenience.";
 "MessageCalendar.Title" = "Calendar";
 "MessageCalendar.DaysSelectedTitle_1" = "1 day selected";
 "MessageCalendar.DaysSelectedTitle_any" = "%@ days selected";
-"MessageCalendar.DeleteConfirmation_1" = "Are you sure you want to delete all messages for the selected day?";
-"MessageCalendar.DeleteConfirmation_1" = "Are you sure you want to delete all messages for the selected %@ days?";
+"MessageCalendar.DeleteAlertText_1" = "Are you sure you want to delete all messages for the selected day?";
+"MessageCalendar.DeleteAlertText_any" = "Are you sure you want to delete all messages for the selected %@ days?";
 
 "SharedMedia.PhotoCount_1" = "1 photo";
 "SharedMedia.PhotoCount_any" = "%@ photos";

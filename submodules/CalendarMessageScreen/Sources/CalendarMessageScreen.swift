@@ -1399,7 +1399,7 @@ public final class CalendarMessageScreen: ViewController {
                 }
 
                 if let _ = info.canClearForMyself ?? info.canClearForEveryone {
-                    items.append(ActionSheetTextItem(title: strongSelf.presentationData.strings.MessageCalendar_DeleteConfirmation(Int32(selectedCount))))
+                    items.append(ActionSheetTextItem(title: strongSelf.presentationData.strings.MessageCalendar_DeleteAlertText(Int32(selectedCount))))
 
                     if let canClearForEveryone = info.canClearForEveryone {
                         let text: String
