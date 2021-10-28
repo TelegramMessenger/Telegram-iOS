@@ -236,7 +236,6 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {
                     currentDisabledOverlayNode = ASDisplayNode()
-                    currentDisabledOverlayNode?.backgroundColor = itemBackgroundColor.withAlphaComponent(0.6)
                 }
             } else {
                 currentDisabledOverlayNode = nil
@@ -278,6 +277,7 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                         } else {
                             transition.updateFrame(node: currentDisabledOverlayNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height - separatorHeight)))
                         }
+                        currentDisabledOverlayNode.backgroundColor = itemBackgroundColor.withAlphaComponent(0.6)
                     } else if let disabledOverlayNode = strongSelf.disabledOverlayNode {
                         transition.updateAlpha(node: disabledOverlayNode, alpha: 0.0, completion: { [weak disabledOverlayNode] _ in
                             disabledOverlayNode?.removeFromSupernode()

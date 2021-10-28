@@ -133,6 +133,7 @@ class BubbleSettingsRadiusItemNode: ListViewItemNode, ItemListItemNode {
         sliderView.maximumValue = 4.0
         sliderView.startValue = 0.0
         sliderView.positionsCount = 5
+        sliderView.useLinesForPositions = true
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         if let item = self.item, let params = self.layoutParams {
             sliderView.isUserInteractionEnabled = item.enabled
