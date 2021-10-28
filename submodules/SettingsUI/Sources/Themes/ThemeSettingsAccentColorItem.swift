@@ -711,10 +711,12 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
     private var item: ThemeSettingsAccentColorItem?
     private var layoutParams: ListViewItemLayoutParams?
     
+    private var tapping = false
+    
     var tag: ItemListItemTag? {
         return self.item?.tag
     }
-    
+        
     init() {
         self.containerNode = ASDisplayNode()
         
@@ -761,7 +763,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         
         let options = ListViewDeleteAndInsertOptions()
         var scrollToItem: ListViewScrollToItem?
-        if !self.initialized || transition.updatePosition {
+        if !self.initialized || transition.updatePosition || !self.tapping {
             if let index = item.colors.firstIndex(where: { $0.index == item.currentColor?.index }) {
                 scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-70.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
@@ -912,7 +914,11 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                                 }
                                 item.openColorPicker(create)
                             } else {
+                                strongSelf.tapping = true
                                 item.updated(color)
+                                Queue.mainQueue().after(0.2) {
+                                    strongSelf.tapping = false
+                                }
                             }
                             let _ = ensureColorVisible(listNode: strongSelf.listNode, accentColor: color, animated: true)
                         }

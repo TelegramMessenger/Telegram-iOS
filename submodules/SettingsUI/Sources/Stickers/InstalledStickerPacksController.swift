@@ -955,6 +955,26 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     if case .modal = mode {
         controller.navigationPresentation = .modal
     }
+    
+    var alreadyReadIds = Set<ItemCollectionId>()
+    controller.visibleEntriesUpdated = { entries in
+        var unreadIds: [ItemCollectionId] = []
+        for entry in entries {
+            if let entry = entry as? InstalledStickerPacksEntry {
+                if case let .trendingPack(_, _, _, info, _, _, _, unread, _) = entry {
+                    if unread && !alreadyReadIds.contains(info.id) {
+                        unreadIds.append(info.id)
+                    }
+                }
+            }
+        }
+        if !unreadIds.isEmpty {
+            alreadyReadIds.formUnion(Set(unreadIds))
+            
+            let _ = context.engine.stickers.markFeaturedStickerPacksAsSeenInteractively(ids: unreadIds).start()
+        }
+    }
+    
     controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [InstalledStickerPacksEntry]) -> Signal<Bool, NoError> in
         let fromEntry = entries[fromIndex]
         guard case let .pack(_, _, _, fromPackInfo, _, _, _, _, _, _) = fromEntry else {

@@ -567,16 +567,17 @@ private struct ThemeCarouselThemeItemNodeTransition {
     let updates: [ListViewUpdateItem]
     let crossfade: Bool
     let entries: [ThemeCarouselThemeEntry]
+    let updatePosition: Bool
 }
 
-private func preparedTransition(context: AccountContext, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, from fromEntries: [ThemeCarouselThemeEntry], to toEntries: [ThemeCarouselThemeEntry], crossfade: Bool) -> ThemeCarouselThemeItemNodeTransition {
+private func preparedTransition(context: AccountContext, action: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, from fromEntries: [ThemeCarouselThemeEntry], to toEntries: [ThemeCarouselThemeEntry], crossfade: Bool, updatePosition: Bool) -> ThemeCarouselThemeItemNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, action: action, contextAction: contextAction), directionHint: .Down) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, action: action, contextAction: contextAction), directionHint: nil) }
     
-    return ThemeCarouselThemeItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates, crossfade: crossfade, entries: toEntries)
+    return ThemeCarouselThemeItemNodeTransition(deletions: deletions, insertions: insertions, updates: updates, crossfade: crossfade, entries: toEntries, updatePosition: false)
 }
 
 private func ensureThemeVisible(listNode: ListView, themeReference: PresentationThemeReference, animated: Bool) -> Bool {
@@ -612,6 +613,8 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
     private var item: ThemeCarouselThemeItem?
     private var layoutParams: ListViewItemLayoutParams?
 
+    private var tapping = false
+    
     var tag: ItemListItemTag? {
         return self.item?.tag
     }
@@ -667,7 +670,7 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
         options.insert(.Synchronous)
         
         var scrollToItem: ListViewScrollToItem?
-        if !self.initialized {
+        if !self.initialized || !self.tapping {
             if let index = transition.entries.firstIndex(where: { entry in
                 return entry.themeReference.index == item.currentTheme.index
             }) {
@@ -775,13 +778,17 @@ class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
                     
                     let action: (PresentationThemeReference) -> Void = { [weak self] themeReference in
                         if let strongSelf = self {
+                            strongSelf.tapping = true
                             strongSelf.item?.updatedTheme(themeReference)
                             let _ = ensureThemeVisible(listNode: strongSelf.listNode, themeReference: themeReference, animated: true)
+                            Queue.mainQueue().after(0.2) {
+                                strongSelf.tapping = false
+                            }
                         }
                     }
                     let previousEntries = strongSelf.entries ?? []
                     let crossfade = previousEntries.count != entries.count
-                    let transition = preparedTransition(context: item.context, action: action, contextAction: item.contextAction, from: previousEntries, to: entries, crossfade: crossfade)
+                    let transition = preparedTransition(context: item.context, action: action, contextAction: item.contextAction, from: previousEntries, to: entries, crossfade: crossfade, updatePosition: false)
                     strongSelf.enqueueTransition(transition)
                     
                     strongSelf.entries = entries

@@ -236,17 +236,18 @@ private final class InviteRequestsSearchContainerInteraction {
 }
 
 private enum InviteRequestsSearchEntryId: Hashable {
+    case placeholder(Int)
     case request(EnginePeer.Id)
 }
 
 private final class InviteRequestsSearchEntry: Comparable, Identifiable {
     let index: Int
-    let request: PeerInvitationImportersState.Importer
+    let request: PeerInvitationImportersState.Importer?
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     let isGroup: Bool
     
-    init(index: Int, request: PeerInvitationImportersState.Importer, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, isGroup: Bool) {
+    init(index: Int, request: PeerInvitationImportersState.Importer?, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, isGroup: Bool) {
         self.index = index
         self.request = request
         self.dateTimeFormat = dateTimeFormat
@@ -255,7 +256,11 @@ private final class InviteRequestsSearchEntry: Comparable, Identifiable {
     }
     
     var stableId: InviteRequestsSearchEntryId {
-        return .request(self.request.peer.peerId)
+        if let request = self.request {
+            return .request(request.peer.peerId)
+        } else {
+            return .placeholder(self.index)
+        }
     }
     
     static func ==(lhs: InviteRequestsSearchEntry, rhs: InviteRequestsSearchEntry) -> Bool {
@@ -268,19 +273,19 @@ private final class InviteRequestsSearchEntry: Comparable, Identifiable {
     
     func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: InviteRequestsSearchContainerInteraction) -> ListViewItem {
         return ItemListInviteRequestItem(context: context, presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, importer: self.request, isGroup: self.isGroup, sectionId: 0, style: .plain, tapAction: {
-            if let peer = self.request.peer.peer.flatMap({ EnginePeer($0) }) {
+            if let peer = self.request?.peer.peer.flatMap({ EnginePeer($0) }) {
                 interaction.openPeer(peer)
             }
         }, addAction: {
-            if let peer = self.request.peer.peer.flatMap({ EnginePeer($0) }) {
+            if let peer = self.request?.peer.peer.flatMap({ EnginePeer($0) }) {
                 interaction.approveRequest(peer)
             }
         }, dismissAction: {
-            if let peer = self.request.peer.peer.flatMap({ EnginePeer($0) }) {
+            if let peer = self.request?.peer.peer.flatMap({ EnginePeer($0) }) {
                 interaction.denyRequest(peer)
             }
         }, contextAction: { node, gesture in
-            if let peer = self.request.peer.peer.flatMap({ EnginePeer($0) }) {
+            if let peer = self.request?.peer.peer.flatMap({ EnginePeer($0) }) {
                 interaction.peerContextAction(peer, node, gesture)
             }
         })
@@ -489,12 +494,16 @@ public final class InviteRequestsSearchContainerNode: SearchDisplayControllerCon
 
             return combineLatest(requestsContext.state, presentationDataPromise.get(), processedPeerIds.get())
             |> mapToSignal { state, presentationData, processedPeerIds -> Signal<[InviteRequestsSearchEntry]?, NoError> in
-                if !state.hasLoadedOnce {
-                    return .complete()
-                }
-                
                 var entries: [InviteRequestsSearchEntry] = []
                 var index = 0
+                if !state.hasLoadedOnce {
+                    for _ in 0 ..< 2 {
+                        entries.append(InviteRequestsSearchEntry(index: index, request: nil, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, isGroup: isGroup))
+                        index += 1
+                    }
+                    return .single(entries)
+                }
+                
                 for importer in state.importers {
                     if processedPeerIds.contains(importer.peer.peerId) {
                         continue
