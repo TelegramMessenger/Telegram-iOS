@@ -1543,7 +1543,10 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
     
     func update(width: CGFloat, safeInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, peer: Peer?, cachedData: CachedPeerData?, isContact: Bool, isSettings: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) -> CGFloat {
         let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
-        let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
+        var avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
+        if isSettings {
+            avatarFrame = avatarFrame.offsetBy(dx: 0.0, dy: 3.0)
+        }
         transition.updateFrameAdditiveToCenter(node: self.avatarNode, frame: CGRect(origin: avatarFrame.center, size: CGSize()))
         
         var contentHeight: CGFloat = statusBarHeight + 10.0 + avatarSize + 20.0
@@ -2166,7 +2169,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         ], mainState: TitleNodeStateRegular)
         self.usernameNode.accessibilityLabel = usernameString.string
         
-        let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
+        var avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
+        if isSettings {
+            avatarFrame = avatarFrame.offsetBy(dx: 0.0, dy: 3.0)
+        }
         let avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
         
         let titleSize = titleNodeLayout[TitleNodeStateRegular]!.size
@@ -2206,7 +2212,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             usernameFrame = CGRect(origin: CGPoint(x: width - usernameSize.width - 16.0, y: minTitleFrame.midY - usernameSize.height / 2.0), size: usernameSize)
         } else {
-            titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 10.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
+            titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 7.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
             if self.isSettings {
                 titleFrame = titleFrame.offsetBy(dx: 0.0, dy: 13.0)
             }

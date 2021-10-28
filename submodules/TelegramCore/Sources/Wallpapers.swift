@@ -6,7 +6,7 @@ import TelegramApi
 
 public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: Bool = false) -> Signal<[TelegramWallpaper], NoError> {
     let fetch: ([TelegramWallpaper]?, Int64?) -> Signal<[TelegramWallpaper], NoError> = { current, hash in
-        network.request(Api.functions.account.getWallPapers(hash: 0))
+        network.request(Api.functions.account.getWallPapers(hash: hash ?? 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<([TelegramWallpaper], Int64), NoError> in
             switch result {
@@ -65,7 +65,21 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
             if items.count == 0 {
                 return ([.builtin(WallpaperSettings())], 0)
             } else {
-                return (items.map { $0.contents.get(TelegramWallpaperNativeCodable.self)!.value }, configuration?.hash)
+                var success = true
+                var mappedItems: [TelegramWallpaper] = []
+                for item in items {
+                    if let value = item.contents.get(TelegramWallpaperNativeCodable.self)?.value {
+                        mappedItems.append(value)
+                    } else {
+                        success = false
+                        break
+                    }
+                }
+                if success {
+                    return (mappedItems, configuration?.hash)
+                } else {
+                    return ([.builtin(WallpaperSettings())], nil)
+                }
             }
         }
         |> mapToSignal { current, hash -> Signal<[TelegramWallpaper], NoError> in

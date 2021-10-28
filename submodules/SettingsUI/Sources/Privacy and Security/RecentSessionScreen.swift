@@ -212,7 +212,12 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.contentBackgroundNode.backgroundColor = backgroundColor
                 
         self.titleNode = ImmediateTextNode()
+        self.titleNode.maximumNumberOfLines = 2
+        self.titleNode.textAlignment = .center
+        
         self.textNode = ImmediateTextNode()
+        self.textNode.maximumNumberOfLines = 1
+        self.textNode.textAlignment = .center
         
         self.fieldBackgroundNode = ASDisplayNode()
         self.fieldBackgroundNode.clipsToBounds = true
@@ -510,8 +515,72 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         insets.top = max(10.0, insets.top)
         
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
-        let titleHeight: CGFloat = 54.0
-        var contentHeight = titleHeight + bottomInset + 341.0
+        
+        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
+                
+        transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        
+        let iconSize = CGSize(width: 72.0, height: 72.0)
+        let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - iconSize.width) / 2.0), y: 36.0), size: iconSize)
+        
+        if let iconNode = self.iconNode {
+            transition.updateFrame(node: iconNode, frame: iconFrame)
+        } else if let animationNode = self.animationNode {
+            transition.updateFrame(node: animationNode, frame: iconFrame)
+            animationNode.loop()
+        } else if let avatarNode = self.avatarNode {
+            transition.updateFrame(node: avatarNode, frame: iconFrame)
+        }
+        
+        let inset: CGFloat = 16.0
+        let titleSize = self.titleNode.updateLayout(CGSize(width: width - inset * 2.0, height: 100.0))
+        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - titleSize.width) / 2.0), y: 120.0), size: titleSize)
+        transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        
+        let textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0, height: 60.0))
+        let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - textSize.width) / 2.0), y: titleFrame.maxY), size: textSize)
+        transition.updateFrame(node: self.textNode, frame: textFrame)
+                
+        let cancelSize = CGSize(width: 44.0, height: 44.0)
+        let cancelFrame = CGRect(origin: CGPoint(x: width - cancelSize.width - 3.0, y: 6.0), size: cancelSize)
+        transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
+        
+        let fieldItemHeight: CGFloat = 44.0
+        let fieldFrame = CGRect(x: inset, y: textFrame.maxY + 24.0, width: width - inset * 2.0, height: fieldItemHeight * 3.0)
+        transition.updateFrame(node: self.fieldBackgroundNode, frame: fieldFrame)
+        
+        let maxFieldTitleWidth = (width - inset * 4.0) * 0.4
+    
+        let deviceTitleTextSize = self.deviceTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
+        let deviceTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + floorToScreenPixels((fieldItemHeight - deviceTitleTextSize.height) / 2.0)), size: deviceTitleTextSize)
+        transition.updateFrame(node: self.deviceTitleNode, frame: deviceTitleTextFrame)
+        
+        let deviceValueTextSize = self.deviceValueNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0 - deviceTitleTextSize.width - 10.0, height: fieldItemHeight))
+        let deviceValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - deviceValueTextSize.width - inset, y: fieldFrame.minY + floorToScreenPixels((fieldItemHeight - deviceValueTextSize.height) / 2.0)), size: deviceValueTextSize)
+        transition.updateFrame(node: self.deviceValueNode, frame: deviceValueTextFrame)
+        
+        transition.updateFrame(node: self.firstSeparatorNode, frame: CGRect(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight, width: fieldFrame.width - inset, height: UIScreenPixel))
+        
+        let locationTitleTextSize = self.locationTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
+        let locationTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationTitleTextSize.height) / 2.0)), size: locationTitleTextSize)
+        transition.updateFrame(node: self.locationTitleNode, frame: locationTitleTextFrame)
+        
+        let locationValueTextSize = self.locationValueNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0 - locationTitleTextSize.width - 10.0, height: fieldItemHeight))
+        let locationValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - locationValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationValueTextSize.height) / 2.0)), size: locationValueTextSize)
+        transition.updateFrame(node: self.locationValueNode, frame: locationValueTextFrame)
+        
+        transition.updateFrame(node: self.secondSeparatorNode, frame: CGRect(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight, width: fieldFrame.width - inset, height: UIScreenPixel))
+        
+        let ipTitleTextSize = self.ipTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
+        let ipTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - ipTitleTextSize.height) / 2.0)), size: ipTitleTextSize)
+        transition.updateFrame(node: self.ipTitleNode, frame: ipTitleTextFrame)
+        
+        let ipValueTextSize = self.ipValueNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0 - ipTitleTextSize.width - 10.0, height: fieldItemHeight))
+        let ipValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - ipValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - ipValueTextSize.height) / 2.0)), size: ipValueTextSize)
+        transition.updateFrame(node: self.ipValueNode, frame: ipValueTextFrame)
+        
+        var contentHeight = fieldFrame.maxY + bottomInset + 64.0
         let isCurrent: Bool
         if case let .session(session) = self.subject, session.isCurrent {
             isCurrent = true
@@ -526,91 +595,21 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
             self.terminateButton.isHidden = false
         }
         
-        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
-        
         let sideInset = floor((layout.size.width - width) / 2.0)
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
         let contentFrame = contentContainerFrame
         
-        var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: contentFrame.width, height: contentFrame.height + 2000.0))
+        var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: width, height: contentFrame.height + 2000.0))
         if backgroundFrame.minY < contentFrame.minY {
             backgroundFrame.origin.y = contentFrame.minY
         }
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
-        transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let iconSize = CGSize(width: 72.0, height: 72.0)
-        let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - iconSize.width) / 2.0), y: 36.0), size: iconSize)
-        
-        if let iconNode = self.iconNode {
-            transition.updateFrame(node: iconNode, frame: iconFrame)
-        } else if let animationNode = self.animationNode {
-            transition.updateFrame(node: animationNode, frame: iconFrame)
-            animationNode.loop()
-        } else if let avatarNode = self.avatarNode {
-            transition.updateFrame(node: avatarNode, frame: iconFrame)
-        }
-        
-        let inset: CGFloat = 16.0
-        let titleSize = self.titleNode.updateLayout(CGSize(width: width - inset * 2.0, height: titleHeight))
-        let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - titleSize.width) / 2.0), y: 120.0), size: titleSize)
-        transition.updateFrame(node: self.titleNode, frame: titleFrame)
-        
-        let textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0, height: titleHeight))
-        let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((contentFrame.width - textSize.width) / 2.0), y: titleFrame.maxY), size: textSize)
-        transition.updateFrame(node: self.textNode, frame: textFrame)
-                
-        let cancelSize = CGSize(width: 44.0, height: 44.0)
-        let cancelFrame = CGRect(origin: CGPoint(x: contentFrame.width - cancelSize.width - 3.0, y: 6.0), size: cancelSize)
-        transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
-        
-        let fieldItemHeight: CGFloat = 44.0
-        let fieldFrame = CGRect(x: inset, y: textFrame.maxY + 24.0, width: contentFrame.width - inset * 2.0, height: fieldItemHeight * 3.0)
-        transition.updateFrame(node: self.fieldBackgroundNode, frame: fieldFrame)
-        
-        let maxFieldTitleWidth = (width - inset * 4.0) * 0.333
-        let maxFieldValueWidth = (width - inset * 4.0) * 0.666
-        
-        let deviceTitleTextSize = self.deviceTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
-        let deviceTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + floorToScreenPixels((fieldItemHeight - deviceTitleTextSize.height) / 2.0)), size: deviceTitleTextSize)
-        transition.updateFrame(node: self.deviceTitleNode, frame: deviceTitleTextFrame)
-        
-        let deviceValueTextSize = self.deviceValueNode.updateLayout(CGSize(width: maxFieldValueWidth, height: fieldItemHeight))
-        let deviceValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - deviceValueTextSize.width - inset, y: fieldFrame.minY + floorToScreenPixels((fieldItemHeight - deviceValueTextSize.height) / 2.0)), size: deviceValueTextSize)
-        transition.updateFrame(node: self.deviceValueNode, frame: deviceValueTextFrame)
-        
-        transition.updateFrame(node: self.firstSeparatorNode, frame: CGRect(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight, width: fieldFrame.width - inset, height: UIScreenPixel))
-        
-        let locationTitleTextSize = self.locationTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
-        let locationTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationTitleTextSize.height) / 2.0)), size: locationTitleTextSize)
-        transition.updateFrame(node: self.locationTitleNode, frame: locationTitleTextFrame)
-        
-        let locationValueTextSize = self.locationValueNode.updateLayout(CGSize(width: maxFieldValueWidth, height: fieldItemHeight))
-        let locationValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - locationValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationValueTextSize.height) / 2.0)), size: locationValueTextSize)
-        transition.updateFrame(node: self.locationValueNode, frame: locationValueTextFrame)
-        
-        transition.updateFrame(node: self.secondSeparatorNode, frame: CGRect(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight, width: fieldFrame.width - inset, height: UIScreenPixel))
-        
-        let ipTitleTextSize = self.ipTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
-        let ipTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - ipTitleTextSize.height) / 2.0)), size: ipTitleTextSize)
-        transition.updateFrame(node: self.ipTitleNode, frame: ipTitleTextFrame)
-        
-        let ipValueTextSize = self.ipValueNode.updateLayout(CGSize(width: maxFieldValueWidth, height: fieldItemHeight))
-        let ipValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - ipValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - ipValueTextSize.height) / 2.0)), size: ipValueTextSize)
-        transition.updateFrame(node: self.ipValueNode, frame: ipValueTextFrame)
-        
-        let doneButtonHeight = self.terminateButton.updateLayout(width: contentFrame.width - inset * 2.0, transition: transition)
-        transition.updateFrame(node: self.terminateButton, frame: CGRect(x: inset, y: contentHeight - doneButtonHeight - insets.bottom - 6.0, width: contentFrame.width, height: doneButtonHeight))
+        let doneButtonHeight = self.terminateButton.updateLayout(width: width - inset * 2.0, transition: transition)
+        transition.updateFrame(node: self.terminateButton, frame: CGRect(x: inset, y: contentHeight - doneButtonHeight - insets.bottom - 6.0, width: width, height: doneButtonHeight))
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         transition.updateFrame(node: self.topContentContainerNode, frame: contentContainerFrame)
-        
-        var listInsets = UIEdgeInsets()
-        listInsets.top += layout.safeInsets.left + 12.0
-        listInsets.bottom += layout.safeInsets.right + 12.0
-        
-        
     }
 }

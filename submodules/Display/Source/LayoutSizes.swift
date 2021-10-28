@@ -5,6 +5,6 @@ public func horizontalContainerFillingSizeForLayout(layout: ContainerViewLayout,
     if case .regular = layout.metrics.widthClass {
         return min(layout.size.width, 414.0) - sideInset * 2.0
     } else {
-        return min(layout.size.width, 414.0) - sideInset * 2.0
+        return min(layout.size.width, 428.0) - sideInset * 2.0
     }
 }

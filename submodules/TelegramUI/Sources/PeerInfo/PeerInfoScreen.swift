@@ -6411,7 +6411,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 if wasAdded && transition.isAnimated && self.isSettings && !self.state.isEditing {
                     sectionNode.alpha = 0.0
-                    transition.updateAlpha(node: sectionNode, alpha: 1.0)
+                    transition.updateAlpha(node: sectionNode, alpha: 1.0, delay: 0.1)
                 }
                                 
                 let sectionHeight = sectionNode.update(width: layout.size.width, safeInsets: insets, presentationData: self.presentationData, items: sectionItems, transition: transition)
@@ -6422,7 +6422,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     transition.updateFrame(node: sectionNode, frame: sectionFrame)
                 }
                 
-                transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 0.0 : 1.0)
+                if wasAdded && transition.isAnimated && self.isSettings && !self.state.isEditing {
+                } else {
+                    transition.updateAlpha(node: sectionNode, alpha: self.state.isEditing ? 0.0 : 1.0)
+                }
                 if !sectionHeight.isZero && !self.state.isEditing {
                     contentHeight += sectionHeight
                     contentHeight += sectionSpacing
@@ -6436,6 +6439,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
             for sectionId in removeRegularSections {
                 if let sectionNode = self.regularSections.removeValue(forKey: sectionId) {
+                    var alphaTransition = transition
+                    if let sectionId = sectionId as? SettingsSection, case .edit = sectionId {
+                        sectionNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -layout.size.width * 0.7), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, mediaTimingFunction: nil, removeOnCompletion: false, additive: true, completion: nil)
+                        
+                        if alphaTransition.isAnimated {
+                            alphaTransition = .animated(duration: 0.12, curve: .easeInOut)
+                        }
+                    }
                     transition.updateAlpha(node: sectionNode, alpha: 0.0, completion: { [weak sectionNode] _ in
                         sectionNode?.removeFromSupernode()
                     })
@@ -6596,8 +6607,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         
         let relativeHeaderFrame = self.headerNode.view.convert(self.headerNode.bounds, to: self.view)
-        self.leftOverlayNode.frame = CGRect(x: 0.0, y: relativeHeaderFrame.maxY + UIScreenPixel - self.scrollNode.view.contentOffset.y, width: currentInsets.left, height: layout.size.height * 10.0)
-        self.rightOverlayNode.frame = CGRect(x: layout.size.width - currentInsets.right, y: relativeHeaderFrame.maxY + UIScreenPixel - self.scrollNode.view.contentOffset.y, width: currentInsets.right, height: layout.size.height * 10.0)
+        transition.updateFrame(node: self.leftOverlayNode, frame: CGRect(x: 0.0, y: relativeHeaderFrame.maxY + UIScreenPixel - self.scrollNode.view.contentOffset.y, width: currentInsets.left, height: layout.size.height * 10.0))
+        transition.updateFrame(node: self.rightOverlayNode, frame: CGRect(x: layout.size.width - currentInsets.right, y: relativeHeaderFrame.maxY + UIScreenPixel - self.scrollNode.view.contentOffset.y, width: currentInsets.right, height: layout.size.height * 10.0))
         
         if additive {
             transition.updateFrameAdditive(node: self.paneContainerNode, frame: paneContainerFrame)
@@ -6751,6 +6762,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         
         let headerFrame = self.headerNode.view.convert(self.headerNode.bounds, to: self.view)
+        if !self.headerNode.isAvatarExpanded {
+            self.leftOverlayNode.layer.removeAllAnimations()
+            self.rightOverlayNode.layer.removeAllAnimations()
+        }
         self.leftOverlayNode.frame = CGRect(x: 0.0, y: headerFrame.maxY + UIScreenPixel - scrollView.contentOffset.y, width: self.leftOverlayNode.frame.width, height: self.leftOverlayNode.frame.height)
         self.rightOverlayNode.frame = CGRect(x: self.rightOverlayNode.frame.minX, y: headerFrame.maxY + UIScreenPixel - scrollView.contentOffset.y, width: self.rightOverlayNode.frame.width, height: self.rightOverlayNode.frame.height)
         
