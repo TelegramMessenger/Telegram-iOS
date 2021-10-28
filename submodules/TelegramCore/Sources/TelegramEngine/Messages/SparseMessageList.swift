@@ -152,7 +152,7 @@ public final class SparseMessageList {
                     return .single(SparseItems(items: []))
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak self] sparseItems in
+            |> deliverOn(self.queue)).start(next: { [weak self] sparseItems in
                 guard let strongSelf = self else {
                     return
                 }
@@ -234,19 +234,183 @@ public final class SparseMessageList {
         }
 
         func loadHole(anchor: MessageId, direction: LoadHoleDirection, completion: @escaping () -> Void) {
-            let loadingHole = LoadingHole(anchor: anchor, direction: direction)
-            if self.loadingHole == loadingHole {
+            guard let sparseItems = self.sparseItems else {
                 completion()
                 return
             }
 
+            var loadRange: ClosedRange<Int32>?
+
+            centralItemSearch: for i in 0 ..< sparseItems.items.count {
+                switch sparseItems.items[i] {
+                case let .anchor(id, _, _):
+                    if id == anchor {
+                        func lowerStep(index: Int, holeRange: inout ClosedRange<Int32>, holeCount: inout Int) -> Bool {
+                            switch sparseItems.items[index] {
+                            case let .anchor(id, _, message):
+                                holeRange = id.id ... holeRange.upperBound
+                                holeCount += 1
+
+                                if message != nil {
+                                    return false
+                                } else {
+                                    if holeCount > 90 {
+                                        return false
+                                    }
+                                }
+                            case let .range(count):
+                                if holeCount + count > 90 {
+                                    return false
+                                }
+                                holeCount += count
+                            }
+                            return true
+                        }
+
+                        func upperStep(index: Int, holeRange: inout ClosedRange<Int32>, holeCount: inout Int) -> Bool {
+                            switch sparseItems.items[index] {
+                            case let .anchor(id, _, message):
+                                holeRange = holeRange.lowerBound ... id.id
+                                holeCount += 1
+
+                                if message != nil {
+                                    return false
+                                } else {
+                                    if holeCount > 90 {
+                                        return false
+                                    }
+                                }
+                            case let .range(count):
+                                if holeCount + count > 90 {
+                                    return false
+                                }
+                                holeCount += count
+                            }
+                            return true
+                        }
+
+                        var holeCount = 1
+                        var holeRange: ClosedRange<Int32> = id.id ... id.id
+                        var lowerIndex = i - 1
+                        var upperIndex = i + 1
+                        while true {
+                            if holeCount > 90 {
+                                break
+                            }
+                            if lowerIndex == -1 && upperIndex == sparseItems.items.count {
+                                break
+                            }
+                            if lowerIndex >= 0 {
+                                if !upperStep(index: lowerIndex, holeRange: &holeRange, holeCount: &holeCount) {
+                                    lowerIndex = -1
+                                } else {
+                                    lowerIndex -= 1
+                                    if lowerIndex == -1 {
+                                        holeRange = holeRange.lowerBound ... (Int32.max - 1)
+                                    }
+                                }
+                            }
+                            if upperIndex < sparseItems.items.count {
+                                if !lowerStep(index: upperIndex, holeRange: &holeRange, holeCount: &holeCount) {
+                                    upperIndex = sparseItems.items.count
+                                } else {
+                                    upperIndex += 1
+                                    if upperIndex == sparseItems.items.count {
+                                        holeRange = 1 ... holeRange.upperBound
+                                    }
+                                }
+                            }
+                        }
+
+                        loadRange = holeRange
+
+                        break centralItemSearch
+                    }
+                default:
+                    break
+                }
+            }
+
+            guard let loadRange = loadRange else {
+                completion()
+                return
+            }
+
+            let loadingHole = LoadingHole(anchor: anchor, direction: direction)
             if self.loadingHole != nil {
                 completion()
                 return
             }
-
             self.loadingHole = loadingHole
-            let mappedDirection: MessageHistoryViewRelativeHoleDirection
+
+            let mappedDirection: MessageHistoryViewRelativeHoleDirection = .range(start: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: loadRange.lowerBound - 1), end: MessageId(peerId: anchor.peerId, namespace: anchor.namespace, id: loadRange.upperBound + 1))
+
+            let account = self.account
+            self.loadHoleDisposable.set((fetchMessageHistoryHole(
+                accountPeerId: self.account.peerId,
+                source: .network(self.account.network),
+                postbox: self.account.postbox,
+                peerInput: .direct(peerId: self.peerId, threadId: nil),
+                namespace: Namespaces.Message.Cloud,
+                direction: mappedDirection,
+                space: .tag(self.messageTag),
+                count: 100
+            )
+            |> mapToSignal { result -> Signal<[Message], NoError> in
+                guard let result = result else {
+                    return .single([])
+                }
+                return account.postbox.transaction { transaction -> [Message] in
+                    return result.ids.sorted(by: { $0 > $1 }).compactMap(transaction.getMessage)
+                }
+            }
+            |> deliverOn(self.queue)).start(next: { [weak self] messages in
+                guard let strongSelf = self else {
+                    completion()
+                    return
+                }
+
+                var lowerIndex: Int?
+                var upperIndex: Int?
+                for i in 0 ..< strongSelf.sparseItems!.items.count {
+                    switch strongSelf.sparseItems!.items[i] {
+                    case let .anchor(id, _, _):
+                        if id.id == loadRange.lowerBound {
+                            lowerIndex = i
+                        }
+                        if id.id == loadRange.upperBound {
+                            upperIndex = i
+                        }
+                    default:
+                        break
+                    }
+                }
+                if loadRange.lowerBound <= 1 {
+                    lowerIndex = strongSelf.sparseItems!.items.count - 1
+                }
+                if loadRange.upperBound >= Int32.max - 1 {
+                    upperIndex = 0
+                }
+
+                if let lowerIndex = lowerIndex, let upperIndex = upperIndex {
+                    strongSelf.sparseItems!.items.removeSubrange(upperIndex ... lowerIndex)
+                    var insertIndex = upperIndex
+                    for message in messages.sorted(by: { $0.id > $1.id }) {
+                        strongSelf.sparseItems!.items.insert(.anchor(id: message.id, timestamp: message.timestamp, message: message), at: insertIndex)
+                        insertIndex += 1
+                    }
+                }
+
+                strongSelf.updateState()
+
+                if strongSelf.loadingHole == loadingHole {
+                    strongSelf.loadingHole = nil
+                }
+
+                completion()
+            }))
+
+            /*let mappedDirection: MessageHistoryViewRelativeHoleDirection
             switch direction {
             case .around:
                 mappedDirection = .aroundId(anchor)
@@ -391,7 +555,7 @@ public final class SparseMessageList {
                 }
 
                 completion()
-            }))
+            }))*/
         }
 
         private func updateTopSection(view: MessageHistoryView) {
@@ -510,7 +674,7 @@ public final class SparseMessageList {
     }
 
     init(account: Account, peerId: PeerId, messageTag: MessageTags) {
-        self.queue = .mainQueue()
+        self.queue = Queue()
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(queue: queue, account: account, peerId: peerId, messageTag: messageTag)

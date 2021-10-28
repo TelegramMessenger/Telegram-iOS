@@ -1418,12 +1418,6 @@ public final class SparseItemGrid: ASDisplayNode {
             return
         }
 
-        /*#if DEBUG
-        if "".isEmpty {
-            return
-        }
-        #endif*/
-
         self.isLoadingHole = true
         self.loadingHoleDisposable.set((items.itemBinding.loadHole(anchor: holeAnchor, at: location)
         |> deliverOnMainQueue).start(completed: { [weak self] in
