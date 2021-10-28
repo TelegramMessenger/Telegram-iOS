@@ -4,7 +4,7 @@ import SwiftSignalKit
 import MtProtoKit
 
 public func fetchHttpResource(url: String) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
-    if let url = URL(string: url) {
+    if let urlString = url.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed), let url = URL(string: urlString) {
         let signal = MTHttpRequestOperation.data(forHttpUrl: url)!
         return Signal { subscriber in
             subscriber.putNext(.reset)
