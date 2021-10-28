@@ -222,7 +222,7 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
             case let .exceptionsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .addException(theme, text):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
                     arguments.addException()
                 })
             case let .exception(_, _, _, dateTimeFormat, nameDisplayOrder, peer, description, _, editing, revealed):

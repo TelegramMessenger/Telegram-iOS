@@ -245,6 +245,16 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
         }
         self.dismissButton.addTarget(self, action: #selector(self.dismissPressed), forControlEvents: .touchUpInside)
         
+        self.containerNode.shouldBegin = { [weak self] point in
+            guard let strongSelf = self else {
+                return false
+            }
+            if strongSelf.addButton.frame.contains(point) || strongSelf.dismissButton.frame.contains(point)  {
+                return false
+            }
+            return true
+        }
+        
         self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let item = strongSelf.layoutParams?.0, let _ = item.importer, let contextAction = item.contextAction else {
                 gesture.cancel()
