@@ -246,8 +246,8 @@ public final class DirectMediaImageCache {
                 selectedSize = progressiveSizes[0]
             } else if progressiveSizes.count > 1 && width <= 160 {
                 selectedSize = progressiveSizes[2]
-            } else if progressiveSizes.count > 2 && width <= 400 {
-                selectedSize = progressiveSizes[3]
+            } else if progressiveSizes.count > 4 && width <= 400 {
+                selectedSize = progressiveSizes[4]
             } else {
                 selectedSize = Int32.max
             }
