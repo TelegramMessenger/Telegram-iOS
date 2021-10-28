@@ -748,7 +748,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     strongSelf.dismissButton.setTitle(item.presentationData.strings.MemberRequests_Dismiss, with: Font.bold(15.0), with: item.presentationData.theme.list.itemAccentColor, for: .normal)
                     
-                    let addWidth = measureAddLayout.size.width + 10.0
+                    let addWidth = measureAddLayout.size.width + 24.0
                     let addHeight = strongSelf.addButton.updateLayout(width: addWidth, transition: .immediate)
                     let addButtonFrame = CGRect(x: leftInset, y: contentSize.height - addHeight - 12.0, width: addWidth, height: addHeight)
                     strongSelf.addButton.frame = addButtonFrame

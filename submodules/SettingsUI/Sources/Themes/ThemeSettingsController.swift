@@ -1102,20 +1102,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
                 if case let .cloud(info) = updatedTheme, info.theme.settings?.contains(where: { $0.baseTheme == .night || $0.baseTheme == .tinted }) ?? false {
                     updatedAutomaticThemeSwitchSetting.theme = updatedTheme
-                } else if autoNightModeTriggered {
-                    var updatedThemeSpecificAccentColors = current.themeSpecificAccentColors
-                    if let baseThemeIndex = baseThemeIndex {
-                        updatedThemeSpecificAccentColors[baseThemeIndex] = PresentationThemeAccentColor(themeIndex: updatedTheme.index)
-                    }
-                    
-                    if autoNightModeTriggered {
-                        var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
-                        updatedAutomaticThemeSwitchSetting.theme = updatedTheme
-                        
-                        return current.withUpdatedAutomaticThemeSwitchSetting(updatedAutomaticThemeSwitchSetting).withUpdatedThemeSpecificAccentColors(updatedThemeSpecificAccentColors)
-                    } else {
-                        return current.withUpdatedTheme(updatedTheme).withUpdatedThemeSpecificAccentColors(updatedThemeSpecificAccentColors)
-                    }
                 } else if case let .builtin(theme) = updatedTheme {
                     if [.day, .dayClassic].contains(theme) {
                         if updatedAutomaticThemeSwitchSetting.theme.emoticon != nil || [.builtin(.dayClassic), .builtin(.day)].contains(updatedAutomaticThemeSwitchSetting.theme.generalThemeReference) {

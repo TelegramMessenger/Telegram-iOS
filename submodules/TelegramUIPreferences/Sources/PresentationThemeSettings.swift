@@ -663,7 +663,7 @@ public struct PresentationThemeSettings: Codable {
         }
         
         var mappedThemePreferredBaseTheme: [Int64: TelegramBaseTheme] = [:]
-        let themePreferredBaseThemeDict = try container.decode([Int64: Int64].self, forKey: "themePreferredBaseTheme")
+        let themePreferredBaseThemeDict = try container.decodeIfPresent([Int64: Int64].self, forKey: "themePreferredBaseTheme") ?? [:]
         for (key, value) in themePreferredBaseThemeDict {
             if let baseTheme = TelegramBaseTheme(rawValue: Int32(clamping: value)) {
                 mappedThemePreferredBaseTheme[key] = baseTheme

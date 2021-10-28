@@ -1135,7 +1135,7 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
                 var updatedAutomaticThemeSwitchSetting = current.automaticThemeSwitchSetting
                 if case let .cloud(info) = updatedTheme, info.theme.settings?.contains(where: { $0.baseTheme == .night || $0.baseTheme == .tinted }) ?? false {
                     updatedAutomaticThemeSwitchSetting.theme = updatedTheme
-                } else if autoNightModeTriggered {
+                } else if autoNightModeTriggered && !preset {
                     var updatedThemeSpecificAccentColors = current.themeSpecificAccentColors
                     if let baseThemeIndex = baseThemeIndex {
                         updatedThemeSpecificAccentColors[baseThemeIndex] = PresentationThemeAccentColor(themeIndex: updatedTheme.index)
