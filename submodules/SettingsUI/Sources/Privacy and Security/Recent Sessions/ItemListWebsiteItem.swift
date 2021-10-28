@@ -260,7 +260,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
             let (appLayout, appApply) = makeAppLayout(TextNodeLayoutArguments(attributedString: appAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (locationLayout, locationApply) = makeLocationLayout(TextNodeLayoutArguments(attributedString: locationAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: 75.0)
             let separatorHeight = UIScreenPixel
             

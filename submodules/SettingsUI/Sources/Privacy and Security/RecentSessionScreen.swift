@@ -18,6 +18,7 @@ import StickerResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import AvatarNode
+import UndoUI
 
 private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -391,6 +392,74 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         }
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
+            self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
+        }
+        
+        self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture)))
+        
+        let titleGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleTitleLongPress(_:)))
+        self.titleNode.view.addGestureRecognizer(titleGestureRecognizer)
+        
+        let deviceGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleDeviceLongPress(_:)))
+        self.deviceValueNode.view.addGestureRecognizer(deviceGestureRecognizer)
+        
+        let locationGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLocationLongPress(_:)))
+        self.locationValueNode.view.addGestureRecognizer(locationGestureRecognizer)
+        
+        let ipGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleIpLongPress(_:)))
+        self.ipValueNode.view.addGestureRecognizer(ipGestureRecognizer)
+    }
+    
+    @objc private func handleTitleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            self.displayCopyContextMenu(self.titleNode, self.titleNode.attributedText?.string ?? "")
+        }
+    }
+    
+    @objc private func handleDeviceLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            self.displayCopyContextMenu(self.deviceValueNode, self.deviceValueNode.attributedText?.string ?? "")
+        }
+    }
+    
+    @objc private func handleLocationLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            self.displayCopyContextMenu(self.locationValueNode, self.locationValueNode.attributedText?.string ?? "")
+        }
+    }
+    
+    @objc private func handleIpLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            self.displayCopyContextMenu(self.ipValueNode, self.ipValueNode.attributedText?.string ?? "")
+        }
+    }
+    
+    private func displayCopyContextMenu(_ node: ASDisplayNode, _ string: String) {
+        if !string.isEmpty {
+            var actions: [ContextMenuAction] = []
+            actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
+                UIPasteboard.general.string = string
+                
+                if let strongSelf = self {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                }
+            }))
+            let contextMenuController = ContextMenuController(actions: actions)
+            self.controller?.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                if let strongSelf = self {
+                    return (node, node.bounds.insetBy(dx: 0.0, dy: -2.0), strongSelf, strongSelf.view.bounds)
+                } else {
+                    return nil
+                }
+            }))
+        }
+    }
+    
     func updatePresentationData(_ presentationData: PresentationData) {
         guard !self.animatedOut else {
             return
@@ -426,16 +495,6 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
         self.terminateButton.updateTheme(SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: self.presentationData.theme.list.itemDestructiveColor))
-    }
-        
-    override func didLoad() {
-        super.didLoad()
-        
-        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-            self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
-        }
-        
-        self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture)))
     }
     
     @objc func cancelButtonPressed() {
@@ -486,6 +545,13 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
             offsetCompleted = true
             internalCompletion()
         })
+        
+        
+        self.controller?.window?.forEachController { c in
+            if let c = c as? UndoOverlayController {
+                c.dismiss()
+            }
+        }
     }
     
     var passthroughHitTestImpl: ((CGPoint) -> UIView?)?

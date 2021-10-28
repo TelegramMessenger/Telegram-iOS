@@ -388,7 +388,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             let verticalInset: CGFloat = 11.0
             let titleSpacing: CGFloat = 2.0
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let separatorHeight = UIScreenPixel
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?

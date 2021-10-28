@@ -261,7 +261,7 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
             
             let separatorHeight = UIScreenPixel
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let leftInset: CGFloat = params.leftInset + (item.isSelected != nil ? 60.0 : 16.0)
             let rightInset: CGFloat = 44.0 + params.rightInset

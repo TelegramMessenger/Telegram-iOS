@@ -226,7 +226,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
             let labelConstrain: CGFloat = params.width - params.rightInset - leftInset - 40.0 - titleLayout.size.width - 10.0
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: titleFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: titleLayout.size.height + 11.0 * 2.0)
             let separatorHeight = UIScreenPixel
             

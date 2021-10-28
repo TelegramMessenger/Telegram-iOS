@@ -178,7 +178,7 @@ public class ItemListAddressItemNode: ListViewItemNode {
                 case .blocks:
                     itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             if !item.displayDecorations {

@@ -226,7 +226,7 @@ public class InfoItemNode: ListViewItemNode {
             
             let insets: UIEdgeInsets
             if let neighbors = neighbors {
-                insets = itemListNeighborsGroupedInsets(neighbors)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             } else {
                 insets = UIEdgeInsets()
             }

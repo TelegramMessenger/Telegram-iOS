@@ -166,6 +166,10 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
     
     let actionsDisposable = DisposableSet()
     
+    if let existingContext = existingContext {
+        existingContext.reload()
+    }
+    
     let statePromise = ValuePromise(InviteRequestsControllerState(searchingMembers: false), ignoreRepeated: true)
     let stateValue = Atomic(value: InviteRequestsControllerState(searchingMembers: false))
     let updateState: ((InviteRequestsControllerState) -> InviteRequestsControllerState) -> Void = { f in

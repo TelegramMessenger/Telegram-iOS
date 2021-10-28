@@ -858,6 +858,12 @@ private final class PeerInvitationImportersContextImpl {
         self.actionDisposables.dispose()
     }
     
+    func reload() {
+        self.loadedFromCache = true
+        self.populateCache = true
+        self.loadMore()
+    }
+    
     func loadMore() {
         if self.isLoadingMore {
             return
@@ -1067,6 +1073,12 @@ public final class PeerInvitationImportersContext {
     public func loadMore() {
         self.impl.with { impl in
             impl.loadMore()
+        }
+    }
+    
+    public func reload() {
+        self.impl.with { impl in
+            impl.reload()
         }
     }
     

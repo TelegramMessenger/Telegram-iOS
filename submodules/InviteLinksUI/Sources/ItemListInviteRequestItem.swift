@@ -245,6 +245,16 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
         }
         self.dismissButton.addTarget(self, action: #selector(self.dismissPressed), forControlEvents: .touchUpInside)
         
+        self.containerNode.shouldBegin = { [weak self] point in
+            guard let strongSelf = self, let item = strongSelf.layoutParams?.0 else {
+                return false
+            }
+            if item.importer == nil || strongSelf.addButton.frame.contains(point) || strongSelf.dismissButton.frame.contains(point)  {
+                return false
+            }
+            return true
+        }
+        
         self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let item = strongSelf.layoutParams?.0, let _ = item.importer, let contextAction = item.contextAction else {
                 gesture.cancel()
@@ -559,7 +569,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let contentSize = CGSize(width: params.width, height: max(minHeight, rawHeight))
@@ -732,8 +742,9 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                         
                         var shapes: [ShimmerEffectNode.Shape] = []
                         
-                        let titleLineWidth: CGFloat = 180.0
-                        let subtitleLineWidth: CGFloat = 60.0
+                        let titleLineWidth: CGFloat = 120.0
+                        let subtitleLineWidth: CGFloat = 180.0
+                        let dateLineWidth: CGFloat = 35.0
                         let lineDiameter: CGFloat = 10.0
                         
                         let iconFrame = strongSelf.avatarNode.frame
@@ -744,6 +755,15 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                         
                         let subtitleFrame = strongSelf.subtitleNode.frame
                         shapes.append(.roundedRectLine(startPoint: CGPoint(x: subtitleFrame.minX, y: subtitleFrame.minY + floor((subtitleFrame.height - lineDiameter) / 2.0)), width: subtitleLineWidth, diameter: lineDiameter))
+                        
+                        let dateFrame = strongSelf.dateNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: dateFrame.maxX - dateLineWidth, y: dateFrame.minY + floor((dateFrame.height - lineDiameter) / 2.0)), width: dateLineWidth, diameter: lineDiameter))
+
+                        let addFrame = strongSelf.addButton.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: addFrame.minX, y: addFrame.minY + floor((addFrame.height - strongSelf.addButton.frame.height) / 2.0)), width: strongSelf.addButton.frame.width, diameter: strongSelf.addButton.frame.height))
+                        
+                        let dismissFrame = strongSelf.dismissButton.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: dismissFrame.minX, y: dismissFrame.minY + floor((dismissFrame.height - lineDiameter) / 2.0)), width: 60.0, diameter: lineDiameter))
                         
                         shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: layout.contentSize)
                     } else if let shimmerNode = strongSelf.placeholderNode {

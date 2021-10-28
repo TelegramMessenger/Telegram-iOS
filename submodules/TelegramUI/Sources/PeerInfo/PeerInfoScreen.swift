@@ -5959,6 +5959,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         
         if self.isSettings {
+            (self.controller?.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.3, curve: .linear))
+            
             if let settings = self.data?.globalSettings {
                 self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Settings_Search, hasBackground: true, hasSeparator: true, contentNode: SettingsSearchContainerNode(context: self.context, openResult: { [weak self] result in
                     if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
@@ -6037,6 +6039,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         self.searchDisplayController = nil
         searchDisplayController.deactivate(placeholder: nil)
+        
+        if self.isSettings {
+            (self.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.3, curve: .linear))
+        }
         
         let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .easeInOut)
         if let navigationBar = self.controller?.navigationBar {

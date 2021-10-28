@@ -161,7 +161,7 @@ private final class WebBrowserItemNode: ListViewItemNode {
             
             let separatorHeight = UIScreenPixel
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: 22.0 + titleLayout.size.height)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)

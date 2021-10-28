@@ -469,6 +469,8 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     var tag: ItemListItemTag? {
         return self.item?.tag
     }
+    
+    private var tapping = false
 
     init() {
         self.containerNode = ASDisplayNode()
@@ -521,7 +523,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         options.insert(.Synchronous)
         
         var scrollToItem: ListViewScrollToItem?
-        if !self.initialized {
+        if !self.initialized || !self.tapping {
             if let index = transition.entries.firstIndex(where: { entry in
                 return entry.theme.index == item.currentTheme.index
             }) {
@@ -541,7 +543,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
             let separatorHeight = UIScreenPixel
 
             contentSize = CGSize(width: params.width, height: 116.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
 
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -650,8 +652,12 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     
                     let action: (PresentationThemeReference) -> Void = { [weak self] themeReference in
                         if let strongSelf = self {
+                            strongSelf.tapping = true
                             strongSelf.item?.updatedTheme(themeReference)
                             let _ = ensureThemeVisible(listNode: strongSelf.listNode, themeReference: themeReference, animated: true)
+                            Queue.mainQueue().after(0.2) {
+                                strongSelf.tapping = false
+                            }
                         }
                     }
                     let previousEntries = strongSelf.entries ?? []

@@ -174,7 +174,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
             if let node = node {
                 contentSize.height += node.frame.size.height
             }
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
