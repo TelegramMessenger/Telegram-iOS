@@ -519,23 +519,35 @@ func managedThemesUpdates(accountManager: AccountManager<TelegramAccountManagerT
                         }.start()
                         let _ = postbox.transaction { transaction in
                             let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
-                            let items = entries.map { entry -> TelegramTheme in
-                                let theme = entry.contents.get(TelegramThemeNativeCodable.self)!.value
-                                if theme.id == updatedTheme.id {
-                                    return updatedTheme
+                            
+                            var success = true
+                            var mappedItems: [TelegramTheme] = []
+                            for entry in entries {
+                                if let theme = entry.contents.get(TelegramThemeNativeCodable.self)?.value {
+                                    if theme.id == updatedTheme.id {
+                                        mappedItems.append(updatedTheme)
+                                    } else {
+                                        mappedItems.append(theme)
+                                    }
                                 } else {
-                                    return theme
+                                    success = false
+                                    break
                                 }
                             }
-                            var updatedEntries: [OrderedItemListEntry] = []
-                            for item in items {
-                                var intValue = Int32(updatedEntries.count)
-                                let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                                if let entry = CodableEntry(TelegramThemeNativeCodable(item)) {
-                                    updatedEntries.append(OrderedItemListEntry(id: id, contents: entry))
+                            if success {
+                                var updatedEntries: [OrderedItemListEntry] = []
+                                for item in mappedItems {
+                                    var intValue = Int32(updatedEntries.count)
+                                    let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
+                                    if let entry = CodableEntry(TelegramThemeNativeCodable(item)) {
+                                        updatedEntries.append(OrderedItemListEntry(id: id, contents: entry))
+                                    }
                                 }
+                                transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
+                            } else {
+                                let _ = (telegramThemes(postbox: postbox, network: network, accountManager: accountManager, forceUpdate: true)
+                                |> take(1)).start()
                             }
-                            transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
                         }.start()
                     }
                     subscriber.putCompletion()
