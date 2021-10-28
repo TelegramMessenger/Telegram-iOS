@@ -663,6 +663,10 @@ private final class VisualMediaItem: SparseItemGrid.Item {
     override var tag: Int32 {
         return self.localMonthTimestamp
     }
+
+    override var holeAnchor: SparseItemGrid.HoleAnchor {
+        return VisualMediaHoleAnchor(index: self.index, messageId: self.message.id, localMonthTimestamp: self.localMonthTimestamp)
+    }
     
     init(index: Int, message: Message, localMonthTimestamp: Int32) {
         self.indexValue = index
@@ -1173,12 +1177,16 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                     if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, synchronous: synchronous == .full) {
                         if let image = result.image {
                             layer.contents = image.cgImage
-                            layer.hasContents = true
                             switch synchronous {
                             case .none:
-                                layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self, weak layer, weak displayItem] _ in
+                                    layer?.hasContents = true
+                                    if let displayItem = displayItem {
+                                        self?.updateShimmerLayersImpl?(displayItem)
+                                    }
+                                })
                             default:
-                                break
+                                layer.hasContents = true
                             }
                         }
                         if let loadSignal = result.loadSignal {
@@ -1192,15 +1200,13 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                                 let deltaTime = CFAbsoluteTimeGetCurrent() - startTimestamp
                                 let synchronousValue: Bool
                                 switch synchronous {
-                                case .none:
+                                case .none, .full:
                                     synchronousValue = false
                                 case .semi:
                                     synchronousValue = deltaTime < 0.1
-                                case .full:
-                                    synchronousValue = true
                                 }
 
-                                if layer.hasContents && !synchronousValue {
+                                if layer.contents != nil && !synchronousValue {
                                     let copyLayer = ItemLayer()
                                     copyLayer.contents = layer.contents
                                     copyLayer.contentsRect = layer.contentsRect
@@ -1211,17 +1217,26 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                                     })
 
                                     layer.contents = image?.cgImage
-                                    layer.hasContents = true
-                                } else {
-                                    layer.contents = image?.cgImage
-                                    layer.hasContents = true
 
-                                    if !synchronousValue {
-                                        layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                    }
-
+                                    layer.hasContents = true
                                     if let displayItem = displayItem {
                                         self?.updateShimmerLayersImpl?(displayItem)
+                                    }
+                                } else {
+                                    layer.contents = image?.cgImage
+
+                                    if !synchronousValue {
+                                        layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak layer] _ in
+                                            layer?.hasContents = true
+                                            if let displayItem = displayItem {
+                                                self?.updateShimmerLayersImpl?(displayItem)
+                                            }
+                                        })
+                                    } else {
+                                        layer.hasContents = true
+                                        if let displayItem = displayItem {
+                                            self?.updateShimmerLayersImpl?(displayItem)
+                                        }
                                     }
                                 }
                             })
@@ -1936,13 +1951,16 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             let timezoneOffset = Int32(TimeZone.current.secondsFromGMT())
 
             var mappedItems: [SparseItemGrid.Item] = []
-            var mappeHoles: [SparseItemGrid.HoleAnchor] = []
+            var mappedHoles: [SparseItemGrid.HoleAnchor] = []
             for item in list.items {
                 switch item.content {
-                case let .message(message, _):
+                case let .message(message, isLocal):
                     mappedItems.append(VisualMediaItem(index: item.index, message: message, localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
+                    if !isLocal {
+                        mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: message.id, localMonthTimestamp: Month(localTimestamp: message.timestamp + timezoneOffset).packedValue))
+                    }
                 case let .placeholder(id, timestamp):
-                    mappeHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: id, localMonthTimestamp: Month(localTimestamp: timestamp + timezoneOffset).packedValue))
+                    mappedHoles.append(VisualMediaHoleAnchor(index: item.index, messageId: id, localMonthTimestamp: Month(localTimestamp: timestamp + timezoneOffset).packedValue))
                 }
             }
 
@@ -1953,7 +1971,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
                 let items = SparseItemGrid.Items(
                     items: mappedItems,
-                    holeAnchors: mappeHoles,
+                    holeAnchors: mappedHoles,
                     count: list.totalCount,
                     itemBinding: strongSelf.itemGridBinding
                 )
@@ -2232,6 +2250,13 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 }
             }
         }
+    }
+
+    func scrollToItem(index: Int) {
+        guard let _ = self.items else {
+            return
+        }
+        self.itemGrid.scrollToItem(at: index)
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

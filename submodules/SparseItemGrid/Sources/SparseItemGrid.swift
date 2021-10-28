@@ -186,6 +186,10 @@ public final class SparseItemGrid: ASDisplayNode {
             preconditionFailure()
         }
 
+        open var holeAnchor: HoleAnchor {
+            preconditionFailure()
+        }
+
         public init() {
         }
     }
@@ -971,14 +975,24 @@ public final class SparseItemGrid: ASDisplayNode {
                 let visibleRange = layout.visibleItemRange(for: visibleBounds, count: items.count)
                 for index in visibleRange.minIndex ... visibleRange.maxIndex {
                     if items.item(at: index) == nil {
-                        if let holeAnchor = items.closestHole(to: index) {
-                            let location: HoleLocation
-                            if index < holeAnchor.index {
-                                location = .toLower
+                        //let closestItem = items.closestItem(at: index)
+                        let closestHole = items.closestHole(to: index)
+
+                        var closestAnchor: HoleAnchor?
+                        /*if let closestItem = closestItem, let closestHole = closestHole {
+                            if abs(closestItem.index - index) < abs(closestHole.index - index) {
+                                closestAnchor = closestItem.holeAnchor
                             } else {
-                                location = .toUpper
+                                closestAnchor = closestHole
                             }
-                            self.maybeLoadHoleAnchor(holeAnchor, location)
+                        } else if let closestItem = closestItem {
+                            closestAnchor = closestItem.holeAnchor
+                        } else if let closestHole = closestHole {*/
+                            closestAnchor = closestHole
+                        //}
+
+                        if let closestAnchor = closestAnchor {
+                            self.maybeLoadHoleAnchor(closestAnchor, .toLower)
                         }
                         break
                     }
