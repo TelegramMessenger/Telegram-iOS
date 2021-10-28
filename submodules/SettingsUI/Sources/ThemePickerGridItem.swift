@@ -248,7 +248,7 @@ private final class ThemeGridThemeItemIconNode : ASDisplayNode {
         self.emojiNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 79.0), size: CGSize(width: 90.0, height: 30.0))
         
         let emojiFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - 42.0) / 2.0), y: 98.0), size: CGSize(width: 42.0, height: 42.0))
-        if let file = item.emojiFile, currentItem == nil {
+        if let file = item.emojiFile, currentItem?.emojiFile == nil {
             let imageApply = self.emojiImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: emojiFrame.size, boundingSize: emojiFrame.size, intrinsicInsets: UIEdgeInsets()))
             imageApply()
             self.emojiImageNode.setSignal(chatMessageStickerPackThumbnail(postbox: item.context.account.postbox, resource: file.resource, animated: true, nilIfEmpty: true))

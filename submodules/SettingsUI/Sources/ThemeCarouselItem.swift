@@ -39,6 +39,9 @@ private struct ThemeCarouselThemeEntry: Comparable, Identifiable {
         if lhs.index != rhs.index {
             return false
         }
+        if lhs.emojiFile?.fileId != rhs.emojiFile?.fileId {
+            return false
+        }
         if lhs.themeReference.index != rhs.themeReference.index {
             return false
         }
@@ -404,7 +407,7 @@ private final class ThemeCarouselThemeItemIconNode : ListViewItemNode {
                     strongSelf.emojiNode.isHidden = string == nil
                     
                     let emojiFrame = CGRect(origin: CGPoint(x: 33.0, y: 79.0), size: CGSize(width: 24.0, height: 24.0))
-                    if let file = item.emojiFile, currentItem == nil {
+                    if let file = item.emojiFile, currentItem?.emojiFile == nil {
                         let imageApply = strongSelf.emojiImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: emojiFrame.size, boundingSize: emojiFrame.size, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
                         strongSelf.emojiImageNode.setSignal(chatMessageStickerPackThumbnail(postbox: item.context.account.postbox, resource: file.resource, animated: true, nilIfEmpty: true))
