@@ -1709,6 +1709,18 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 }
             }
             strongSelf.itemInteraction.hiddenMedia = hiddenMedia
+
+            if let items = strongSelf.items {
+                for item in items.items {
+                    if let item = item as? VisualMediaItem {
+                        if hiddenMedia[item.message.id] != nil {
+                            strongSelf.itemGrid.ensureItemVisible(index: item.index)
+                            break
+                        }
+                    }
+                }
+            }
+
             strongSelf.updateHiddenMedia()
         })
         

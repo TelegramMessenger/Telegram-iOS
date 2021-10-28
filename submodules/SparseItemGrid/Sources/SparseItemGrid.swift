@@ -719,6 +719,36 @@ public final class SparseItemGrid: ASDisplayNode {
             self.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
         }
 
+        func ensureItemVisible(index: Int) {
+            guard let layout = self.layout, let _ = self.items else {
+                return
+            }
+            if layout.containerLayout.lockScrollingAtTop {
+                return
+            }
+
+            let itemFrame = layout.frame(at: index)
+            let visibleBounds = self.scrollView.bounds
+            if itemFrame.intersects(visibleBounds) {
+                return
+            }
+
+            var contentOffset: CGFloat
+            if itemFrame.midY >= visibleBounds.maxY {
+                contentOffset = itemFrame.maxY - self.scrollView.bounds.height + layout.containerLayout.insets.bottom
+            } else {
+                contentOffset = itemFrame.minY - layout.containerLayout.insets.top
+            }
+
+            if contentOffset > self.scrollView.contentSize.height - self.scrollView.bounds.height {
+                contentOffset = self.scrollView.contentSize.height - self.scrollView.bounds.height
+            }
+            if contentOffset < 0.0 {
+                contentOffset = 0.0
+            }
+            self.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
+        }
+
         func scrollToTop() -> Bool {
             if self.scrollView.contentOffset.y > 0.0 {
                 self.scrollView.setContentOffset(CGPoint(), animated: true)
@@ -1569,6 +1599,13 @@ public final class SparseItemGrid: ASDisplayNode {
         currentViewport.scrollToItem(at: index)
     }
 
+    public func ensureItemVisible(index: Int) {
+        guard let currentViewport = self.currentViewport else {
+            return
+        }
+        currentViewport.ensureItemVisible(index: index)
+    }
+
     public func scrollToTop() -> Bool {
         guard let currentViewport = self.currentViewport else {
             return false
@@ -1615,15 +1652,23 @@ public final class SparseItemGrid: ASDisplayNode {
         }
     }
 
+    private var brieflyDisabledTouchActions = false
+
     public func brieflyDisableTouchActions() {
+        if self.brieflyDisabledTouchActions {
+            return
+        }
+        self.brieflyDisabledTouchActions = true
+
         let tapEnabled = self.tapRecognizer?.isEnabled ?? true
         self.tapRecognizer?.isEnabled = false
         let pinchEnabled = self.pinchRecognizer?.isEnabled ?? true
         self.pinchRecognizer?.isEnabled = false
 
-        DispatchQueue.main.async {
-            self.tapRecognizer?.isEnabled = tapEnabled
-            self.pinchRecognizer?.isEnabled = pinchEnabled
+        DispatchQueue.main.async { [weak self] in
+            self?.tapRecognizer?.isEnabled = tapEnabled
+            self?.pinchRecognizer?.isEnabled = pinchEnabled
+            self?.brieflyDisabledTouchActions = false
         }
     }
 
