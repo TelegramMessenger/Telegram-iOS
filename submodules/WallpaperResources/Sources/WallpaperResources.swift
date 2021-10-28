@@ -1314,7 +1314,11 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
     if case let .cloud(theme) = theme, theme.theme.settings != nil, let nightMode = nightMode {
         themeSignal = .single(makePresentationTheme(cloudTheme: theme.theme, dark: nightMode))
     } else if case let .builtin(theme) = theme {
-        themeSignal = .single(makeDefaultPresentationTheme(reference: theme, serviceBackgroundColor: nil))
+        var defaultTheme = makeDefaultPresentationTheme(reference: theme, serviceBackgroundColor: nil)
+        if let color = color {
+            defaultTheme = customizePresentationTheme(defaultTheme, editing: false, accentColor: color.accentColor.flatMap { UIColor(rgb: $0) }, outgoingAccentColor: nil, backgroundColors: [], bubbleColors: color.bubbleColors, animateBubbleColors: nil, baseColor: color.baseColor)
+        }
+        themeSignal = .single(defaultTheme)
     } else if case let .cloud(theme) = theme, let settings = theme.theme.settings?.first {
         themeSignal = Signal { subscriber in
             let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: .builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme)), accentColor: UIColor(argb: settings.accentColor), backgroundColors: [], bubbleColors: settings.messageColors, wallpaper: settings.wallpaper, serviceBackgroundColor: nil, preview: false)
