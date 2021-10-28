@@ -156,9 +156,11 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
-        
+                
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
+        
+        self.containerNode = ASDisplayNode()
         
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.cornerRadius = 7.0
