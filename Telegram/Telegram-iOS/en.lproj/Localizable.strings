@@ -6994,6 +6994,8 @@ Sorry for the inconvenience.";
 
 "AuthSessions.View.Browser" = "Browser";
 "AuthSessions.View.Device" = "Device";
+"AuthSessions.View.Application" = "Application";
+"AuthSessions.View.OS" = "Operating System";
 "AuthSessions.View.Location" = "Location";
 "AuthSessions.View.IP" = "IP Address";
 "AuthSessions.View.TerminateSession" = "Terminate Session";

@@ -142,10 +142,10 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, String?) {
         return (UIImage(bundleImageName: "Settings/Devices/iPhone"), "device_iphone")
     }
     if device.contains("ipad") {
-        return (UIImage(bundleImageName: "Settings/Devices/iPad"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/iPad"), "device_ipad")
     }
     if (platform.contains("macos") || systemVersion.contains("macos")) && device.contains("mac") {
-        return (UIImage(bundleImageName: "Settings/Devices/Mac"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Mac"), "device_mac")
     }
     if platform.contains("ios") || platform.contains("macos") || systemVersion.contains("macos") {
         return (UIImage(bundleImageName: "Settings/Devices/iOS"), nil)
