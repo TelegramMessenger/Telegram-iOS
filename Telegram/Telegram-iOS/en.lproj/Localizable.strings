@@ -6976,6 +6976,10 @@ Sorry for the inconvenience.";
 "Notifications.GroupChats" = "Group Chats";
 "Notifications.Channels" = "Channels";
 
+"Notifications.PrivateChatsTitle" = "Private Chats";
+"Notifications.GroupChatsTitle" = "Group Chats";
+"Notifications.ChannelsTitle" = "Channels";
+
 "Notifications.CategoryExceptions_0" = "%@ exceptions";
 "Notifications.CategoryExceptions_1" = "%@ exception";
 "Notifications.CategoryExceptions_2" = "%@ exceptions";
