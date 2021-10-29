@@ -364,6 +364,11 @@ public struct ChatTextInputStateText: Codable, Equatable {
 }
 
 public enum ChatControllerSubject: Equatable {
+    public enum MessageSubject: Equatable {
+        case id(MessageId)
+        case timestamp(Int32)
+    }
+
     public struct ForwardOptions: Equatable {
         public let hideNames: Bool
         public let hideCaptions: Bool
@@ -374,7 +379,7 @@ public enum ChatControllerSubject: Equatable {
         }
     }
     
-    case message(id: EngineMessage.Id, highlight: Bool, timecode: Double?)
+    case message(id: MessageSubject, highlight: Bool, timecode: Double?)
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
     case forwardedMessages(ids: [EngineMessage.Id], options: Signal<ForwardOptions, NoError>)
