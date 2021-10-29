@@ -328,14 +328,14 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             isScheduledMessages = true
         }
         
-        self.dateHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
+        self.dateHeader = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp, alreadyThere in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
             let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
             let components = calendar.dateComponents([.year, .month, .day], from: date)
 
             if let date = calendar.date(from: components) {
-                controllerInteraction.navigateToFirstDateMessage(Int32(date.timeIntervalSince1970))
+                controllerInteraction.navigateToFirstDateMessage(Int32(date.timeIntervalSince1970), alreadyThere)
             }
         })
         

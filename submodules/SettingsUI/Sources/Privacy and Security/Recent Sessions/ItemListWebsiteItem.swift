@@ -130,6 +130,11 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
     private let appNode: TextNode
     private let locationNode: TextNode
     
+    private let containerNode: ASDisplayNode
+    override var controlsContainer: ASDisplayNode {
+        return self.containerNode
+    }
+    
     private var layoutParams: (ItemListWebsiteItem, ListViewItemLayoutParams, ItemListNeighbors)?
     
     private var editableControlNode: ItemListEditableControlNode?
@@ -151,9 +156,11 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
-        
+                
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
+        
+        self.containerNode = ASDisplayNode()
         
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.cornerRadius = 7.0
@@ -179,10 +186,11 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
-        self.addSubnode(self.avatarNode)
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.appNode)
-        self.addSubnode(self.locationNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.avatarNode)
+        self.containerNode.addSubnode(self.titleNode)
+        self.containerNode.addSubnode(self.appNode)
+        self.containerNode.addSubnode(self.locationNode)
     }
     
     func asyncLayout() -> (_ item: ItemListWebsiteItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
@@ -328,7 +336,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }
                             strongSelf.editableControlNode = editableControlNode
-                            strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.titleNode)
+                            strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.containerNode)
                             editableControlNode.frame = editableControlFrame
                             transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                             editableControlNode.alpha = 0.0
@@ -390,6 +398,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: strongSelf.backgroundNode.frame.size)
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
@@ -401,7 +410,7 @@ class ItemListWebsiteItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.appNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 30.0), size: appLayout.size))
                     transition.updateFrame(node: strongSelf.locationNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 50.0), size: locationLayout.size))
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     

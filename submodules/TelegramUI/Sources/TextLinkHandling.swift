@@ -59,7 +59,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         openResolvedPeerImpl(peerId, navigation)
                     case let .channelMessage(peerId, messageId, timecode):
                         if let navigationController = controller.navigationController as? NavigationController {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true, timecode: timecode)))
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))
                         }
                     case let .replyThreadMessage(replyThreadMessage, messageId):
                         if let navigationController = controller.navigationController as? NavigationController {

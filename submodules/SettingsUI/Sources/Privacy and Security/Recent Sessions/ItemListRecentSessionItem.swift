@@ -138,13 +138,22 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, String?) {
     if platform.contains("android") {
         return (UIImage(bundleImageName: "Settings/Devices/Android"), "device_android")
     }
+    if device.contains("iphone") {
+        return (UIImage(bundleImageName: "Settings/Devices/iPhone"), "device_iphone")
+    }
+    if device.contains("ipad") {
+        return (UIImage(bundleImageName: "Settings/Devices/iPad"), nil)
+    }
+    if (platform.contains("macos") || systemVersion.contains("macos")) && device.contains("mac") {
+        return (UIImage(bundleImageName: "Settings/Devices/Mac"), nil)
+    }
     if platform.contains("ios") || platform.contains("macos") || systemVersion.contains("macos") {
         return (UIImage(bundleImageName: "Settings/Devices/iOS"), nil)
     }
     if platform.contains("ubuntu") || systemVersion.contains("ubuntu") {
         return (UIImage(bundleImageName: "Settings/Devices/Ubuntu"), nil)
     }
-    if platform.contains("linux") || systemVersion.contains("macos") {
+    if platform.contains("linux") || systemVersion.contains("linux") {
         return (UIImage(bundleImageName: "Settings/Devices/Linux"), nil)
     }
     if platform.contains("windows") || systemVersion.contains("windows") {
@@ -278,7 +287,12 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             
             let rightInset: CGFloat = params.rightInset
             
-            titleAttributedString = NSAttributedString(string: "\(item.session.appName) \(item.session.appVersion)", font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            var appVersion = item.session.appVersion
+            appVersion = appVersion.replacingOccurrences(of: "APPSTORE", with: "").replacingOccurrences(of: "BETA", with: "Beta").trimmingTrailingSpaces()
+            if let openingRoundBraceRange = appVersion.range(of: " ("), let closingRoundBraceRange = appVersion.range(of: ")") {
+                appVersion = appVersion.replacingCharacters(in: openingRoundBraceRange.lowerBound ..< closingRoundBraceRange.upperBound, with: "")
+            }
+            titleAttributedString = NSAttributedString(string: "\(item.session.appName) \(appVersion)", font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             
             var deviceString = ""
             if !item.session.deviceModel.isEmpty {
@@ -291,14 +305,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                 }
                 deviceString += item.session.platform
             }
-            
-            if !item.session.systemVersion.isEmpty {
-                if !deviceString.isEmpty {
-                    deviceString += ", "
-                }
-                deviceString += item.session.systemVersion
-            }
-            
+                        
             var updatedIcon: UIImage?
             if item.session != currentItem?.session {
                 updatedIcon = iconForSession(item.session).0
@@ -429,7 +436,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }
                             strongSelf.editableControlNode = editableControlNode
-                            strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.titleNode)
+                            strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.containerNode)
                             editableControlNode.frame = editableControlFrame
                             transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                             editableControlNode.alpha = 0.0
@@ -501,7 +508,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.appNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: appLayout.size))
                     transition.updateFrame(node: strongSelf.locationNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: strongSelf.appNode.frame.maxY + textSpacing), size: locationLayout.size))
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     

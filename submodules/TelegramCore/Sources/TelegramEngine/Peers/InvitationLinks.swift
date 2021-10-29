@@ -663,6 +663,8 @@ public struct PeerInvitationImportersState: Equatable {
     }
     
     public static var Empty = PeerInvitationImportersState(importers: [], isLoadingMore: false, hasLoadedOnce: true, canLoadMore: false, count: 0)
+    
+    public static var Loading = PeerInvitationImportersState(importers: [], isLoadingMore: false, hasLoadedOnce: false, canLoadMore: false, count: 0)
 }
 
 final class CachedPeerInvitationImporters: Codable {

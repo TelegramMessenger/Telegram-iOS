@@ -250,7 +250,10 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         switch subject {
             case let .session(session):
                 self.terminateButton.title = self.presentationData.strings.AuthSessions_View_TerminateSession
-                title = "\(session.appName) \(session.appVersion)"
+                var appVersion = session.appVersion
+                appVersion = appVersion.replacingOccurrences(of: "APPSTORE", with: "").replacingOccurrences(of: "BETA", with: "Beta").trimmingTrailingSpaces()
+            
+                title = "\(session.appName) \(appVersion)"
                 if session.isCurrent {
                     subtitle = presentationData.strings.Presence_online
                     subtitleActive = true

@@ -50,6 +50,8 @@ public final class ThemePreviewController: ViewController {
     
     private var disposable: Disposable?
     private var applyDisposable = MetaDisposable()
+    
+    var customApply: (() -> Void)?
 
     public init(context: AccountContext, previewTheme: PresentationTheme, source: ThemePreviewSource) {
         self.context = context
@@ -121,7 +123,11 @@ public final class ThemePreviewController: ViewController {
                     }
                 } else {
                     self.theme.set(.single(nil))
-                    themeName = previewTheme.name.string
+                    if [.builtin(.dayClassic), .builtin(.night)].contains(themeReference) {
+                        themeName = "🏠"
+                    } else {
+                        themeName = previewTheme.name.string
+                    }
                 }
             default:
                 self.theme.set(.single(nil))
@@ -223,6 +229,14 @@ public final class ThemePreviewController: ViewController {
     }
     
     private func apply() {
+        if let customApply = self.customApply {
+            customApply()
+            Queue.mainQueue().after(0.2) {
+                self.dismiss()
+            }
+            return
+        }
+        
         let previewTheme = self.previewTheme
         let theme: Signal<PresentationThemeReference?, NoError>
         let context = self.context

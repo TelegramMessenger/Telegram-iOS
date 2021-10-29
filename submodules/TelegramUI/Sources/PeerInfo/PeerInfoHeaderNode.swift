@@ -2089,7 +2089,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
             }
             if self.isSettings {
-                titleString = NSAttributedString(string: title, font: Font.semibold(26.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+                titleString = NSAttributedString(string: title, font: Font.medium(29.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
                 smallTitleString = NSAttributedString(string: title, font: Font.semibold(28.0), textColor: .white)
             } else {
                 titleString = NSAttributedString(string: title, font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
@@ -2200,7 +2200,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             let minTitleSize = CGSize(width: titleSize.width * 0.7, height: titleSize.height * 0.7)
             let minTitleFrame: CGRect
             if self.isSettings {
-                minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - 58.0 + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
+                minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
             } else {
                 minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - expandedAvatarControlsHeight + 9.0 + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
             }
@@ -2214,7 +2214,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 7.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
             if self.isSettings {
-                titleFrame = titleFrame.offsetBy(dx: 0.0, dy: 13.0)
+                titleFrame = titleFrame.offsetBy(dx: 0.0, dy: 11.0)
             }
             let totalSubtitleWidth = subtitleSize.width + usernameSpacing + usernameSize.width
             twoLineInfo = false
@@ -2236,7 +2236,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let titleOffset = -min(titleCollapseOffset, contentOffset)
         let titleCollapseFraction = max(0.0, min(1.0, contentOffset / titleCollapseOffset))
         
-        let titleMinScale: CGFloat = 0.7
+        let titleMinScale: CGFloat = self.isSettings ? 0.6 : 0.7
         let subtitleMinScale: CGFloat = 0.8
         let avatarMinScale: CGFloat = 0.7
         

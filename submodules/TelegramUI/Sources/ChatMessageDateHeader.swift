@@ -26,9 +26,9 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     let id: ListViewItemNode.HeaderId
     let presentationData: ChatPresentationData
     let context: AccountContext
-    let action: ((Int32) -> Void)?
+    let action: ((Int32, Bool) -> Void)?
     
-    init(timestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32) -> Void)? = nil) {
+    init(timestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.timestamp = timestamp
         self.scheduled = scheduled
         self.presentationData = presentationData
@@ -117,9 +117,9 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     
     private var flashingOnScrolling = false
     private var stickDistanceFactor: CGFloat = 0.0
-    private var action: ((Int32) -> Void)? = nil
+    private var action: ((Int32, Bool) -> Void)? = nil
     
-    init(localTimestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32) -> Void)? = nil) {
+    init(localTimestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.presentationData = presentationData
         self.context = context
         
@@ -309,7 +309,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     
     @objc func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.action?(self.localTimestamp)
+            self.action?(self.localTimestamp, self.stickDistanceFactor < 0.5)
         }
     }
 }

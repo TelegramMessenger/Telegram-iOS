@@ -263,7 +263,9 @@ UIImage * _Nullable decompressImage(NSData * _Nonnull sourceData) {
 
     tjhandle _jpegDecompressor = tjInitDecompress();
 
-    tjDecompressHeader2(_jpegDecompressor, _compressedImage, jpegSize, &width, &height, &jpegSubsamp);
+    if (tjDecompressHeader2(_jpegDecompressor, _compressedImage, jpegSize, &width, &height, &jpegSubsamp) != 0) {
+        return nil;
+    }
 
     int sourceBytesPerRow = (3 * width + 31) & ~0x1F;
     int targetBytesPerRow = (4 * width + 31) & ~0x1F;

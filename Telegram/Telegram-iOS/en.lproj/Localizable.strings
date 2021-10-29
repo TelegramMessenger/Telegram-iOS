@@ -296,13 +296,13 @@
 "Weekday.Today" = "Today";
 "Weekday.Yesterday" = "Yesterday";
 
-"Calendar.ShortMonday" = "M";
-"Calendar.ShortTuesday" = "T";
-"Calendar.ShortWednesday" = "W";
-"Calendar.ShortThursday" = "T";
-"Calendar.ShortFriday" = "F";
-"Calendar.ShortSaturday" = "S";
-"Calendar.ShortSunday" = "S";
+"Calendar.ShortMon" = "M";
+"Calendar.ShortTue" = "T";
+"Calendar.ShortWed" = "W";
+"Calendar.ShortThu" = "T";
+"Calendar.ShortFri" = "F";
+"Calendar.ShortSat" = "S";
+"Calendar.ShortSun" = "S";
 
 "Time.TodayAt" = "today at %@";
 "Time.YesterdayAt" = "yesterday at %@";
@@ -6976,6 +6976,10 @@ Sorry for the inconvenience.";
 "Notifications.GroupChats" = "Group Chats";
 "Notifications.Channels" = "Channels";
 
+"Notifications.PrivateChatsTitle" = "Private Chats";
+"Notifications.GroupChatsTitle" = "Group Chats";
+"Notifications.ChannelsTitle" = "Channels";
+
 "Notifications.CategoryExceptions_0" = "%@ exceptions";
 "Notifications.CategoryExceptions_1" = "%@ exception";
 "Notifications.CategoryExceptions_2" = "%@ exceptions";
@@ -6998,8 +7002,8 @@ Sorry for the inconvenience.";
 "MessageCalendar.Title" = "Calendar";
 "MessageCalendar.DaysSelectedTitle_1" = "1 day selected";
 "MessageCalendar.DaysSelectedTitle_any" = "%@ days selected";
-"MessageCalendar.DeleteConfirmation_1" = "Are you sure you want to delete all messages for the selected day?";
-"MessageCalendar.DeleteConfirmation_1" = "Are you sure you want to delete all messages for the selected %@ days?";
+"MessageCalendar.DeleteAlertText_1" = "Are you sure you want to delete all messages for the selected day?";
+"MessageCalendar.DeleteAlertText_any" = "Are you sure you want to delete all messages for the selected %@ days?";
 
 "SharedMedia.PhotoCount_1" = "1 photo";
 "SharedMedia.PhotoCount_any" = "%@ photos";
@@ -7032,3 +7036,5 @@ Sorry for the inconvenience.";
 "Themes.BuildOwn" = "Build Your Own Theme";
 "Themes.EditCurrentTheme" = "Edit Current Theme";
 "Themes.CreateNewTheme" = "Create a New Theme";
+
+"Chat.JumpToDate" = "Jump to Date";

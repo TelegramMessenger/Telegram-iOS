@@ -469,8 +469,12 @@ public final class InviteRequestsSearchContainerNode: SearchDisplayControllerCon
         let searchQuery = self.searchQuery.get()
         |> mapToSignal { query -> Signal<String?, NoError> in
             if let query = query, !query.isEmpty {
-                return (.complete() |> delay(0.6, queue: Queue.mainQueue()))
-                |> then(.single(query))
+                if query.count == 1 {
+                    return .single(" ")
+                } else {
+                    return (.complete() |> delay(0.6, queue: Queue.mainQueue()))
+                    |> then(.single(query))
+                }
             } else {
                 return .single(query)
             }
@@ -481,19 +485,26 @@ public final class InviteRequestsSearchContainerNode: SearchDisplayControllerCon
             guard let query = query, !query.isEmpty, let peer = peerViewMainPeer(peerView) else {
                 return .single(nil)
             }
-            updateActivity(true)
-            let requestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: query))
-            let _ = previousRequestsContext.swap(requestsContext)
             
-            let isGroup: Bool
-            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                isGroup = false
+            let signal: Signal<PeerInvitationImportersState, NoError>
+            if query == " " {
+                signal = .single(PeerInvitationImportersState.Loading)
             } else {
-                isGroup = true
+                updateActivity(true)
+                let requestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .requests(query: query))
+                let _ = previousRequestsContext.swap(requestsContext)
+                signal = requestsContext.state
             }
-
-            return combineLatest(requestsContext.state, presentationDataPromise.get(), processedPeerIds.get())
+                                    
+            return combineLatest(signal, presentationDataPromise.get(), processedPeerIds.get())
             |> mapToSignal { state, presentationData, processedPeerIds -> Signal<[InviteRequestsSearchEntry]?, NoError> in
+                let isGroup: Bool
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    isGroup = false
+                } else {
+                    isGroup = true
+                }
+                
                 var entries: [InviteRequestsSearchEntry] = []
                 var index = 0
                 if !state.hasLoadedOnce {

@@ -6,7 +6,7 @@ import AccountContext
 import OverlayStatusController
 import UrlWhitelist
 
-public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: String, concealed: Bool, skipUrlAuth: Bool = false, present: @escaping (ViewController) -> Void, openResolved: @escaping (ResolvedUrl) -> Void) {
+public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: String, concealed: Bool, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, present: @escaping (ViewController) -> Void, openResolved: @escaping (ResolvedUrl) -> Void) {
     var concealed = concealed
     
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -47,7 +47,7 @@ public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: 
     let (parsedString, parsedConcealed) = parseUrl(url: url, wasConcealed: concealed)
     concealed = parsedConcealed
     
-    if concealed {
+    if concealed && !skipConcealedAlert {
         var rawDisplayUrl: String = parsedString
         let maxLength = 180
         if rawDisplayUrl.count > maxLength {
