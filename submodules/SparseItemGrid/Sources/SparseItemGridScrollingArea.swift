@@ -1067,7 +1067,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
         //#if DEBUG
         //#else
-        Queue.mainQueue().after(2.0, { [weak self] in
+        Queue.mainQueue().after(5.0, { [weak self] in
             self?.dismissLineTooltip()
         })
         //#endif
