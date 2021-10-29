@@ -1119,7 +1119,7 @@ public final class SparseItemGrid: ASDisplayNode {
             let previousProgress = self.currentProgress
             self.currentProgress = progress
 
-            let fixedAnchorPoint = CGPoint(x: fromAnchorFrame.minX + 1.0, y: fromAnchorFrame.minY + 1.0)
+            let fixedAnchorPoint = CGPoint(x: toAnchorFrame.midX, y: toAnchorFrame.midY)
 
             if let fromItem = self.fromViewport.anchorItem(at: fixedAnchorPoint), let fromFrame = self.fromViewport.frameForItem(at: fromItem.index) {
                 fromAnchorFrame.origin.y = fromFrame.midY

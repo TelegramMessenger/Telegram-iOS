@@ -20,16 +20,18 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let updateTextInputState = params.updateTextInputState {
                     controller.updateTextInputState(updateTextInputState)
                 }
-                if let subject = params.subject, case let .message(messageId, _, timecode) = subject {
-                    let navigationController = params.navigationController
-                    let animated = params.animated
-                    controller.navigateToMessage(messageLocation: .id(messageId, timecode), animated: isFirst, completion: { [weak navigationController, weak controller] in
-                        if let navigationController = navigationController, let controller = controller {
-                            let _ = navigationController.popToViewController(controller, animated: animated)
-                        }
-                    }, customPresentProgress: { [weak navigationController] c, a in
-                        (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
-                    })
+                if let subject = params.subject, case let .message(messageSubject, _, timecode) = subject {
+                    if case let .id(messageId) = messageSubject {
+                        let navigationController = params.navigationController
+                        let animated = params.animated
+                        controller.navigateToMessage(messageLocation: .id(messageId, timecode), animated: isFirst, completion: { [weak navigationController, weak controller] in
+                            if let navigationController = navigationController, let controller = controller {
+                                let _ = navigationController.popToViewController(controller, animated: animated)
+                            }
+                        }, customPresentProgress: { [weak navigationController] c, a in
+                            (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
+                        })
+                    }
                 } else if params.scrollToEndIfExists && isFirst {
                     controller.scrollToEndOfHistory()
                     let _ = params.navigationController.popToViewController(controller, animated: params.animated)

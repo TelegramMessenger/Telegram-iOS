@@ -951,8 +951,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(anchorIndex), anchorIndex: .message(anchorIndex), count: historyMessageCount, highlight: false), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             }
                         } else {
-                            if let subject = subject, case let .message(messageId, highlight, _) = subject {
-                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: highlight), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
+                            if let subject = subject, case let .message(messageSubject, highlight, _) = subject {
+                                let initialSearchLocation: ChatHistoryInitialSearchLocation
+                                switch messageSubject {
+                                case let .id(id):
+                                    initialSearchLocation = .id(id)
+                                case let .timestamp(timestamp):
+                                    initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: strongSelf.chatLocation.peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                                }
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: 60, highlight: highlight), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: true), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if var chatHistoryLocation = strongSelf.chatHistoryLocationValue {
@@ -1207,8 +1214,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         })
         
-        if let subject = subject, case let .message(messageId, highlight, _) = subject {
-            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: highlight), id: 0)
+        if let subject = subject, case let .message(messageSubject, highlight, _) = subject {
+            let initialSearchLocation: ChatHistoryInitialSearchLocation
+            switch messageSubject {
+            case let .id(id):
+                initialSearchLocation = .id(id)
+            case let .timestamp(timestamp):
+                initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: self.chatLocation.peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+            }
+            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: 60, highlight: highlight), id: 0)
         } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
             self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: true), id: 0)
         } else {

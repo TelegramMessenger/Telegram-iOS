@@ -1800,7 +1800,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     c.dismiss(completion: {
                         if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                             let currentPeerId = strongSelf.peerId
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId), subject: .message(id: message.id, highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId), subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
                                 var viewControllers = navigationController.viewControllers
                                 var indexesToRemove = Set<Int>()
                                 var keptCurrentChatController = false
@@ -1946,7 +1946,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             c.dismiss(completion: {
                                 if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                                     let currentPeerId = strongSelf.peerId
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId), subject: .message(id: message.id, highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId), subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
                                         var viewControllers = navigationController.viewControllers
                                         var indexesToRemove = Set<Int>()
                                         var keptCurrentChatController = false
@@ -2198,7 +2198,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
-        }, navigateToFirstDateMessage: { _ in
+        }, navigateToFirstDateMessage: { _, _ in
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
         }, rateCall: { _, _, _ in
@@ -6249,68 +6249,77 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
         var dismissCalendarScreen: (() -> Void)?
 
-        let calendarScreen = CalendarMessageScreen(context: self.context, peerId: self.peerId, calendarSource: calendarSource, initialTimestamp: initialTimestamp, navigateToDay: { [weak self] c, index in
-            guard let strongSelf = self else {
-                c.dismiss()
-                return
-            }
-            guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
-                c.dismiss()
-                return
-            }
-
-            pane.scrollToItem(index: index)
-
-            c.dismiss()
-        }, previewDay: { [weak self] index, sourceNode, sourceRect, gesture in
-            guard let strongSelf = self else {
-                return
-            }
-
-            var items: [ContextMenuItem] = []
-
-            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)
-            }, action: { _, f in
-                f(.dismissWithoutContent)
-                dismissCalendarScreen?()
-
-                guard let strongSelf = self, let controller = strongSelf.controller, let navigationController = controller.navigationController as? NavigationController else {
+        let calendarScreen = CalendarMessageScreen(
+            context: self.context,
+            peerId: self.peerId,
+            calendarSource: calendarSource,
+            initialTimestamp: initialTimestamp,
+            enableMessageRangeDeletion: false,
+            canNavigateToEmptyDays: false,
+            navigateToDay: { [weak self] c, index, _ in
+                guard let strongSelf = self else {
+                    c.dismiss()
+                    return
+                }
+                guard let pane = strongSelf.paneContainerNode.currentPane?.node as? PeerInfoVisualMediaPaneNode else {
+                    c.dismiss()
                     return
                 }
 
-                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
-                    navigationController: navigationController,
-                    chatController: nil,
-                    context: strongSelf.context,
-                    chatLocation: .peer(strongSelf.peerId),
-                    subject: .message(id: index.id, highlight: false, timecode: nil),
-                    botStart: nil,
-                    updateTextInputState: nil,
-                    activateInput: false,
-                    keepStack: .never,
-                    useExisting: true,
-                    purposefulAction: nil,
-                    scrollToEndIfExists: false,
-                    activateMessageSearch: nil,
-                    peekData: nil,
-                    peerNearbyData: nil,
-                    reportReason: nil,
-                    animated: true,
-                    options: [],
-                    parentGroupId: nil,
-                    chatListFilter: nil,
-                    changeColors: false,
-                    completion: { _ in
-                    }
-                ))
-            })))
+                pane.scrollToItem(index: index)
 
-            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: index.id, highlight: false, timecode: nil), botStart: nil, mode: .standard(previewing: true))
-            chatController.canReadHistory.set(false)
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, sourceRect: sourceRect, passthroughTouches: true)), items: .single(ContextController.Items(items: items)), gesture: gesture)
-            strongSelf.controller?.presentInGlobalOverlay(contextController)
-        })
+                c.dismiss()
+            },
+            previewDay: { [weak self] _, index, sourceNode, sourceRect, gesture in
+                guard let strongSelf = self, let index = index else {
+                    return
+                }
+
+                var items: [ContextMenuItem] = []
+
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)
+                }, action: { _, f in
+                    f(.dismissWithoutContent)
+                    dismissCalendarScreen?()
+
+                    guard let strongSelf = self, let controller = strongSelf.controller, let navigationController = controller.navigationController as? NavigationController else {
+                        return
+                    }
+
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                        navigationController: navigationController,
+                        chatController: nil,
+                        context: strongSelf.context,
+                        chatLocation: .peer(strongSelf.peerId),
+                        subject: .message(id: .id(index.id), highlight: false, timecode: nil),
+                        botStart: nil,
+                        updateTextInputState: nil,
+                        activateInput: false,
+                        keepStack: .never,
+                        useExisting: true,
+                        purposefulAction: nil,
+                        scrollToEndIfExists: false,
+                        activateMessageSearch: nil,
+                        peekData: nil,
+                        peerNearbyData: nil,
+                        reportReason: nil,
+                        animated: true,
+                        options: [],
+                        parentGroupId: nil,
+                        chatListFilter: nil,
+                        changeColors: false,
+                        completion: { _ in
+                        }
+                    ))
+                })))
+
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: .id(index.id), highlight: false, timecode: nil), botStart: nil, mode: .standard(previewing: true))
+                chatController.canReadHistory.set(false)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, sourceRect: sourceRect, passthroughTouches: true)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+                strongSelf.controller?.presentInGlobalOverlay(contextController)
+            }
+        )
 
         self.controller?.push(calendarScreen)
         dismissCalendarScreen = { [weak calendarScreen] in
