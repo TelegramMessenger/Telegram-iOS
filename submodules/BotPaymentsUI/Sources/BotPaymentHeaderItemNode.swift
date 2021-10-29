@@ -22,7 +22,7 @@ final class BotPaymentHeaderItemNode: BotPaymentItemNode {
         self.addSubnode(self.textNode)
     }
     
-    override func layoutContents(theme: PresentationTheme, width: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func layoutContents(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         if self.theme !== theme {
             self.theme = theme
             self.textNode.attributedText = NSAttributedString(string: self.text, font: titleFont, textColor: theme.list.sectionHeaderTextColor)
@@ -30,9 +30,9 @@ final class BotPaymentHeaderItemNode: BotPaymentItemNode {
         
         let leftInset: CGFloat = 16.0
         
-        let textSize = self.textNode.measure(CGSize(width: width - leftInset - 10.0, height: CGFloat.greatestFiniteMagnitude))
+        let textSize = self.textNode.measure(CGSize(width: width - leftInset - 10.0 - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
         
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 7.0), size: textSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: 7.0), size: textSize))
         
         return 30.0
     }

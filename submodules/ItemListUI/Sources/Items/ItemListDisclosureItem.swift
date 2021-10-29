@@ -144,6 +144,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         self.backgroundNode.backgroundColor = .white
         
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true

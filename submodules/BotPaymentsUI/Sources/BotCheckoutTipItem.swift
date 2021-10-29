@@ -467,6 +467,7 @@ private final class FormatterImpl: NSObject, UITextFieldDelegate {
 
 class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
     private let backgroundNode: ASDisplayNode
+    private let maskNode: ASImageNode
     let titleNode: TextNode
     let labelNode: TextNode
     let tipMeasurementNode: ImmediateTextNode
@@ -504,6 +505,9 @@ class BotCheckoutTipItemNode: ListViewItemNode, UITextFieldDelegate {
         if #available(iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         super.init(layerBacked: false, dynamicBounce: false)
 
