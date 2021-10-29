@@ -120,22 +120,51 @@ private final class MediaPreviewView: UIView {
     }
 }
 
-private func dayName(index: Int, strings: PresentationStrings) -> String {
+private func normalizeDayIndex(index: Int) -> Int {
     switch index {
-    case 0:
-        return strings.Calendar_ShortMonday
     case 1:
-        return strings.Calendar_ShortTuesday
+        return 6
     case 2:
-        return strings.Calendar_ShortWednesday
+        return 0
     case 3:
-        return strings.Calendar_ShortThursday
+        return 1
     case 4:
-        return strings.Calendar_ShortFriday
+        return 2
     case 5:
-        return strings.Calendar_ShortSaturday
+        return 3
     case 6:
-        return strings.Calendar_ShortSunday
+        return 4
+    case 7:
+        return 5
+    default:
+        preconditionFailure()
+    }
+}
+
+private func gridDayOffset(firstDayOfWeek: Int, firstWeekdayOfMonth: Int) -> Int {
+    let monthStartsWithDay = normalizeDayIndex(index: firstWeekdayOfMonth)
+    let weekStartsWithDay = normalizeDayIndex(index: firstDayOfWeek)
+
+    return (monthStartsWithDay - weekStartsWithDay + 7) % 7
+}
+
+private func gridDayName(index: Int, firstDayOfWeek: Int, strings: PresentationStrings) -> String {
+    let adjustedIndex = (index + firstDayOfWeek) % 7
+    switch adjustedIndex {
+    case 1:
+        return strings.Calendar_ShortSun
+    case 2:
+        return strings.Calendar_ShortMon
+    case 3:
+        return strings.Calendar_ShortTue
+    case 4:
+        return strings.Calendar_ShortWed
+    case 5:
+        return strings.Calendar_ShortThu
+    case 6:
+        return strings.Calendar_ShortFri
+    case 0:
+        return strings.Calendar_ShortSat
     default:
         return ""
     }
@@ -670,7 +699,7 @@ private final class MonthComponent: CombinedComponent {
             let updatedWeekdayTitles = (0 ..< 7).map { index in
                 return weekdayTitles[index].update(
                     component: AnyComponent(Text(
-                        text: dayName(index: index, strings: context.component.strings),
+                        text: gridDayName(index: index, firstDayOfWeek: context.component.model.firstWeekday, strings: context.component.strings),
                         font: Font.regular(10.0),
                         color: context.component.foregroundColor
                     )),
@@ -761,7 +790,7 @@ private final class MonthComponent: CombinedComponent {
             var selectionsByLine: [Int: LineSelection] = [:]
 
             for i in 0 ..< updatedDays.count {
-                let gridIndex = (context.component.model.firstDayWeekday - 1) + i
+                let gridIndex = gridDayOffset(firstDayOfWeek: context.component.model.firstWeekday, firstWeekdayOfMonth: context.component.model.firstDayWeekday) + i
                 let rowIndex = gridIndex % 7
                 let lineIndex = gridIndex / 7
 
@@ -828,7 +857,7 @@ private final class MonthComponent: CombinedComponent {
             }
 
             for i in 0 ..< updatedDays.count {
-                let gridIndex = (context.component.model.firstDayWeekday - 1) + i
+                let gridIndex = gridDayOffset(firstDayOfWeek: context.component.model.firstWeekday, firstWeekdayOfMonth: context.component.model.firstDayWeekday) + i
                 let rowIndex = gridIndex % 7
                 let lineIndex = gridIndex / 7
 
@@ -865,6 +894,7 @@ private struct MonthModel: Equatable {
     var numberOfDays: Int
     var firstDay: Date
     var firstDayWeekday: Int
+    var firstWeekday: Int
     var currentYear: Int
     var currentMonth: Int
     var currentDayOfMonth: Int
@@ -876,6 +906,7 @@ private struct MonthModel: Equatable {
         numberOfDays: Int,
         firstDay: Date,
         firstDayWeekday: Int,
+        firstWeekday: Int,
         currentYear: Int,
         currentMonth: Int,
         currentDayOfMonth: Int,
@@ -886,6 +917,7 @@ private struct MonthModel: Equatable {
         self.numberOfDays = numberOfDays
         self.firstDay = firstDay
         self.firstDayWeekday = firstDayWeekday
+        self.firstWeekday = firstWeekday
         self.currentYear = currentYear
         self.currentMonth = currentMonth
         self.currentDayOfMonth = currentDayOfMonth
@@ -901,6 +933,7 @@ private func monthMetadata(calendar: Calendar, for baseDate: Date, currentYear: 
     let year = calendar.component(.year, from: firstDayOfMonth)
     let month = calendar.component(.month, from: firstDayOfMonth)
     let firstDayWeekday = calendar.component(.weekday, from: firstDayOfMonth)
+    let firstWeekday = calendar.firstWeekday
 
     return MonthModel(
         year: year,
@@ -908,6 +941,7 @@ private func monthMetadata(calendar: Calendar, for baseDate: Date, currentYear: 
         numberOfDays: numberOfDaysInMonth,
         firstDay: firstDayOfMonth,
         firstDayWeekday: firstDayWeekday,
+        firstWeekday: firstWeekday,
         currentYear: currentYear,
         currentMonth: currentMonth,
         currentDayOfMonth: currentDayOfMonth,
@@ -1057,7 +1091,7 @@ public final class CalendarMessageScreen: ViewController {
                 }
             }
 
-            let calendar = Calendar(identifier: .gregorian)
+            let calendar = Calendar.current
 
             let baseDate = Date()
             let currentYear = calendar.component(.year, from: baseDate)

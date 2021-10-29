@@ -1015,6 +1015,10 @@ public final class SparseItemGrid: ASDisplayNode {
                     guard let strongSelf = self else {
                         return nil
                     }
+                    if let decelerationAnimator = strongSelf.decelerationAnimator {
+                        strongSelf.decelerationAnimator = nil
+                        decelerationAnimator.invalidate()
+                    }
                     strongSelf.items?.itemBinding.onBeginFastScrolling()
                     return strongSelf.scrollView
                 }

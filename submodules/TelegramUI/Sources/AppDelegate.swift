@@ -1394,15 +1394,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         
         Logger.shared.log("App \(self.episodeId)", "remoteNotification: \(redactedPayload)")
-        
+
         if userInfo["p"] == nil {
+            completionHandler(.noData)
             return
         }
         
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            
             sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
                 completionHandler(.newData)
             }, timeout: 29.0)
