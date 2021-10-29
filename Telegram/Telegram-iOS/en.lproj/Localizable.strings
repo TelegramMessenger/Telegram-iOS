@@ -296,13 +296,13 @@
 "Weekday.Today" = "Today";
 "Weekday.Yesterday" = "Yesterday";
 
-"Calendar.ShortMonday" = "M";
-"Calendar.ShortTuesday" = "T";
-"Calendar.ShortWednesday" = "W";
-"Calendar.ShortThursday" = "T";
-"Calendar.ShortFriday" = "F";
-"Calendar.ShortSaturday" = "S";
-"Calendar.ShortSunday" = "S";
+"Calendar.ShortMon" = "M";
+"Calendar.ShortTue" = "T";
+"Calendar.ShortWed" = "W";
+"Calendar.ShortThu" = "T";
+"Calendar.ShortFri" = "F";
+"Calendar.ShortSat" = "S";
+"Calendar.ShortSun" = "S";
 
 "Time.TodayAt" = "today at %@";
 "Time.YesterdayAt" = "yesterday at %@";
