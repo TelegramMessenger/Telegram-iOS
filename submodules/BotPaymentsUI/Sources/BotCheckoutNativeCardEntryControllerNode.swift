@@ -549,6 +549,9 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard !self.scrollNode.view.ignoreUpdateBounds else {
+            return
+        }
         let value = scrollView.contentOffset.y + scrollView.contentInset.top
         self.navigationBar?.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: .immediate)
     }

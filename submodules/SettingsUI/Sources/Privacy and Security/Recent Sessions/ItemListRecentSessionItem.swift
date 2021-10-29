@@ -139,7 +139,7 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, String?) {
         return (UIImage(bundleImageName: "Settings/Devices/Android"), "device_android")
     }
     if device.contains("iphone") {
-        return (UIImage(bundleImageName: "Settings/Devices/iPhone"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/iPhone"), "device_iphone")
     }
     if device.contains("ipad") {
         return (UIImage(bundleImageName: "Settings/Devices/iPad"), nil)
