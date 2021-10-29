@@ -292,26 +292,28 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             if let openingRoundBraceRange = appVersion.range(of: " ("), let closingRoundBraceRange = appVersion.range(of: ")") {
                 appVersion = appVersion.replacingCharacters(in: openingRoundBraceRange.lowerBound ..< closingRoundBraceRange.upperBound, with: "")
             }
-            titleAttributedString = NSAttributedString(string: "\(item.session.appName) \(appVersion)", font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             
             var deviceString = ""
             if !item.session.deviceModel.isEmpty {
                 deviceString = item.session.deviceModel
             }
             
-            if !item.session.platform.isEmpty {
-                if !deviceString.isEmpty {
-                    deviceString += ", "
-                }
-                deviceString += item.session.platform
-            }
+//            if !item.session.platform.isEmpty {
+//                if !deviceString.isEmpty {
+//                    deviceString += ", "
+//                }
+//                deviceString += item.session.platform
+//            }
                         
             var updatedIcon: UIImage?
             if item.session != currentItem?.session {
                 updatedIcon = iconForSession(item.session).0
             }
             
-            appAttributedString = NSAttributedString(string: deviceString, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            let appString = "\(item.session.appName) \(appVersion)"
+            
+            titleAttributedString = NSAttributedString(string: deviceString, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            appAttributedString = NSAttributedString(string: appString, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             
             let label: String
             if item.session.isCurrent {
