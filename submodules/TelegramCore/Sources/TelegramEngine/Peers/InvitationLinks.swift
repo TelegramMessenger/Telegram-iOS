@@ -659,7 +659,7 @@ public struct PeerInvitationImportersState: Equatable {
     public var count: Int32
     
     public var waitingCount: Int {
-        return importers.filter { $0.approvedBy == nil }.count
+        return Int(count)
     }
     
     public static var Empty = PeerInvitationImportersState(importers: [], isLoadingMore: false, hasLoadedOnce: true, canLoadMore: false, count: 0)
