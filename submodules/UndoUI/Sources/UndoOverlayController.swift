@@ -37,6 +37,7 @@ public enum UndoOverlayContent {
     case copy(text: String)
     case mediaSaved(text: String)
     case paymentSent(currencyValue: String, itemTitle: String)
+    case inviteRequestSent(title: String, text: String)
 }
 
 public enum UndoOverlayAction {

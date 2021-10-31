@@ -795,10 +795,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if indexKeys.count > 1, let first = indexKeys.first, let last = indexKeys.last {
                             let emoji: String?
                             let indexEmoji: String?
-                            if sequence.contains(first) {
+                            if sequence.contains(first.strippedEmoji) {
                                 emoji = last
                                 indexEmoji = first
-                            } else if sequence.contains(last) {
+                            } else if sequence.contains(last.strippedEmoji) {
                                 emoji = first
                                 indexEmoji = last
                             } else {
@@ -806,8 +806,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 indexEmoji = nil
                             }
                             
-                            if let emoji = emoji, let indexEmoji = indexEmoji?.first,  let strIndex = sequence.firstIndex(of: indexEmoji) {
-                                let emoji = emoji.strippedEmoji
+                            if let emoji = emoji?.strippedEmoji, let indexEmoji = indexEmoji?.first,  let strIndex = sequence.firstIndex(of: indexEmoji) {
                                 let index = sequence.distance(from: sequence.startIndex, to: strIndex)
                                 if animatedEmojiStickers[emoji] != nil {
                                     animatedEmojiStickers[emoji]![index] = item
