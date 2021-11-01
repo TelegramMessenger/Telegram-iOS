@@ -285,6 +285,8 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     let listNode: ListView
+    private let leftOverlayNode: ASDisplayNode
+    private let rightOverlayNode: ASDisplayNode
     private var queuedTransitions: [LanguageListNodeTransition] = []
     private var searchDisplayController: SearchDisplayController?
     
@@ -316,6 +318,10 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
+        self.leftOverlayNode = ASDisplayNode()
+        self.leftOverlayNode.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
+        self.rightOverlayNode = ASDisplayNode()
+        self.rightOverlayNode.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
         
         super.init()
         
@@ -418,6 +424,14 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             strongSelf.enqueueTransition(transition)
         })
         self.updatedDisposable = context.engine.localization.synchronizedLocalizationListState().start()
+        
+        self.listNode.itemNodeHitTest = { [weak self] point in
+            if let strongSelf = self {
+                return point.x > strongSelf.leftOverlayNode.frame.maxX && point.x < strongSelf.rightOverlayNode.frame.minX
+            } else {
+                return true
+            }
+        }
     }
     
     deinit {
@@ -432,6 +446,8 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
         self.searchDisplayController?.updatePresentationData(presentationData)
+        self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -440,8 +456,25 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         
         var listInsets = layout.insets(options: [.input])
         listInsets.top += navigationBarHeight
-        listInsets.left += layout.safeInsets.left
-        listInsets.right += layout.safeInsets.right
+        if layout.size.width >= 375.0 {
+            let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+            listInsets.left += inset
+            listInsets.right += inset
+        } else {
+            listInsets.left += layout.safeInsets.left
+            listInsets.right += layout.safeInsets.right
+        }
+        
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: 0.0, width: listInsets.left, height: layout.size.height)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - listInsets.right, y: 0.0, width: listInsets.right, height: layout.size.height)
+        
+        if self.leftOverlayNode.supernode == nil {
+            self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
+        }
+        if self.rightOverlayNode.supernode == nil {
+            self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.listNode)
+        }
+        
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }

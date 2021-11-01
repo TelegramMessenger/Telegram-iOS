@@ -659,7 +659,7 @@ public struct PeerInvitationImportersState: Equatable {
     public var count: Int32
     
     public var waitingCount: Int {
-        return importers.filter { $0.approvedBy == nil }.count
+        return Int(count)
     }
     
     public static var Empty = PeerInvitationImportersState(importers: [], isLoadingMore: false, hasLoadedOnce: true, canLoadMore: false, count: 0)
@@ -904,8 +904,15 @@ private final class PeerInvitationImportersContextImpl {
                 if let _ = query {
                     flags |= (1 << 2)
                 }
+                
+                let limit: Int32
+                if self.requested {
+                    limit = 50
+                } else {
+                    limit = lastResult == nil ? 10 : 50
+                }
                                 
-                let signal = account.network.request(Api.functions.messages.getChatInviteImporters(flags: flags, peer: inputPeer, link: link, q: query, offsetDate: offsetDate, offsetUser: offsetUser, limit: lastResult == nil ? 10 : 50))
+                let signal = account.network.request(Api.functions.messages.getChatInviteImporters(flags: flags, peer: inputPeer, link: link, q: query, offsetDate: offsetDate, offsetUser: offsetUser, limit: limit))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.ChatInviteImporters?, NoError> in
                     return .single(nil)

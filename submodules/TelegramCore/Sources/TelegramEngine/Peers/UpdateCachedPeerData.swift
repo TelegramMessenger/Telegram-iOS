@@ -485,12 +485,14 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             }
                                             
                                             var invitedBy: PeerId?
+                                            var invitedOn: Int32?
                                             if let participantResult = participantResult {
                                                 switch participantResult {
-                                                case let.channelParticipant(participant, _, _):
+                                                case let .channelParticipant(participant, _, _):
                                                     switch participant {
-                                                    case let .channelParticipantSelf(_, _, inviterId, _):
+                                                    case let .channelParticipantSelf(_, _, inviterId, invitedDate):
                                                         invitedBy = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(inviterId))
+                                                        invitedOn = invitedDate
                                                     default:
                                                         break
                                                     }
@@ -536,6 +538,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedHasScheduledMessages(hasScheduledMessages)
                                                     .withUpdatedStatsDatacenterId(statsDc ?? 0)
                                                     .withUpdatedInvitedBy(invitedBy)
+                                                    .withUpdatedInvitedOn(invitedOn)
                                                     .withUpdatedPhoto(photo)
                                                     .withUpdatedActiveCall(updatedActiveCall)
                                                     .withUpdatedCallJoinPeerId(groupcallDefaultJoinAs?.peerId)
