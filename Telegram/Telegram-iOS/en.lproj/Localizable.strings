@@ -180,6 +180,7 @@
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_any" = "{author} sent %d files";
 "PUSH_CHAT_MESSAGE_THEME" = "%1$@|set theme to %3$@ in the group %2$@";
 "PUSH_CHAT_MESSAGE_NOTHEME" = "%1$@|disabled theme in the group %2$@";
+"PUSH_CHAT_REQ_JOINED" = "%1$@ was accepted into the group %2$@";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
