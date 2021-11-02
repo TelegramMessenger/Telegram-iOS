@@ -6891,6 +6891,7 @@ Sorry for the inconvenience.";
 "MemberRequests.DescriptionGroup" = "Some [additional links]() are set up to accept requests to join the group.";
 "MemberRequests.DescriptionChannel" = "Some [additional links]() are set up to accept requests to join the channel.";
 
+"MemberRequests.SearchPlaceholder" = "Search Join Requests";
 "MemberRequests.PeopleRequested_1" = "%@ requested to join";
 "MemberRequests.PeopleRequested_2" = "%@ requested to join";
 "MemberRequests.PeopleRequested_3_10" = "%@ requested to join";
