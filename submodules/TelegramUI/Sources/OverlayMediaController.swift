@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import AccountContext
+import AVKit
 
 public final class OverlayMediaControllerImpl: ViewController, OverlayMediaController {
     private var controllerNode: OverlayMediaControllerNode {
@@ -13,6 +14,9 @@ public final class OverlayMediaControllerImpl: ViewController, OverlayMediaContr
     
     public var updatePossibleEmbeddingItem: ((OverlayMediaControllerEmbeddingItem?) -> Void)?
     public var embedPossibleEmbeddingItem: ((OverlayMediaControllerEmbeddingItem) -> Bool)?
+
+    private var pictureInPictureContainer: ASDisplayNode?
+    private var pictureInPictureContent: PictureInPictureContent?
     
     public init() {
         super.init(navigationBarPresentationData: nil)
@@ -43,6 +47,31 @@ public final class OverlayMediaControllerImpl: ViewController, OverlayMediaContr
     
     public func removeNode(_ node: OverlayMediaItemNode, customTransition: Bool) {
         self.controllerNode.removeNode(node, customTransition: customTransition)
+    }
+
+    public func setPictureInPictureContent(content: PictureInPictureContent, absoluteRect: CGRect) {
+        if self.pictureInPictureContainer == nil {
+            let pictureInPictureContainer = ASDisplayNode()
+            pictureInPictureContainer.clipsToBounds = false
+            self.pictureInPictureContainer = pictureInPictureContainer
+            self.controllerNode.addSubnode(pictureInPictureContainer)
+        }
+        self.pictureInPictureContainer?.clipsToBounds = false
+        self.pictureInPictureContent = content
+        self.pictureInPictureContainer?.addSubnode(content.videoNode)
+    }
+
+    public func setPictureInPictureContentHidden(content: PictureInPictureContent, isHidden value: Bool) {
+        if self.pictureInPictureContent === content {
+            self.pictureInPictureContainer?.clipsToBounds = value
+        }
+    }
+
+    public func removePictureInPictureContent(content: PictureInPictureContent) {
+        if self.pictureInPictureContent === content {
+            self.pictureInPictureContent = nil
+            content.videoNode.removeFromSupernode()
+        }
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

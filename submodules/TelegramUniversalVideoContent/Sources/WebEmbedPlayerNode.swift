@@ -224,4 +224,7 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
             self.webView.isUserInteractionEnabled = !hidden
         }
     }
+
+    func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
+    }
 }

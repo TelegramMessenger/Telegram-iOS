@@ -289,5 +289,8 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     func notifyPlaybackControlsHidden(_ hidden: Bool) {   
     }
+
+    func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
+    }
 }
 

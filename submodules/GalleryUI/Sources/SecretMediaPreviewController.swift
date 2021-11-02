@@ -232,7 +232,7 @@ public final class SecretMediaPreviewController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.controllerNode.beginCustomDismiss = { [weak self] in
+        self.controllerNode.beginCustomDismiss = { [weak self] _ in
             if let strongSelf = self {
                 strongSelf._hiddenMedia.set(.single(nil))
                 

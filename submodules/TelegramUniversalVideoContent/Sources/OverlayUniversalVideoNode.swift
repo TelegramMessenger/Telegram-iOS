@@ -7,8 +7,9 @@ import TelegramCore
 import Postbox
 import TelegramAudio
 import AccountContext
+import AVKit
 
-public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
+public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInPictureSampleBufferPlaybackDelegate {
     public let content: UniversalVideoContent
     private let videoNode: UniversalVideoNode
     private let decoration: OverlayVideoDecoration
@@ -178,5 +179,36 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
     
     public func controlPlay() {
         self.videoNode.play()
+    }
+
+    @available(iOSApplicationExtension 15.0, iOS 15.0, *)
+    override public func makeNativeContentSource() -> AVPictureInPictureController.ContentSource? {
+        guard let videoLayer = self.videoNode.getVideoLayer() else {
+            return nil
+        }
+        return AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: videoLayer, playbackDelegate: self)
+    }
+
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
+        self.controlPlay()
+    }
+
+    public func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
+        return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: 10.0, preferredTimescale: CMTimeScale(30.0)))
+    }
+
+    public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+        return false
+    }
+
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
+    }
+
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
+        completionHandler()
+    }
+
+    public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+        return false
     }
 }

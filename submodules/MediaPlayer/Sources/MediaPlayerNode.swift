@@ -61,6 +61,7 @@ private enum PollStatus: CustomStringConvertible {
 
 public final class MediaPlayerNode: ASDisplayNode {
     public var videoInHierarchy: Bool = false
+    var canPlaybackWithoutHierarchy: Bool = false
     public var updateVideoInHierarchy: ((Bool) -> Void)?
     
     private var videoNode: MediaPlayerNodeDisplayNode
@@ -117,7 +118,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                     videoLayer.setAffineTransform(transform)
                 }
                 
-                if self.videoInHierarchy {
+                if self.videoInHierarchy || self.canPlaybackWithoutHierarchy {
                     if requestFrames {
                         self.startPolling()
                     }
@@ -137,7 +138,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                     switch status {
                         case let .delay(delay):
                             strongSelf.timer = SwiftSignalKit.Timer(timeout: delay, repeat: true, completion: {
-                                if let strongSelf = self, let videoLayer = strongSelf.videoLayer, let (_, requestFrames, _, _) = strongSelf.state, requestFrames, strongSelf.videoInHierarchy {
+                                if let strongSelf = self, let videoLayer = strongSelf.videoLayer, let (_, requestFrames, _, _) = strongSelf.state, requestFrames, (strongSelf.videoInHierarchy || strongSelf.canPlaybackWithoutHierarchy) {
                                     if videoLayer.isReadyForMoreMediaData {
                                         strongSelf.timer?.invalidate()
                                         strongSelf.timer = nil
@@ -385,7 +386,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                         strongSelf.updateState()
                     }
                 }
-                strongSelf.updateVideoInHierarchy?(value)
+                strongSelf.updateVideoInHierarchy?(strongSelf.videoInHierarchy || strongSelf.canPlaybackWithoutHierarchy)
             }
         }
         self.addSubnode(self.videoNode)
@@ -457,5 +458,15 @@ public final class MediaPlayerNode: ASDisplayNode {
     
     public func reset() {
         self.videoLayer?.flush()
+    }
+
+    public func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
+        if self.canPlaybackWithoutHierarchy != canPlaybackWithoutHierarchy {
+            self.canPlaybackWithoutHierarchy = canPlaybackWithoutHierarchy
+            if canPlaybackWithoutHierarchy {
+                self.updateState()
+            }
+        }
+        self.updateVideoInHierarchy?(self.videoInHierarchy || self.canPlaybackWithoutHierarchy)
     }
 }
