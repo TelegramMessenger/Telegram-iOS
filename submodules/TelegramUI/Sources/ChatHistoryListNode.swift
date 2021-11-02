@@ -786,7 +786,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let additionalAnimatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmojiAnimations, forceActualized: false)
         |> map { animatedEmoji -> [String: [Int: StickerPackItem]] in
-            let sequence = "0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣"
+            let sequence = "0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣".strippedEmoji
             var animatedEmojiStickers: [String: [Int: StickerPackItem]] = [:]
             switch animatedEmoji {
                 case let .result(_, items, _):
@@ -806,7 +806,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 indexEmoji = nil
                             }
                             
-                            if let emoji = emoji?.strippedEmoji, let indexEmoji = indexEmoji?.first,  let strIndex = sequence.firstIndex(of: indexEmoji) {
+                            if let emoji = emoji?.strippedEmoji, let indexEmoji = indexEmoji?.strippedEmoji.first, let strIndex = sequence.firstIndex(of: indexEmoji) {
                                 let index = sequence.distance(from: sequence.startIndex, to: strIndex)
                                 if animatedEmojiStickers[emoji] != nil {
                                     animatedEmojiStickers[emoji]![index] = item
