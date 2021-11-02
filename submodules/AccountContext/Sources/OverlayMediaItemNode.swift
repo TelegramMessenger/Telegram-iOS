@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import AVKit
 
 public struct OverlayMediaItemNodeGroup: Hashable, RawRepresentable {
     public var rawValue: Int32
@@ -60,5 +61,10 @@ open class OverlayMediaItemNode: ASDisplayNode {
     
     open func performCustomTransitionOut() -> Bool {
         return false
+    }
+
+    @available(iOSApplicationExtension 15.0, iOS 15.0, *)
+    open func makeNativeContentSource() -> AVPictureInPictureController.ContentSource? {
+        return nil
     }
 }

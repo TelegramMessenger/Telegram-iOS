@@ -560,6 +560,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var contentInsetAnimator: DisplayLinkAnimator?
 
     private let adMessagesContext: AdMessagesHistoryContext?
+    private var preloadAdPeerId: PeerId?
+    private let preloadAdPeerDisposable = MetaDisposable()
     
     private let clientId: Atomic<Int32>
     
@@ -586,7 +588,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.prefetchManager = InChatPrefetchManager(context: context)
 
-        let adMessages: Signal<[Message], NoError>
+        var adMessages: Signal<[Message], NoError>
         if case .bubbles = mode, case let .peer(peerId) = chatLocation, case .none = subject {
             let adMessagesContext = context.engine.messages.adMessages(peerId: peerId)
             self.adMessagesContext = adMessagesContext
@@ -601,6 +603,29 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         nextClientId += 1
         
         super.init()
+
+        adMessages = adMessages
+        |> afterNext { [weak self] messages in
+            Queue.mainQueue().async {
+                guard let strongSelf = self else {
+                    return
+                }
+                var adPeerId: PeerId?
+                adPeerId = nil
+
+                if strongSelf.preloadAdPeerId != adPeerId {
+                    strongSelf.preloadAdPeerId = adPeerId
+                    if let adPeerId = adPeerId {
+                        let combinedDisposable = DisposableSet()
+                        strongSelf.preloadAdPeerDisposable.set(combinedDisposable)
+                        combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: adPeerId).start())
+                        combinedDisposable.add(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: adPeerId))
+                    } else {
+                        strongSelf.preloadAdPeerDisposable.set(nil)
+                    }
+                }
+            }
+        }
 
         self.clipsToBounds = false
         
@@ -1398,6 +1423,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.interactiveReadActionDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
         self.loadedMessagesFromCachedDataDisposable?.dispose()
+        self.preloadAdPeerDisposable.dispose()
     }
     
     public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {

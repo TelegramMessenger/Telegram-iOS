@@ -244,7 +244,7 @@ class SecureIdDocumentGalleryController: ViewController, StandalonePresentableCo
             }
         }
         
-        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself, useSimpleAnimation: false)
     }
     
     private var firstLayout = true

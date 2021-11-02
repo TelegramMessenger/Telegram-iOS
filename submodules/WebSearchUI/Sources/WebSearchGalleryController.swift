@@ -333,7 +333,7 @@ class WebSearchGalleryController: ViewController {
             }
         }
         
-        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself, useSimpleAnimation: false)
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

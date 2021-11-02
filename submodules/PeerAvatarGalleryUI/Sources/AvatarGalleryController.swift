@@ -670,7 +670,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             self.galleryNode.setControlsHidden(false, animated: false)
             if let presentationArguments = self.presentationArguments as? AvatarGalleryControllerPresentationArguments {
                 if presentationArguments.animated {
-                    self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+                    self.galleryNode.animateIn(animateContent: !nodeAnimatesItself, useSimpleAnimation: false)
                 }
             }
         }
