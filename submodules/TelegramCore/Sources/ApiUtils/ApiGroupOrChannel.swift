@@ -84,6 +84,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
             if (flags & Int32(1 << 20)) != 0 {
                 infoFlags.insert(.hasDiscussionGroup)
             }
+            if (flags & Int32(1 << 27)) != 0 {
+                infoFlags.insert(.copyProtectionEnabled)
+            }
             info = .broadcast(TelegramChannelBroadcastInfo(flags: infoFlags))
         }
         

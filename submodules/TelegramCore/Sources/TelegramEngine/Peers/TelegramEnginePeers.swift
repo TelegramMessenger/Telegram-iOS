@@ -231,6 +231,10 @@ public extension TelegramEngine {
             return _internal_toggleShouldChannelMessagesSignatures(account: self.account, peerId: peerId, enabled: enabled)
         }
 
+        public func toggleChannelMessageCopyProtection(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
+            return _internal_toggleChannelMessageCopyProtection(account: self.account, peerId: peerId, enabled: enabled)
+        }
+
         public func requestPeerPhotos(peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
             return _internal_requestPeerPhotos(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
         }

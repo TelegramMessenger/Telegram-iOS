@@ -4464,6 +4464,22 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func hideAllChatJoinRequests(flags: Int32, peer: Api.InputPeer, link: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-528091926)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(link!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.hideAllChatJoinRequests", parameters: [("flags", flags), ("peer", peer), ("link", link)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
@@ -5067,6 +5083,21 @@ public extension Api {
                         var result: Api.messages.SponsoredMessages?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.SponsoredMessages
+                        }
+                        return result
+                    })
+                }
+            
+                public static func toggleNoForwards(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-219318255)
+                    channel.serialize(buffer, true)
+                    enabled.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.toggleNoForwards", parameters: [("channel", channel), ("enabled", enabled)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })

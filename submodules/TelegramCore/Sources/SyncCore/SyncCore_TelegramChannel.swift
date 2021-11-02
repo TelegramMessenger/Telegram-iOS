@@ -43,6 +43,7 @@ public struct TelegramChannelBroadcastFlags: OptionSet {
     
     public static let messagesShouldHaveSignatures = TelegramChannelBroadcastFlags(rawValue: 1 << 0)
     public static let hasDiscussionGroup = TelegramChannelBroadcastFlags(rawValue: 1 << 1)
+    public static let copyProtectionEnabled = TelegramChannelBroadcastFlags(rawValue: 1 << 2)
 
 }
 

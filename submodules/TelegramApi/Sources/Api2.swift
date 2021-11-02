@@ -8051,6 +8051,8 @@ public extension Api {
         case keyboardButtonUrlAuth(flags: Int32, text: String, fwdText: String?, url: String, buttonId: Int32)
         case inputKeyboardButtonUrlAuth(flags: Int32, text: String, fwdText: String?, url: String, bot: Api.InputUser)
         case keyboardButtonRequestPoll(flags: Int32, quiz: Api.Bool?, text: String)
+        case inputKeyboardButtonUserProfile(text: String, userId: Api.InputUser)
+        case keyboardButtonUserProfile(text: String, userId: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -8135,6 +8137,20 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {quiz!.serialize(buffer, true)}
                     serializeString(text, buffer: buffer, boxed: false)
                     break
+                case .inputKeyboardButtonUserProfile(let text, let userId):
+                    if boxed {
+                        buffer.appendInt32(-376962181)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    userId.serialize(buffer, true)
+                    break
+                case .keyboardButtonUserProfile(let text, let userId):
+                    if boxed {
+                        buffer.appendInt32(814112961)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -8162,6 +8178,10 @@ public extension Api {
                 return ("inputKeyboardButtonUrlAuth", [("flags", flags), ("text", text), ("fwdText", fwdText), ("url", url), ("bot", bot)])
                 case .keyboardButtonRequestPoll(let flags, let quiz, let text):
                 return ("keyboardButtonRequestPoll", [("flags", flags), ("quiz", quiz), ("text", text)])
+                case .inputKeyboardButtonUserProfile(let text, let userId):
+                return ("inputKeyboardButtonUserProfile", [("text", text), ("userId", userId)])
+                case .keyboardButtonUserProfile(let text, let userId):
+                return ("keyboardButtonUserProfile", [("text", text), ("userId", userId)])
     }
     }
     
@@ -8330,6 +8350,36 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.KeyboardButton.keyboardButtonRequestPoll(flags: _1!, quiz: _2, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputKeyboardButtonUserProfile(_ reader: BufferReader) -> KeyboardButton? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Api.InputUser?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.InputUser
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.KeyboardButton.inputKeyboardButtonUserProfile(text: _1!, userId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_keyboardButtonUserProfile(_ reader: BufferReader) -> KeyboardButton? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.KeyboardButton.keyboardButtonUserProfile(text: _1!, userId: _2!)
             }
             else {
                 return nil
