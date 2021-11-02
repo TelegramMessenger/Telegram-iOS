@@ -6992,6 +6992,8 @@ Sorry for the inconvenience.";
 
 "Notifications.DeleteAllExceptions" = "Delete All Exceptions";
 
+"Notifications.Options" = "Options";
+
 "Notifications.On" = "On";
 "Notifications.Off" = "Off";
 
