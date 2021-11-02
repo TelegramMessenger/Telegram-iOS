@@ -1306,7 +1306,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             self.galleryNode.setControlsHidden(self.landscape, animated: false)
             if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
                 if presentationArguments.animated {
-                    self.galleryNode.animateIn(animateContent: !nodeAnimatesItself && !self.useSimpleAnimation)
+                    self.galleryNode.animateIn(animateContent: !nodeAnimatesItself && !self.useSimpleAnimation, useSimpleAnimation: self.useSimpleAnimation)
                 }
             }
         }

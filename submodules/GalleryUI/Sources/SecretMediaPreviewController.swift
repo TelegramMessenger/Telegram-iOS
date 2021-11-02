@@ -86,8 +86,8 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
         }
     }
     
-    override func animateIn(animateContent: Bool) {
-        super.animateIn(animateContent: animateContent)
+    override func animateIn(animateContent: Bool, useSimpleAnimation: Bool) {
+        super.animateIn(animateContent: animateContent, useSimpleAnimation: useSimpleAnimation)
         
         self.timeoutNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
@@ -369,7 +369,7 @@ public final class SecretMediaPreviewController: ViewController {
         self.controllerNode.setControlsHidden(false, animated: false)
         if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
             if presentationArguments.animated {
-                self.controllerNode.animateIn(animateContent: !nodeAnimatesItself)
+                self.controllerNode.animateIn(animateContent: !nodeAnimatesItself, useSimpleAnimation: false)
             }
         }
     }

@@ -327,7 +327,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         }
     }
     
-    open func animateIn(animateContent: Bool) {
+    open func animateIn(animateContent: Bool, useSimpleAnimation: Bool) {
         let duration: Double = animateContent ? 0.2 : 0.3
 
         self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(0.0)
@@ -348,7 +348,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         
         if animateContent {
             self.scrollView.layer.animateBounds(from: self.scrollView.layer.bounds.offsetBy(dx: 0.0, dy: -self.scrollView.layer.bounds.size.height), to: self.scrollView.layer.bounds, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-        } else {
+        } else if useSimpleAnimation {
             self.scrollView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
     }
