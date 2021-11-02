@@ -737,7 +737,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
-                self.animationNode = AnimationNode(animation: "anim_inviterequest", colors: [:], scale: 1.0)
+                self.animationNode = AnimationNode(animation: "anim_inviterequest", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
