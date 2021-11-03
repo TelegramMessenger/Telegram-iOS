@@ -490,9 +490,11 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                 switch participantResult {
                                                 case let .channelParticipant(participant, _, _):
                                                     switch participant {
-                                                    case let .channelParticipantSelf(_, _, inviterId, invitedDate):
+                                                    case let .channelParticipantSelf(flags, _, inviterId, invitedDate):
                                                         invitedBy = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(inviterId))
-                                                        invitedOn = invitedDate
+                                                        if (flags & (1 << 0)) != 0 {
+                                                            invitedOn = invitedDate
+                                                        }
                                                     default:
                                                         break
                                                     }
