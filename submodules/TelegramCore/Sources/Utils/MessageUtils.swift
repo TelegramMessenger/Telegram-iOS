@@ -238,6 +238,14 @@ public extension Message {
             return false
         }
     }
+    
+    func isCopyProtected() -> Bool {
+        if let channel = self.peers[self.id.peerId] as? TelegramChannel, case let .broadcast(flags) = channel.info, flags.flags.contains(.copyProtectionEnabled) && channel.adminRights == nil {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 public extension Message {

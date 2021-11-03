@@ -1191,6 +1191,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
         case groupLocation
         case peerPublicSettings
         case peerSettings
+        case peerAdditionalSettings
         case peerActions
     }
     
@@ -1278,7 +1279,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                     items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
                     
-                    items[.peerSettings]!.append(PeerInfoScreenSwitchItem(id: ItemCopyProtection, text: "Disable Forwards", value: messagesCopyProtection, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
+                    items[.peerAdditionalSettings]!.append(PeerInfoScreenSwitchItem(id: ItemCopyProtection, text: "Disable Forwards", value: messagesCopyProtection, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
                         interaction.editingToggleChannelMessageCopyProtection(value)
                     }))
                 }
@@ -1851,7 +1852,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     })))
                 }
                 
-                if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(flags) = channel.info, flags.flags.contains(.copyProtectionEnabled) && channel.adminRights == nil {
+                    
+                } else if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                         c.dismiss(completion: {
                             if let strongSelf = self {
@@ -1987,7 +1990,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             })
                         })))
                         
-                        if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                        if message.isCopyProtected() {
+                            
+                        } else if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
                             items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                                 c.dismiss(completion: {
                                     if let strongSelf = self {

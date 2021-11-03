@@ -1037,87 +1037,91 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
         
-        var needShareButton = false
+        var needsShareButton = false
         if case .pinnedMessages = item.associatedData.subject {
-            needShareButton = true
+            needsShareButton = true
             for media in item.message.media {
                 if let _ = media as? TelegramMediaExpiredContent {
-                    needShareButton = false
+                    needsShareButton = false
                     break
                 }
             }
         } else if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
-            needShareButton = false
+            needsShareButton = false
             allowFullWidth = true
         } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
-            needShareButton = false
+            needsShareButton = false
         } else if item.message.id.peerId == item.context.account.peerId {
             if let _ = sourceReference {
-                needShareButton = true
+                needsShareButton = true
             }
         } else if item.message.id.peerId.isReplies {
-            needShareButton = false
+            needsShareButton = false
         } else if item.message.effectivelyIncoming(item.context.account.peerId) {
             if let _ = sourceReference {
-                needShareButton = true
+                needsShareButton = true
             }
             
             if let peer = item.message.peers[item.message.id.peerId] {
                 if let channel = peer as? TelegramChannel {
                     if case .broadcast = channel.info {
-                        needShareButton = true
+                        needsShareButton = true
                     }
                 }
             }
             
             if let info = item.message.forwardInfo {
                 if let author = info.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty && !(item.message.media.first is TelegramMediaAction) {
-                    needShareButton = true
+                    needsShareButton = true
                 } else if let author = info.author as? TelegramChannel, case .broadcast = author.info {
-                    needShareButton = true
+                    needsShareButton = true
                 }
             }
             
-            if !needShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty && !(item.message.media.first is TelegramMediaAction) {
-                needShareButton = true
+            if !needsShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty && !(item.message.media.first is TelegramMediaAction) {
+                needsShareButton = true
             }
-            if !needShareButton {
+            if !needsShareButton {
                 loop: for media in item.message.media {
                     if media is TelegramMediaGame || media is TelegramMediaInvoice {
-                        needShareButton = true
+                        needsShareButton = true
                         break loop
                     } else if let media = media as? TelegramMediaWebpage, case .Loaded = media.content {
-                        needShareButton = true
+                        needsShareButton = true
                         break loop
                     }
                 }
             } else {
                 loop: for media in item.message.media {
                     if media is TelegramMediaAction {
-                        needShareButton = false
+                        needsShareButton = false
                         break loop
                     }
                 }
             }
+            
+            if item.message.isCopyProtected() {
+                needsShareButton = false
+            }
         }
         
         if isPreview {
-            needShareButton = false
+            needsShareButton = false
         }
         let isAd = item.content.firstMessage.adAttribute != nil
         if isAd {
-            needShareButton = false
+            needsShareButton = false
         }
         
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth
-            if needShareButton || isAd {
+            if needsShareButton || isAd {
                 tmpWidth -= 38.0
             }
         } else {
             tmpWidth = layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
-            if (needShareButton || isAd) && tmpWidth + 32.0 > baseWidth {
+            if (needsShareButton || isAd) && tmpWidth + 32.0 > baseWidth {
                 tmpWidth = baseWidth - 32.0
             }
         }
@@ -2031,7 +2035,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 contentContainerNodeFrames: contentContainerNodeFrames,
                 mosaicStatusOrigin: mosaicStatusOrigin,
                 mosaicStatusSizeAndApply: mosaicStatusSizeAndApply,
-                needsShareButton: needShareButton
+                needsShareButton: needsShareButton
             )
         })
     }
