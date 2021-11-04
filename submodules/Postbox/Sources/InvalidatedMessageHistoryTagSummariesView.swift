@@ -37,6 +37,19 @@ final class MutableInvalidatedMessageHistoryTagSummariesView: MutablePostboxView
         }
         return updated
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        var entries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
+        for entry in postbox.invalidatedMessageHistoryTagsSummaryTable.get(tagMask: tagMask, namespace: namespace) {
+            entries.insert(entry)
+        }
+        if self.entries != entries {
+            self.entries = entries
+            return true
+        } else {
+            return false
+        }
+    }
     
     func immutableView() -> PostboxView {
         return InvalidatedMessageHistoryTagSummariesView(self)

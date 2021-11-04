@@ -2212,7 +2212,7 @@ final class PostboxImpl {
     }
     
     fileprivate func setPeerChatState(_ id: PeerId, state: PeerChatState) {
-        self.peerChatStateTable.set(id, state: state)
+        self.peerChatStateTable.set(id, state: CodableEntry(legacyValue: state))
         self.currentUpdatedPeerChatStates.insert(id)
     }
     

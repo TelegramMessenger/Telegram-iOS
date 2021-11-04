@@ -2064,6 +2064,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     @objc func pictureInPictureButtonPressed() {
+        var isNativePictureInPictureSupported = false
+        switch self.item?.contentInfo {
+        case let .message(message):
+            for media in message.media {
+                if let media = media as? TelegramMediaFile, media.isVideo {
+                    isNativePictureInPictureSupported = true
+                }
+            }
+        default:
+            break
+        }
+
         if let item = self.item, let videoNode = self.videoNode, let overlayController = self.context.sharedContext.mediaManager.overlayMediaManager.controller {
             videoNode.setContinuePlayingWithoutSoundOnLostAudioSession(false)
 
@@ -2071,7 +2083,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let baseNavigationController = self.baseNavigationController()
             let playbackRate = self.playbackRate
 
-            if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported() {
+            if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported(), isNativePictureInPictureSupported {
                 self.disablePictureInPicturePlaceholder = true
 
                 let overlayVideoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .overlay)

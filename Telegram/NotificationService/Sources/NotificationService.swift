@@ -424,7 +424,7 @@ private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) -
 }
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
-private struct NotificationContent {
+private struct NotificationContent: CustomStringConvertible {
     var title: String?
     var subtitle: String?
     var body: String?
@@ -437,6 +437,21 @@ private struct NotificationContent {
 
     var senderPerson: INPerson?
     var senderImage: INImage?
+
+    var description: String {
+        var string = "{"
+        string += " title: \(String(describing: self.title))\n"
+        string += " subtitle: \(String(describing: self.subtitle))\n"
+        string += " body: \(String(describing: self.body)),\n"
+        string += " threadId: \(String(describing: self.threadId)),\n"
+        string += " sound: \(String(describing: self.sound)),\n"
+        string += " badge: \(String(describing: self.badge)),\n"
+        string += " category: \(String(describing: self.category)),\n"
+        string += " userInfo: \(String(describing: self.userInfo)),\n"
+        string += " senderImage: \(self.senderImage != nil ? "non-empty" : "empty"),\n"
+        string += "}"
+        return string
+    }
 
     mutating func addSenderInfo(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer) {
         if #available(iOS 15.0, *) {
@@ -548,6 +563,8 @@ private final class NotificationServiceHandler {
     init?(queue: Queue, updateCurrentContent: @escaping (NotificationContent) -> Void, completed: @escaping () -> Void, payload: [AnyHashable: Any]) {
         self.queue = queue
 
+        let episode = String(UInt32.random(in: 0 ..< UInt32.max), radix: 16)
+
         guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
             return nil
         }
@@ -586,7 +603,10 @@ private final class NotificationServiceHandler {
 
         let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil)
 
+        Logger.shared.log("NotificationService \(episode)", "Begin processing payload \(payload)")
+
         guard var encryptedPayload = payload["p"] as? String else {
+            Logger.shared.log("NotificationService \(episode)", "Invalid payload 1")
             return nil
         }
         encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
@@ -595,6 +615,7 @@ private final class NotificationServiceHandler {
             encryptedPayload.append("=")
         }
         guard let payloadData = Data(base64Encoded: encryptedPayload) else {
+            Logger.shared.log("NotificationService \(episode)", "Invalid payload 2")
             return nil
         }
 
@@ -621,6 +642,8 @@ private final class NotificationServiceHandler {
             }
 
             guard let strongSelf = self, let recordId = recordId else {
+                Logger.shared.log("NotificationService \(episode)", "Couldn't find a matching decryption key")
+
                 let content = NotificationContent()
                 updateCurrentContent(content)
                 completed()
@@ -641,6 +664,8 @@ private final class NotificationServiceHandler {
                     return
                 }
                 guard let stateManager = stateManager else {
+                    Logger.shared.log("NotificationService \(episode)", "Didn't receive stateManager")
+
                     let content = NotificationContent()
                     updateCurrentContent(content)
                     completed()
@@ -658,6 +683,8 @@ private final class NotificationServiceHandler {
                         return
                     }
                     guard let notificationsKey = notificationsKey else {
+                        Logger.shared.log("NotificationService \(episode)", "Didn't receive decryption key")
+
                         let content = NotificationContent()
                         updateCurrentContent(content)
                         completed()
@@ -665,6 +692,8 @@ private final class NotificationServiceHandler {
                         return
                     }
                     guard let decryptedPayload = decryptedNotificationPayload(key: notificationsKey, data: payloadData) else {
+                        Logger.shared.log("NotificationService \(episode)", "Couldn't decrypt payload")
+
                         let content = NotificationContent()
                         updateCurrentContent(content)
                         completed()
@@ -672,12 +701,16 @@ private final class NotificationServiceHandler {
                         return
                     }
                     guard let payloadJson = try? JSONSerialization.jsonObject(with: decryptedPayload, options: []) as? [String: Any] else {
+                        Logger.shared.log("NotificationService \(episode)", "Couldn't process payload as JSON")
+
                         let content = NotificationContent()
                         updateCurrentContent(content)
                         completed()
 
                         return
                     }
+
+                    Logger.shared.log("NotificationService \(episode)", "Decrypted payload: \(payloadJson)")
 
                     var peerId: PeerId?
                     var messageId: MessageId.Id?
@@ -842,8 +875,10 @@ private final class NotificationServiceHandler {
                     if let action = action {
                         switch action {
                         case .logout:
+                            Logger.shared.log("NotificationService \(episode)", "Will logout")
                             completed()
                         case let .poll(peerId, initialContent):
+                            Logger.shared.log("NotificationService \(episode)", "Will poll")
                             if let stateManager = strongSelf.stateManager {
                                 let pollCompletion: (NotificationContent) -> Void = { content in
                                     var content = content
@@ -912,6 +947,7 @@ private final class NotificationServiceHandler {
                                             }
                                         }
 
+                                        Logger.shared.log("NotificationService \(episode)", "Will fetch media")
                                         let _ = (fetchMediaSignal
                                         |> timeout(10.0, queue: queue, alternate: .single(nil))
                                         |> deliverOn(queue)).start(next: { mediaData in
@@ -920,6 +956,9 @@ private final class NotificationServiceHandler {
                                                 return
                                             }
 
+                                            Logger.shared.log("NotificationService \(episode)", "Did fetch media \(mediaData == nil ? "Non-empty" : "Empty")")
+
+                                            Logger.shared.log("NotificationService \(episode)", "Will get unread count")
                                             let _ = (getCurrentRenderedTotalUnreadCount(
                                                 accountManager: strongSelf.accountManager,
                                                 postbox: stateManager.postbox
@@ -933,6 +972,8 @@ private final class NotificationServiceHandler {
                                                 if isCurrentAccount {
                                                     content.badge = Int(value.0)
                                                 }
+
+                                                Logger.shared.log("NotificationService \(episode)", "Unread count: \(value.0), isCurrentAccount: \(isCurrentAccount)")
 
                                                 if let image = mediaAttachment as? TelegramMediaImage, let resource = largestImageRepresentation(image.representations)?.resource {
                                                     if let mediaData = mediaData {
@@ -988,6 +1029,8 @@ private final class NotificationServiceHandler {
                                                     }
                                                 }
 
+                                                Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
+
                                                 updateCurrentContent(content)
 
                                                 completed()
@@ -1000,6 +1043,8 @@ private final class NotificationServiceHandler {
 
                                 stateManager.network.shouldKeepConnection.set(.single(true))
                                 if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                    Logger.shared.log("NotificationService \(episode)", "Will poll channel \(peerId)")
+
                                     pollSignal = standalonePollChannelOnce(
                                         postbox: stateManager.postbox,
                                         network: stateManager.network,
@@ -1007,6 +1052,7 @@ private final class NotificationServiceHandler {
                                         stateManager: stateManager
                                     )
                                 } else {
+                                    Logger.shared.log("NotificationService \(episode)", "Will perform non-specific getDifference")
                                     enum ControlError {
                                         case restart
                                     }
@@ -1054,6 +1100,7 @@ private final class NotificationServiceHandler {
                                 completed()
                             }
                         case let .deleteMessage(ids):
+                            Logger.shared.log("NotificationService \(episode)", "Will delete messages \(ids)")
                             let mediaBox = stateManager.postbox.mediaBox
                             let _ = (stateManager.postbox.transaction { transaction -> Void in
                                 _internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, deleteMedia: true)
@@ -1084,6 +1131,8 @@ private final class NotificationServiceHandler {
                                             if isCurrentAccount {
                                                 content.badge = Int(value.0)
                                             }
+                                            Logger.shared.log("NotificationService \(episode)", "Unread count: \(value.0), isCurrentAccount: \(isCurrentAccount)")
+                                            Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
 
                                             updateCurrentContent(content)
 
@@ -1092,6 +1141,7 @@ private final class NotificationServiceHandler {
                                     }
 
                                     if !removeIdentifiers.isEmpty {
+                                        Logger.shared.log("NotificationService \(episode)", "Will try to remove \(removeIdentifiers.count) notifications")
                                         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: removeIdentifiers)
                                         queue.after(1.0, {
                                             completeRemoval()
@@ -1102,6 +1152,7 @@ private final class NotificationServiceHandler {
                                 })
                             })
                         case let .readMessage(id):
+                            Logger.shared.log("NotificationService \(episode)", "Will read message \(id)")
                             let _ = (stateManager.postbox.transaction { transaction -> Void in
                                 transaction.applyIncomingReadMaxId(id)
                             }
@@ -1130,6 +1181,9 @@ private final class NotificationServiceHandler {
                                                 content.badge = Int(value.0)
                                             }
 
+                                            Logger.shared.log("NotificationService \(episode)", "Unread count: \(value.0), isCurrentAccount: \(isCurrentAccount)")
+                                            Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
+
                                             updateCurrentContent(content)
 
                                             completed()
@@ -1137,6 +1191,7 @@ private final class NotificationServiceHandler {
                                     }
 
                                     if !removeIdentifiers.isEmpty {
+                                        Logger.shared.log("NotificationService \(episode)", "Will try to remove \(removeIdentifiers.count) notifications")
                                         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: removeIdentifiers)
                                         queue.after(1.0, {
                                             completeRemoval()

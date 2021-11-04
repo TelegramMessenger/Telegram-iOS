@@ -370,7 +370,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if (strongSelf.context.sharedContext.currentPresentationData.with({ $0 })).reduceMotion {
                 return
             }
-            strongSelf.backgroundNode.animateEvent(transition: transition)
+            strongSelf.backgroundNode.animateEvent(transition: transition, extendAnimation: false)
         }
 
         getMessageTransitionNode = { [weak self] in
@@ -1648,7 +1648,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if (self.context.sharedContext.currentPresentationData.with({ $0 })).reduceMotion {
                     return
                 }
-                self.backgroundNode.animateEvent(transition: transition)
+                self.backgroundNode.animateEvent(transition: transition, extendAnimation: false)
             }
             //self.historyNode.didScrollWithOffset?(listBottomInset - previousListBottomInset, transition, nil)
         }
