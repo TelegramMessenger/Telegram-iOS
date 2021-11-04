@@ -108,6 +108,9 @@
 
 + (SSignal *)convertAVAsset:(AVAsset *)avAsset adjustments:(TGMediaVideoEditAdjustments *)adjustments watcher:(TGMediaVideoFileWatcher *)watcher inhibitAudio:(bool)inhibitAudio entityRenderer:(id<TGPhotoPaintEntityRenderer>)entityRenderer
 {
+    if ([avAsset isKindOfClass:[NSURL class]]) {
+        avAsset = [[AVURLAsset alloc] initWithURL:(NSURL *)avAsset options:nil];
+    }
     SQueue *queue = [[SQueue alloc] init];
     
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
