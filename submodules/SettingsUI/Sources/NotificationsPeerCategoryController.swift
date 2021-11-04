@@ -266,7 +266,7 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
     entries.append(.enable(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, notificationSettings.enabled))
         
     if notificationSettings.enabled || !notificationExceptions.isEmpty {
-        entries.append(.optionsHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotifications.uppercased()))
+        entries.append(.optionsHeader(presentationData.theme, presentationData.strings.Notifications_Options.uppercased()))
         entries.append(.previews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, notificationSettings.displayPreviews))
         entries.append(.sound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(notificationSettings.sound)), filteredGlobalSound(notificationSettings.sound)))
     }

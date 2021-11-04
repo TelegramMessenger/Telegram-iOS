@@ -1070,6 +1070,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     updatingMedia: updatingMedia,
                     customChannelDiscussionReadState: customChannelDiscussionReadState,
                     customThreadOutgoingReadState: customThreadOutgoingReadState,
+                    cachedData: data.cachedData,
                     adMessages: adMessages
                 )
                 let lastHeaderId = filteredEntries.last.flatMap { listMessageDateHeaderId(timestamp: $0.index.timestamp) } ?? 0
