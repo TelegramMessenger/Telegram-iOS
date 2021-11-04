@@ -44,6 +44,21 @@ final class MutablePreferencesView: MutablePostboxView {
         
         return updated
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        var values: [ValueBoxKey: PreferencesEntry] = [:]
+        for key in self.keys {
+            if let value = postbox.preferencesTable.get(key: key) {
+                values[key] = value
+            }
+        }
+        if self.values != values {
+            self.values = values
+            return true
+        } else {
+            return false
+        }
+    }
     
     func immutableView() -> PostboxView {
         return PreferencesView(self)
