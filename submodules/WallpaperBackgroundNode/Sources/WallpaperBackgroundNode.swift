@@ -27,25 +27,47 @@ private func generateBlurredContents(image: UIImage) -> UIImage? {
     return context.generateImage()
 }
 
-public final class WallpaperBackgroundNode: ASDisplayNode {
-    public final class BubbleBackgroundNode: ASDisplayNode {
-        public enum BubbleType {
-            case incoming
-            case outgoing
-            case free
-        }
+public enum WallpaperBubbleType {
+    case incoming
+    case outgoing
+    case free
+}
 
-        private let bubbleType: BubbleType
+public protocol WallpaperBubbleBackgroundNode: ASDisplayNode {
+    var frame: CGRect { get set }
+
+    func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition)
+    func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition)
+    func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double)
+    func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat)
+}
+
+public protocol WallpaperBackgroundNode: ASDisplayNode {
+    var isReady: Signal<Bool, NoError> { get }
+    var rotation: CGFloat { get set }
+
+    func update(wallpaper: TelegramWallpaper)
+    func _internalUpdateIsSettingUpWallpaper()
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
+    func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool)
+    func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners)
+    func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool
+    func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode?
+}
+
+final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode {
+    final class BubbleBackgroundNodeImpl: ASDisplayNode, WallpaperBubbleBackgroundNode {
+        private let bubbleType: WallpaperBubbleType
         private let contentNode: ASImageNode
 
         private var cleanWallpaperNode: ASDisplayNode?
         private var gradientWallpaperNode: GradientBackgroundNode.CloneNode?
-        private weak var backgroundNode: WallpaperBackgroundNode?
-        private var index: SparseBag<BubbleBackgroundNode>.Index?
+        private weak var backgroundNode: WallpaperBackgroundNodeImpl?
+        private var index: SparseBag<BubbleBackgroundNodeImpl>.Index?
 
         private var currentLayout: (rect: CGRect, containerSize: CGSize)?
 
-        public override var frame: CGRect {
+        override var frame: CGRect {
             didSet {
                 if oldValue.size != self.bounds.size {
                     self.contentNode.frame = self.bounds
@@ -59,7 +81,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        init(backgroundNode: WallpaperBackgroundNode, bubbleType: BubbleType) {
+        init(backgroundNode: WallpaperBackgroundNodeImpl, bubbleType: WallpaperBubbleType) {
             self.backgroundNode = backgroundNode
             self.bubbleType = bubbleType
 
@@ -210,7 +232,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+        func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
             self.currentLayout = (rect, containerSize)
 
             let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
@@ -233,7 +255,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        public func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
+        func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
             self.currentLayout = (rect, containerSize)
 
             let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
@@ -250,7 +272,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        public func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
             guard let (_, containerSize) = self.currentLayout else {
                 return
             }
@@ -267,7 +289,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        public func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+        func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
             guard let (_, containerSize) = self.currentLayout else {
                 return
             }
@@ -285,9 +307,9 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     }
 
     private final class BubbleBackgroundNodeReference {
-        weak var node: BubbleBackgroundNode?
+        weak var node: BubbleBackgroundNodeImpl?
 
-        init(node: BubbleBackgroundNode) {
+        init(node: BubbleBackgroundNodeImpl) {
             self.node = node
         }
     }
@@ -302,6 +324,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     private var outgoingBubbleGradientBackgroundNode: GradientBackgroundNode?
     private let patternImageNode: ASImageNode
     private var isGeneratingPatternImage: Bool = false
+
+    private let bakedBackgroundView: UIImageView
 
     private var validLayout: CGSize?
     private var wallpaper: TelegramWallpaper?
@@ -367,7 +391,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
     }
     
-    public var rotation: CGFloat = 0.0 {
+    var rotation: CGFloat = 0.0 {
         didSet {
             var fromValue: CGFloat = 0.0
             if let value = (self.layer.value(forKeyPath: "transform.rotation.z") as? NSNumber)?.floatValue {
@@ -400,11 +424,11 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     private static var cachedSharedPattern: (PatternKey, UIImage)?
 
     private let _isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
-    public var isReady: Signal<Bool, NoError> {
+    var isReady: Signal<Bool, NoError> {
         return self._isReady.get()
     }
     
-    public init(context: AccountContext, useSharedAnimationPhase: Bool = false) {
+    init(context: AccountContext, useSharedAnimationPhase: Bool) {
         self.context = context
         self.useSharedAnimationPhase = useSharedAnimationPhase
         self.imageContentMode = .scaleAspectFill
@@ -413,6 +437,9 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.contentNode.contentMode = self.imageContentMode
 
         self.patternImageNode = ASImageNode()
+
+        self.bakedBackgroundView = UIImageView()
+        self.bakedBackgroundView.isHidden = true
         
         super.init()
         
@@ -420,6 +447,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.contentNode.frame = self.bounds
         self.addSubnode(self.contentNode)
         self.addSubnode(self.patternImageNode)
+
+        //self.view.addSubview(self.bakedBackgroundView)
     }
 
     deinit {
@@ -428,7 +457,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.imageDisposable.dispose()
     }
 
-    public func update(wallpaper: TelegramWallpaper) {
+    func update(wallpaper: TelegramWallpaper) {
         if self.wallpaper == wallpaper {
             return
         }
@@ -539,7 +568,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func _internalUpdateIsSettingUpWallpaper() {
+    func _internalUpdateIsSettingUpWallpaper() {
         self.isSettingUpWallpaper = true
     }
 
@@ -622,7 +651,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 self.validPatternGeneratedImage = nil
                 self.validPatternImage = nil
 
-                if let cachedValidPatternImage = WallpaperBackgroundNode.cachedValidPatternImage, cachedValidPatternImage.generated.wallpaper == wallpaper {
+                if let cachedValidPatternImage = WallpaperBackgroundNodeImpl.cachedValidPatternImage, cachedValidPatternImage.generated.wallpaper == wallpaper {
                     self.validPatternImage = ValidPatternImage(wallpaper: cachedValidPatternImage.generated.wallpaper, generate: cachedValidPatternImage.generate)
                 } else {
                     func reference(for resource: EngineMediaResource, media: EngineMedia) -> MediaResourceReference {
@@ -688,7 +717,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             if self.validPatternGeneratedImage != updatedGeneratedImage {
                 self.validPatternGeneratedImage = updatedGeneratedImage
 
-                if let cachedValidPatternImage = WallpaperBackgroundNode.cachedValidPatternImage, cachedValidPatternImage.generated == updatedGeneratedImage {
+                if let cachedValidPatternImage = WallpaperBackgroundNodeImpl.cachedValidPatternImage, cachedValidPatternImage.generated == updatedGeneratedImage {
                     self.patternImageNode.image = cachedValidPatternImage.image
                     self.updatePatternPresentation()
                 } else {
@@ -700,7 +729,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                                 self.updatePatternPresentation()
 
                                 if self.useSharedAnimationPhase {
-                                    WallpaperBackgroundNode.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
+                                    WallpaperBackgroundNodeImpl.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
                                 }
                             } else {
                                 self.updatePatternPresentation()
@@ -721,7 +750,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                                 strongSelf.updatePatternPresentation()
 
                                 if let image = image, strongSelf.useSharedAnimationPhase {
-                                    WallpaperBackgroundNode.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
+                                    WallpaperBackgroundNodeImpl.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
                                 }
                             }
                         }
@@ -743,7 +772,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         transition.updateFrame(node: self.patternImageNode, frame: CGRect(origin: CGPoint(), size: size))
     }
     
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.validLayout == nil
         self.validLayout = size
 
@@ -767,12 +796,25 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool = false) {
+    func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
         self.gradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation)
         self.outgoingBubbleGradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation)
     }
 
-    public func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
+    private func updateBakedBackground() {
+        guard let size = self.validLayout else {
+            return
+        }
+        let context = DrawingContext(size: size, scale: UIScreenScale, opaque: true)
+
+        context.withContext { context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+        }
+
+        self.bakedBackgroundView.image = context.generateImage()
+    }
+
+    func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
         if self.bubbleTheme !== bubbleTheme || self.bubbleCorners != bubbleCorners {
             self.bubbleTheme = bubbleTheme
             self.bubbleCorners = bubbleCorners
@@ -801,7 +843,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func hasBubbleBackground(for type: WallpaperBackgroundNode.BubbleBackgroundNode.BubbleType) -> Bool {
+    func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool {
         guard let bubbleTheme = self.bubbleTheme, let bubbleCorners = self.bubbleCorners else {
             return false
         }
@@ -846,12 +888,138 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         return false
     }
 
-    public func makeBubbleBackground(for type: WallpaperBackgroundNode.BubbleBackgroundNode.BubbleType) -> WallpaperBackgroundNode.BubbleBackgroundNode? {
+    func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode? {
         if !self.hasBubbleBackground(for: type) {
             return nil
         }
-        let node = WallpaperBackgroundNode.BubbleBackgroundNode(backgroundNode: self, bubbleType: type)
+        let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node
     }
+}
+
+final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroundNode {
+    final class SharedStorage {
+    }
+
+    private class WallpaperComponentView: UIView {
+        let updated: () -> Void
+
+        init(updated: @escaping () -> Void) {
+            self.updated = updated
+
+            super.init(frame: CGRect())
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+    }
+
+    private final class WallpaperGradiendComponentView: WallpaperComponentView {
+        struct Spec {
+            var colors: [UInt32]
+        }
+    }
+
+    private final class WallpaperPatternComponentView: WallpaperComponentView {
+        struct Spec {
+        }
+    }
+
+    private let context: AccountContext
+    private let storage: SharedStorage
+
+    private let staticView: UIImageView
+    private var gradient: WallpaperGradiendComponentView?
+    private var pattern: WallpaperPatternComponentView?
+
+    private let _isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
+    var isReady: Signal<Bool, NoError> {
+        return self._isReady.get()
+    }
+
+    var rotation: CGFloat = 0.0 {
+        didSet {
+        }
+    }
+
+    init(context: AccountContext, storage: SharedStorage?) {
+        self.context = context
+        self.storage = storage ?? SharedStorage()
+
+        self.staticView = UIImageView()
+
+        super.init()
+
+        self.view.addSubview(self.staticView)
+    }
+
+    func update(wallpaper: TelegramWallpaper) {
+        var gradientSpec: WallpaperGradiendComponentView.Spec?
+
+        switch wallpaper {
+        case let .builtin(wallpaperSettings):
+            let _ = wallpaperSettings
+        case let .color(color):
+            let _ = color
+        case let .gradient(gradient):
+            if gradient.colors.count >= 3 {
+                gradientSpec = WallpaperGradiendComponentView.Spec(colors: gradient.colors)
+            }
+        case let .image(representations, settings):
+            let _ = representations
+            let _ = settings
+        case let .file(file):
+            if file.settings.colors.count >= 3 {
+                gradientSpec = WallpaperGradiendComponentView.Spec(colors: file.settings.colors)
+            }
+        }
+
+        if let gradientSpec = gradientSpec {
+            let gradient: WallpaperGradiendComponentView
+            if let current = self.gradient {
+                gradient = current
+            } else {
+                gradient = WallpaperGradiendComponentView(updated: { [weak self] in
+                    self?.componentsUpdated()
+                })
+            }
+            let _ = gradient
+            let _ = gradientSpec
+        } else if let gradient = self.gradient {
+            self.gradient = nil
+            gradient.removeFromSuperview()
+        }
+    }
+
+    private func componentsUpdated() {
+    }
+
+    func _internalUpdateIsSettingUpWallpaper() {
+    }
+
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+
+    }
+
+    func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
+
+    }
+
+    func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
+
+    }
+
+    func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool {
+        return false
+    }
+
+    func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode? {
+        return nil
+    }
+}
+
+public func createWallpaperBackgroundNode(context: AccountContext, useSharedAnimationPhase: Bool = false) -> WallpaperBackgroundNode {
+    return WallpaperBackgroundNodeImpl(context: context, useSharedAnimationPhase: useSharedAnimationPhase)
 }

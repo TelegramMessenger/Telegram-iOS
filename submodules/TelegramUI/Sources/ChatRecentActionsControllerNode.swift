@@ -99,7 +99,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
         
-        self.backgroundNode = WallpaperBackgroundNode(context: context)
+        self.backgroundNode = createWallpaperBackgroundNode(context: context)
         self.backgroundNode.isUserInteractionEnabled = false
         
         self.panelBackgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.chat.inputPanel.panelBackgroundColor)

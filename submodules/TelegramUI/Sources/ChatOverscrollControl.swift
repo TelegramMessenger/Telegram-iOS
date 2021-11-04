@@ -353,7 +353,7 @@ final class BadgeComponent: CombinedComponent {
         if lhs.withinSize != rhs.withinSize {
             return false
         }
-        if lhs.wallpaperNode != rhs.wallpaperNode {
+        if lhs.wallpaperNode !== rhs.wallpaperNode {
             return false
         }
         return true
@@ -564,7 +564,7 @@ final class AvatarComponent: Component {
 }
 
 private final class WallpaperBlurNode: ASDisplayNode {
-    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    private var backgroundNode: WallpaperBubbleBackgroundNode?
     private let colorNode: ASDisplayNode
 
     override init() {
