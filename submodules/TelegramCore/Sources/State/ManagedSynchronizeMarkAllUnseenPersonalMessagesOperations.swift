@@ -181,8 +181,12 @@ private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox
         )
         |> mapToSignal { resultId -> Signal<Void, GetUnseenIdsError> in
             if let resultId = resultId {
-                let _ = currentMaxId.swap(resultId)
-                return .complete()
+                let previous = currentMaxId.swap(resultId)
+                if previous == resultId {
+                    return .fail(.done)
+                } else {
+                    return .complete()
+                }
             } else {
                 return .fail(.done)
             }
