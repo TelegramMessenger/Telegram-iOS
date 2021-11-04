@@ -12,6 +12,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import ItemListPeerItem
+import ItemListPeerActionItem
 import InviteLinksUI
 
 private final class ChannelMembersControllerArguments {
@@ -21,8 +22,9 @@ private final class ChannelMembersControllerArguments {
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let removePeer: (PeerId) -> Void
     let openPeer: (Peer) -> Void
-    let inviteViaLink: ()->Void
-    init(context: AccountContext, addMember: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void, inviteViaLink: @escaping()->Void) {
+    let inviteViaLink: () -> Void
+    
+    init(context: AccountContext, addMember: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void, inviteViaLink: @escaping () -> Void) {
         self.context = context
         self.addMember = addMember
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -155,12 +157,12 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelMembersControllerArguments
         switch self {
-            case let .addMember(_, text):
-                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .addMember(theme, text):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
                     arguments.addMember()
                 })
-            case let .inviteLink(_, text):
-                return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            case let .inviteLink(theme, text):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.linkIcon(theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
                     arguments.inviteViaLink()
                 })
             case let .addMemberInfo(_, text):
