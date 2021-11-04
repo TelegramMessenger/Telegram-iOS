@@ -619,9 +619,12 @@ private final class NotificationServiceHandler {
             return nil
         }
 
-        let _ = (self.accountManager.accountRecords()
+        let _ = (combineLatest(queue: self.queue,
+            self.accountManager.accountRecords(),
+            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+        )
         |> take(1)
-        |> deliverOn(self.queue)).start(next: { [weak self] records in
+        |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
             var recordId: AccountRecordId?
             var isCurrentAccount: Bool = false
 
@@ -640,6 +643,8 @@ private final class NotificationServiceHandler {
                     }
                 }
             }
+
+            let inAppNotificationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
 
             guard let strongSelf = self, let recordId = recordId else {
                 Logger.shared.log("NotificationService \(episode)", "Couldn't find a matching decryption key")
@@ -1075,7 +1080,7 @@ private final class NotificationServiceHandler {
                                     pollWithUpdatedContent = stateManager.postbox.transaction { transaction -> NotificationContent in
                                         var content = initialContent
 
-                                        if let peer = transaction.getPeer(interactionAuthorId) {
+                                        if inAppNotificationSettings.displayNameOnLockscreen, let peer = transaction.getPeer(interactionAuthorId) {
                                             content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer)
                                         }
 
