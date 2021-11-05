@@ -204,7 +204,7 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        let (entries, lower, upper) = postbox.messageHistoryTable.entriesAround(globalTagMask: globalTag, index: position, count: count)
+        /*let (entries, lower, upper) = postbox.messageHistoryTable.entriesAround(globalTagMask: globalTag, index: position, count: count)
 
         self.entries = entries.map { entry -> InternalGlobalMessageTagsEntry in
             switch entry {
@@ -219,7 +219,8 @@ final class MutableGlobalMessageTagsView: MutablePostboxView {
 
         self.render(postbox: postbox)
 
-        return true
+        return true*/
+        return false
     }
     
     private func add(_ entry: InternalGlobalMessageTagsEntry) -> Bool {

@@ -19,13 +19,14 @@ final class MutablePeerChatStateView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        let chatState = postbox.peerChatStateTable.get(self.peerId)
+        /*let chatState = postbox.peerChatStateTable.get(self.peerId)
         if self.chatState != chatState {
             self.chatState = chatState
             return true
         } else {
             return false
-        }
+        }*/
+        return false
     }
     
     func immutableView() -> PostboxView {

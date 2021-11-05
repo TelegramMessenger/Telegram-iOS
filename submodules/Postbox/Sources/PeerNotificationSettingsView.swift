@@ -38,7 +38,7 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+        /*var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
         for peerId in self.peerIds {
             var notificationPeerId = peerId
             if let peer = postbox.peerTable.get(peerId), let associatedPeerId = peer.associatedPeerId {
@@ -71,7 +71,8 @@ final class MutablePeerNotificationSettingsView: MutablePostboxView {
             return true
         } else {
             return false
-        }
+        }*/
+        return false
     }
     
     func immutableView() -> PostboxView {

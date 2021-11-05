@@ -63,7 +63,7 @@ final class MutableHistoryTagInfoView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        var currentIndex: MessageIndex?
+        /*var currentIndex: MessageIndex?
         for namespace in postbox.messageHistoryIndexTable.existingNamespaces(peerId: self.peerId) {
             if let index = postbox.messageHistoryTagsTable.latestIndex(tag: self.tag, peerId: self.peerId, namespace: namespace) {
                 currentIndex = index
@@ -75,7 +75,8 @@ final class MutableHistoryTagInfoView: MutablePostboxView {
             return true
         } else {
             return false
-        }
+        }*/
+        return false
     }
     
     func immutableView() -> PostboxView {

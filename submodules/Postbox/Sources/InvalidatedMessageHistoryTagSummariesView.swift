@@ -39,7 +39,7 @@ final class MutableInvalidatedMessageHistoryTagSummariesView: MutablePostboxView
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        var entries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
+        /*var entries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
         for entry in postbox.invalidatedMessageHistoryTagsSummaryTable.get(tagMask: tagMask, namespace: namespace) {
             entries.insert(entry)
         }
@@ -48,7 +48,8 @@ final class MutableInvalidatedMessageHistoryTagSummariesView: MutablePostboxView
             return true
         } else {
             return false
-        }
+        }*/
+        return false
     }
     
     func immutableView() -> PostboxView {

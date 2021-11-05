@@ -42,7 +42,7 @@ final class MutableItemCollectionIdsView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        var idsByNamespace: [ItemCollectionId.Namespace: Set<ItemCollectionId>] = [:]
+        /*var idsByNamespace: [ItemCollectionId.Namespace: Set<ItemCollectionId>] = [:]
         for namespace in namespaces {
             let ids = postbox.itemCollectionInfoTable.getIds(namespace: namespace)
             idsByNamespace[namespace] = Set(ids)
@@ -52,7 +52,8 @@ final class MutableItemCollectionIdsView: MutablePostboxView {
             return true
         } else {
             return false
-        }
+        }*/
+        return false
     }
     
     func immutableView() -> PostboxView {

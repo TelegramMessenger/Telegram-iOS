@@ -28,7 +28,7 @@ final class MutablePeerPresencesView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        var presences: [PeerId: PeerPresence] = [:]
+        /*var presences: [PeerId: PeerPresence] = [:]
 
         for id in self.ids {
             if let presence = postbox.peerPresenceTable.get(id) {
@@ -58,7 +58,8 @@ final class MutablePeerPresencesView: MutablePostboxView {
             return true
         } else {
             return false
-        }
+        }*/
+        return false
     }
     
     func immutableView() -> PostboxView {

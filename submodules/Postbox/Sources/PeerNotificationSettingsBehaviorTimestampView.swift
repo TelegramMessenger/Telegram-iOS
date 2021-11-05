@@ -21,13 +21,14 @@ final class MutablePeerNotificationSettingsBehaviorTimestampView: MutablePostbox
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        let earliestTimestamp = postbox.peerNotificationSettingsBehaviorTable.getEarliest()?.1
+        /*let earliestTimestamp = postbox.peerNotificationSettingsBehaviorTable.getEarliest()?.1
         if self.earliestTimestamp != earliestTimestamp {
             self.earliestTimestamp = earliestTimestamp
             return true
         } else {
             return false
-        }
+        }*/
+        return false
     }
     
     func immutableView() -> PostboxView {

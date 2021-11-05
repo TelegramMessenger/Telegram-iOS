@@ -27,13 +27,14 @@ final class MutableMessageHistoryTagSummaryView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        let count = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: self.tag, peerId: self.peerId, namespace: self.namespace))?.count
+        /*let count = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: self.tag, peerId: self.peerId, namespace: self.namespace))?.count
         if self.count != count {
             self.count = count
             return true
         } else {
             return false
-        }
+        }*/
+        return false
     }
     
     func immutableView() -> PostboxView {
