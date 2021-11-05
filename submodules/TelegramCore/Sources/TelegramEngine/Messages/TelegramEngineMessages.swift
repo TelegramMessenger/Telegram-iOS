@@ -92,8 +92,8 @@ public extension TelegramEngine {
             |> ignoreValues
         }
 
-        public func forwardGameWithScore(messageId: MessageId, to peerId: PeerId) -> Signal<Void, NoError> {
-            return _internal_forwardGameWithScore(account: self.account, messageId: messageId, to: peerId)
+        public func forwardGameWithScore(messageId: MessageId, to peerId: PeerId, as senderPeerId: PeerId?) -> Signal<Void, NoError> {
+            return _internal_forwardGameWithScore(account: self.account, messageId: messageId, to: peerId, as: senderPeerId)
         }
 
         public func requestUpdatePinnedMessage(peerId: PeerId, update: PinnedMessageUpdate) -> Signal<Void, UpdatePinnedMessageError> {

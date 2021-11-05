@@ -466,7 +466,9 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, presentGigagroupHelp: {
         }, editMessageMedia: { _, _ in
         }, updateShowCommands: { _ in
+        }, updateShowSendAsPeers: { _ in
         }, openInviteRequests: {
+        }, openSendAsPeer: { _, _ in
         }, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction
@@ -1265,21 +1267,19 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 
                 if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.hasPermission(.sendMessages)) {
                     let messagesShouldHaveSignatures: Bool
-                    let messagesCopyProtection: Bool
+                    let messagesCopyProtection = channel.flags.contains(.copyProtectionEnabled)
                     switch channel.info {
                     case let .broadcast(info):
                         messagesShouldHaveSignatures = info.flags.contains(.messagesShouldHaveSignatures)
-                        messagesCopyProtection = info.flags.contains(.copyProtectionEnabled)
                     default:
                         messagesShouldHaveSignatures = false
-                        messagesCopyProtection = false
                     }
                     items[.peerSettings]!.append(PeerInfoScreenSwitchItem(id: ItemSignMessages, text: presentationData.strings.Channel_SignMessages, value: messagesShouldHaveSignatures, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
                         interaction.editingToggleMessageSignatures(value)
                     }))
                     items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
                     
-                    items[.peerAdditionalSettings]!.append(PeerInfoScreenSwitchItem(id: ItemCopyProtection, text: "Disable Forwards", value: messagesCopyProtection, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
+                    items[.peerAdditionalSettings]!.append(PeerInfoScreenSwitchItem(id: ItemCopyProtection, text: "Restrict Saving Content", value: messagesCopyProtection, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
                         interaction.editingToggleChannelMessageCopyProtection(value)
                     }))
                 }
@@ -1593,7 +1593,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private let activeActionDisposable = MetaDisposable()
     private let resolveUrlDisposable = MetaDisposable()
     private let toggleShouldChannelMessagesSignaturesDisposable = MetaDisposable()
-    private let toggleChannelMessageCopyProtectionDisposable = MetaDisposable()
+    private let toggleMessageCopyProtectionDisposable = MetaDisposable()
     private let selectAddMemberDisposable = MetaDisposable()
     private let addMemberDisposable = MetaDisposable()
     private let preloadHistoryDisposable = MetaDisposable()
@@ -1852,7 +1852,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     })))
                 }
                 
-                if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(flags) = channel.info, flags.flags.contains(.copyProtectionEnabled) && channel.adminRights == nil {
+                if message.isCopyProtected() {
                     
                 } else if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
@@ -2979,7 +2979,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.resolveUrlDisposable.dispose()
         self.hiddenAvatarRepresentationDisposable.dispose()
         self.toggleShouldChannelMessagesSignaturesDisposable.dispose()
-        self.toggleChannelMessageCopyProtectionDisposable.dispose()
+        self.toggleMessageCopyProtectionDisposable.dispose()
         self.editAvatarDisposable.dispose()
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
@@ -4830,7 +4830,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
     
     private func editingToggleMessageCopyProtection(value: Bool) {
-        self.toggleChannelMessageCopyProtectionDisposable.set(self.context.engine.peers.toggleChannelMessageCopyProtection(peerId: self.peerId, enabled: value).start())
+        self.toggleMessageCopyProtectionDisposable.set(self.context.engine.peers.toggleMessageCopyProtection(peerId: self.peerId, enabled: value).start())
     }
     
     private func openParticipantsSection(section: PeerInfoParticipantsSection) {

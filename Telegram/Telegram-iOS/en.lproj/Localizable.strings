@@ -7046,3 +7046,6 @@ Sorry for the inconvenience.";
 "Themes.CreateNewTheme" = "Create a New Theme";
 
 "Chat.JumpToDate" = "Jump to Date";
+
+"Channel.AdminLog.MessageToggleNoForwardsOn" = "%@ enabled no-forwards";
+"Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ disabled no-forwards";

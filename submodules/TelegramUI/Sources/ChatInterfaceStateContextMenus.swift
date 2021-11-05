@@ -1041,7 +1041,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
                 
         if data.messageActions.options.contains(.forward) {
-            if let channel = message.peers[message.id.peerId] as? TelegramChannel, case let .broadcast(flags) = channel.info, flags.flags.contains(.copyProtectionEnabled) && channel.adminRights == nil {
+            if message.isCopyProtected() {
                 
             } else {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, icon: { theme in

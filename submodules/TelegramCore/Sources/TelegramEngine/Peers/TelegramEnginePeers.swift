@@ -231,8 +231,8 @@ public extension TelegramEngine {
             return _internal_toggleShouldChannelMessagesSignatures(account: self.account, peerId: peerId, enabled: enabled)
         }
 
-        public func toggleChannelMessageCopyProtection(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
-            return _internal_toggleChannelMessageCopyProtection(account: self.account, peerId: peerId, enabled: enabled)
+        public func toggleMessageCopyProtection(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
+            return _internal_toggleMessageCopyProtection(account: self.account, peerId: peerId, enabled: enabled)
         }
 
         public func requestPeerPhotos(peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
@@ -659,6 +659,14 @@ public extension TelegramEngine {
                 }
             }
             |> ignoreValues
+        }
+        
+        public func sendAsAvailablePeers(peerId: PeerId) -> Signal<[FoundPeer], NoError> {
+            return _internal_cachedPeerSendAsAvailablePeers(account: self.account, peerId: peerId)
+        }
+        
+        public func updatePeerSendAsPeer(peerId: PeerId, sendAs: PeerId) -> Signal<Never, UpdatePeerSendAsPeerError> {
+            return _internal_updatePeerSendAsPeer(account: self.account, peerId: peerId, sendAs: sendAs)
         }
     }
 }
