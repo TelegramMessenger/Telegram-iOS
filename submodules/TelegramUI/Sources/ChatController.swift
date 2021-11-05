@@ -3531,7 +3531,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         var peerDiscussionId: PeerId?
                         var peerGeoLocation: PeerGeoLocation?
+                        var currentSendAsPeerId: PeerId?
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
+                            currentSendAsPeerId = cachedData.sendAsPeerId
                             if case .broadcast = peer.info {
                                 if case let .known(value) = cachedData.linkedDiscussionPeerId {
                                     peerDiscussionId = value
@@ -3667,7 +3669,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                             return $0.updatedPeer { _ in
                                 return renderedPeer
-                            }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(false)
+                            }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(false).updatedCurrentSendAsPeerId(currentSendAsPeerId)
                         })
                         if !strongSelf.didSetChatLocationInfoReady {
                             strongSelf.didSetChatLocationInfoReady = true
