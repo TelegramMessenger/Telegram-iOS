@@ -12,6 +12,7 @@ import GZip
 import UIKit
 import Intents
 import PersistentStringHash
+import CallKit
 
 private let queue = Queue()
 
@@ -723,6 +724,15 @@ private final class NotificationServiceHandler {
 
                     var interactionAuthorId: PeerId?
 
+                    struct CallData {
+                        var id: Int64
+                        var accessHash: Int64
+                        var fromId: PeerId
+                        var updates: String
+                    }
+
+                    var callData: CallData?
+
                     if let messageIdString = payloadJson["msg_id"] as? String {
                         messageId = Int32(messageIdString)
                     }
@@ -745,16 +755,30 @@ private final class NotificationServiceHandler {
                         }
                     }
 
+                    if let callIdString = payloadJson["call_id"] as? String, let callAccessHashString = payloadJson["call_ah"] as? String, let peerId = peerId, let updates = payloadJson["updates"] as? String {
+                        if let callId = Int64(callIdString), let callAccessHash = Int64(callAccessHashString) {
+                            callData = CallData(
+                                id: callId,
+                                accessHash: callAccessHash,
+                                fromId: peerId,
+                                updates: updates
+                            )
+                        }
+                    }
+
                     enum Action {
                         case logout
                         case poll(peerId: PeerId, content: NotificationContent)
                         case deleteMessage([MessageId])
                         case readMessage(MessageId)
+                        case call(CallData)
                     }
 
                     var action: Action?
 
-                    if let locKey = payloadJson["loc-key"] as? String {
+                    if let callData = callData {
+                        action = .call(callData)
+                    } else if let locKey = payloadJson["loc-key"] as? String {
                         switch locKey {
                         case "SESSION_REVOKE":
                             action = .logout
@@ -879,8 +903,31 @@ private final class NotificationServiceHandler {
 
                     if let action = action {
                         switch action {
+                        case let .call(callData):
+                            let voipPayload: [AnyHashable: Any] = [
+                                "call_id": "\(callData.id)",
+                                "call_ah": "\(callData.accessHash)",
+                                "from_id": "\(callData.fromId.id._internalGetInt64Value())",
+                                "updates": callData.updates
+                            ]
+                            Logger.shared.log("NotificationService \(episode)", "Will report voip notification")
+                            let content = NotificationContent()
+                            updateCurrentContent(content)
+
+                            if #available(iOS 14.5, *) {
+                                CXProvider.reportNewIncomingVoIPPushPayload(voipPayload, completion: { error in
+                                    Logger.shared.log("NotificationService \(episode)", "Did report voip notification, error: \(String(describing: error))")
+
+                                    completed()
+                                })
+                            } else {
+                                completed()
+                            }
                         case .logout:
                             Logger.shared.log("NotificationService \(episode)", "Will logout")
+
+                            let content = NotificationContent()
+                            updateCurrentContent(content)
                             completed()
                         case let .poll(peerId, initialContent):
                             Logger.shared.log("NotificationService \(episode)", "Will poll")
@@ -890,6 +937,9 @@ private final class NotificationServiceHandler {
 
                                     queue.async {
                                         guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
+                                            
+                                            let content = NotificationContent()
+                                            updateCurrentContent(content)
                                             completed()
                                             return
                                         }
