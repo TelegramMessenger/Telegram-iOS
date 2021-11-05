@@ -11306,12 +11306,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var selectDay: ((Int32) -> Void)?
         var openClearHistory: ((Int32) -> Void)?
 
+        let enableMessageRangeDeletion: Bool = false
+
         let calendarScreen = CalendarMessageScreen(
             context: self.context,
             peerId: peerId,
             calendarSource: self.context.engine.messages.sparseMessageCalendar(peerId: peerId, tag: .photoOrVideo),
             initialTimestamp: initialTimestamp,
-            enableMessageRangeDeletion: false,
+            enableMessageRangeDeletion: enableMessageRangeDeletion,
             canNavigateToEmptyDays: true,
             navigateToDay: { [weak self] c, index, timestamp in
                 guard let strongSelf = self else {
@@ -11379,7 +11381,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }))
                 })))
 
-                if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
+                if enableMessageRangeDeletion && (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat) {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, textColor: .destructive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                     }, action: { _, f in
