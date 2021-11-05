@@ -376,36 +376,40 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
 
         actions.append(.separator)
 
-        actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
-        }, action: { _, f in
-            let copyTextWithEntities = {
-                var messageEntities: [MessageTextEntity]?
-                var restrictedText: String?
-                for attribute in message.attributes {
-                    if let attribute = attribute as? TextEntitiesMessageAttribute {
-                        messageEntities = attribute.entities
+        if message.isCopyProtected() {
+            
+        } else {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                let copyTextWithEntities = {
+                    var messageEntities: [MessageTextEntity]?
+                    var restrictedText: String?
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? TextEntitiesMessageAttribute {
+                            messageEntities = attribute.entities
+                        }
+                        if let attribute = attribute as? RestrictedContentMessageAttribute {
+                            restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                        }
                     }
-                    if let attribute = attribute as? RestrictedContentMessageAttribute {
-                        restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+
+                    if let restrictedText = restrictedText {
+                        storeMessageTextInPasteboard(restrictedText, entities: nil)
+                    } else {
+                        storeMessageTextInPasteboard(message.text, entities: messageEntities)
                     }
+
+                    Queue.mainQueue().after(0.2, {
+                        let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
+                        controllerInteraction.displayUndo(content)
+                    })
                 }
 
-                if let restrictedText = restrictedText {
-                    storeMessageTextInPasteboard(restrictedText, entities: nil)
-                } else {
-                    storeMessageTextInPasteboard(message.text, entities: messageEntities)
-                }
-
-                Queue.mainQueue().after(0.2, {
-                    let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
-                    controllerInteraction.displayUndo(content)
-                })
-            }
-
-            copyTextWithEntities()
-            f(.default)
-        })))
+                copyTextWithEntities()
+                f(.default)
+            })))
+        }
 
         if let author = message.author, let addressName = author.addressName {
             let link = "https://t.me/\(addressName)"
@@ -682,7 +686,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             resourceAvailable = false
         }
         
-        if !messages[0].text.isEmpty || resourceAvailable || diceEmoji != nil {
+        if (!messages[0].text.isEmpty || resourceAvailable || diceEmoji != nil) && !messages[0].isCopyProtected() {
             let message = messages[0]
             var isExpired = false
             for media in message.media {
@@ -763,6 +767,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     })))
                 }
             }
+            
             if resourceAvailable, !message.containsSecretMedia {
                 var mediaReference: AnyMediaReference?
                 var isVideo = false
@@ -1036,12 +1041,16 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
                 
         if data.messageActions.options.contains(.forward) {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                interfaceInteraction.forwardMessages(selectAll ? messages : [message])
-                f(.dismissWithoutContent)
-            })))
+            if message.isCopyProtected() {
+                
+            } else {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.forwardMessages(selectAll ? messages : [message])
+                    f(.dismissWithoutContent)
+                })))
+            }
         }
         
         if data.messageActions.options.contains(.report) {
@@ -1370,7 +1379,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                             }
                         }
                         if !message.containsSecretMedia && !isAction {
-                            if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                            if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.isCopyProtected() {
                                 if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                     optionsMap[id]!.insert(.forward)
                                 }

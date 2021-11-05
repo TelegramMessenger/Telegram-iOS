@@ -145,7 +145,9 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, presentGigagroupHelp: {
         }, editMessageMedia: { _, _ in
         }, updateShowCommands: { _ in
+        }, updateShowSendAsPeers: { _ in
         }, openInviteRequests: {
+        }, openSendAsPeer: { _, _ in
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView

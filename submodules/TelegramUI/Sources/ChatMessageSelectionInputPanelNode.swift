@@ -70,7 +70,6 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.forwardButton.accessibilityLabel = strings.VoiceOver_MessageContextForward
         
         self.shareButton = HighlightableButtonNode(pointerStyle: .default)
-        self.shareButton.isEnabled = false
         self.shareButton.isAccessibilityElement = true
         self.shareButton.accessibilityLabel = strings.VoiceOver_MessageContextShare
         
@@ -95,6 +94,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.addSubnode(self.separatorNode)
         
         self.forwardButton.isEnabled = false
+        self.shareButton.isEnabled = false
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), forControlEvents: .touchUpInside)
         self.reportButton.addTarget(self, action: #selector(self.reportButtonPressed), forControlEvents: .touchUpInside)
@@ -116,6 +116,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.reportButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionReport"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+            self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
             
             self.separatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         }
@@ -149,7 +151,6 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.deleteButton.isEnabled = false
             self.reportButton.isEnabled = false
             self.forwardButton.isEnabled = actions.options.contains(.forward)
-            self.shareButton.isEnabled = false
             
             if self.peerMedia {
                 self.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty

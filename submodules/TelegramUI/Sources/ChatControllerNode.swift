@@ -2444,7 +2444,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             messages.append(.forward(source: id, grouping: .auto, attributes: attributes, correlationId: nil))
                         }
                     }
-
+                    
                     var usedCorrelationId: Int64?
 
                     if !messages.isEmpty, case .message = messages[messages.count - 1] {
