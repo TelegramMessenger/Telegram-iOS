@@ -852,6 +852,8 @@ public class ChatMessageItemView: ListViewItemNode {
                     item.controllerInteraction.requestMessageActionUrlAuth(url, .message(id: item.message.id, buttonId: buttonId))
                 case .setupPoll:
                     break
+                case let .openUserProfile(peerId):
+                    item.controllerInteraction.openPeer(peerId, .info, nil)
             }
         }
     }

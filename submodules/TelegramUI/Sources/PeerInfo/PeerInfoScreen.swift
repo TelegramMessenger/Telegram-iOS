@@ -466,7 +466,9 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, presentGigagroupHelp: {
         }, editMessageMedia: { _, _ in
         }, updateShowCommands: { _ in
+        }, updateShowSendAsPeers: { _ in
         }, openInviteRequests: {
+        }, openSendAsPeer: { _, _ in
         }, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction
@@ -566,6 +568,7 @@ private final class PeerInfoInteraction {
     let editingOpenInviteLinksSetup: () -> Void
     let editingOpenDiscussionGroupSetup: () -> Void
     let editingToggleMessageSignatures: (Bool) -> Void
+    let editingToggleChannelMessageCopyProtection: (Bool) -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let editingOpenPreHistorySetup: () -> Void
     let editingOpenAutoremoveMesages: () -> Void
@@ -605,6 +608,7 @@ private final class PeerInfoInteraction {
         editingOpenInviteLinksSetup: @escaping () -> Void,
         editingOpenDiscussionGroupSetup: @escaping () -> Void,
         editingToggleMessageSignatures: @escaping (Bool) -> Void,
+        editingToggleChannelMessageCopyProtection: @escaping (Bool) -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         editingOpenPreHistorySetup: @escaping () -> Void,
         editingOpenAutoremoveMesages: @escaping () -> Void,
@@ -643,6 +647,7 @@ private final class PeerInfoInteraction {
         self.editingOpenInviteLinksSetup = editingOpenInviteLinksSetup
         self.editingOpenDiscussionGroupSetup = editingOpenDiscussionGroupSetup
         self.editingToggleMessageSignatures = editingToggleMessageSignatures
+        self.editingToggleChannelMessageCopyProtection = editingToggleChannelMessageCopyProtection
         self.openParticipantsSection = openParticipantsSection
         self.editingOpenPreHistorySetup = editingOpenPreHistorySetup
         self.editingOpenAutoremoveMesages = editingOpenAutoremoveMesages
@@ -1188,6 +1193,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
         case groupLocation
         case peerPublicSettings
         case peerSettings
+        case peerAdditionalSettings
         case peerActions
     }
     
@@ -1212,6 +1218,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemDiscussionGroup = 3
                 let ItemSignMessages = 4
                 let ItemSignMessagesHelp = 5
+                let ItemCopyProtection = 6
                 
                 if channel.flags.contains(.isCreator) {
                     let linkText: String
@@ -1260,6 +1267,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 
                 if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.hasPermission(.sendMessages)) {
                     let messagesShouldHaveSignatures: Bool
+                    let messagesCopyProtection = channel.flags.contains(.copyProtectionEnabled)
                     switch channel.info {
                     case let .broadcast(info):
                         messagesShouldHaveSignatures = info.flags.contains(.messagesShouldHaveSignatures)
@@ -1270,6 +1278,10 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         interaction.editingToggleMessageSignatures(value)
                     }))
                     items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
+                    
+                    items[.peerAdditionalSettings]!.append(PeerInfoScreenSwitchItem(id: ItemCopyProtection, text: "Restrict Saving Content", value: messagesCopyProtection, icon: UIImage(bundleImageName: "Chat/Info/GroupSignIcon"), toggled: { value in
+                        interaction.editingToggleChannelMessageCopyProtection(value)
+                    }))
                 }
             case .group:
                 let ItemUsername = 101
@@ -1581,6 +1593,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private let activeActionDisposable = MetaDisposable()
     private let resolveUrlDisposable = MetaDisposable()
     private let toggleShouldChannelMessagesSignaturesDisposable = MetaDisposable()
+    private let toggleMessageCopyProtectionDisposable = MetaDisposable()
     private let selectAddMemberDisposable = MetaDisposable()
     private let addMemberDisposable = MetaDisposable()
     private let preloadHistoryDisposable = MetaDisposable()
@@ -1695,6 +1708,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             },
             editingToggleMessageSignatures: { [weak self] value in
                 self?.editingToggleMessageSignatures(value: value)
+            },
+            editingToggleChannelMessageCopyProtection: { [weak self] value in
+                self?.editingToggleMessageCopyProtection(value: value)
             },
             openParticipantsSection: { [weak self] section in
                 self?.openParticipantsSection(section: section)
@@ -1836,7 +1852,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     })))
                 }
                 
-                if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                if message.isCopyProtected() {
+                    
+                } else if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                         c.dismiss(completion: {
                             if let strongSelf = self {
@@ -1972,7 +1990,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             })
                         })))
                         
-                        if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                        if message.isCopyProtected() {
+                            
+                        } else if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
                             items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                                 c.dismiss(completion: {
                                     if let strongSelf = self {
@@ -2959,6 +2979,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.resolveUrlDisposable.dispose()
         self.hiddenAvatarRepresentationDisposable.dispose()
         self.toggleShouldChannelMessagesSignaturesDisposable.dispose()
+        self.toggleMessageCopyProtectionDisposable.dispose()
         self.editAvatarDisposable.dispose()
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
@@ -4806,6 +4827,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     
     private func editingToggleMessageSignatures(value: Bool) {
         self.toggleShouldChannelMessagesSignaturesDisposable.set(self.context.engine.peers.toggleShouldChannelMessagesSignatures(peerId: self.peerId, enabled: value).start())
+    }
+    
+    private func editingToggleMessageCopyProtection(value: Bool) {
+        self.toggleMessageCopyProtectionDisposable.set(self.context.engine.peers.toggleMessageCopyProtection(peerId: self.peerId, enabled: value).start())
     }
     
     private func openParticipantsSection(section: PeerInfoParticipantsSection) {
