@@ -272,7 +272,7 @@ public final class Transaction {
     
     public func getPeerChatState(_ id: PeerId) -> PeerChatState? {
         assert(!self.disposed)
-        return self.postbox?.peerChatStateTable.get(id) as? PeerChatState
+        return self.postbox?.peerChatStateTable.get(id)?.getLegacy() as? PeerChatState
     }
     
     public func setPeerChatState(_ id: PeerId, state: PeerChatState) {
@@ -2715,7 +2715,7 @@ final class PostboxImpl {
                     let messages = self.getMessageGroup(at: id)
                     additionalDataEntries.append(.message(id, messages ?? []))
                 case let .peerChatState(peerId):
-                    additionalDataEntries.append(.peerChatState(peerId, self.peerChatStateTable.get(peerId) as? PeerChatState))
+                    additionalDataEntries.append(.peerChatState(peerId, self.peerChatStateTable.get(peerId)?.getLegacy() as? PeerChatState))
                 case .totalUnreadState:
                     additionalDataEntries.append(.totalUnreadState(self.messageHistoryMetadataTable.getTotalUnreadState(groupId: .root)))
                 case let .peerNotificationSettings(peerId):
