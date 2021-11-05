@@ -518,7 +518,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                     
                     storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, threadId: threadId, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
-                case let .forward(source, grouping, requestedAttributes, _):
+                case let .forward(source, grouping, requestedAttributes, _, _):
                     let sourceMessage = transaction.getMessage(source)
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         var messageText = sourceMessage.text
