@@ -469,7 +469,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
-    private let adSeenProcessingManager = ChatMessageThrottledProcessingManager()
+    let adSeenProcessingManager = ChatMessageThrottledProcessingManager()
     private let seenLiveLocationProcessingManager = ChatMessageThrottledProcessingManager()
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
     private let refreshMediaProcessingManager = ChatMessageThrottledProcessingManager()
@@ -1563,7 +1563,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             let toLaterRange = (historyView.filteredEntries.count - 1 - (visible.firstIndex - 1), historyView.filteredEntries.count - 1)
             
             var messageIdsWithViewCount: [MessageId] = []
-            var messageIdsWithAds: [MessageId] = []
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithRefreshMedia: [MessageId] = []
@@ -1589,8 +1588,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.id.namespace == Namespaces.Message.Cloud {
                                     messageIdsWithViewCount.append(message.id)
                                 }
-                            } else if attribute is AdMessageAttribute {
-                                messageIdsWithAds.append(message.id)
                             } else if attribute is ReplyThreadMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
                                     messageIdsWithViewCount.append(message.id)
@@ -1753,9 +1750,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             if !messageIdsWithViewCount.isEmpty {
                 self.messageProcessingManager.add(messageIdsWithViewCount)
-            }
-            if !messageIdsWithAds.isEmpty {
-                self.adSeenProcessingManager.add(messageIdsWithAds)
             }
             if !messageIdsWithLiveLocation.isEmpty {
                 self.seenLiveLocationProcessingManager.add(messageIdsWithLiveLocation)
