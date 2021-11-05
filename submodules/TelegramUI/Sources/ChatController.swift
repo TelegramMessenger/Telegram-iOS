@@ -11311,7 +11311,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             peerId: peerId,
             calendarSource: self.context.engine.messages.sparseMessageCalendar(peerId: peerId, tag: .photoOrVideo),
             initialTimestamp: initialTimestamp,
-            enableMessageRangeDeletion: true,
+            enableMessageRangeDeletion: false,
             canNavigateToEmptyDays: true,
             navigateToDay: { [weak self] c, index, timestamp in
                 guard let strongSelf = self else {
