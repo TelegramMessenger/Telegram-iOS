@@ -255,15 +255,14 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                         case .sameSection(false):
                             bottomStripeInset = leftInset + editingOffset
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = !item.hasSeparator
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
                             hasBottomCorners = true
-                            strongSelf.bottomStripeNode.isHidden = hasCorners
+                            strongSelf.bottomStripeNode.isHidden = hasCorners || !item.hasSeparator
                     }
-                    
-                    strongSelf.bottomStripeNode.isHidden = strongSelf.bottomStripeNode.isHidden || !item.hasSeparator
-                    
+                        
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))

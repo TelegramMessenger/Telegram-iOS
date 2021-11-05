@@ -14,6 +14,10 @@ final class MutableAdditionalChatListItemsView: MutablePostboxView {
         }
         return false
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return AdditionalChatListItemsView(self)

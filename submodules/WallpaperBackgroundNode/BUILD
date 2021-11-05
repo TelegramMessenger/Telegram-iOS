@@ -19,6 +19,9 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/WallpaperResources:WallpaperResources",
         "//submodules/FastBlur:FastBlur",
+        "//submodules/Svg:Svg",
+        "//submodules/GZip:GZip",
+        "//submodules/AppBundle:AppBundle",
     ],
     visibility = [
         "//visibility:public",

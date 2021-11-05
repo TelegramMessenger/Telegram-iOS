@@ -174,7 +174,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
 
         if let gradientNode = self.gradientNode {
             gradientNode.frame = CGRect(origin: CGPoint(), size: size)
-            gradientNode.updateLayout(size: size, transition: .immediate)
+            gradientNode.updateLayout(size: size, transition: .immediate, extendAnimation: false, backwards: false, completion: {})
         }
         
         let progressDiameter: CGFloat = 50.0

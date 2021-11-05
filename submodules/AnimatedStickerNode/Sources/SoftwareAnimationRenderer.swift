@@ -10,6 +10,7 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
     private var highlightedColor: UIColor?
     
     func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, completion: @escaping () -> Void) {
+        assert(bytesPerRow > 0)
         queue.async { [weak self] in
             switch type {
             case .argb:
@@ -26,7 +27,7 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                         guard let baseAddress = bytes.baseAddress else {
                             return
                         }
-                        if bytesPerRow * height > bytes.count {
+                        if bytesPerRow <= 0 || height <= 0 || width <= 0 || bytesPerRow * height > bytes.count {
                             assert(false)
                             return
                         }

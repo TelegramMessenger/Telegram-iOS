@@ -74,7 +74,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         self.pageControlNode = PageControlNode(dotSpacing: 7.0, dotColor: .white, inactiveDotColor: UIColor.white.withAlphaComponent(0.4))
     
         self.chatListBackgroundNode = ASDisplayNode()
-        self.chatBackgroundNode = WallpaperBackgroundNode(context: context)
+        self.chatBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         self.chatBackgroundNode.displaysAsynchronously = false
         
         self.messagesContainerNode = ASDisplayNode()

@@ -2,7 +2,7 @@ import Foundation
 
 final class MutablePeerChatStateView: MutablePostboxView {
     let peerId: PeerId
-    var chatState: PostboxCoding?
+    var chatState: CodableEntry?
     
     init(postbox: PostboxImpl, peerId: PeerId) {
         self.peerId = peerId
@@ -17,6 +17,17 @@ final class MutablePeerChatStateView: MutablePostboxView {
             return false
         }
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        /*let chatState = postbox.peerChatStateTable.get(self.peerId)
+        if self.chatState != chatState {
+            self.chatState = chatState
+            return true
+        } else {
+            return false
+        }*/
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return PeerChatStateView(self)
@@ -25,7 +36,7 @@ final class MutablePeerChatStateView: MutablePostboxView {
 
 public final class PeerChatStateView: PostboxView {
     public let peerId: PeerId
-    public let chatState: PostboxCoding?
+    public let chatState: CodableEntry?
     
     init(_ view: MutablePeerChatStateView) {
         self.peerId = view.peerId

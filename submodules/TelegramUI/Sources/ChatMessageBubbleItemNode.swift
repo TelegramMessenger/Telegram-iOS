@@ -3321,6 +3321,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         }
                     }
                 }
+                if message.adAttribute != nil {
+                    canHaveSelection = false
+                }
             default:
                 break
         }

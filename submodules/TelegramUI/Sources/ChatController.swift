@@ -508,7 +508,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         default:
             break
         }
-        self.chatBackgroundNode = WallpaperBackgroundNode(context: context, useSharedAnimationPhase: useSharedAnimationPhase)
+        self.chatBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: useSharedAnimationPhase, useExperimentalImplementation: self.context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
         self.wallpaperReady.set(self.chatBackgroundNode.isReady)
         
         var locationBroadcastPanelSource: LocationBroadcastPanelSource
@@ -4998,8 +4998,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var minOffsetForNavigation: CGFloat = 40.0
             strongSelf.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
                 if let itemNode = itemNode as? ChatMessageBubbleItemNode {
-                    if itemNode.item?.content.firstMessage.adAttribute != nil {
+                    if let message = itemNode.item?.content.firstMessage, message.adAttribute != nil {
                         minOffsetForNavigation += itemNode.bounds.height
+
+                        switch offset {
+                            case let .known(offset):
+                                if offset <= itemNode.bounds.height / 2.0 {
+                                    strongSelf.chatDisplayNode.historyNode.adSeenProcessingManager.add([message.id])
+                                }
+                        default:
+                            break
+                        }
                     }
                 }
                 return false

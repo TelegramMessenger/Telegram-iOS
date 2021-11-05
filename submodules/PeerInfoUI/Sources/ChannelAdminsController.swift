@@ -178,7 +178,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelAdminsControllerArguments
         switch self {
             case let .recentActions(_, text):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openRecentActions()
                 })
             case let .adminsHeader(_, title):

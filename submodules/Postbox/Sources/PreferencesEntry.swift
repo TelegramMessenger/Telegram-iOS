@@ -13,9 +13,35 @@ public final class CodableEntry: Equatable {
         self.data = encoder.makeData()
     }
 
+    public init(legacyValue: PostboxCoding) {
+        let encoder = PostboxEncoder()
+        encoder.encodeRootObject(legacyValue)
+        self.data = encoder.makeData()
+    }
+
     public func get<T: Decodable>(_ type: T.Type) -> T? {
         let decoder = PostboxDecoder(buffer: MemoryBuffer(data: self.data))
         return decoder.decode(T.self, forKey: "_")
+    }
+
+    public func getLegacy<T: PostboxCoding>(_ type: T.Type) -> T? {
+        let decoder = PostboxDecoder(buffer: MemoryBuffer(data: self.data))
+        let object = decoder.decodeRootObject()
+        if let object = object as? T {
+            return object
+        } else {
+            return nil
+        }
+    }
+
+    public func getLegacy() -> PostboxCoding? {
+        let decoder = PostboxDecoder(buffer: MemoryBuffer(data: self.data))
+        let object = decoder.decodeRootObject()
+        if let object = object {
+            return object
+        } else {
+            return nil
+        }
     }
 
     public static func ==(lhs: CodableEntry, rhs: CodableEntry) -> Bool {

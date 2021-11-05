@@ -48,6 +48,10 @@ final class MutableItemCollectionInfoView: MutablePostboxView {
         }
         return updated
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return ItemCollectionInfoView(self)

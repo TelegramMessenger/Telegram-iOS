@@ -136,7 +136,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
-        self.nativeNode = WallpaperBackgroundNode(context: context)
+        self.nativeNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         self.cropNode = WallpaperCropNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)
@@ -812,7 +812,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         switch wallpaper {
         case let .gradient(gradient):
             if gradient.colors.count >= 3 {
-                self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
+                self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring), extendAnimation: false)
             } else {
                 let rotation = gradient.settings.rotation ?? 0
                 self.requestRotateGradient?((rotation + 90) % 360)
@@ -820,7 +820,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         case let .file(file):
             if file.isPattern {
                 if file.settings.colors.count >= 3 {
-                    self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
+                    self.nativeNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring), extendAnimation: false)
                 } else {
                     let rotation = file.settings.rotation ?? 0
                     self.requestRotateGradient?((rotation + 90) % 360)

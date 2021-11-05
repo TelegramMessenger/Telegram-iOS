@@ -42,6 +42,10 @@ final class MutableBasicPeerView: MutablePostboxView {
         
         return updated
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return BasicPeerView(self)

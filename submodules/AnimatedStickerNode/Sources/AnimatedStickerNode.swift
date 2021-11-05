@@ -81,6 +81,7 @@ public final class AnimatedStickerFrame {
         self.type = type
         self.width = width
         self.height = height
+        assert(bytesPerRow > 0)
         self.bytesPerRow = bytesPerRow
         self.index = index
         self.isLastFrame = isLastFrame
@@ -687,7 +688,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         self.currentFrame += 1
         if draw {
             if let cache = self.cache, let yuvData = cache.readUncompressedYuvFrame(index: frameIndex) {
-                return AnimatedStickerFrame(data: yuvData, type: .yuva, width: self.width, height: self.height, bytesPerRow: 0, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount)
+                return AnimatedStickerFrame(data: yuvData, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.width * 2, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount)
             } else {
                 var frameData = Data(count: self.bytesPerRow * self.height)
                 frameData.withUnsafeMutableBytes { buffer -> Void in
@@ -1134,6 +1135,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             guard let strongSelf = self else {
                                 return
                             }
+
+                            assert(frame.bytesPerRow != 0)
                             
                             strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, completion: {
                                 guard let strongSelf = self else {

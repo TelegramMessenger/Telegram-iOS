@@ -132,7 +132,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
         
         return { item, params, neighbors in
             if currentBackgroundNode == nil {
-                currentBackgroundNode = WallpaperBackgroundNode(context: item.context)
+                currentBackgroundNode = createWallpaperBackgroundNode(context: item.context, forChatDisplay: false)
             }
             currentBackgroundNode?.update(wallpaper: item.wallpaper)
             currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
