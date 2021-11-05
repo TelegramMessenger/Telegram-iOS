@@ -286,7 +286,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelAdminControllerArguments
         switch self {
             case let .info(_, _, dateTimeFormat, peer, presence):
-                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: EnginePeer(peer), presence: presence.flatMap(EnginePeer.Presence.init), memberCount: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rankTitle(_, text, count, limit):
@@ -987,9 +987,9 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                                         if let admin = adminView.peers[adminView.peerId] {
                                             switch channel.info {
                                                 case .broadcast:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                                 case .group:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                             }
                                         }
                                     case .notMutualContact:
@@ -1071,9 +1071,9 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                                         case .restricted:
                                             switch channel.info {
                                                 case .broadcast:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                                 case .group:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                             }
                                         case .notMutualContact:
                                             if case .broadcast = channel.info {
@@ -1132,7 +1132,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                             updateRightsDisposable.set((context.engine.peers.addGroupAdmin(peerId: peerId, adminId: adminId)
                             |> deliverOnMainQueue).start(error: { error in
                                 if case let .addMemberError(error) = error, case .privacy = error, let admin = adminView.peers[adminView.peerId] {
-                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 } else if case .adminsTooMuch = error {
                                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Group_ErrorAdminsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
@@ -1192,7 +1192,7 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                                     if case let .addMemberError(error) = error {
                                         var text = presentationData.strings.Login_UnknownError
                                         if case .restricted = error, let admin = adminView.peers[adminView.peerId] {
-                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
+                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                         } else if case .tooMuchJoined = error {
                                             text = presentationData.strings.Invite_ChannelsTooMuch
                                         }

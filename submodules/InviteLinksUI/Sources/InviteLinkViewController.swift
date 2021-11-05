@@ -23,13 +23,13 @@ import UndoUI
 
 class InviteLinkViewInteraction {
     let context: AccountContext
-    let openPeer: (PeerId) -> Void
+    let openPeer: (EnginePeer.Id) -> Void
     let copyLink: (ExportedInvitation) -> Void
     let shareLink: (ExportedInvitation) -> Void
     let editLink: (ExportedInvitation) -> Void
     let contextAction: (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, openPeer: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, editLink: @escaping (ExportedInvitation) -> Void, contextAction: @escaping (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, openPeer: @escaping (EnginePeer.Id) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, editLink: @escaping (ExportedInvitation) -> Void, contextAction: @escaping (ExportedInvitation, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.openPeer = openPeer
         self.copyLink = copyLink
@@ -52,16 +52,20 @@ private enum InviteLinkViewEntryId: Hashable {
     case link
     case creatorHeader
     case creator
+    case requestHeader
+    case request(EnginePeer.Id)
     case importerHeader
-    case importer(PeerId)
+    case importer(EnginePeer.Id)
 }
 
 private enum InviteLinkViewEntry: Comparable, Identifiable {
     case link(PresentationTheme, ExportedInvitation)
     case creatorHeader(PresentationTheme, String)
-    case creator(PresentationTheme, PresentationDateTimeFormat, Peer, Int32)
+    case creator(PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32)
+    case requestHeader(PresentationTheme, String, String, Bool)
+    case request(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32, Bool)
     case importerHeader(PresentationTheme, String, String, Bool)
-    case importer(Int32, PresentationTheme, PresentationDateTimeFormat, Peer, Int32, Bool)
+    case importer(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32, Bool)
     
     var stableId: InviteLinkViewEntryId {
         switch self {
@@ -71,6 +75,10 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 return .creatorHeader
             case .creator:
                 return .creator
+            case .requestHeader:
+                return .requestHeader
+            case let .request(_, _, _, peer, _, _):
+                return .request(peer.id)
             case .importerHeader:
                 return .importerHeader
             case let .importer(_, _, _, peer, _, _):
@@ -93,7 +101,19 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     return false
                 }
             case let .creator(lhsTheme, lhsDateTimeFormat, lhsPeer, lhsDate):
-                if case let .creator(rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate {
+                if case let .creator(rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsDate == rhsDate {
+                    return true
+                } else {
+                    return false
+                }
+            case let .requestHeader(lhsTheme, lhsTitle, lhsSubtitle, lhsExpired):
+                if case let .requestHeader(rhsTheme, rhsTitle, rhsSubtitle, rhsExpired) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsExpired == rhsExpired {
+                    return true
+                } else {
+                    return false
+                }
+            case let .request(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsPeer, lhsDate, lhsLoading):
+                if case let .request(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate, rhsLoading) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsDate == rhsDate, lhsLoading == rhsLoading {
                     return true
                 } else {
                     return false
@@ -105,7 +125,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     return false
                 }
             case let .importer(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsPeer, lhsDate, lhsLoading):
-                if case let .importer(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate, rhsLoading) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, arePeersEqual(lhsPeer, rhsPeer), lhsDate == rhsDate, lhsLoading == rhsLoading {
+                if case let .importer(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsDate, rhsLoading) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsDate == rhsDate, lhsLoading == rhsLoading {
                     return true
                 } else {
                     return false
@@ -119,33 +139,49 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 switch rhs {
                     case .link:
                         return false
-                    case .creatorHeader, .creator, .importerHeader, .importer:
+                    case .creatorHeader, .creator, .requestHeader, .request, .importerHeader, .importer:
                         return true
                 }
             case .creatorHeader:
                 switch rhs {
                     case .link, .creatorHeader:
                         return false
-                    case .creator, .importerHeader, .importer:
+                    case .creator, .requestHeader, .request, .importerHeader, .importer:
                         return true
                 }
             case .creator:
                 switch rhs {
                     case .link, .creatorHeader, .creator:
                         return false
-                    case .importerHeader, .importer:
+                    case .requestHeader, .request, .importerHeader, .importer:
                         return true
             }
+            case .requestHeader:
+                switch rhs {
+                    case .link, .creatorHeader, .creator, .requestHeader:
+                        return false
+                    case .request, .importerHeader, .importer:
+                        return true
+                }
+            case let .request(lhsIndex, _, _, _, _, _):
+                switch rhs {
+                    case .link, .creatorHeader, .creator, .requestHeader:
+                        return false
+                    case let .request(rhsIndex, _, _, _, _, _):
+                        return lhsIndex < rhsIndex
+                    case .importerHeader, .importer:
+                        return true
+                }
             case .importerHeader:
                 switch rhs {
-                    case .link, .creatorHeader, .importerHeader:
+                    case .link, .creatorHeader, .creator, .requestHeader, .request, .importerHeader:
                         return false
-                    case .creator, .importer:
+                    case .importer:
                         return true
                 }
             case let .importer(lhsIndex, _, _, _, _, _):
                 switch rhs {
-                    case .link, .creatorHeader, .creator, .importerHeader:
+                    case .link, .creatorHeader, .creator, .importerHeader, .request, .requestHeader:
                         return false
                     case let .importer(rhsIndex, _, _, _, _, _):
                         return lhsIndex < rhsIndex
@@ -175,7 +211,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                 return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, hasTopStripe: false, noInsets: true, tag: nil)
-            case let .importerHeader(_, title, subtitle, expired):
+            case let .importerHeader(_, title, subtitle, expired), let .requestHeader(_, title, subtitle, expired):
                 let additionalText: SectionHeaderAdditionalText
                 if !subtitle.isEmpty {
                     if expired {
@@ -187,7 +223,7 @@ private enum InviteLinkViewEntry: Comparable, Identifiable {
                     additionalText = .none
                 }
                 return SectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title, additionalText: additionalText)
-            case let .importer(_, _, dateTimeFormat, peer, date, loading):
+            case let .importer(_, _, dateTimeFormat, peer, date, loading), let .request(_, _, dateTimeFormat, peer, date, loading):
                 let dateString = stringForFullDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: interaction.context, peer: peer, height: .generic, nameStyle: .distinctBold, presence: nil, text: .text(dateString, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: peer.id != account.peerId, sectionId: 0, action: {
                     interaction.openPeer(peer.id)
@@ -233,7 +269,7 @@ public final class InviteLinkViewController: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
-    private let peerId: PeerId
+    private let peerId: EnginePeer.Id
     private let invite: ExportedInvitation
     private let invitationsContext: PeerExportedInvitationsContext?
     private let revokedInvitationsContext: PeerExportedInvitationsContext?
@@ -243,7 +279,7 @@ public final class InviteLinkViewController: ViewController {
     private var presentationDataDisposable: Disposable?
     fileprivate var presentationDataPromise = Promise<PresentationData>()
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, revokedInvitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, invite: ExportedInvitation, invitationsContext: PeerExportedInvitationsContext?, revokedInvitationsContext: PeerExportedInvitationsContext?, importersContext: PeerInvitationImportersContext?) {
         self.context = context
         self.peerId = peerId
         self.invite = invite
@@ -338,10 +374,11 @@ public final class InviteLinkViewController: ViewController {
         private weak var controller: InviteLinkViewController?
         
         private let context: AccountContext
-        private let peerId: PeerId
-        private let invite: ExportedInvitation
+        private let peerId: EnginePeer.Id
+        private var invite: ExportedInvitation
         
         private let importersContext: PeerInvitationImportersContext
+        private let requestsContext: PeerInvitationImportersContext?
         
         private var interaction: InviteLinkViewInteraction?
         
@@ -369,7 +406,7 @@ public final class InviteLinkViewController: ViewController {
         
         private var validLayout: ContainerViewLayout?
         
-        init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, invite: ExportedInvitation, importersContext: PeerInvitationImportersContext?, controller: InviteLinkViewController) {
+        init(context: AccountContext, presentationData: PresentationData, peerId: EnginePeer.Id, invite: ExportedInvitation, importersContext: PeerInvitationImportersContext?, controller: InviteLinkViewController) {
             self.context = context
             self.peerId = peerId
             self.invite = invite
@@ -377,7 +414,12 @@ public final class InviteLinkViewController: ViewController {
             self.presentationDataPromise = Promise(self.presentationData)
             self.controller = controller
             
-            self.importersContext = importersContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, invite: invite)
+            self.importersContext = importersContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: invite, requested: false))
+            if invite.requestApproval {
+                self.requestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: invite, requested: true))
+            } else {
+                self.requestsContext = nil
+            }
             
             self.dimNode = ASDisplayNode()
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
@@ -441,6 +483,46 @@ public final class InviteLinkViewController: ViewController {
                 self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }, shareLink: { [weak self] invite in
                 let shareController = ShareController(context: context, subject: .url(invite.link))
+                shareController.completed = { [weak self] peerIds in
+                    if let strongSelf = self {
+                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                            var peers: [Peer] = []
+                            for peerId in peerIds {
+                                if let peer = transaction.getPeer(peerId) {
+                                    peers.append(peer)
+                                }
+                            }
+                            return peers
+                        } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                            if let strongSelf = self {
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                
+                                let text: String
+                                var savedMessages = false
+                                if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                                    text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_SavedMessages_One
+                                    savedMessages = true
+                                } else {
+                                    if peers.count == 1, let peer = peers.first {
+                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_Chat_One(peerName).string
+                                    } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                                    } else if let peer = peers.first {
+                                        let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                                    } else {
+                                        text = ""
+                                    }
+                                }
+                                
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
+                            }
+                        })
+                    }
+                }
                 shareController.actionCompleted = { [weak self] in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
@@ -565,7 +647,7 @@ public final class InviteLinkViewController: ViewController {
                     })))
                 }
                            
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             })
             
@@ -573,15 +655,47 @@ public final class InviteLinkViewController: ViewController {
             let previousCount = Atomic<Int32?>(value: nil)
             let previousLoading = Atomic<Bool?>(value: nil)
             
+            let requestsState: Signal<PeerInvitationImportersState, NoError>
+            if let requestsContext = self.requestsContext {
+                requestsState = requestsContext.state
+            } else {
+                requestsState = .single(PeerInvitationImportersState.Empty)
+            }
+            
             let creatorPeer = context.account.postbox.loadedPeerWithId(invite.adminId)
-            self.disposable = (combineLatest(self.presentationDataPromise.get(), self.importersContext.state, creatorPeer)
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, creatorPeer in
+            self.disposable = (combineLatest(self.presentationDataPromise.get(), self.importersContext.state, requestsState, creatorPeer)
+            |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, requestsState, creatorPeer in
                 if let strongSelf = self {
                     var entries: [InviteLinkViewEntry] = []
                     
                     entries.append(.link(presentationData.theme, invite))
                     entries.append(.creatorHeader(presentationData.theme, presentationData.strings.InviteLink_CreatedBy.uppercased()))
-                    entries.append(.creator(presentationData.theme, presentationData.dateTimeFormat, creatorPeer, invite.date))
+                    entries.append(.creator(presentationData.theme, presentationData.dateTimeFormat, EnginePeer(creatorPeer), invite.date))
+                                        
+                    if !requestsState.importers.isEmpty || (state.isLoadingMore && requestsState.count > 0) {
+                        entries.append(.requestHeader(presentationData.theme, presentationData.strings.MemberRequests_PeopleRequested(Int32(requestsState.count)).uppercased(), "", false))
+                    }
+                    
+                    var count: Int32
+                    var loading: Bool
+                    var index: Int32 = 0
+                    if requestsState.importers.isEmpty && requestsState.isLoadingMore {
+                        count = min(4, state.count)
+                        loading = true
+                        let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                        for i in 0 ..< count {
+                            entries.append(.request(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
+                        }
+                    } else {
+                        count = min(4, Int32(requestsState.importers.count))
+                        loading = false
+                        for importer in requestsState.importers {
+                            if let peer = importer.peer.peer {
+                                entries.append(.request(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
+                            }
+                            index += 1
+                        }
+                    }
                     
                     if !state.importers.isEmpty || (state.isLoadingMore && state.count > 0) {
                         let subtitle: String
@@ -594,27 +708,24 @@ public final class InviteLinkViewController: ViewController {
                             subtitle = ""
                             subtitleExpired = false
                         }
-                        
+
                         entries.append(.importerHeader(presentationData.theme, presentationData.strings.InviteLink_PeopleJoined(Int32(state.count)).uppercased(), subtitle, subtitleExpired))
                     }
                     
-                    let count: Int32
-                    let loading: Bool
-                    
-                    var index: Int32 = 0
+                    index = 0
                     if state.importers.isEmpty && state.isLoadingMore {
                         count = min(4, state.count)
                         loading = true
-                        let fakeUser = TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                        let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
                         for i in 0 ..< count {
-                            entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, fakeUser, 0, true))
+                            entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
                         }
                     } else {
                         count = min(4, Int32(state.importers.count))
                         loading = false
                         for importer in state.importers {
                             if let peer = importer.peer.peer {
-                                entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, peer, importer.date, false))
+                                entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
                             }
                             index += 1
                         }
@@ -697,19 +808,26 @@ public final class InviteLinkViewController: ViewController {
             }
             
             let navigationController = parentController.navigationController as? NavigationController
-            self.controller?.dismiss()
-            
+          
+  
             let invitationsContext = parentController.invitationsContext
             let revokedInvitationsContext = parentController.revokedInvitationsContext
             if let navigationController = navigationController {
                 let updatedPresentationData = (self.presentationData, parentController.presentationDataPromise.get())
-                let controller = inviteLinkEditController(context: self.context, updatedPresentationData: updatedPresentationData, peerId: self.peerId, invite: self.invite, completion: { invite in
+                let controller = inviteLinkEditController(context: self.context, updatedPresentationData: updatedPresentationData, peerId: self.peerId, invite: self.invite, completion: { [weak self] invite in
                     if let invite = invite {
                         if invite.isRevoked {
                             invitationsContext?.remove(invite)
                             revokedInvitationsContext?.add(invite.withUpdated(isRevoked: true))
+                            
+                            self?.controller?.dismiss()
                         } else {
                             invitationsContext?.update(invite)
+                            
+                            if let strongSelf = self, let layout = strongSelf.validLayout {
+                                strongSelf.invite = invite
+                                strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                            }
                         }
                     }
                 })
@@ -728,7 +846,7 @@ public final class InviteLinkViewController: ViewController {
             
             self.historyBackgroundContentNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             self.headerBackgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_InviteLink, font: titleFont, textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: titleFont, textColor: self.presentationData.theme.actionSheet.primaryTextColor)
             self.subtitleNode.attributedText = NSAttributedString(string: self.subtitleNode.attributedText?.string ?? "", font: subtitleFont, textColor: self.presentationData.theme.list.itemSecondaryTextColor)
             
             let accentColor = self.presentationData.theme.actionSheet.controlAccentColor
@@ -822,7 +940,6 @@ public final class InviteLinkViewController: ViewController {
             transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 68.0))
             
             var titleText = self.presentationData.strings.InviteLink_InviteLink
-  
             
             var subtitleText = ""
             var subtitleColor = self.presentationData.theme.list.itemSecondaryTextColor
@@ -858,6 +975,10 @@ public final class InviteLinkViewController: ViewController {
                 }
             }
             
+            if let title = self.invite.title, !title.isEmpty {
+                titleText = title
+            }
+            
             self.titleNode.attributedText = NSAttributedString(string: titleText, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
             self.subtitleNode.attributedText = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: subtitleColor)
                         
@@ -870,11 +991,11 @@ public final class InviteLinkViewController: ViewController {
             transition.updateFrame(node: self.titleNode, frame: titleFrame)
             
             let editSize = self.editButton.measure(CGSize(width: layout.size.width, height: headerHeight))
-            let editFrame = CGRect(origin: CGPoint(x: 16.0, y: 18.0), size: editSize)
+            let editFrame = CGRect(origin: CGPoint(x: 16.0 + layout.safeInsets.left, y: 18.0), size: editSize)
             transition.updateFrame(node: self.editButton, frame: editFrame)
             
             let doneSize = self.doneButton.measure(CGSize(width: layout.size.width, height: headerHeight))
-            let doneFrame = CGRect(origin: CGPoint(x: layout.size.width - doneSize.width - 16.0, y: 18.0), size: doneSize)
+            let doneFrame = CGRect(origin: CGPoint(x: layout.size.width - doneSize.width - 16.0 - layout.safeInsets.right, y: 18.0), size: doneSize)
             transition.updateFrame(node: self.doneButton, frame: doneFrame)
         }
         

@@ -458,7 +458,6 @@ func _internal_downloadMessage(postbox: Postbox, network: Network, messageId: Me
                 }
             }
             |> `catch` { _ -> Signal<Message?, NoError> in
-                return .single(nil)
             }
         }
     }
@@ -557,7 +556,6 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
         }
     }
     |> `catch` { _ -> Signal<Message?, NoError> in
-        return .single(nil)
     }
 }
 

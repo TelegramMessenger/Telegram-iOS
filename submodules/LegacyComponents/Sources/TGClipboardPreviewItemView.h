@@ -29,7 +29,7 @@
 @property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
 @property (nonatomic, copy) void (^presentTimerController)(void (^)(int32_t));
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context images:(NSArray *)images allowGrouping:(bool)allowGrouping;
 
 - (void)setCollapsed:(bool)collapsed animated:(bool)animated;
 

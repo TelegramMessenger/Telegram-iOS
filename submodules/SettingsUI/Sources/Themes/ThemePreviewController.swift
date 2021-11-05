@@ -18,7 +18,7 @@ import UndoUI
 import TelegramNotices
 
 public enum ThemePreviewSource {
-    case settings(PresentationThemeReference, TelegramWallpaper?)
+    case settings(PresentationThemeReference, TelegramWallpaper?, Bool)
     case theme(TelegramTheme)
     case slug(String, TelegramMediaFile)
     case themeSettings(String, TelegramThemeSettings)
@@ -50,6 +50,8 @@ public final class ThemePreviewController: ViewController {
     
     private var disposable: Disposable?
     private var applyDisposable = MetaDisposable()
+    
+    var customApply: (() -> Void)?
 
     public init(context: AccountContext, previewTheme: PresentationTheme, source: ThemePreviewSource) {
         self.context = context
@@ -106,18 +108,26 @@ public final class ThemePreviewController: ViewController {
                     }
                 ))
                 hasInstallsCount = true
-            case let .settings(themeReference, _):
+            case let .settings(themeReference, _, _):
                 if case let .cloud(theme) = themeReference {
                     self.theme.set(getTheme(account: context.account, slug: theme.theme.slug)
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
                         return .single(nil)
                     })
-                    themeName = theme.theme.title
-                    hasInstallsCount = true
+                    if let emoticon = theme.theme.emoticon{
+                        themeName = emoticon
+                    } else {
+                        themeName = theme.theme.title
+                        hasInstallsCount = true
+                    }
                 } else {
                     self.theme.set(.single(nil))
-                    themeName = previewTheme.name.string
+                    if [.builtin(.dayClassic), .builtin(.night)].contains(themeReference) {
+                        themeName = "🏠"
+                    } else {
+                        themeName = previewTheme.name.string
+                    }
                 }
             default:
                 self.theme.set(.single(nil))
@@ -145,7 +155,7 @@ public final class ThemePreviewController: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] theme, presentationTheme in
             if let strongSelf = self, let theme = theme {
                 let titleView = CounterContollerTitleView(theme: strongSelf.previewTheme)
-                titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount ?? 0)))
+                titleView.title = CounterContollerTitle(title: themeName, counter: hasInstallsCount ? strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount ?? 0)) : "")
                 strongSelf.navigationItem.titleView = titleView
                 strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings))
             }
@@ -184,13 +194,14 @@ public final class ThemePreviewController: ViewController {
         super.loadDisplayNode()
         
         var isPreview = false
-        if case .settings = self.source {
-            isPreview = true
-        }
-        
+        var forceReady = false
         var initialWallpaper: TelegramWallpaper?
-        if case let .settings(_, currentWallpaper) = self.source, let wallpaper = currentWallpaper {
-            initialWallpaper = wallpaper
+        if case let .settings(_, currentWallpaper, preview) = self.source {
+            isPreview = preview
+            forceReady = true
+            if let wallpaper = currentWallpaper {
+                initialWallpaper = wallpaper
+            }
         }
         
         self.displayNode = ThemePreviewControllerNode(context: self.context, previewTheme: self.previewTheme, initialWallpaper: initialWallpaper, dismiss: { [weak self] in
@@ -201,7 +212,7 @@ public final class ThemePreviewController: ViewController {
             if let strongSelf = self {
                 strongSelf.apply()
             }
-        }, isPreview: isPreview, ready: self._ready)
+        }, isPreview: isPreview, forceReady: forceReady, ready: self._ready)
         self.displayNodeDidLoad()
         
         let previewTheme = self.previewTheme
@@ -218,6 +229,14 @@ public final class ThemePreviewController: ViewController {
     }
     
     private func apply() {
+        if let customApply = self.customApply {
+            customApply()
+            Queue.mainQueue().after(0.2) {
+                self.dismiss()
+            }
+            return
+        }
+        
         let previewTheme = self.previewTheme
         let theme: Signal<PresentationThemeReference?, NoError>
         let context = self.context
@@ -227,7 +246,7 @@ public final class ThemePreviewController: ViewController {
         let disposable = self.applyDisposable
         
         switch self.source {
-            case let .settings(reference, _):
+            case let .settings(reference, _, _):
                 theme = .single(reference)
             case .theme, .slug, .themeSettings:
                 theme = combineLatest(self.theme.get() |> take(1), wallpaperPromise.get() |> take(1))
@@ -347,7 +366,9 @@ public final class ThemePreviewController: ViewController {
         |> mapToSignal { updatedTheme, existing -> Signal<(PresentationThemeReference, PresentationThemeAccentColor?, Bool, PresentationThemeReference, Bool)?, NoError> in
             if case let .cloud(info) = updatedTheme {
                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
-                let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
+                if info.theme.emoticon == nil {
+                    let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
+                }
             }
 
             let autoNightModeTriggered = context.sharedContext.currentPresentationData.with { $0 }.autoNightModeTriggered
@@ -356,7 +377,7 @@ public final class ThemePreviewController: ViewController {
                 var previousDefaultTheme: (PresentationThemeReference, PresentationThemeAccentColor?, Bool, PresentationThemeReference, Bool)?
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                     let currentSettings: PresentationThemeSettings
-                    if let entry = entry as? PresentationThemeSettings {
+                    if let entry = entry?.get(PresentationThemeSettings.self) {
                         currentSettings = entry
                     } else {
                         currentSettings = PresentationThemeSettings.defaultSettings
@@ -380,14 +401,14 @@ public final class ThemePreviewController: ViewController {
                     }
                     
                     var themeSpecificAccentColors = updatedSettings.themeSpecificAccentColors
-                    if case let .cloud(info) = updatedTheme, let settings = info.theme.settings {
+                    if case let .cloud(info) = updatedTheme, let settings = info.theme.settings?.first {
                         let baseThemeReference = PresentationThemeReference.builtin(PresentationBuiltinThemeReference(baseTheme: settings.baseTheme))
                         themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: updatedTheme.index)
                     }
                     
                     var themeSpecificChatWallpapers = updatedSettings.themeSpecificChatWallpapers
                     themeSpecificChatWallpapers[updatedTheme.index] = nil
-                    return updatedSettings.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers).withUpdatedThemeSpecificAccentColors(themeSpecificAccentColors)
+                    return PreferencesEntry(updatedSettings.withUpdatedThemeSpecificChatWallpapers(themeSpecificChatWallpapers).withUpdatedThemeSpecificAccentColors(themeSpecificAccentColors))
                 })
                 return previousDefaultTheme
             }
@@ -421,7 +442,9 @@ public final class ThemePreviewController: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] previousDefaultTheme in
             if let strongSelf = self, let layout = strongSelf.validLayout {
                 Queue.mainQueue().after(0.3) {
-                    if layout.size.width >= 375.0 {
+                    if case .settings = strongSelf.source {
+                        
+                    } else if layout.size.width >= 375.0 {
                         let navigationController = strongSelf.navigationController as? NavigationController
                         if let (previousDefaultTheme, previousAccentColor, autoNightMode, theme, _) = previousDefaultTheme {
                             let _ = (ApplicationSpecificNotice.getThemeChangeTip(accountManager: strongSelf.context.sharedContext.accountManager)

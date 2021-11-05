@@ -34,7 +34,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                     peerSignal = context.account.postbox.loadedPeerWithId(peerId) |> map(Optional.init)
                     navigateDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { peer in
                         if let controller = controller, let peer = peer {
-                            if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                            if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                                 (controller.navigationController as? NavigationController)?.pushViewController(infoController)
                             }
                         }
@@ -126,7 +126,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         let peerSignal = context.account.postbox.loadedPeerWithId(peerId)
                         let _ = (peerSignal
                         |> deliverOnMainQueue).start(next: { peer in
-                            let searchController = HashtagSearchController(context: context, peer: peer, query: hashtag)
+                            let searchController = HashtagSearchController(context: context, peer: EnginePeer(peer), query: hashtag)
                             (controller.navigationController as? NavigationController)?.pushViewController(searchController)
                         })
                     }

@@ -82,10 +82,10 @@ class MessageHistoryTagsSummaryTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 4 + 8 + 4)
     
-    init(valueBox: ValueBox, table: ValueBoxTable, invalidateTable: InvalidatedMessageHistoryTagsSummaryTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, invalidateTable: InvalidatedMessageHistoryTagsSummaryTable) {
         self.invalidateTable = invalidateTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(key: MessageHistoryTagsSummaryKey, sharedKey: ValueBoxKey = ValueBoxKey(length: 4 + 8 + 4)) -> ValueBoxKey {
@@ -171,6 +171,10 @@ class MessageHistoryTagsSummaryTable: Table {
                 }
             }
             self.updatedKeys.removeAll()
+        }
+
+        if !self.useCaches {
+            self.cachedSummaries.removeAll()
         }
     }
 }

@@ -117,8 +117,23 @@ public final class ToolbarNode: ASDisplayNode {
         
         self.rightTitle.attributedText = NSAttributedString(string: toolbar.rightAction?.title ?? "", font: Font.regular(17.0), textColor: (toolbar.rightAction?.isEnabled ?? false) ? self.theme.tabBarSelectedTextColor : self.theme.tabBarTextColor)
         self.rightButton.accessibilityLabel = toolbar.rightAction?.title
-        
-        self.middleTitle.attributedText = NSAttributedString(string: toolbar.middleAction?.title ?? "", font: Font.regular(17.0), textColor: (toolbar.middleAction?.isEnabled ?? false) ? self.theme.tabBarSelectedTextColor : self.theme.tabBarTextColor)
+
+        let middleColor: UIColor
+        if let middleAction = toolbar.middleAction {
+            if middleAction.isEnabled {
+                switch middleAction.color {
+                case .accent:
+                    middleColor = self.theme.tabBarSelectedTextColor
+                case let .custom(color):
+                    middleColor = color
+                }
+            } else {
+                middleColor = self.theme.tabBarTextColor
+            }
+        } else {
+            middleColor = self.theme.tabBarTextColor
+        }
+        self.middleTitle.attributedText = NSAttributedString(string: toolbar.middleAction?.title ?? "", font: Font.regular(17.0), textColor: middleColor)
         self.middleButton.accessibilityLabel = toolbar.middleAction?.title
         
         var size = size

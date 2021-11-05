@@ -1,6 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
+import TelegramApi
 
 public extension TelegramEngine {
     final class Messages {
@@ -206,6 +207,95 @@ public extension TelegramEngine {
 
         public func messageReadStats(id: MessageId) -> Signal<MessageReadStats?, NoError> {
             return _internal_messageReadStats(account: self.account, id: id)
+        }
+
+        public func requestCancelLiveLocation(ids: [MessageId]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for id in ids {
+                    transaction.updateMessage(id, update: { currentMessage in
+                        var storeForwardInfo: StoreMessageForwardInfo?
+                        if let forwardInfo = currentMessage.forwardInfo {
+                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+                        }
+                        var updatedMedia = currentMessage.media
+                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                        for i in 0 ..< updatedMedia.count {
+                            if let media = updatedMedia[i] as? TelegramMediaMap, let _ = media.liveBroadcastingTimeout {
+                                updatedMedia[i] = TelegramMediaMap(latitude: media.latitude, longitude: media.longitude, heading: media.heading, accuracyRadius: media.accuracyRadius, geoPlace: media.geoPlace, venue: media.venue, liveBroadcastingTimeout: max(0, timestamp - currentMessage.timestamp - 1), liveProximityNotificationRadius: nil)
+                            }
+                        }
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
+                    })
+                }
+            }
+            |> ignoreValues
+        }
+
+        public func activeLiveLocationMessages() -> Signal<[EngineMessage], NoError> {
+            let viewKey: PostboxViewKey = .localMessageTag(.OutgoingLiveLocation)
+            return self.account.postbox.combinedView(keys: [viewKey])
+            |> map { view in
+                if let view = view.views[viewKey] as? LocalMessageTagsView {
+                    return view.messages.values.map(EngineMessage.init)
+                } else {
+                    return []
+                }
+            }
+        }
+
+        public func sparseMessageList(peerId: EnginePeer.Id, tag: EngineMessage.Tags) -> SparseMessageList {
+            return SparseMessageList(account: self.account, peerId: peerId, messageTag: tag)
+        }
+
+        public func sparseMessageCalendar(peerId: EnginePeer.Id, tag: EngineMessage.Tags) -> SparseMessageCalendar {
+            return SparseMessageCalendar(account: self.account, peerId: peerId, messageTag: tag)
+        }
+
+        public func refreshMessageTagStats(peerId: EnginePeer.Id, tags: [EngineMessage.Tags]) -> Signal<Never, NoError> {
+            let account = self.account
+            return self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                return transaction.getPeer(peerId).flatMap(apiInputPeer)
+            }
+            |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+                guard let inputPeer = inputPeer else {
+                    return .complete()
+                }
+                var signals: [Signal<(count: Int32?, topId: Int32?), NoError>] = []
+                for tag in tags {
+                    guard let filter = messageFilterForTagMask(tag) else {
+                        signals.append(.single((nil, nil)))
+                        continue
+                    }
+                    signals.append(self.account.network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, topMsgId: nil, filter: filter, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
+                    |> map { result -> (count: Int32?, topId: Int32?) in
+                        switch result {
+                        case let .messagesSlice(_, count, _, _, messages, _, _):
+                            return (count, messages.first?.id(namespace: Namespaces.Message.Cloud)?.id)
+                        case let .channelMessages(_, _, count, _, messages, _, _):
+                            return (count, messages.first?.id(namespace: Namespaces.Message.Cloud)?.id)
+                        case let .messages(messages, _, _):
+                            return (Int32(messages.count), messages.first?.id(namespace: Namespaces.Message.Cloud)?.id)
+                        case .messagesNotModified:
+                            return (nil, nil)
+                        }
+                    }
+                    |> `catch` { _ -> Signal<(count: Int32?, topId: Int32?), NoError> in
+                        return .single((nil, nil))
+                    })
+                }
+                return combineLatest(signals)
+                |> mapToSignal { counts -> Signal<Never, NoError> in
+                    return account.postbox.transaction { transaction in
+                        for i in 0 ..< tags.count {
+                            let (count, maxId) = counts[i]
+                            if let count = count {
+                                transaction.replaceMessageTagSummary(peerId: peerId, tagMask: tags[i], namespace: Namespaces.Message.Cloud, count: count, maxId: maxId ?? 1)
+                            }
+                        }
+                    }
+                    |> ignoreValues
+                }
+            }
         }
     }
 }

@@ -338,9 +338,9 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         let removeItem: (String) -> Void = { id in
             let _ = (context.account.postbox.transaction { transaction -> Signal<LocalizationInfo?, NoError> in
                 removeSavedLocalization(transaction: transaction, languageCode: id)
-                let state = transaction.getPreferencesEntry(key: PreferencesKeys.localizationListState) as? LocalizationListState
+                let state = transaction.getPreferencesEntry(key: PreferencesKeys.localizationListState)?.get(LocalizationListState.self)
                 return context.sharedContext.accountManager.transaction { transaction -> LocalizationInfo? in
-                    if let settings = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, let state = state {
+                    if let settings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self), let state = state {
                         if settings.primaryComponent.languageCode == id {
                             for item in state.availableOfficialLocalizations {
                                 if item.languageCode == "en" {
@@ -374,12 +374,12 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                         
             var entries: [LanguageListEntry] = []
             var activeLanguageCode: String?
-            if let localizationSettings = sharedData.entries[SharedDataKeys.localizationSettings] as? LocalizationSettings {
+            if let localizationSettings = sharedData.entries[SharedDataKeys.localizationSettings]?.get(LocalizationSettings.self) {
                 activeLanguageCode = localizationSettings.primaryComponent.languageCode
             }
             var existingIds = Set<String>()
             
-            let localizationListState = (view.views[preferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState] as? LocalizationListState
+            let localizationListState = (view.views[preferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState]?.get(LocalizationListState.self)
             if let localizationListState = localizationListState, !localizationListState.availableOfficialLocalizations.isEmpty {
                 strongSelf.currentListState = localizationListState
                 

@@ -88,7 +88,15 @@ public final class ContextControllerSourceNode: ASDisplayNode {
             }
         }
         contextGesture.activated = { [weak self] gesture, location in
-            if let activated = self?.activated {
+            guard let strongSelf = self else {
+                gesture.cancel()
+                return
+            }
+            if let customActivationProgress = strongSelf.customActivationProgress {
+                customActivationProgress(0.0, .ended(0.0))
+            }
+
+            if let activated = strongSelf.activated {
                 activated(gesture, location)
             } else {
                 gesture.cancel()

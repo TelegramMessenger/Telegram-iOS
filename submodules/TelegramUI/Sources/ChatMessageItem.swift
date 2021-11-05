@@ -47,8 +47,8 @@ public enum ChatMessageItemContent: Sequence {
     
     var firstMessageAttributes: ChatMessageEntryAttributes {
         switch self {
-            case let .message(message):
-                return message.attributes
+            case let .message(_, _, _, attributes):
+                return attributes
             case let .group(messages):
                 return messages[0].3
         }
@@ -58,10 +58,10 @@ public enum ChatMessageItemContent: Sequence {
         var index = 0
         return AnyIterator { () -> (Message, ChatMessageEntryAttributes)? in
             switch self {
-                case let .message(message):
+                case let .message(message, _, _, attributes):
                     if index == 0 {
                         index += 1
-                        return (message.message, message.attributes)
+                        return (message, attributes)
                     } else {
                         index += 1
                         return nil

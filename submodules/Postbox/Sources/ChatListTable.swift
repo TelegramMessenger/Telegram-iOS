@@ -115,8 +115,8 @@ public enum ChatListNamespaceEntry {
     
     public var index: ChatListIndex {
         switch self {
-            case let .peer(peer):
-                return peer.index
+            case let .peer(index, _, _, _, _):
+                return index
             case let .hole(index):
                 return ChatListIndex(pinningIndex: nil, messageIndex: index)
         }
@@ -133,12 +133,12 @@ final class ChatListTable: Table {
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
-    init(valueBox: ValueBox, table: ValueBoxTable, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.indexTable = indexTable
         self.metadataTable = metadataTable
         self.seedConfiguration = seedConfiguration
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(groupId: PeerGroupId, index: ChatListIndex, type: ChatListEntryType) -> ValueBoxKey {
@@ -245,8 +245,8 @@ final class ChatListTable: Table {
         }
     }
     
-    func getUnreadChatListPeerIds(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
-        let globalNotificationSettings = postbox.getGlobalNotificationSettings()
+    func getUnreadChatListPeerIds(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) -> [PeerId] {
+        let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
         
         var result: [PeerId] = []
         self.valueBox.range(self.table, start: self.upperBound(groupId: groupId), end: self.lowerBound(groupId: groupId), keys: { key in
@@ -797,13 +797,13 @@ final class ChatListTable: Table {
         return entries
     }
     
-    func getRelativeUnreadChatListIndex(postbox: Postbox, filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
+    func getRelativeUnreadChatListIndex(postbox: PostboxImpl, currentTransaction: Transaction, filtered: Bool, position: ChatListRelativePosition, groupId: PeerGroupId) -> ChatListIndex? {
         var result: ChatListIndex?
         
         let lower: ValueBoxKey
         let upper: ValueBoxKey
         
-        let globalNotificationSettings = postbox.getGlobalNotificationSettings()
+        let globalNotificationSettings = postbox.getGlobalNotificationSettings(transaction: currentTransaction)
         
         switch position {
             case let .earlier(index):

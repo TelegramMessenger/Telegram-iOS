@@ -10,7 +10,9 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
             
             var sha1AData = Data()
             sha1AData.count = 16 + 32
-            sha1AData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+            sha1AData.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 memcpy(bytes, msgKey, 16)
                 memcpy(bytes.advanced(by: 16), key.key.memory.advanced(by: x), 32)
             }
@@ -18,7 +20,9 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
             
             var sha1BData = Data()
             sha1BData.count = 16 + 16 + 16
-            sha1BData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+            sha1BData.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 memcpy(bytes, key.key.memory.advanced(by: 32 + x), 16)
                 memcpy(bytes.advanced(by: 16), msgKey, 16)
                 memcpy(bytes.advanced(by: 16 + 16), key.key.memory.advanced(by: 48 + x), 16)
@@ -27,7 +31,9 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
             
             var sha1CData = Data()
             sha1CData.count = 32 + 16
-            sha1CData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+            sha1CData.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 memcpy(bytes, key.key.memory.advanced(by: 64 + x), 32)
                 memcpy(bytes.advanced(by: 32), msgKey, 16)
             }
@@ -35,7 +41,9 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
             
             var sha1DData = Data()
             sha1DData.count = 16 + 32
-            sha1DData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+            sha1DData.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 memcpy(bytes, msgKey, 16)
                 memcpy(bytes.advanced(by: 16), key.key.memory.advanced(by: 96 + x), 32)
             }
@@ -43,32 +51,36 @@ private func messageKey(key: SecretChatKey, msgKey: UnsafeRawPointer, mode: Secr
             
             var aesKey = Data()
             aesKey.count = 8 + 12 + 12
-            aesKey.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                sha1A.withUnsafeBytes { (sha1A: UnsafePointer<UInt8>) -> Void in
-                    memcpy(bytes, sha1A, 8)
+            aesKey.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
+                sha1A.withUnsafeBytes { sha1A -> Void in
+                    memcpy(bytes, sha1A.baseAddress!.assumingMemoryBound(to: UInt8.self), 8)
                 }
-                sha1B.withUnsafeBytes { (sha1B: UnsafePointer<UInt8>) -> Void in
-                    memcpy(bytes.advanced(by: 8), sha1B.advanced(by: 8), 12)
+                sha1B.withUnsafeBytes { sha1B -> Void in
+                    memcpy(bytes.advanced(by: 8), sha1B.baseAddress!.assumingMemoryBound(to: UInt8.self).advanced(by: 8), 12)
                 }
-                sha1C.withUnsafeBytes { (sha1C: UnsafePointer<UInt8>) -> Void in
-                    memcpy(bytes.advanced(by: 8 + 12), sha1C.advanced(by: 4), 12)
+                sha1C.withUnsafeBytes { sha1C -> Void in
+                    memcpy(bytes.advanced(by: 8 + 12), sha1C.baseAddress!.assumingMemoryBound(to: UInt8.self).advanced(by: 4), 12)
                 }
             }
             
             var aesIv = Data()
             aesIv.count = 12 + 8 + 4 + 8
-            aesIv.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                sha1A.withUnsafeBytes { (sha1A: UnsafePointer<UInt8>) -> Void in
-                    memcpy(bytes, sha1A.advanced(by: 8), 12)
+            aesIv.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
+                sha1A.withUnsafeBytes { sha1A -> Void in
+                    memcpy(bytes, sha1A.baseAddress!.assumingMemoryBound(to: UInt8.self).advanced(by: 8), 12)
                 }
-                sha1B.withUnsafeBytes { (sha1B: UnsafePointer<UInt8>) -> Void in
-                    memcpy(bytes.advanced(by: 12), sha1B, 8)
+                sha1B.withUnsafeBytes { sha1B -> Void in
+                    memcpy(bytes.advanced(by: 12), sha1B.baseAddress!.assumingMemoryBound(to: UInt8.self), 8)
                 }
-                sha1C.withUnsafeBytes { (sha1C: UnsafePointer<UInt8>) -> Void in
-                    memcpy(bytes.advanced(by: 12 + 8), sha1C.advanced(by: 16), 4)
+                sha1C.withUnsafeBytes { sha1C -> Void in
+                    memcpy(bytes.advanced(by: 12 + 8), sha1C.baseAddress!.assumingMemoryBound(to: UInt8.self).advanced(by: 16), 4)
                 }
-                sha1D.withUnsafeBytes { (sha1D: UnsafePointer<UInt8>) -> Void in
-                    memcpy(bytes.advanced(by: 12 + 8 + 4), sha1D, 8)
+                sha1D.withUnsafeBytes { sha1D -> Void in
+                    memcpy(bytes.advanced(by: 12 + 8 + 4), sha1D.baseAddress!.assumingMemoryBound(to: UInt8.self), 8)
                 }
             }
             return (aesKey, aesIv)
@@ -127,7 +139,9 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
             }
             
             var payloadLength: Int32 = 0
-            decryptedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            decryptedData.withUnsafeBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 memcpy(&payloadLength, bytes, 4)
             }
             
@@ -137,7 +151,9 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
             }
             
             let calculatedMsgKeyData = MTSubdataSha1(decryptedData, 0, UInt(payloadLength) + 4)
-            let msgKeyMatches = calculatedMsgKeyData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Bool in
+            let msgKeyMatches = calculatedMsgKeyData.withUnsafeBytes { rawBytes -> Bool in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 return memcmp(bytes.advanced(by: calculatedMsgKeyData.count - 16), msgKey, 16) == 0
             }
             
@@ -145,7 +161,9 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
                 return nil
             }
             
-            let result = decryptedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Data in
+            let result = decryptedData.withUnsafeBytes { rawBytes -> Data in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 return Data(bytes: bytes.advanced(by: 4), count: Int(payloadLength))
             }
             return MemoryBuffer(data: result)
@@ -166,7 +184,9 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
             }
             
             var payloadLength: Int32 = 0
-            decryptedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            decryptedData.withUnsafeBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 memcpy(&payloadLength, bytes, 4)
             }
             
@@ -203,7 +223,9 @@ func withDecryptedMessageContents(parameters: SecretChatEncryptionParameters, da
                 return nil
             }
             
-            let result = decryptedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Data in
+            let result = decryptedData.withUnsafeBytes { rawBytes -> Data in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 return Data(bytes: bytes.advanced(by: 4), count: Int(payloadLength))
             }
             return MemoryBuffer(data: result)
@@ -233,7 +255,7 @@ func encryptedMessageContents(parameters: SecretChatEncryptionParameters, data: 
             var msgKey = MTSha1(payloadData)
             msgKey.replaceSubrange(0 ..< (msgKey.count - 16), with: Data())
             
-            var randomBuf = malloc(16)!
+            let randomBuf = malloc(16)!
             defer {
                 free(randomBuf)
             }
@@ -246,7 +268,9 @@ func encryptedMessageContents(parameters: SecretChatEncryptionParameters, data: 
                 randomIndex += 1
             }
             
-            let (aesKey, aesIv) = msgKey.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> (Data, Data) in
+            let (aesKey, aesIv) = msgKey.withUnsafeBytes { rawBytes -> (Data, Data) in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 return messageKey(key: parameters.key, msgKey: bytes, mode: parameters.mode)
             }
             
@@ -262,7 +286,9 @@ func encryptedMessageContents(parameters: SecretChatEncryptionParameters, data: 
         case let .v2(role):
             var randomBytes = Data(count: 128)
             let randomBytesCount = randomBytes.count
-            randomBytes.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            randomBytes.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
                 arc4random_buf(bytes, randomBytesCount)
             }
             
@@ -305,7 +331,9 @@ func encryptedMessageContents(parameters: SecretChatEncryptionParameters, data: 
             
             let msgKey = keyLarge.subdata(in: 8 ..< (8 + 16))
             
-            let (aesKey, aesIv) = msgKey.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> (Data, Data) in
+            let (aesKey, aesIv) = msgKey.withUnsafeBytes { rawBytes -> (Data, Data) in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                 return messageKey(key: parameters.key, msgKey: bytes, mode: parameters.mode)
             }
             

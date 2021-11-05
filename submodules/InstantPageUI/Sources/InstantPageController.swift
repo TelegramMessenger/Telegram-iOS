@@ -109,13 +109,13 @@ public final class InstantPageController: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] sharedData in
             if let strongSelf = self {
                 let settings: InstantPagePresentationSettings
-                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.instantPagePresentationSettings] as? InstantPagePresentationSettings {
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.instantPagePresentationSettings]?.get(InstantPagePresentationSettings.self) {
                     settings = current
                 } else {
                     settings = InstantPagePresentationSettings.defaultSettings
                 }
                 let themeSettings: PresentationThemeSettings
-                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings {
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
                     themeSettings = current
                 } else {
                     themeSettings = PresentationThemeSettings.defaultSettings

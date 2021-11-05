@@ -4,12 +4,28 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
+private func _internal_updateInvitationRequest(account: Account, peerId: PeerId, userId: PeerId, approve: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Never, NoError> in
+        if let peer = transaction.getPeer(peerId), let user = transaction.getPeer(userId), let inputPeer = apiInputPeer(peer), let inputUser = apiInputUser(user) {
+            var flags: Int32 = 0
+            if approve {
+                flags |= (1 << 0)
+            }
+            return account.network.request(Api.functions.messages.hideChatJoinRequest(flags: flags, peer: inputPeer, userId: inputUser))
+            |> retryRequest
+            |> ignoreValues
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
 func _internal_revokePersistentPeerExportedInvitation(account: Account, peerId: PeerId) -> Signal<ExportedInvitation?, NoError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
             if let _ = peer as? TelegramChannel {
-                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
+                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil, title: nil))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                     return account.postbox.transaction { transaction -> ExportedInvitation? in
@@ -26,7 +42,7 @@ func _internal_revokePersistentPeerExportedInvitation(account: Account, peerId: 
                     }
                 }
             } else if let _ = peer as? TelegramGroup {
-                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil))
+                return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: nil, usageLimit: nil, title: nil))
                 |> retryRequest
                 |> mapToSignal { result -> Signal<ExportedInvitation?, NoError> in
                     return account.postbox.transaction { transaction -> ExportedInvitation? in
@@ -55,7 +71,7 @@ public enum CreatePeerExportedInvitationError {
     case generic
 }
 
-func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
+func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, title: String?, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Bool?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
@@ -65,7 +81,13 @@ func _internal_createPeerExportedInvitation(account: Account, peerId: PeerId, ex
             if let _ = usageLimit {
                 flags |= (1 << 1)
             }
-            return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: expireDate, usageLimit: usageLimit))
+            if let requestNeeded = requestNeeded, requestNeeded {
+                flags |= (1 << 3)
+            }
+            if let _ = title {
+                flags |= (1 << 4)
+            }
+            return account.network.request(Api.functions.messages.exportChatInvite(flags: flags, peer: inputPeer, expireDate: expireDate, usageLimit: usageLimit, title: title))
             |> mapError { _ in return CreatePeerExportedInvitationError.generic }
             |> map { result -> ExportedInvitation? in
                 return ExportedInvitation(apiExportedInvite: result)
@@ -82,7 +104,7 @@ public enum EditPeerExportedInvitationError {
     case generic
 }
 
-func _internal_editPeerExportedInvitation(account: Account, peerId: PeerId, link: String, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
+func _internal_editPeerExportedInvitation(account: Account, peerId: PeerId, link: String, title: String?, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Bool?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var flags: Int32 = 0
@@ -92,7 +114,13 @@ func _internal_editPeerExportedInvitation(account: Account, peerId: PeerId, link
             if let _ = usageLimit {
                 flags |= (1 << 1)
             }
-            return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: expireDate, usageLimit: usageLimit))
+            if let _ = requestNeeded {
+                flags |= (1 << 3)
+            }
+            if let _ = title {
+                flags |= (1 << 4)
+            }
+            return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: expireDate, usageLimit: usageLimit, requestNeeded: requestNeeded.flatMap { $0 ? .boolTrue : .boolFalse }, title: title))
             |> mapError { _ in return EditPeerExportedInvitationError.generic }
             |> mapToSignal { result -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> in
                 return account.postbox.transaction { transaction in
@@ -109,7 +137,7 @@ func _internal_editPeerExportedInvitation(account: Account, peerId: PeerId, link
                     } else {
                         return nil
                     }
-                } |> mapError { _ in .generic }
+                } |> mapError { _ -> EditPeerExportedInvitationError in }
             }
         } else {
             return .complete()
@@ -132,7 +160,7 @@ func _internal_revokePeerExportedInvitation(account: Account, peerId: PeerId, li
     return account.postbox.transaction { transaction -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let flags: Int32 = (1 << 2)
-            return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: nil, usageLimit: nil))
+            return account.network.request(Api.functions.messages.editExportedChatInvite(flags: flags, peer: inputPeer, link: link, expireDate: nil, usageLimit: nil, requestNeeded: nil, title: nil))
             |> mapError { _ in return RevokePeerExportedInvitationError.generic }
             |> mapToSignal { result -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> in
                 return account.postbox.transaction { transaction in
@@ -179,7 +207,7 @@ func _internal_revokePeerExportedInvitation(account: Account, peerId: PeerId, li
                     } else {
                         return nil
                     }
-                } |> mapError { _ in .generic }
+                } |> mapError { _ -> RevokePeerExportedInvitationError in }
             }
         } else {
             return .complete()
@@ -296,7 +324,7 @@ public struct PeerExportedInvitationsState: Equatable {
     }
 }
 
-final class CachedPeerExportedInvitations: PostboxCoding {
+final class CachedPeerExportedInvitations: Codable {
     let invitations: [ExportedInvitation]
     let canLoadMore: Bool
     let count: Int32
@@ -314,16 +342,20 @@ final class CachedPeerExportedInvitations: PostboxCoding {
         self.count = count
     }
     
-    init(decoder: PostboxDecoder) {
-        self.invitations = decoder.decodeObjectArrayForKey("invitations")
-        self.canLoadMore = decoder.decodeBoolForKey("canLoadMore", orElse: false)
-        self.count = decoder.decodeInt32ForKey("count", orElse: 0)
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.invitations = try container.decode([ExportedInvitation].self, forKey: "invitations")
+        self.canLoadMore = try container.decode(Bool.self, forKey: "canLoadMore")
+        self.count = try container.decode(Int32.self, forKey: "count")
     }
     
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObjectArray(self.invitations, forKey: "invitations")
-        encoder.encodeBool(self.canLoadMore, forKey: "canLoadMore")
-        encoder.encodeInt32(self.count, forKey: "count")
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.invitations, forKey: "invitations")
+        try container.encode(self.canLoadMore, forKey: "canLoadMore")
+        try container.encode(self.count, forKey: "count")
     }
 }
 
@@ -361,7 +393,7 @@ private final class PeerExportedInvitationsContextImpl {
         if adminId == nil {
             self.isLoadingMore = true
             self.disposable.set((account.postbox.transaction { transaction -> CachedPeerExportedInvitations? in
-                return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked))) as? CachedPeerExportedInvitations
+                return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)))?.get(CachedPeerExportedInvitations.self)
             }
             |> deliverOn(self.queue)).start(next: { [weak self] cachedResult in
                 guard let strongSelf = self else {
@@ -448,7 +480,9 @@ private final class PeerExportedInvitationsContextImpl {
                             })
                             let invitations: [ExportedInvitation] = invites.compactMap { ExportedInvitation(apiExportedInvite: $0) }
                             if populateCache {
-                                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: CachedPeerExportedInvitations(invitations: invitations, canLoadMore: count >= 50, count: count), collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+                                if let entry = CodableEntry(CachedPeerExportedInvitations(invitations: invitations, canLoadMore: count >= 50, count: count)) {
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: entry, collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+                                }
                             }
                             return (invitations, count)
                         }
@@ -536,7 +570,9 @@ private final class PeerExportedInvitationsContextImpl {
         let canLoadMore = self.canLoadMore
         let count = self.count
         self.updateDisposable.set(self.account.postbox.transaction({ transaction in
-            transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: CachedPeerExportedInvitations(invitations: invitations, canLoadMore: canLoadMore, count: count), collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+            if let entry = CodableEntry(CachedPeerExportedInvitations(invitations: invitations, canLoadMore: canLoadMore, count: count)) {
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerExportedInvitations, key: CachedPeerExportedInvitations.key(peerId: peerId, revoked: revoked)), entry: entry, collectionSpec: cachedPeerExportedInvitationsCollectionSpec)
+            }
         }).start())
     }
     
@@ -613,23 +649,58 @@ public struct PeerInvitationImportersState: Equatable {
     public struct Importer: Equatable {
         public var peer: RenderedPeer
         public var date: Int32
+        public var about: String?
+        public var approvedBy: PeerId?
     }
     public var importers: [Importer]
     public var isLoadingMore: Bool
     public var hasLoadedOnce: Bool
     public var canLoadMore: Bool
     public var count: Int32
+    
+    public var waitingCount: Int {
+        return importers.filter { $0.approvedBy == nil }.count
+    }
+    
+    public static var Empty = PeerInvitationImportersState(importers: [], isLoadingMore: false, hasLoadedOnce: true, canLoadMore: false, count: 0)
+    
+    public static var Loading = PeerInvitationImportersState(importers: [], isLoadingMore: false, hasLoadedOnce: false, canLoadMore: false, count: 0)
 }
 
-final class CachedPeerInvitationImporters: PostboxCoding {
+final class CachedPeerInvitationImporters: Codable {
+    private struct DictionaryPair: Codable, Hashable {
+        var key: Int64
+        var value: String
+        
+        init(_ key: Int64, value: String) {
+            self.key = key
+            self.value = value
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+            self.key = try container.decode(Int64.self, forKey: "k")
+            self.value = try container.decode(String.self, forKey: "v")
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: StringCodingKey.self)
+
+            try container.encode(self.key, forKey: "k")
+            try container.encode(self.value, forKey: "v")
+        }
+    }
+    
     let peerIds: [PeerId]
     let dates: [PeerId: Int32]
+    let abouts: [PeerId: String]
     let count: Int32
     
-    static func key(peerId: PeerId, link: String) -> ValueBoxKey {
+    static func key(peerId: PeerId, link: String, requested: Bool) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
-        key.setInt32(8, value: Int32(HashFunctions.murMurHash32(link)))
+        key.setInt32(8, value: Int32(HashFunctions.murMurHash32(link + (requested ? "_requested" : ""))))
         return key
     }
     
@@ -638,20 +709,28 @@ final class CachedPeerInvitationImporters: PostboxCoding {
         self.dates = importers.reduce(into: [PeerId: Int32]()) {
             $0[$1.peer.peerId] = $1.date
         }
+        self.abouts = importers.reduce(into: [PeerId: String]()) {
+            if let about = $1.about {
+                $0[$1.peer.peerId] = about
+            }
+        }
         self.count = count
     }
     
-    init(peerIds: [PeerId], dates: [PeerId: Int32], count: Int32) {
+    init(peerIds: [PeerId], dates: [PeerId: Int32], abouts: [PeerId: String], count: Int32) {
         self.peerIds = peerIds
         self.dates = dates
+        self.abouts = abouts
         self.count = count
     }
     
-    init(decoder: PostboxDecoder) {
-        self.peerIds = decoder.decodeInt64ArrayForKey("peerIds").map(PeerId.init)
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.peerIds = (try container.decode([Int64].self, forKey: "peerIds")).map(PeerId.init)
         
         var dates: [PeerId: Int32] = [:]
-        let datesArray = decoder.decodeInt64ArrayForKey("dates")
+        let datesArray = try container.decode([Int64].self, forKey: "dates")
         for index in stride(from: 0, to: datesArray.endIndex, by: 2) {
             let userId = datesArray[index]
             let date = datesArray[index + 1]
@@ -660,20 +739,38 @@ final class CachedPeerInvitationImporters: PostboxCoding {
         }
         self.dates = dates
         
-        self.count = decoder.decodeInt32ForKey("count", orElse: 0)
+        var abouts: [PeerId: String] = [:]
+        let aboutsArray = try container.decodeIfPresent([DictionaryPair].self, forKey: "abouts")
+        if let aboutsArray = aboutsArray {
+            for aboutPair in aboutsArray {
+                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(aboutPair.key))
+                abouts[peerId] = aboutPair.value
+            }
+        }
+        self.abouts = abouts
+        
+        self.count = try container.decode(Int32.self, forKey: "count")
     }
     
-    func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt64Array(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.peerIds.map { $0.toInt64() }, forKey: "peerIds")
         
         var dates: [Int64] = []
         for (peerId, date) in self.dates {
             dates.append(peerId.id._internalGetInt64Value())
             dates.append(Int64(date))
         }
-        encoder.encodeInt64Array(dates, forKey: "dates")
+        try container.encode(dates, forKey: "dates")
         
-        encoder.encodeInt32(self.count, forKey: "count")
+        var abouts: [DictionaryPair] = []
+        for (peerId, about) in self.abouts {
+            abouts.append(DictionaryPair(peerId.id._internalGetInt64Value(), value: about))
+        }
+        try container.encode(abouts, forKey: "abouts")
+        
+        try container.encode(self.count, forKey: "count")
     }
 }
 
@@ -681,8 +778,12 @@ private final class PeerInvitationImportersContextImpl {
     private let queue: Queue
     private let account: Account
     private let peerId: PeerId
-    private let link: String
+    private let link: String?
+    private let requested: Bool
+    private let query: String?
     private let disposable = MetaDisposable()
+    private let updateDisposables = DisposableSet()
+    private let actionDisposables = DisposableSet()
     private var isLoadingMore: Bool = false
     private var hasLoadedOnce: Bool = false
     private var canLoadMore: Bool = true
@@ -693,39 +794,56 @@ private final class PeerInvitationImportersContextImpl {
     
     let state = Promise<PeerInvitationImportersState>()
     
-    init(queue: Queue, account: Account, peerId: PeerId, invite: ExportedInvitation) {
+    init(queue: Queue, account: Account, peerId: PeerId, subject: PeerInvitationImportersContext.Subject) {
         self.queue = queue
         self.account = account
         self.peerId = peerId
-        self.link = invite.link
         
-        let count = invite.count ?? 0
+        var invite: ExportedInvitation?
+        var requested = false
+        var query: String?
+        switch subject {
+            case let .invite(subjectInvite, subjectRequested):
+                invite = subjectInvite
+                requested = subjectRequested
+            case let .requests(maybeQuery):
+                query = maybeQuery
+        }
+        self.link = invite?.link
+        self.requested = requested
+        self.query = query
+        
+        let count = invite?.count ?? 0
         self.count = count
         
         self.isLoadingMore = true
-        self.disposable.set((account.postbox.transaction { transaction -> (peers: [PeerInvitationImportersState.Importer], canLoadMore: Bool)? in
-            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: invite.link))) as? CachedPeerInvitationImporters
-            if let cachedResult = cachedResult, Int(cachedResult.count) == count {
+        self.disposable.set((account.postbox.transaction { transaction -> (peers: [PeerInvitationImportersState.Importer], count: Int32, canLoadMore: Bool)? in
+            guard query == nil else {
+                return nil
+            }
+            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: invite?.link ?? "requests", requested: self.requested)))?.get(CachedPeerInvitationImporters.self)
+            if let cachedResult = cachedResult, (Int(cachedResult.count) == count || invite == nil) {
                 var result: [PeerInvitationImportersState.Importer] = []
                 for peerId in cachedResult.peerIds {
                     if let peer = transaction.getPeer(peerId), let date = cachedResult.dates[peerId] {
-                        result.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date))
+                        result.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date, about: cachedResult.abouts[peerId]))
                     } else {
                         return nil
                     }
                 }
-                return (result, Int(cachedResult.count) > result.count)
+                return (result, cachedResult.count, Int(cachedResult.count) > result.count || invite == nil)
             } else {
                 return nil
             }
         }
-        |> deliverOn(self.queue)).start(next: { [weak self] cachedPeersAndCanLoadMore in
+        |> deliverOn(self.queue)).start(next: { [weak self] cachedPeersCountAndCanLoadMore in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.isLoadingMore = false
-            if let (cachedPeers, canLoadMore) = cachedPeersAndCanLoadMore {
+            if let (cachedPeers, cachedCount, canLoadMore) = cachedPeersCountAndCanLoadMore {
                 strongSelf.results = cachedPeers
+                strongSelf.count = cachedCount
                 strongSelf.hasLoadedOnce = true
                 strongSelf.canLoadMore = canLoadMore
                 strongSelf.loadedFromCache = true
@@ -738,6 +856,14 @@ private final class PeerInvitationImportersContextImpl {
     
     deinit {
         self.disposable.dispose()
+        self.updateDisposables.dispose()
+        self.actionDisposables.dispose()
+    }
+    
+    func reload() {
+        self.loadedFromCache = true
+        self.populateCache = true
+        self.loadMore()
     }
     
     func loadMore() {
@@ -749,6 +875,7 @@ private final class PeerInvitationImportersContextImpl {
         let peerId = self.peerId
         let link = self.link
         let populateCache = self.populateCache
+        let query = self.query
         
         var lastResult = self.results.last
         if self.loadedFromCache {
@@ -763,7 +890,22 @@ private final class PeerInvitationImportersContextImpl {
             if let inputPeer = inputPeer {
                 let offsetUser = lastResult?.peer.peer.flatMap { apiInputUser($0) } ?? .inputUserEmpty
                 let offsetDate = lastResult?.date ?? 0
-                let signal = account.network.request(Api.functions.messages.getChatInviteImporters(peer: inputPeer, link: link, offsetDate: offsetDate, offsetUser: offsetUser, limit: lastResult == nil ? 10 : 50))
+                
+                var flags: Int32 = 0
+                if let _ = link {
+                    if self.requested {
+                        flags |= (1 << 0)
+                    }
+                    flags |= (1 << 1)
+                } else {
+                    flags |= (1 << 0)
+                }
+                
+                if let _ = query {
+                    flags |= (1 << 2)
+                }
+                                
+                let signal = account.network.request(Api.functions.messages.getChatInviteImporters(flags: flags, peer: inputPeer, link: link, q: query, offsetDate: offsetDate, offsetUser: offsetUser, limit: lastResult == nil ? 10 : 50))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.messages.ChatInviteImporters?, NoError> in
                     return .single(nil)
@@ -786,17 +928,23 @@ private final class PeerInvitationImportersContextImpl {
                             for importer in importers {
                                 let peerId: PeerId
                                 let date: Int32
+                                let about: String?
+                                let approvedBy: PeerId?
                                 switch importer {
-                                    case let .chatInviteImporter(userId, dateValue):
+                                    case let .chatInviteImporter(_, userId, dateValue, aboutValue, approvedByValue):
                                         peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                         date = dateValue
+                                        about = aboutValue
+                                        approvedBy = approvedByValue.flatMap { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }
                                 }
                                 if let peer = transaction.getPeer(peerId) {
-                                    resultImporters.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date))
+                                    resultImporters.append(PeerInvitationImportersState.Importer(peer: RenderedPeer(peer: peer), date: date, about: about, approvedBy: approvedBy))
                                 }
                             }
-                            if populateCache {
-                                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link)), entry: CachedPeerInvitationImporters(importers: resultImporters, count: count), collectionSpec: cachedPeerInvitationImportersCollectionSpec)
+                            if populateCache && query == nil {
+                                if let entry = CodableEntry(CachedPeerInvitationImporters(importers: resultImporters, count: count)) {
+                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: self.requested)), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
+                                }
                             }
                             return (resultImporters, count)
                         }
@@ -835,12 +983,73 @@ private final class PeerInvitationImportersContextImpl {
         self.updateState()
     }
     
+    func update(_ peerId: EnginePeer.Id, action: PeerInvitationImportersContext.UpdateAction) {
+        self.actionDisposables.add(_internal_updateInvitationRequest(account: self.account, peerId: self.peerId, userId: peerId, approve: action == .approve).start())
+        
+        var results = self.results
+        results.removeAll(where: { $0.peer.peerId == peerId })
+        self.results = results
+        self.count = max(0, self.count - 1)
+        self.updateState()
+        self.updateCache()
+        
+        if case .approve = action {
+            self.updateDisposables.add(self.account.postbox.transaction({ transaction in
+                let peer = transaction.getPeer(self.peerId)
+                if let peer = peer as? TelegramGroup {
+                    updatePeers(transaction: transaction, peers: [peer], update: { current, _ in
+                        var updated = current
+                        if let current = current as? TelegramGroup {
+                            updated = current.updateParticipantCount(current.participantCount + 1)
+                        }
+                        return updated
+                    })
+                } else if let _ = peer as? TelegramChannel {
+                    transaction.updatePeerCachedData(peerIds: Set([self.peerId]), update: { _, current in
+                        var updated = current
+                        if let current = current as? CachedChannelData, let currentMemberCount = current.participantsSummary.memberCount {
+                            let updatedParticipantsSummary = current.participantsSummary.withUpdatedMemberCount(currentMemberCount + 1)
+                            updated = current.withUpdatedParticipantsSummary(updatedParticipantsSummary)
+                        }
+                        return updated
+                    })
+                }
+            }).start())
+        }
+    }
+    
+    private func updateCache() {
+        guard self.hasLoadedOnce && !self.isLoadingMore && self.query == nil else {
+            return
+        }
+        
+        let peerId = self.peerId
+        let resultImporters = Array(self.results.prefix(50))
+        let count = self.count
+        let link = self.link
+        self.updateDisposables.add(self.account.postbox.transaction({ transaction in
+            if let entry = CodableEntry(CachedPeerInvitationImporters(importers: resultImporters, count: count)) {
+                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: self.requested)), entry: entry, collectionSpec: cachedPeerInvitationImportersCollectionSpec)
+            }
+        }).start())
+    }
+    
     private func updateState() {
         self.state.set(.single(PeerInvitationImportersState(importers: self.results, isLoadingMore: self.isLoadingMore, hasLoadedOnce: self.hasLoadedOnce, canLoadMore: self.canLoadMore, count: self.count)))
     }
 }
 
 public final class PeerInvitationImportersContext {
+    public enum Subject {
+        case invite(invite: ExportedInvitation, requested: Bool)
+        case requests(query: String?)
+    }
+    
+    public enum UpdateAction {
+        case approve
+        case deny
+    }
+    
     private let queue: Queue = Queue()
     private let impl: QueueLocalObject<PeerInvitationImportersContextImpl>
     
@@ -856,16 +1065,28 @@ public final class PeerInvitationImportersContext {
         }
     }
     
-    init(account: Account, peerId: PeerId, invite: ExportedInvitation) {
+    init(account: Account, peerId: PeerId, subject: Subject) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return PeerInvitationImportersContextImpl(queue: queue, account: account, peerId: peerId, invite: invite)
+            return PeerInvitationImportersContextImpl(queue: queue, account: account, peerId: peerId, subject: subject)
         })
     }
     
     public func loadMore() {
         self.impl.with { impl in
             impl.loadMore()
+        }
+    }
+    
+    public func reload() {
+        self.impl.with { impl in
+            impl.reload()
+        }
+    }
+    
+    public func update(_ peerId: EnginePeer.Id, action: UpdateAction) {
+        self.impl.with { impl in
+            impl.update(peerId, action: action)
         }
     }
 }

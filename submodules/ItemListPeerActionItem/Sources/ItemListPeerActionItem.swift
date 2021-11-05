@@ -15,6 +15,7 @@ public enum ItemListPeerActionItemHeight {
 public enum ItemListPeerActionItemColor {
     case accent
     case destructive
+    case disabled
 }
 
 public class ItemListPeerActionItem: ListViewItem, ItemListItem {
@@ -29,7 +30,7 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, hasSeparator: Bool = true, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, editing: Bool, action: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, hasSeparator: Bool = true, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, editing: Bool = false, action: (() -> Void)?) {
         self.presentationData = presentationData
         self.icon = icon
         self.title = title
@@ -182,13 +183,15 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                     textColor = item.presentationData.theme.list.itemAccentColor
                 case .destructive:
                     textColor = item.presentationData.theme.list.itemDestructiveColor
+                case .disabled:
+                    textColor = item.presentationData.theme.list.itemDisabledTextColor
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - editingOffset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: titleLayout.size.height + verticalInset * 2.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)

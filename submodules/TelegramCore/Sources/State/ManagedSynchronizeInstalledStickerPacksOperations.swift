@@ -396,7 +396,6 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
     let sequence = request
     |> retryRequest
     |> mapError { _ -> SynchronizeInstalledStickerPacksError in
-        return .restart
     }
     |> mapToSignal { result -> Signal<Void, SynchronizeInstalledStickerPacksError> in
         return postbox.transaction { transaction -> Signal<Void, SynchronizeInstalledStickerPacksError> in
@@ -444,7 +443,6 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                     }
                     return resolveStickerPacks(network: network, remoteInfos: resolveRemoteInfos, localInfos: localInfos)
                     |> mapError { _ -> SynchronizeInstalledStickerPacksError in
-                        return .restart
                     }
                     |> mapToSignal { replaceItems -> Signal<Void, SynchronizeInstalledStickerPacksError> in
                         return postbox.transaction { transaction -> Signal<Void, SynchronizeInstalledStickerPacksError> in
@@ -481,8 +479,7 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                             
                             return (
                                 storeSignal
-                                |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart
-                                }
+                                |> mapError { _ -> SynchronizeInstalledStickerPacksError in }
                             )
                             |> then(.fail(.done))
                         }
@@ -567,7 +564,7 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                 let resolvedItems = resolveStickerPacks(network: network, remoteInfos: resultingInfos, localInfos: localInfos)
                 
                 return combineLatest(archivedOrRemovedIds, resolvedItems)
-                |> mapError { _ -> SynchronizeInstalledStickerPacksError in return .restart }
+                |> mapError { _ -> SynchronizeInstalledStickerPacksError in }
                 |> mapToSignal { archivedOrRemovedIds, replaceItems -> Signal<Void, SynchronizeInstalledStickerPacksError> in
                     return (postbox.transaction { transaction -> Signal<Void, SynchronizeInstalledStickerPacksError> in
                         let finalCheckLocalCollectionInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
@@ -590,7 +587,6 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                         return .complete()
                     }
                     |> mapError { _ -> SynchronizeInstalledStickerPacksError in
-                        return .restart
                     })
                     |> switchToLatest
                     |> then(.fail(.done))
@@ -598,7 +594,6 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
             }
         }
         |> mapError { _ -> SynchronizeInstalledStickerPacksError in
-            return .restart
         }
         |> switchToLatest
     }

@@ -1552,7 +1552,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 }
             }, node: {
                 assert(Queue.mainQueue().isCurrent())
-                return previousNode.syncWith({ $0 })!
+                return previousNode.syncWith({ $0 })
             }, params: params, previousItem: previousItem, nextItem: nextItem, animation: updateAnimation, completion: { (layout, apply) in
                 if Thread.isMainThread {
                     if synchronous {
@@ -2003,7 +2003,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             }
                         }, node: {
                             assert(Queue.mainQueue().isCurrent())
-                            return referenceNode.syncWith({ $0 })!
+                            return referenceNode.syncWith({ $0 })
                         }, params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), previousItem: index == 0 ? nil : self.items[index - 1], nextItem: index == self.items.count - 1 ? nil : self.items[index + 1], animation: updateAnimation, completion: { layout, apply in
                             var updatedState = state
                             var updatedOperations = operations
@@ -2442,7 +2442,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         var takenPreviousNodes = Set<ListViewItemNode>()
         for operation in operations {
             if case let .InsertNode(_, _, _, node, _, _) = operation {
-                takenPreviousNodes.insert(node.syncWith({ $0 })!)
+                takenPreviousNodes.insert(node.syncWith({ $0 }))
             }
         }
         
@@ -2454,7 +2454,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         for operation in operations {
             switch operation {
                 case let .InsertNode(index, offsetDirection, nodeAnimated, nodeObject, layout, apply):
-                    let node = nodeObject.syncWith({ $0 })!
+                    let node = nodeObject.syncWith({ $0 })
                     var previousFrame: CGRect?
                     for (previousNode, frame) in previousApparentFrames {
                         if previousNode === node {
@@ -2517,7 +2517,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var height: CGFloat?
                     var previousLayout: ListViewItemNodeLayout?
                     
-                    let referenceNode = referenceNodeObject.syncWith({ $0 })!
+                    let referenceNode = referenceNodeObject.syncWith({ $0 })
                     
                     for (node, previousFrame) in previousApparentFrames {
                         if node === referenceNode {
@@ -4293,6 +4293,16 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         for itemNode in self.itemNodes {
             if itemNode.index != nil {
                 f(itemNode)
+            }
+        }
+    }
+
+    public func enumerateItemNodes(_ f: (ASDisplayNode) -> Bool) {
+        for itemNode in self.itemNodes {
+            if itemNode.index != nil {
+                if !f(itemNode) {
+                    break
+                }
             }
         }
     }

@@ -72,10 +72,13 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         var feedbackTapImpl: (() -> Void)?
         var activatedActionImpl: (() -> Void)?
+        var requestLayoutImpl: (() -> Void)?
         self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(items: content.menuItems()), getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             activatedActionImpl?()
+        }, requestLayout: {
+            requestLayoutImpl?()
         }, feedbackTap: {
             feedbackTapImpl?()
         }, blurBackground: true)
@@ -85,6 +88,10 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         feedbackTapImpl = { [weak self] in
             self?.hapticFeedback.tap()
+        }
+
+        requestLayoutImpl = { [weak self] in
+            self?.updateLayout()
         }
         
         if content.presentation() == .freeform {
@@ -117,6 +124,12 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimNodeTap(_:))))
         self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+    }
+
+    func updateLayout() {
+        if let layout = self.validLayout {
+            self.containerLayoutUpdated(layout, transition: .immediate)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -332,6 +345,8 @@ final class PeekControllerNode: ViewControllerTracingNode {
             return self?.controller
         }, actionSelected: { [weak self] result in
             self?.requestDismiss()
+        }, requestLayout: { [weak self] in
+            self?.updateLayout()
         }, feedbackTap: { [weak self] in
             self?.hapticFeedback.tap()
         }, blurBackground: true)

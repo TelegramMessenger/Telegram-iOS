@@ -133,23 +133,23 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
                 status = .custom(string: label, multiline: false)
             } else if participant.peer.id != context.account.peerId {
                 let presence = participant.presences[participant.peer.id] ?? TelegramUserPresence(status: .none, lastActivity: 0)
-                status = .presence(presence, presentationData.dateTimeFormat)
+                status = .presence(EnginePeer.Presence(presence), presentationData.dateTimeFormat)
             } else {
                 status = .none
             }
             
-            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: ChatListSearchItemHeader(type: .groupMembers, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
+            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(participant.peer), chatPeer: nil), status: status, enabled: enabled, selection: .none, editing: editing, index: nil, header: ChatListSearchItemHeader(type: .groupMembers, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
                 interaction.openPeer(participant.peer, participant)
             })
         case let .contact(_, peer, presence):
             let status: ContactsPeerItemStatus
             if peer.id != context.account.peerId, let presence = presence {
-                status = .presence(presence, presentationData.dateTimeFormat)
+                status = .presence(EnginePeer.Presence(presence), presentationData.dateTimeFormat)
             } else {
                 status = .none
             }
             
-            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: nil), status: status, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
+            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(peer), chatPeer: nil), status: status, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: ChatListSearchItemHeader(type: .contacts, theme: presentationData.theme, strings: presentationData.strings), action: { _ in
                 interaction.openPeer(peer, nil)
             })
         }
@@ -242,7 +242,12 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
         let additionalDisposable = MetaDisposable()
         
         if peerId.namespace == Namespaces.Peer.CloudGroup {
-            let disposable = combineLatest(queue: Queue.mainQueue(), context.account.postbox.peerView(id: peerId), context.account.postbox.contactPeersView(accountPeerId: context.account.peerId, includePresences: true)).start(next: { [weak self] peerView, contactsView in
+            let disposable = combineLatest(queue: Queue.mainQueue(),
+                context.account.postbox.peerView(id: peerId),
+                context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Contacts.List(includePresences: true)
+                )
+            ).start(next: { [weak self] peerView, contactsView in
                 guard let strongSelf = self else {
                     return
                 }
@@ -405,7 +410,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     }
                 }) {
                     for peer in contactsView.peers {
-                        entries.append(ChannelMembersSearchEntry.contact(index, peer, contactsView.peerPresences[peer.id] as? TelegramUserPresence))
+                        entries.append(ChannelMembersSearchEntry.contact(index, peer._asPeer(), contactsView.presences[peer.id]?._asPresence()))
                         index += 1
                     }
                 }
@@ -425,7 +430,9 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
             additionalDisposable.set((combineLatest(queue: .mainQueue(),
                membersState.get(),
                context.account.postbox.peerView(id: peerId),
-               context.account.postbox.contactPeersView(accountPeerId: context.account.peerId, includePresences: true)
+               context.engine.data.subscribe(
+                   TelegramEngine.EngineData.Item.Contacts.List(includePresences: true)
+               )
             ).start(next: { [weak self] state, peerView, contactsView in
                 guard let strongSelf = self else {
                     return
@@ -554,7 +561,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     }
                 }) {
                     for peer in contactsView.peers {
-                        entries.append(ChannelMembersSearchEntry.contact(index, peer, contactsView.peerPresences[peer.id] as? TelegramUserPresence))
+                        entries.append(ChannelMembersSearchEntry.contact(index, peer._asPeer(), contactsView.presences[peer.id]?._asPresence()))
                         index += 1
                     }
                 }

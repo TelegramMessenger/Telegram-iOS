@@ -1,8 +1,7 @@
 import Foundation
 import Postbox
 
-
-public final class LocalizationComponent: Equatable, PostboxCoding {
+public final class LocalizationComponent: Equatable, Codable {
     public let languageCode: String
     public let localizedName: String
     public let localization: Localization
@@ -15,22 +14,22 @@ public final class LocalizationComponent: Equatable, PostboxCoding {
         self.customPluralizationCode = customPluralizationCode
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.languageCode = decoder.decodeStringForKey("lc", orElse: "")
-        self.localizedName = decoder.decodeStringForKey("localizedName", orElse: "")
-        self.localization = decoder.decodeObjectForKey("loc", decoder: { Localization(decoder: $0) }) as! Localization
-        self.customPluralizationCode = decoder.decodeOptionalStringForKey("cpl")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.languageCode = (try? container.decode(String.self, forKey: "lc")) ?? ""
+        self.localizedName = (try? container.decode(String.self, forKey: "localizedName")) ?? ""
+        self.localization = try container.decode(Localization.self, forKey: "loc")
+        self.customPluralizationCode = try container.decodeIfPresent(String.self, forKey: "cpl")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.languageCode, forKey: "lc")
-        encoder.encodeString(self.localizedName, forKey: "localizedName")
-        encoder.encodeObject(self.localization, forKey: "loc")
-        if let customPluralizationCode = self.customPluralizationCode {
-            encoder.encodeString(customPluralizationCode, forKey: "cpl")
-        } else {
-            encoder.encodeNil(forKey: "cpl")
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.languageCode, forKey: "lc")
+        try container.encode(self.localizedName, forKey: "localizedName")
+        try container.encode(self.localization, forKey: "loc")
+        try container.encodeIfPresent(self.customPluralizationCode, forKey: "cpl")
     }
     
     public static func ==(lhs: LocalizationComponent, rhs: LocalizationComponent) -> Bool {
@@ -50,7 +49,7 @@ public final class LocalizationComponent: Equatable, PostboxCoding {
     }
 }
 
-public final class LocalizationSettings: PreferencesEntry, Equatable {
+public final class LocalizationSettings: Codable, Equatable {
     public let primaryComponent: LocalizationComponent
     public let secondaryComponent: LocalizationComponent?
     
@@ -59,31 +58,28 @@ public final class LocalizationSettings: PreferencesEntry, Equatable {
         self.secondaryComponent = secondaryComponent
     }
     
-    public init(decoder: PostboxDecoder) {
-        if let languageCode = decoder.decodeOptionalStringForKey("lc") {
-            self.primaryComponent = LocalizationComponent(languageCode: languageCode, localizedName: "", localization: decoder.decodeObjectForKey("loc", decoder: { Localization(decoder: $0) }) as! Localization, customPluralizationCode: nil)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        if let languageCode = try container.decodeIfPresent(String.self, forKey: "lc") {
+            self.primaryComponent = LocalizationComponent(
+                languageCode: languageCode,
+                localizedName: "",
+                localization: try container.decode(Localization.self, forKey: "loc"),
+                customPluralizationCode: nil
+            )
             self.secondaryComponent = nil
         } else {
-            self.primaryComponent = decoder.decodeObjectForKey("primaryComponent", decoder: { LocalizationComponent(decoder: $0) }) as! LocalizationComponent
-            self.secondaryComponent = decoder.decodeObjectForKey("secondaryComponent", decoder: { LocalizationComponent(decoder: $0) }) as? LocalizationComponent
+            self.primaryComponent = try container.decode(LocalizationComponent.self, forKey: "primaryComponent")
+            self.secondaryComponent = try container.decodeIfPresent(LocalizationComponent.self, forKey: "secondaryComponent")
         }
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.primaryComponent, forKey: "primaryComponent")
-        if let secondaryComponent = self.secondaryComponent {
-            encoder.encodeObject(secondaryComponent, forKey: "secondaryComponent")
-        } else {
-            encoder.encodeNil(forKey: "secondaryComponent")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? LocalizationSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.primaryComponent, forKey: "primaryComponent")
+        try container.encodeIfPresent(self.secondaryComponent, forKey: "secondaryComponent")
     }
     
     public static func ==(lhs: LocalizationSettings, rhs: LocalizationSettings) -> Bool {

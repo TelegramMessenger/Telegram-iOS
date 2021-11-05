@@ -6,6 +6,6 @@ public func setPostboxLogger(_ f: @escaping (String) -> Void) {
     postboxLogger = f
 }
 
-func postboxLog(_ what: @autoclosure () -> String) {
+public func postboxLog(_ what: @autoclosure () -> String) {
     postboxLogger(what())
 }

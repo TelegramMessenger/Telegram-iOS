@@ -1,5 +1,12 @@
+import Foundation
 
 public enum PeerNotificationSettingsBehavior: PostboxCoding {
+    enum CodingKeys: String, CodingKey {
+        case _case = "_v"
+        case toValue
+        case atTimestamp
+    }
+
     case none
     case reset(atTimestamp: Int32, toValue: PeerNotificationSettings)
     
@@ -34,19 +41,24 @@ public enum PeerNotificationSettingsBehavior: PostboxCoding {
 
 public protocol PeerNotificationSettings: PostboxCoding {
     func isRemovedFromTotalUnreadCount(`default`: Bool) -> Bool
+
     var behavior: PeerNotificationSettingsBehavior { get }
-    
-    func isEqual(to: PeerNotificationSettings) -> Bool
+
+    func isEqual(to other: PeerNotificationSettings) -> Bool
 }
 
-public protocol PostboxGlobalNotificationSettings: PostboxCoding {
-    func defaultIncludePeer(peer: Peer) -> Bool
-    
-    func isEqualInDefaultPeerInclusion(other: PostboxGlobalNotificationSettings) -> Bool
+public final class PostboxGlobalNotificationSettings {
+    public let defaultIncludePeer: (_ peer: Peer) -> Bool
+
+    public init(
+        defaultIncludePeer: @escaping (_ peer: Peer) -> Bool
+    ) {
+        self.defaultIncludePeer = defaultIncludePeer
+    }
 }
 
 public func resolvedIsRemovedFromTotalUnreadCount(globalSettings: PostboxGlobalNotificationSettings, peer: Peer, peerSettings: PeerNotificationSettings?) -> Bool {
-    let defaultValue = !globalSettings.defaultIncludePeer(peer: peer)
+    let defaultValue = !globalSettings.defaultIncludePeer(peer)
     if let peerSettings = peerSettings {
         return peerSettings.isRemovedFromTotalUnreadCount(default: defaultValue)
     } else {

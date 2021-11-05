@@ -11,6 +11,7 @@ private class AdMessagesHistoryContextImpl {
             case textEntities
             case media
             case authorId
+            case messageId
             case startParam
         }
 
@@ -19,6 +20,7 @@ private class AdMessagesHistoryContextImpl {
         public let textEntities: [MessageTextEntity]
         public let media: [Media]
         public let authorId: PeerId
+        public let messageId: MessageId?
         public let startParam: String?
 
         public init(
@@ -27,6 +29,7 @@ private class AdMessagesHistoryContextImpl {
             textEntities: [MessageTextEntity],
             media: [Media],
             authorId: PeerId,
+            messageId: MessageId?,
             startParam: String?
         ) {
             self.opaqueId = opaqueId
@@ -34,6 +37,7 @@ private class AdMessagesHistoryContextImpl {
             self.textEntities = textEntities
             self.media = media
             self.authorId = authorId
+            self.messageId = messageId
             self.startParam = startParam
         }
 
@@ -51,7 +55,7 @@ private class AdMessagesHistoryContextImpl {
             }
 
             self.authorId = try container.decode(PeerId.self, forKey: .authorId)
-
+            self.messageId = try container.decodeIfPresent(MessageId.self, forKey: .messageId)
             self.startParam = try container.decodeIfPresent(String.self, forKey: .startParam)
         }
 
@@ -70,6 +74,7 @@ private class AdMessagesHistoryContextImpl {
             try container.encode(mediaData, forKey: .media)
 
             try container.encode(self.authorId, forKey: .authorId)
+            try container.encodeIfPresent(self.messageId, forKey: .messageId)
             try container.encodeIfPresent(self.startParam, forKey: .startParam)
         }
 
@@ -94,6 +99,9 @@ private class AdMessagesHistoryContextImpl {
             if lhs.authorId != rhs.authorId {
                 return false
             }
+            if lhs.messageId != rhs.messageId {
+                return false
+            }
             if lhs.startParam != rhs.startParam {
                 return false
             }
@@ -103,7 +111,7 @@ private class AdMessagesHistoryContextImpl {
         func toMessage(peerId: PeerId, transaction: Transaction) -> Message {
             var attributes: [MessageAttribute] = []
 
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, startParam: self.startParam))
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, startParam: self.startParam, messageId: self.messageId))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -201,8 +209,8 @@ private class AdMessagesHistoryContextImpl {
             return postbox.transaction { transaction -> CachedState? in
                 let key = ValueBoxKey(length: 8)
                 key.setInt64(0, value: peerId.toInt64())
-                if let entry = transaction.retrieveItemCacheEntryData(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAdMessageStates, key: key)) {
-                    return try? AdaptedPostboxDecoder().decode(CachedState.self, from: entry)
+                if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAdMessageStates, key: key))?.get(CachedState.self) {
+                    return entry
                 } else {
                     return nil
                 }
@@ -213,8 +221,8 @@ private class AdMessagesHistoryContextImpl {
             let key = ValueBoxKey(length: 8)
             key.setInt64(0, value: peerId.toInt64())
             let id = ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedAdMessageStates, key: key)
-            if let state = state, let stateData = try? AdaptedPostboxEncoder().encode(state) {
-                transaction.putItemCacheEntryData(id: id, entry: stateData, collectionSpec: collectionSpec)
+            if let state = state, let entry = CodableEntry(state) {
+                transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
             } else {
                 transaction.removeItemCacheEntry(id: id)
             }
@@ -317,7 +325,7 @@ private class AdMessagesHistoryContextImpl {
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(_, randomId, fromId, startParam, message, entities):
+                            case let .sponsoredMessage(_, randomId, fromId, channelPost, startParam, message, entities):
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
@@ -337,6 +345,7 @@ private class AdMessagesHistoryContextImpl {
                                     textEntities: parsedEntities,
                                     media: parsedMedia,
                                     authorId: fromId.peerId,
+                                    messageId: channelPost.flatMap { MessageId(peerId: fromId.peerId, namespace: Namespaces.Message.Cloud, id: $0) },
                                     startParam: startParam
                                 ))
                             }

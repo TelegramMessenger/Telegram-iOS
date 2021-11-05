@@ -179,7 +179,7 @@ final class MutableItemCollectionsView {
     var lower: ItemCollectionViewEntry?
     var higher: ItemCollectionViewEntry?
     
-    init(postbox: Postbox, orderedItemListsViews: [MutableOrderedItemListView], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int) {
+    init(postbox: PostboxImpl, orderedItemListsViews: [MutableOrderedItemListView], namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int) {
         self.orderedItemListsViews = orderedItemListsViews
         self.namespaces = namespaces
         self.requestedAroundIndex = aroundIndex
@@ -193,23 +193,23 @@ final class MutableItemCollectionsView {
         self.reload(postbox: postbox, aroundIndex: aroundIndex, count: count)
     }
     
-    private func lowerItems(postbox: Postbox, collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
+    private func lowerItems(postbox: PostboxImpl, collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
         return postbox.itemCollectionItemTable.lowerItems(collectionId: collectionId, itemIndex: itemIndex, count: count)
     }
     
-    private func higherItems(postbox: Postbox, collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
+    private func higherItems(postbox: PostboxImpl, collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
         return postbox.itemCollectionItemTable.higherItems(collectionId: collectionId, itemIndex: itemIndex, count: count)
     }
     
-    private func lowerCollectionId(postbox: Postbox, namespaceList: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32) -> (ItemCollectionId, Int32)? {
+    private func lowerCollectionId(postbox: PostboxImpl, namespaceList: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32) -> (ItemCollectionId, Int32)? {
         return postbox.itemCollectionInfoTable.lowerCollectionId(namespaceList: namespaceList, collectionId: collectionId, index: collectionIndex)
     }
     
-    private func higherCollectionId(postbox: Postbox, namespaceList: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32) -> (ItemCollectionId, Int32)? {
+    private func higherCollectionId(postbox: PostboxImpl, namespaceList: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32) -> (ItemCollectionId, Int32)? {
         return postbox.itemCollectionInfoTable.higherCollectionId(namespaceList: namespaceList, collectionId: collectionId, index: collectionIndex)
     }
     
-    private func reload(postbox: Postbox, aroundIndex: ItemCollectionViewEntryIndex?, count: Int) {
+    private func reload(postbox: PostboxImpl, aroundIndex: ItemCollectionViewEntryIndex?, count: Int) {
         self.collectionInfos = []
         for namespace in namespaces {
             for (_, id, info) in postbox.itemCollectionInfoTable.getInfos(namespace: namespace) {
@@ -242,7 +242,7 @@ final class MutableItemCollectionsView {
         self.higher = higher
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
         if !transaction.currentOrderedItemListOperations.isEmpty {

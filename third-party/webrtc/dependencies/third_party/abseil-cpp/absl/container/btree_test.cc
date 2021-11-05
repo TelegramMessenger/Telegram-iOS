@@ -15,6 +15,7 @@
 #include "absl/container/btree_test.h"
 
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -52,7 +53,9 @@ using ::absl::test_internal::MovableOnlyInstance;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::IsEmpty;
+using ::testing::IsNull;
 using ::testing::Pair;
+using ::testing::SizeIs;
 
 template <typename T, typename U>
 void CheckPairEquals(const T &x, const U &y) {
@@ -592,7 +595,7 @@ void BtreeTest() {
   using V = typename remove_pair_const<typename T::value_type>::type;
   const std::vector<V> random_values = GenerateValuesWithSeed<V>(
       absl::GetFlag(FLAGS_test_values), 4 * absl::GetFlag(FLAGS_test_values),
-      testing::GTEST_FLAG(random_seed));
+      GTEST_FLAG_GET(random_seed));
 
   unique_checker<T, C> container;
 
@@ -616,7 +619,7 @@ void BtreeMultiTest() {
   using V = typename remove_pair_const<typename T::value_type>::type;
   const std::vector<V> random_values = GenerateValuesWithSeed<V>(
       absl::GetFlag(FLAGS_test_values), 4 * absl::GetFlag(FLAGS_test_values),
-      testing::GTEST_FLAG(random_seed));
+      GTEST_FLAG_GET(random_seed));
 
   multi_checker<T, C> container;
 
@@ -1180,6 +1183,103 @@ TEST(Btree, RangeCtorSanity) {
   EXPECT_EQ(1, tmap.size());
 }
 
+}  // namespace
+
+class BtreeNodePeer {
+ public:
+  // Yields the size of a leaf node with a specific number of values.
+  template <typename ValueType>
+  constexpr static size_t GetTargetNodeSize(size_t target_values_per_node) {
+    return btree_node<
+        set_params<ValueType, std::less<ValueType>, std::allocator<ValueType>,
+                   /*TargetNodeSize=*/256,  // This parameter isn't used here.
+                   /*Multi=*/false>>::SizeWithNSlots(target_values_per_node);
+  }
+
+  // Yields the number of slots in a (non-root) leaf node for this btree.
+  template <typename Btree>
+  constexpr static size_t GetNumSlotsPerNode() {
+    return btree_node<typename Btree::params_type>::kNodeSlots;
+  }
+
+  template <typename Btree>
+  constexpr static size_t GetMaxFieldType() {
+    return std::numeric_limits<
+        typename btree_node<typename Btree::params_type>::field_type>::max();
+  }
+
+  template <typename Btree>
+  constexpr static bool UsesLinearNodeSearch() {
+    return btree_node<typename Btree::params_type>::use_linear_search::value;
+  }
+};
+
+namespace {
+
+class BtreeMapTest : public ::testing::Test {
+ public:
+  struct Key {};
+  struct Cmp {
+    template <typename T>
+    bool operator()(T, T) const {
+      return false;
+    }
+  };
+
+  struct KeyLin {
+    using absl_btree_prefer_linear_node_search = std::true_type;
+  };
+  struct CmpLin : Cmp {
+    using absl_btree_prefer_linear_node_search = std::true_type;
+  };
+
+  struct KeyBin {
+    using absl_btree_prefer_linear_node_search = std::false_type;
+  };
+  struct CmpBin : Cmp {
+    using absl_btree_prefer_linear_node_search = std::false_type;
+  };
+
+  template <typename K, typename C>
+  static bool IsLinear() {
+    return BtreeNodePeer::UsesLinearNodeSearch<absl::btree_map<K, int, C>>();
+  }
+};
+
+TEST_F(BtreeMapTest, TestLinearSearchPreferredForKeyLinearViaAlias) {
+  // Test requesting linear search by directly exporting an alias.
+  EXPECT_FALSE((IsLinear<Key, Cmp>()));
+  EXPECT_TRUE((IsLinear<KeyLin, Cmp>()));
+  EXPECT_TRUE((IsLinear<Key, CmpLin>()));
+  EXPECT_TRUE((IsLinear<KeyLin, CmpLin>()));
+}
+
+TEST_F(BtreeMapTest, LinearChoiceTree) {
+  // Cmp has precedence, and is forcing binary
+  EXPECT_FALSE((IsLinear<Key, CmpBin>()));
+  EXPECT_FALSE((IsLinear<KeyLin, CmpBin>()));
+  EXPECT_FALSE((IsLinear<KeyBin, CmpBin>()));
+  EXPECT_FALSE((IsLinear<int, CmpBin>()));
+  EXPECT_FALSE((IsLinear<std::string, CmpBin>()));
+  // Cmp has precedence, and is forcing linear
+  EXPECT_TRUE((IsLinear<Key, CmpLin>()));
+  EXPECT_TRUE((IsLinear<KeyLin, CmpLin>()));
+  EXPECT_TRUE((IsLinear<KeyBin, CmpLin>()));
+  EXPECT_TRUE((IsLinear<int, CmpLin>()));
+  EXPECT_TRUE((IsLinear<std::string, CmpLin>()));
+  // Cmp has no preference, Key determines linear vs binary.
+  EXPECT_FALSE((IsLinear<Key, Cmp>()));
+  EXPECT_TRUE((IsLinear<KeyLin, Cmp>()));
+  EXPECT_FALSE((IsLinear<KeyBin, Cmp>()));
+  // arithmetic key w/ std::less or std::greater: linear
+  EXPECT_TRUE((IsLinear<int, std::less<int>>()));
+  EXPECT_TRUE((IsLinear<double, std::greater<double>>()));
+  // arithmetic key w/ custom compare: binary
+  EXPECT_FALSE((IsLinear<int, Cmp>()));
+  // non-arithmetic key: binary
+  EXPECT_FALSE((IsLinear<std::string, std::less<std::string>>()));
+}
+
 TEST(Btree, BtreeMapCanHoldMoveOnlyTypes) {
   absl::btree_map<std::string, std::unique_ptr<std::string>> m;
 
@@ -1325,28 +1425,6 @@ TEST(Btree, RValueInsert) {
   EXPECT_EQ(tracker.swaps(), 0);
 }
 
-}  // namespace
-
-class BtreeNodePeer {
- public:
-  // Yields the size of a leaf node with a specific number of values.
-  template <typename ValueType>
-  constexpr static size_t GetTargetNodeSize(size_t target_values_per_node) {
-    return btree_node<
-        set_params<ValueType, std::less<ValueType>, std::allocator<ValueType>,
-                   /*TargetNodeSize=*/256,  // This parameter isn't used here.
-                   /*Multi=*/false>>::SizeWithNValues(target_values_per_node);
-  }
-
-  // Yields the number of values in a (non-root) leaf node for this set.
-  template <typename Set>
-  constexpr static size_t GetNumValuesPerNode() {
-    return btree_node<typename Set::params_type>::kNodeValues;
-  }
-};
-
-namespace {
-
 // A btree set with a specific number of values per node.
 template <typename Key, int TargetValuesPerNode, typename Cmp = std::less<Key>>
 class SizedBtreeSet
@@ -1380,7 +1458,7 @@ void ExpectOperationCounts(const int expected_moves,
 TEST(Btree, MovesComparisonsCopiesSwapsTracking) {
   InstanceTracker tracker;
   // Note: this is minimum number of values per node.
-  SizedBtreeSet<MovableOnlyInstance, /*TargetValuesPerNode=*/3> set3;
+  SizedBtreeSet<MovableOnlyInstance, /*TargetValuesPerNode=*/4> set4;
   // Note: this is the default number of values per node for a set of int32s
   // (with 64-bit pointers).
   SizedBtreeSet<MovableOnlyInstance, /*TargetValuesPerNode=*/61> set61;
@@ -1391,28 +1469,28 @@ TEST(Btree, MovesComparisonsCopiesSwapsTracking) {
   std::vector<int> values =
       GenerateValuesWithSeed<int>(10000, 1 << 22, /*seed=*/23);
 
-  EXPECT_EQ(BtreeNodePeer::GetNumValuesPerNode<decltype(set3)>(), 3);
-  EXPECT_EQ(BtreeNodePeer::GetNumValuesPerNode<decltype(set61)>(), 61);
-  EXPECT_EQ(BtreeNodePeer::GetNumValuesPerNode<decltype(set100)>(), 100);
+  EXPECT_EQ(BtreeNodePeer::GetNumSlotsPerNode<decltype(set4)>(), 4);
+  EXPECT_EQ(BtreeNodePeer::GetNumSlotsPerNode<decltype(set61)>(), 61);
+  EXPECT_EQ(BtreeNodePeer::GetNumSlotsPerNode<decltype(set100)>(), 100);
   if (sizeof(void *) == 8) {
-    EXPECT_EQ(BtreeNodePeer::GetNumValuesPerNode<absl::btree_set<int32_t>>(),
-              BtreeNodePeer::GetNumValuesPerNode<decltype(set61)>());
+    EXPECT_EQ(BtreeNodePeer::GetNumSlotsPerNode<absl::btree_set<int32_t>>(),
+              BtreeNodePeer::GetNumSlotsPerNode<decltype(set61)>());
   }
 
   // Test key insertion/deletion in random order.
-  ExpectOperationCounts(45281, 132551, values, &tracker, &set3);
+  ExpectOperationCounts(56540, 134212, values, &tracker, &set4);
   ExpectOperationCounts(386718, 129807, values, &tracker, &set61);
   ExpectOperationCounts(586761, 130310, values, &tracker, &set100);
 
   // Test key insertion/deletion in sorted order.
   std::sort(values.begin(), values.end());
-  ExpectOperationCounts(26638, 92134, values, &tracker, &set3);
+  ExpectOperationCounts(24972, 85563, values, &tracker, &set4);
   ExpectOperationCounts(20208, 87757, values, &tracker, &set61);
   ExpectOperationCounts(20124, 96583, values, &tracker, &set100);
 
   // Test key insertion/deletion in reverse sorted order.
   std::reverse(values.begin(), values.end());
-  ExpectOperationCounts(49951, 119325, values, &tracker, &set3);
+  ExpectOperationCounts(54949, 127531, values, &tracker, &set4);
   ExpectOperationCounts(338813, 118266, values, &tracker, &set61);
   ExpectOperationCounts(534529, 125279, values, &tracker, &set100);
 }
@@ -1429,9 +1507,9 @@ struct MovableOnlyInstanceThreeWayCompare {
 TEST(Btree, MovesComparisonsCopiesSwapsTrackingThreeWayCompare) {
   InstanceTracker tracker;
   // Note: this is minimum number of values per node.
-  SizedBtreeSet<MovableOnlyInstance, /*TargetValuesPerNode=*/3,
+  SizedBtreeSet<MovableOnlyInstance, /*TargetValuesPerNode=*/4,
                 MovableOnlyInstanceThreeWayCompare>
-      set3;
+      set4;
   // Note: this is the default number of values per node for a set of int32s
   // (with 64-bit pointers).
   SizedBtreeSet<MovableOnlyInstance, /*TargetValuesPerNode=*/61,
@@ -1446,28 +1524,28 @@ TEST(Btree, MovesComparisonsCopiesSwapsTrackingThreeWayCompare) {
   std::vector<int> values =
       GenerateValuesWithSeed<int>(10000, 1 << 22, /*seed=*/23);
 
-  EXPECT_EQ(BtreeNodePeer::GetNumValuesPerNode<decltype(set3)>(), 3);
-  EXPECT_EQ(BtreeNodePeer::GetNumValuesPerNode<decltype(set61)>(), 61);
-  EXPECT_EQ(BtreeNodePeer::GetNumValuesPerNode<decltype(set100)>(), 100);
+  EXPECT_EQ(BtreeNodePeer::GetNumSlotsPerNode<decltype(set4)>(), 4);
+  EXPECT_EQ(BtreeNodePeer::GetNumSlotsPerNode<decltype(set61)>(), 61);
+  EXPECT_EQ(BtreeNodePeer::GetNumSlotsPerNode<decltype(set100)>(), 100);
   if (sizeof(void *) == 8) {
-    EXPECT_EQ(BtreeNodePeer::GetNumValuesPerNode<absl::btree_set<int32_t>>(),
-              BtreeNodePeer::GetNumValuesPerNode<decltype(set61)>());
+    EXPECT_EQ(BtreeNodePeer::GetNumSlotsPerNode<absl::btree_set<int32_t>>(),
+              BtreeNodePeer::GetNumSlotsPerNode<decltype(set61)>());
   }
 
   // Test key insertion/deletion in random order.
-  ExpectOperationCounts(45281, 122560, values, &tracker, &set3);
+  ExpectOperationCounts(56540, 124221, values, &tracker, &set4);
   ExpectOperationCounts(386718, 119816, values, &tracker, &set61);
   ExpectOperationCounts(586761, 120319, values, &tracker, &set100);
 
   // Test key insertion/deletion in sorted order.
   std::sort(values.begin(), values.end());
-  ExpectOperationCounts(26638, 92134, values, &tracker, &set3);
+  ExpectOperationCounts(24972, 85563, values, &tracker, &set4);
   ExpectOperationCounts(20208, 87757, values, &tracker, &set61);
   ExpectOperationCounts(20124, 96583, values, &tracker, &set100);
 
   // Test key insertion/deletion in reverse sorted order.
   std::reverse(values.begin(), values.end());
-  ExpectOperationCounts(49951, 109326, values, &tracker, &set3);
+  ExpectOperationCounts(54949, 117532, values, &tracker, &set4);
   ExpectOperationCounts(338813, 108267, values, &tracker, &set61);
   ExpectOperationCounts(534529, 115280, values, &tracker, &set100);
 }
@@ -1543,7 +1621,7 @@ TEST(Btree, MapAt) {
 #ifdef ABSL_HAVE_EXCEPTIONS
   EXPECT_THROW(map.at(3), std::out_of_range);
 #else
-  EXPECT_DEATH(map.at(3), "absl::btree_map::at");
+  EXPECT_DEATH_IF_SUPPORTED(map.at(3), "absl::btree_map::at");
 #endif
 }
 
@@ -1630,10 +1708,25 @@ TEST(Btree, StrSplitCompatible) {
   EXPECT_EQ(split_set, expected_set);
 }
 
-// We can't use EXPECT_EQ/etc. to compare absl::weak_ordering because they
-// convert literal 0 to int and absl::weak_ordering can only be compared with
-// literal 0. Defining this function allows for avoiding ClangTidy warnings.
-bool Identity(const bool b) { return b; }
+TEST(Btree, KeyComp) {
+  absl::btree_set<int> s;
+  EXPECT_TRUE(s.key_comp()(1, 2));
+  EXPECT_FALSE(s.key_comp()(2, 2));
+  EXPECT_FALSE(s.key_comp()(2, 1));
+
+  absl::btree_map<int, int> m1;
+  EXPECT_TRUE(m1.key_comp()(1, 2));
+  EXPECT_FALSE(m1.key_comp()(2, 2));
+  EXPECT_FALSE(m1.key_comp()(2, 1));
+
+  // Even though we internally adapt the comparator of `m2` to be three-way and
+  // heterogeneous, the comparator we expose through key_comp() is the original
+  // unadapted comparator.
+  absl::btree_map<std::string, int> m2;
+  EXPECT_TRUE(m2.key_comp()("a", "b"));
+  EXPECT_FALSE(m2.key_comp()("b", "b"));
+  EXPECT_FALSE(m2.key_comp()("b", "a"));
+}
 
 TEST(Btree, ValueComp) {
   absl::btree_set<int> s;
@@ -1646,13 +1739,13 @@ TEST(Btree, ValueComp) {
   EXPECT_FALSE(m1.value_comp()(std::make_pair(2, 0), std::make_pair(2, 0)));
   EXPECT_FALSE(m1.value_comp()(std::make_pair(2, 0), std::make_pair(1, 0)));
 
+  // Even though we internally adapt the comparator of `m2` to be three-way and
+  // heterogeneous, the comparator we expose through value_comp() is based on
+  // the original unadapted comparator.
   absl::btree_map<std::string, int> m2;
-  EXPECT_TRUE(Identity(
-      m2.value_comp()(std::make_pair("a", 0), std::make_pair("b", 0)) < 0));
-  EXPECT_TRUE(Identity(
-      m2.value_comp()(std::make_pair("b", 0), std::make_pair("b", 0)) == 0));
-  EXPECT_TRUE(Identity(
-      m2.value_comp()(std::make_pair("b", 0), std::make_pair("a", 0)) > 0));
+  EXPECT_TRUE(m2.value_comp()(std::make_pair("a", 0), std::make_pair("b", 0)));
+  EXPECT_FALSE(m2.value_comp()(std::make_pair("b", 0), std::make_pair("b", 0)));
+  EXPECT_FALSE(m2.value_comp()(std::make_pair("b", 0), std::make_pair("a", 0)));
 }
 
 TEST(Btree, DefaultConstruction) {
@@ -1960,6 +2053,30 @@ TEST(Btree, ExtractAndInsertNodeHandleMultiMap) {
   EXPECT_EQ(res, ++other.begin());
 }
 
+TEST(Btree, ExtractMultiMapEquivalentKeys) {
+  // Note: using string keys means a three-way comparator.
+  absl::btree_multimap<std::string, int> map;
+  for (int i = 0; i < 100; ++i) {
+    for (int j = 0; j < 100; ++j) {
+      map.insert({absl::StrCat(i), j});
+    }
+  }
+
+  for (int i = 0; i < 100; ++i) {
+    const std::string key = absl::StrCat(i);
+    auto node_handle = map.extract(key);
+    EXPECT_EQ(node_handle.key(), key);
+    EXPECT_EQ(node_handle.mapped(), 0) << i;
+  }
+
+  for (int i = 0; i < 100; ++i) {
+    const std::string key = absl::StrCat(i);
+    auto node_handle = map.extract(key);
+    EXPECT_EQ(node_handle.key(), key);
+    EXPECT_EQ(node_handle.mapped(), 1) << i;
+  }
+}
+
 // For multisets, insert with hint also affects correctness because we need to
 // insert immediately before the hint if possible.
 struct InsertMultiHintData {
@@ -2099,6 +2216,31 @@ TEST(Btree, MergeIntoMultiMapsWithDifferentComparators) {
   EXPECT_TRUE(src2.empty());
   EXPECT_THAT(dst, ElementsAre(Pair(1, 1), Pair(2, 2), Pair(3, 3), Pair(3, 2),
                                Pair(4, 1), Pair(4, 4), Pair(5, 5)));
+}
+
+TEST(Btree, MergeIntoSetMovableOnly) {
+  absl::btree_set<MovableOnlyInstance> src;
+  src.insert(MovableOnlyInstance(1));
+  absl::btree_multiset<MovableOnlyInstance> dst1;
+  dst1.insert(MovableOnlyInstance(2));
+  absl::btree_set<MovableOnlyInstance> dst2;
+
+  // Test merge into multiset.
+  dst1.merge(src);
+
+  EXPECT_TRUE(src.empty());
+  // ElementsAre/ElementsAreArray don't work with move-only types.
+  ASSERT_THAT(dst1, SizeIs(2));
+  EXPECT_EQ(*dst1.begin(), MovableOnlyInstance(1));
+  EXPECT_EQ(*std::next(dst1.begin()), MovableOnlyInstance(2));
+
+  // Test merge into set.
+  dst2.merge(dst1);
+
+  EXPECT_TRUE(dst1.empty());
+  ASSERT_THAT(dst2, SizeIs(2));
+  EXPECT_EQ(*dst2.begin(), MovableOnlyInstance(1));
+  EXPECT_EQ(*std::next(dst2.begin()), MovableOnlyInstance(2));
 }
 
 struct KeyCompareToWeakOrdering {
@@ -2402,6 +2544,408 @@ TEST(Btree, BitfieldArgument) {
   m.try_emplace(m.end(), n);
   m.at(n);
   m[n];
+}
+
+TEST(Btree, SetRangeConstructorAndInsertSupportExplicitConversionComparable) {
+  const absl::string_view names[] = {"n1", "n2"};
+
+  absl::btree_set<std::string> name_set1{std::begin(names), std::end(names)};
+  EXPECT_THAT(name_set1, ElementsAreArray(names));
+
+  absl::btree_set<std::string> name_set2;
+  name_set2.insert(std::begin(names), std::end(names));
+  EXPECT_THAT(name_set2, ElementsAreArray(names));
+}
+
+// A type that is explicitly convertible from int and counts constructor calls.
+struct ConstructorCounted {
+  explicit ConstructorCounted(int i) : i(i) { ++constructor_calls; }
+  bool operator==(int other) const { return i == other; }
+
+  int i;
+  static int constructor_calls;
+};
+int ConstructorCounted::constructor_calls = 0;
+
+struct ConstructorCountedCompare {
+  bool operator()(int a, const ConstructorCounted &b) const { return a < b.i; }
+  bool operator()(const ConstructorCounted &a, int b) const { return a.i < b; }
+  bool operator()(const ConstructorCounted &a,
+                  const ConstructorCounted &b) const {
+    return a.i < b.i;
+  }
+  using is_transparent = void;
+};
+
+TEST(Btree,
+     SetRangeConstructorAndInsertExplicitConvComparableLimitConstruction) {
+  const int i[] = {0, 1, 1};
+  ConstructorCounted::constructor_calls = 0;
+
+  absl::btree_set<ConstructorCounted, ConstructorCountedCompare> set{
+      std::begin(i), std::end(i)};
+  EXPECT_THAT(set, ElementsAre(0, 1));
+  EXPECT_EQ(ConstructorCounted::constructor_calls, 2);
+
+  set.insert(std::begin(i), std::end(i));
+  EXPECT_THAT(set, ElementsAre(0, 1));
+  EXPECT_EQ(ConstructorCounted::constructor_calls, 2);
+}
+
+TEST(Btree,
+     SetRangeConstructorAndInsertSupportExplicitConversionNonComparable) {
+  const int i[] = {0, 1};
+
+  absl::btree_set<std::vector<void *>> s1{std::begin(i), std::end(i)};
+  EXPECT_THAT(s1, ElementsAre(IsEmpty(), ElementsAre(IsNull())));
+
+  absl::btree_set<std::vector<void *>> s2;
+  s2.insert(std::begin(i), std::end(i));
+  EXPECT_THAT(s2, ElementsAre(IsEmpty(), ElementsAre(IsNull())));
+}
+
+// libstdc++ included with GCC 4.9 has a bug in the std::pair constructors that
+// prevents explicit conversions between pair types.
+// We only run this test for the libstdc++ from GCC 7 or newer because we can't
+// reliably check the libstdc++ version prior to that release.
+#if !defined(__GLIBCXX__) || \
+    (defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE >= 7)
+TEST(Btree, MapRangeConstructorAndInsertSupportExplicitConversionComparable) {
+  const std::pair<absl::string_view, int> names[] = {{"n1", 1}, {"n2", 2}};
+
+  absl::btree_map<std::string, int> name_map1{std::begin(names),
+                                              std::end(names)};
+  EXPECT_THAT(name_map1, ElementsAre(Pair("n1", 1), Pair("n2", 2)));
+
+  absl::btree_map<std::string, int> name_map2;
+  name_map2.insert(std::begin(names), std::end(names));
+  EXPECT_THAT(name_map2, ElementsAre(Pair("n1", 1), Pair("n2", 2)));
+}
+
+TEST(Btree,
+     MapRangeConstructorAndInsertExplicitConvComparableLimitConstruction) {
+  const std::pair<int, int> i[] = {{0, 1}, {1, 2}, {1, 3}};
+  ConstructorCounted::constructor_calls = 0;
+
+  absl::btree_map<ConstructorCounted, int, ConstructorCountedCompare> map{
+      std::begin(i), std::end(i)};
+  EXPECT_THAT(map, ElementsAre(Pair(0, 1), Pair(1, 2)));
+  EXPECT_EQ(ConstructorCounted::constructor_calls, 2);
+
+  map.insert(std::begin(i), std::end(i));
+  EXPECT_THAT(map, ElementsAre(Pair(0, 1), Pair(1, 2)));
+  EXPECT_EQ(ConstructorCounted::constructor_calls, 2);
+}
+
+TEST(Btree,
+     MapRangeConstructorAndInsertSupportExplicitConversionNonComparable) {
+  const std::pair<int, int> i[] = {{0, 1}, {1, 2}};
+
+  absl::btree_map<std::vector<void *>, int> m1{std::begin(i), std::end(i)};
+  EXPECT_THAT(m1,
+              ElementsAre(Pair(IsEmpty(), 1), Pair(ElementsAre(IsNull()), 2)));
+
+  absl::btree_map<std::vector<void *>, int> m2;
+  m2.insert(std::begin(i), std::end(i));
+  EXPECT_THAT(m2,
+              ElementsAre(Pair(IsEmpty(), 1), Pair(ElementsAre(IsNull()), 2)));
+}
+
+TEST(Btree, HeterogeneousTryEmplace) {
+  absl::btree_map<std::string, int> m;
+  std::string s = "key";
+  absl::string_view sv = s;
+  m.try_emplace(sv, 1);
+  EXPECT_EQ(m[s], 1);
+
+  m.try_emplace(m.end(), sv, 2);
+  EXPECT_EQ(m[s], 1);
+}
+
+TEST(Btree, HeterogeneousOperatorMapped) {
+  absl::btree_map<std::string, int> m;
+  std::string s = "key";
+  absl::string_view sv = s;
+  m[sv] = 1;
+  EXPECT_EQ(m[s], 1);
+
+  m[sv] = 2;
+  EXPECT_EQ(m[s], 2);
+}
+
+TEST(Btree, HeterogeneousInsertOrAssign) {
+  absl::btree_map<std::string, int> m;
+  std::string s = "key";
+  absl::string_view sv = s;
+  m.insert_or_assign(sv, 1);
+  EXPECT_EQ(m[s], 1);
+
+  m.insert_or_assign(m.end(), sv, 2);
+  EXPECT_EQ(m[s], 2);
+}
+#endif
+
+// This test requires std::launder for mutable key access in node handles.
+#if defined(__cpp_lib_launder) && __cpp_lib_launder >= 201606
+TEST(Btree, NodeHandleMutableKeyAccess) {
+  {
+    absl::btree_map<std::string, std::string> map;
+
+    map["key1"] = "mapped";
+
+    auto nh = map.extract(map.begin());
+    nh.key().resize(3);
+    map.insert(std::move(nh));
+
+    EXPECT_THAT(map, ElementsAre(Pair("key", "mapped")));
+  }
+  // Also for multimap.
+  {
+    absl::btree_multimap<std::string, std::string> map;
+
+    map.emplace("key1", "mapped");
+
+    auto nh = map.extract(map.begin());
+    nh.key().resize(3);
+    map.insert(std::move(nh));
+
+    EXPECT_THAT(map, ElementsAre(Pair("key", "mapped")));
+  }
+}
+#endif
+
+struct MultiKey {
+  int i1;
+  int i2;
+};
+
+bool operator==(const MultiKey a, const MultiKey b) {
+  return a.i1 == b.i1 && a.i2 == b.i2;
+}
+
+// A heterogeneous comparator that has different equivalence classes for
+// different lookup types.
+struct MultiKeyComp {
+  using is_transparent = void;
+  bool operator()(const MultiKey a, const MultiKey b) const {
+    if (a.i1 != b.i1) return a.i1 < b.i1;
+    return a.i2 < b.i2;
+  }
+  bool operator()(const int a, const MultiKey b) const { return a < b.i1; }
+  bool operator()(const MultiKey a, const int b) const { return a.i1 < b; }
+};
+
+// A heterogeneous, three-way comparator that has different equivalence classes
+// for different lookup types.
+struct MultiKeyThreeWayComp {
+  using is_transparent = void;
+  absl::weak_ordering operator()(const MultiKey a, const MultiKey b) const {
+    if (a.i1 < b.i1) return absl::weak_ordering::less;
+    if (a.i1 > b.i1) return absl::weak_ordering::greater;
+    if (a.i2 < b.i2) return absl::weak_ordering::less;
+    if (a.i2 > b.i2) return absl::weak_ordering::greater;
+    return absl::weak_ordering::equivalent;
+  }
+  absl::weak_ordering operator()(const int a, const MultiKey b) const {
+    if (a < b.i1) return absl::weak_ordering::less;
+    if (a > b.i1) return absl::weak_ordering::greater;
+    return absl::weak_ordering::equivalent;
+  }
+  absl::weak_ordering operator()(const MultiKey a, const int b) const {
+    if (a.i1 < b) return absl::weak_ordering::less;
+    if (a.i1 > b) return absl::weak_ordering::greater;
+    return absl::weak_ordering::equivalent;
+  }
+};
+
+template <typename Compare>
+class BtreeMultiKeyTest : public ::testing::Test {};
+using MultiKeyComps = ::testing::Types<MultiKeyComp, MultiKeyThreeWayComp>;
+TYPED_TEST_SUITE(BtreeMultiKeyTest, MultiKeyComps);
+
+TYPED_TEST(BtreeMultiKeyTest, EqualRange) {
+  absl::btree_set<MultiKey, TypeParam> set;
+  for (int i = 0; i < 100; ++i) {
+    for (int j = 0; j < 100; ++j) {
+      set.insert({i, j});
+    }
+  }
+
+  for (int i = 0; i < 100; ++i) {
+    auto equal_range = set.equal_range(i);
+    EXPECT_EQ(equal_range.first->i1, i);
+    EXPECT_EQ(equal_range.first->i2, 0) << i;
+    EXPECT_EQ(std::distance(equal_range.first, equal_range.second), 100) << i;
+  }
+}
+
+TYPED_TEST(BtreeMultiKeyTest, Extract) {
+  absl::btree_set<MultiKey, TypeParam> set;
+  for (int i = 0; i < 100; ++i) {
+    for (int j = 0; j < 100; ++j) {
+      set.insert({i, j});
+    }
+  }
+
+  for (int i = 0; i < 100; ++i) {
+    auto node_handle = set.extract(i);
+    EXPECT_EQ(node_handle.value().i1, i);
+    EXPECT_EQ(node_handle.value().i2, 0) << i;
+  }
+
+  for (int i = 0; i < 100; ++i) {
+    auto node_handle = set.extract(i);
+    EXPECT_EQ(node_handle.value().i1, i);
+    EXPECT_EQ(node_handle.value().i2, 1) << i;
+  }
+}
+
+TYPED_TEST(BtreeMultiKeyTest, Erase) {
+  absl::btree_set<MultiKey, TypeParam> set = {
+      {1, 1}, {2, 1}, {2, 2}, {3, 1}};
+  EXPECT_EQ(set.erase(2), 2);
+  EXPECT_THAT(set, ElementsAre(MultiKey{1, 1}, MultiKey{3, 1}));
+}
+
+TYPED_TEST(BtreeMultiKeyTest, Count) {
+  const absl::btree_set<MultiKey, TypeParam> set = {
+      {1, 1}, {2, 1}, {2, 2}, {3, 1}};
+  EXPECT_EQ(set.count(2), 2);
+}
+
+TEST(Btree, AllocConstructor) {
+  using Alloc = CountingAllocator<int>;
+  using Set = absl::btree_set<int, std::less<int>, Alloc>;
+  int64_t bytes_used = 0;
+  Alloc alloc(&bytes_used);
+  Set set(alloc);
+
+  set.insert({1, 2, 3});
+
+  EXPECT_THAT(set, ElementsAre(1, 2, 3));
+  EXPECT_GT(bytes_used, set.size() * sizeof(int));
+}
+
+TEST(Btree, AllocInitializerListConstructor) {
+  using Alloc = CountingAllocator<int>;
+  using Set = absl::btree_set<int, std::less<int>, Alloc>;
+  int64_t bytes_used = 0;
+  Alloc alloc(&bytes_used);
+  Set set({1, 2, 3}, alloc);
+
+  EXPECT_THAT(set, ElementsAre(1, 2, 3));
+  EXPECT_GT(bytes_used, set.size() * sizeof(int));
+}
+
+TEST(Btree, AllocRangeConstructor) {
+  using Alloc = CountingAllocator<int>;
+  using Set = absl::btree_set<int, std::less<int>, Alloc>;
+  int64_t bytes_used = 0;
+  Alloc alloc(&bytes_used);
+  std::vector<int> v = {1, 2, 3};
+  Set set(v.begin(), v.end(), alloc);
+
+  EXPECT_THAT(set, ElementsAre(1, 2, 3));
+  EXPECT_GT(bytes_used, set.size() * sizeof(int));
+}
+
+TEST(Btree, AllocCopyConstructor) {
+  using Alloc = CountingAllocator<int>;
+  using Set = absl::btree_set<int, std::less<int>, Alloc>;
+  int64_t bytes_used1 = 0;
+  Alloc alloc1(&bytes_used1);
+  Set set1(alloc1);
+
+  set1.insert({1, 2, 3});
+
+  int64_t bytes_used2 = 0;
+  Alloc alloc2(&bytes_used2);
+  Set set2(set1, alloc2);
+
+  EXPECT_THAT(set1, ElementsAre(1, 2, 3));
+  EXPECT_THAT(set2, ElementsAre(1, 2, 3));
+  EXPECT_GT(bytes_used1, set1.size() * sizeof(int));
+  EXPECT_EQ(bytes_used1, bytes_used2);
+}
+
+TEST(Btree, AllocMoveConstructor_SameAlloc) {
+  using Alloc = CountingAllocator<int>;
+  using Set = absl::btree_set<int, std::less<int>, Alloc>;
+  int64_t bytes_used = 0;
+  Alloc alloc(&bytes_used);
+  Set set1(alloc);
+
+  set1.insert({1, 2, 3});
+
+  const int64_t original_bytes_used = bytes_used;
+  EXPECT_GT(original_bytes_used, set1.size() * sizeof(int));
+
+  Set set2(std::move(set1), alloc);
+
+  EXPECT_THAT(set2, ElementsAre(1, 2, 3));
+  EXPECT_EQ(bytes_used, original_bytes_used);
+}
+
+TEST(Btree, AllocMoveConstructor_DifferentAlloc) {
+  using Alloc = CountingAllocator<int>;
+  using Set = absl::btree_set<int, std::less<int>, Alloc>;
+  int64_t bytes_used1 = 0;
+  Alloc alloc1(&bytes_used1);
+  Set set1(alloc1);
+
+  set1.insert({1, 2, 3});
+
+  const int64_t original_bytes_used = bytes_used1;
+  EXPECT_GT(original_bytes_used, set1.size() * sizeof(int));
+
+  int64_t bytes_used2 = 0;
+  Alloc alloc2(&bytes_used2);
+  Set set2(std::move(set1), alloc2);
+
+  EXPECT_THAT(set2, ElementsAre(1, 2, 3));
+  // We didn't free these bytes allocated by `set1` yet.
+  EXPECT_EQ(bytes_used1, original_bytes_used);
+  EXPECT_EQ(bytes_used2, original_bytes_used);
+}
+
+bool IntCmp(const int a, const int b) { return a < b; }
+
+TEST(Btree, SupportsFunctionPtrComparator) {
+  absl::btree_set<int, decltype(IntCmp) *> set(IntCmp);
+  set.insert({1, 2, 3});
+  EXPECT_THAT(set, ElementsAre(1, 2, 3));
+  EXPECT_TRUE(set.key_comp()(1, 2));
+  EXPECT_TRUE(set.value_comp()(1, 2));
+
+  absl::btree_map<int, int, decltype(IntCmp) *> map(&IntCmp);
+  map[1] = 1;
+  EXPECT_THAT(map, ElementsAre(Pair(1, 1)));
+  EXPECT_TRUE(map.key_comp()(1, 2));
+  EXPECT_TRUE(map.value_comp()(std::make_pair(1, 1), std::make_pair(2, 2)));
+}
+
+template <typename Compare>
+struct TransparentPassThroughComp {
+  using is_transparent = void;
+
+  // This will fail compilation if we attempt a comparison that Compare does not
+  // support, and the failure will happen inside the function implementation so
+  // it can't be avoided by using SFINAE on this comparator.
+  template <typename T, typename U>
+  bool operator()(const T &lhs, const U &rhs) const {
+    return Compare()(lhs, rhs);
+  }
+};
+
+TEST(Btree,
+     SupportsTransparentComparatorThatDoesNotImplementAllVisibleOperators) {
+  absl::btree_set<MultiKey, TransparentPassThroughComp<MultiKeyComp>> set;
+  set.insert(MultiKey{1, 2});
+  EXPECT_TRUE(set.contains(1));
+}
+
+TEST(Btree, ConstructImplicitlyWithUnadaptedComparator) {
+  absl::btree_set<MultiKey, MultiKeyComp> set = {{}, MultiKeyComp{}};
 }
 
 }  // namespace

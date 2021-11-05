@@ -6,7 +6,7 @@ import TelegramApi
 
 public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: Bool = false) -> Signal<[TelegramWallpaper], NoError> {
     let fetch: ([TelegramWallpaper]?, Int64?) -> Signal<[TelegramWallpaper], NoError> = { current, hash in
-        network.request(Api.functions.account.getWallPapers(hash: 0))
+        network.request(Api.functions.account.getWallPapers(hash: hash ?? 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<([TelegramWallpaper], Int64), NoError> in
             switch result {
@@ -43,10 +43,14 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
                 for item in items {
                     var intValue = Int32(entries.count)
                     let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-                    entries.append(OrderedItemListEntry(id: id, contents: item))
+                    if let entry = CodableEntry(TelegramWallpaperNativeCodable(item)) {
+                        entries.append(OrderedItemListEntry(id: id, contents: entry))
+                    }
                 }
                 transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers, items: entries)
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0)), entry: CachedWallpapersConfiguration(hash: hash), collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                if let entry = CodableEntry(CachedWallpapersConfiguration(hash: hash)) {
+                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0)), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                }
                 return items
             }
         }
@@ -56,12 +60,26 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
         return fetch(nil, nil)
     } else {
         return postbox.transaction { transaction -> ([TelegramWallpaper], Int64?) in
-            let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0))) as? CachedWallpapersConfiguration
+            let configuration = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedWallpapersConfiguration, key: ValueBoxKey(length: 0)))?.get(CachedWallpapersConfiguration.self)
             let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudWallpapers)
             if items.count == 0 {
                 return ([.builtin(WallpaperSettings())], 0)
             } else {
-                return (items.map { $0.contents as! TelegramWallpaper }, configuration?.hash)
+                var success = true
+                var mappedItems: [TelegramWallpaper] = []
+                for item in items {
+                    if let value = item.contents.get(TelegramWallpaperNativeCodable.self)?.value {
+                        mappedItems.append(value)
+                    } else {
+                        success = false
+                        break
+                    }
+                }
+                if success {
+                    return (mappedItems, configuration?.hash)
+                } else {
+                    return ([.builtin(WallpaperSettings())], nil)
+                }
             }
         }
         |> mapToSignal { current, hash -> Signal<[TelegramWallpaper], NoError> in
@@ -102,7 +120,7 @@ private func uploadedWallpaper(postbox: Postbox, network: Network, resource: Med
 
 public func uploadWallpaper(account: Account, resource: MediaResource, mimeType: String = "image/jpeg", settings: WallpaperSettings) -> Signal<UploadWallpaperStatus, UploadWallpaperError> {
     return uploadedWallpaper(postbox: account.postbox, network: account.network, resource: resource)
-    |> mapError { _ -> UploadWallpaperError in return .generic }
+    |> mapError { _ -> UploadWallpaperError in }
     |> mapToSignal { result -> Signal<(UploadWallpaperStatus, MediaResource?), UploadWallpaperError> in
         switch result.content {
             case .error:

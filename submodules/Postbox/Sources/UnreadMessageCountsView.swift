@@ -21,7 +21,7 @@ public enum UnreadMessageCountsItemEntry {
 final class MutableUnreadMessageCountsView: MutablePostboxView {
     fileprivate var entries: [MutableUnreadMessageCountsItemEntry]
     
-    init(postbox: Postbox, items: [UnreadMessageCountsItem]) {
+    init(postbox: PostboxImpl, items: [UnreadMessageCountsItem]) {
         self.entries = items.map { item in
             switch item {
             case let .total(preferencesKey):
@@ -34,7 +34,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
         var updatedPreferencesEntry: PreferencesEntry?
@@ -133,12 +133,12 @@ final class MutableCombinedReadStateView: MutablePostboxView {
     private let peerId: PeerId
     fileprivate var state: CombinedPeerReadState?
     
-    init(postbox: Postbox, peerId: PeerId) {
+    init(postbox: PostboxImpl, peerId: PeerId) {
         self.peerId = peerId
         self.state = postbox.readStateTable.getCombinedState(peerId)
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
         if transaction.alteredInitialPeerCombinedReadStates[self.peerId] != nil {

@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ActivityIndicator
@@ -20,8 +19,8 @@ private struct ArchivedStickersNoticeEntry: Comparable, Identifiable {
     let topItem: StickerPackItem?
     let count: String
     
-    var stableId: ItemCollectionId {
-        return info.id
+    var stableId: AnyHashable {
+        return AnyHashable(self.info.id)
     }
 
     static func ==(lhs: ArchivedStickersNoticeEntry, rhs: ArchivedStickersNoticeEntry) -> Bool {

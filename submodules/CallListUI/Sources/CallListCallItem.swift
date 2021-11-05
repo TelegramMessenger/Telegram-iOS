@@ -188,6 +188,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
@@ -205,6 +206,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     required init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -353,7 +357,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             var dateRightInset: CGFloat = 46.0 + params.rightInset
@@ -510,50 +514,6 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                             }
                             
-                            switch item.style {
-                                case .plain:
-                                    if strongSelf.backgroundNode.supernode == nil {
-                                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                                    }
-                                    if strongSelf.topStripeNode.supernode != nil {
-                                        strongSelf.topStripeNode.removeFromSupernode()
-                                    }
-                                    if !last && strongSelf.bottomStripeNode.supernode == nil {
-                                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 1)
-                                    } else if last && strongSelf.bottomStripeNode.supernode != nil {
-                                        strongSelf.bottomStripeNode.removeFromSupernode()
-                                    }
-                                    
-                                    transition.updateFrameAdditive(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight)))
-                                case .blocks:
-                                    if strongSelf.backgroundNode.supernode == nil {
-                                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                                    }
-                                    if strongSelf.topStripeNode.supernode == nil {
-                                        strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
-                                    }
-                                    if strongSelf.bottomStripeNode.supernode == nil {
-                                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
-                                    }
-                                    switch neighbors.top {
-                                        case .sameSection(false):
-                                            strongSelf.topStripeNode.isHidden = true
-                                        default:
-                                            strongSelf.topStripeNode.isHidden = false
-                                    }
-                                    let bottomStripeInset: CGFloat
-                                    switch neighbors.bottom {
-                                        case .sameSection(false):
-                                            bottomStripeInset = leftInset
-                                        default:
-                                            bottomStripeInset = 0.0
-                                    }
-                                    
-                                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                                    strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))
-                                    transition.updateFrameAdditive(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width - bottomStripeInset, height: separatorHeight)))
-                            }
-                            
                             if let editableControlSizeAndApply = editableControlSizeAndApply {
                                 let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: nodeLayout.contentSize.height))
                                 if strongSelf.editableControlNode == nil {
@@ -583,6 +543,65 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                 })
                             }
                             
+                            switch item.style {
+                                case .plain:
+                                    if strongSelf.backgroundNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
+                                    }
+                                    if strongSelf.topStripeNode.supernode != nil {
+                                        strongSelf.topStripeNode.removeFromSupernode()
+                                    }
+                                    if !last && strongSelf.bottomStripeNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 1)
+                                    } else if last && strongSelf.bottomStripeNode.supernode != nil {
+                                        strongSelf.bottomStripeNode.removeFromSupernode()
+                                    }
+                                    if strongSelf.maskNode.supernode != nil {
+                                        strongSelf.maskNode.removeFromSupernode()
+                                    }
+                                    transition.updateFrameAdditive(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight)))
+                                case .blocks:
+                                    if strongSelf.backgroundNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
+                                    }
+                                    if strongSelf.topStripeNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                                    }
+                                    if strongSelf.bottomStripeNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                                    }
+                                    if strongSelf.maskNode.supernode == nil {
+                                        strongSelf.addSubnode(strongSelf.maskNode)
+                                    }
+                                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                                    var hasTopCorners = false
+                                    var hasBottomCorners = false
+                                    switch neighbors.top {
+                                        case .sameSection(false):
+                                            strongSelf.topStripeNode.isHidden = true
+                                        default:
+                                            hasTopCorners = true
+                                            strongSelf.topStripeNode.isHidden = hasCorners
+                                    }
+                                    let bottomStripeInset: CGFloat
+                                    switch neighbors.bottom {
+                                        case .sameSection(false):
+                                            bottomStripeInset = leftInset
+                                        default:
+                                            bottomStripeInset = 0.0
+                                            hasBottomCorners = true
+                                            strongSelf.bottomStripeNode.isHidden = hasCorners
+                                    }
+                                
+                                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                                    
+                                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                                    strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))
+                                    transition.updateFrameAdditive(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width - bottomStripeInset, height: separatorHeight)))
+                            }
+                            
+                    
                             transition.updateFrameAdditive(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 52.0, y: floor((contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter)))
                             
                             let _ = titleApply()

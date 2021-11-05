@@ -13,7 +13,7 @@ func _internal_createSecretChat(account: Account, peerId: PeerId) -> Signal<Peer
     return account.postbox.transaction { transaction -> Signal<PeerId, CreateSecretChatError> in
         if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
             return validatedEncryptionConfig(postbox: account.postbox, network: account.network)
-                |> mapError { _ -> CreateSecretChatError in return .generic }
+                |> mapError { _ -> CreateSecretChatError in }
                 |> mapToSignal { config -> Signal<PeerId, CreateSecretChatError> in
                     let aBytes = malloc(256)!
                     let _ = SecRandomCopyBytes(nil, 256, aBytes.assumingMemoryBound(to: UInt8.self))
@@ -43,11 +43,11 @@ func _internal_createSecretChat(account: Account, peerId: PeerId) -> Signal<Peer
                                 updateSecretChat(encryptionProvider: account.network.encryptionProvider, accountPeerId: account.peerId, transaction: transaction, mediaBox: account.postbox.mediaBox, chat: result, requestData: SecretChatRequestData(g: config.g, p: config.p, a: a))
                                 
                                 return result.peerId
-                            } |> mapError { _ -> CreateSecretChatError in return .generic }
+                            } |> mapError { _ -> CreateSecretChatError in }
                         }
                 }
         } else {
             return .fail(.generic)
         }
-    } |> mapError { _ -> CreateSecretChatError in return .generic } |> switchToLatest
+    } |> mapError { _ -> CreateSecretChatError in } |> switchToLatest
 }

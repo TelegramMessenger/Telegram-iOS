@@ -3,7 +3,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-public struct IntentsSettings: PreferencesEntry, Equatable {
+public struct IntentsSettings: Codable, Equatable {
     public let initiallyReset: Bool
     
     public let account: PeerId?
@@ -27,36 +27,28 @@ public struct IntentsSettings: PreferencesEntry, Equatable {
         self.onlyShared = onlyShared
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.initiallyReset = decoder.decodeBoolForKey("initiallyReset_v2", orElse: false)
-        self.account = decoder.decodeOptionalInt64ForKey("account").flatMap { PeerId($0) }
-        self.contacts = decoder.decodeBoolForKey("contacts", orElse: true)
-        self.privateChats = decoder.decodeBoolForKey("privateChats", orElse: false)
-        self.savedMessages = decoder.decodeBoolForKey("savedMessages", orElse: true)
-        self.groups = decoder.decodeBoolForKey("groups", orElse: false)
-        self.onlyShared = decoder.decodeBoolForKey("onlyShared", orElse: false)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.initiallyReset = try container.decodeIfPresent(Bool.self, forKey: "initiallyReset_v2") ?? false
+        self.account = (try container.decodeIfPresent(Int64.self, forKey: "account")).flatMap { PeerId($0) }
+        self.contacts = try container.decodeIfPresent(Bool.self, forKey: "contacts") ?? true
+        self.privateChats = try container.decodeIfPresent(Bool.self, forKey: "privateChats") ?? false
+        self.savedMessages = try container.decodeIfPresent(Bool.self, forKey: "savedMessages") ?? true
+        self.groups = try container.decodeIfPresent(Bool.self, forKey: "groups") ?? false
+        self.onlyShared = try container.decodeIfPresent(Bool.self, forKey: "onlyShared") ?? false
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeBool(self.initiallyReset, forKey: "initiallyReset_v2")
-        if let account = self.account {
-            encoder.encodeInt64(account.toInt64(), forKey: "account")
-        } else {
-            encoder.encodeNil(forKey: "account")
-        }
-        encoder.encodeBool(self.contacts, forKey: "contacts")
-        encoder.encodeBool(self.privateChats, forKey: "privateChats")
-        encoder.encodeBool(self.savedMessages, forKey: "savedMessages")
-        encoder.encodeBool(self.groups, forKey: "groups")
-        encoder.encodeBool(self.onlyShared, forKey: "onlyShared")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? IntentsSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.initiallyReset, forKey: "initiallyReset_v2")
+        try container.encodeIfPresent(self.account?.toInt64(), forKey: "account")
+        try container.encode(self.contacts, forKey: "contacts")
+        try container.encode(self.privateChats, forKey: "privateChats")
+        try container.encode(self.savedMessages, forKey: "savedMessages")
+        try container.encode(self.groups, forKey: "groups")
+        try container.encode(self.onlyShared, forKey: "onlyShared")
     }
     
     public static func ==(lhs: IntentsSettings, rhs: IntentsSettings) -> Bool {
@@ -95,14 +87,14 @@ public func updateIntentsSettingsInteractively(accountManager: AccountManager<Te
         var updatedSettings: IntentsSettings? = nil
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.intentsSettings, { entry in
             let currentSettings: IntentsSettings
-            if let entry = entry as? IntentsSettings {
+            if let entry = entry?.get(IntentsSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = IntentsSettings.defaultSettings
             }
             previousSettings = currentSettings
             updatedSettings = f(currentSettings)
-            return updatedSettings
+            return PreferencesEntry(updatedSettings)
         })
         return (previousSettings, updatedSettings)
     }

@@ -24,14 +24,14 @@ private extension ContentSettings {
 }
 
 public func getContentSettings(transaction: Transaction) -> ContentSettings {
-    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+    let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
     return ContentSettings(appConfiguration: appConfiguration)
 }
 
 public func getContentSettings(postbox: Postbox) -> Signal<ContentSettings, NoError> {
     return postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> map { view -> ContentSettings in
-        let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? AppConfiguration.defaultValue
+        let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
         return ContentSettings(appConfiguration: appConfiguration)
     }
     |> distinctUntilChanged

@@ -66,7 +66,7 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
                 }
             }
             if buttons.isEmpty, let phone = peer.phone, !phone.isEmpty {
-                buttons.append(.addContact(peer.compactDisplayTitle))
+                buttons.append(.addContact(EnginePeer(peer).compactDisplayTitle))
             } else {
                 buttons.append(.addContact(nil))
             }
@@ -152,9 +152,9 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
         
         let stringAndRanges: PresentationStrings.FormattedString
         if let channel = chatPeer as? TelegramChannel, case .broadcast = channel.info {
-            stringAndRanges = strings.Conversation_NoticeInvitedByInChannel(invitedBy.compactDisplayTitle)
+            stringAndRanges = strings.Conversation_NoticeInvitedByInChannel(EnginePeer(invitedBy).compactDisplayTitle)
         } else {
-            stringAndRanges = strings.Conversation_NoticeInvitedByInGroup(invitedBy.compactDisplayTitle)
+            stringAndRanges = strings.Conversation_NoticeInvitedByInGroup(EnginePeer(invitedBy).compactDisplayTitle)
         }
         
         let attributedString = NSMutableAttributedString(string: stringAndRanges.string, font: Font.regular(13.0), textColor: primaryTextColor)
@@ -249,7 +249,7 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
         let bottomInset: CGFloat = 6.0
         let sideInset: CGFloat = 16.0
         
-        let stringAndRanges = strings.Conversation_PeerNearbyDistance(chatPeer.compactDisplayTitle, shortStringForDistance(strings: strings, distance: distance))
+        let stringAndRanges = strings.Conversation_PeerNearbyDistance(EnginePeer(chatPeer).compactDisplayTitle, shortStringForDistance(strings: strings, distance: distance))
         
         let attributedString = NSMutableAttributedString(string: stringAndRanges.string, font: Font.regular(13.0), textColor: primaryTextColor)
         

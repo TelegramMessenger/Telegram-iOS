@@ -76,7 +76,7 @@
     self.scrollViewsForAutomaticInsetsAdjustment = @[ _collectionView ];
     
     self.explicitTableInset = UIEdgeInsetsMake(0, 0, TGMediaPickerToolbarHeight, 0);
-    self.explicitScrollIndicatorInset = self.explicitTableInset;
+    self.explicitScrollIndicatorInset =  UIEdgeInsetsMake(14.0, 0, TGMediaPickerToolbarHeight, 0);
     
     [self _setupSelectionGesture];
     

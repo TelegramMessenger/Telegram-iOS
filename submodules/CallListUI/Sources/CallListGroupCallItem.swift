@@ -309,7 +309,7 @@ class CallListGroupCallItemNode: ItemListRevealOptionsItemNode {
                 case .blocks:
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             var dateRightInset: CGFloat = 46.0 + params.rightInset

@@ -24,7 +24,6 @@ func ipcNotifications(basePath: String) -> Signal<Int64, Void> {
             if fd != -1 {
                 let readSource = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.write])
                 
-                var previousValue: Int64 = 0
                 readSource.setEventHandler(handler: {
                     subscriber.putNext(Int64.max)
                     /*lseek(fd, 0, SEEK_SET)

@@ -159,7 +159,7 @@ class StatsGraphItemNode: ListViewItemNode {
                     itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                     itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                     contentSize = CGSize(width: params.width, height: 361.0)
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
                 
             var visibilityHeight = currentVisibilityHeight

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramPresentationData
-import Postbox
 import TelegramCore
 import AccountContext
 
@@ -16,13 +15,13 @@ public enum UndoOverlayContent {
     case emoji(name: String, text: String)
     case swipeToReply(title: String, text: String)
     case actionSucceeded(title: String, text: String, cancel: String)
-    case stickersModified(title: String, text: String, undo: Bool, info: StickerPackCollectionInfo, topItem: ItemCollectionItem?, context: AccountContext)
+    case stickersModified(title: String, text: String, undo: Bool, info: StickerPackCollectionInfo, topItem: StickerPackItem?, context: AccountContext)
     case dice(dice: TelegramMediaDice, context: AccountContext, text: String, action: String?)
     case chatAddedToFolder(chatTitle: String, folderTitle: String)
     case chatRemovedFromFolder(chatTitle: String, folderTitle: String)
     case messagesUnpinned(title: String, text: String, undo: Bool, isHidden: Bool)
     case setProximityAlert(title: String, text: String, cancelled: Bool)
-    case invitedToVoiceChat(context: AccountContext, peer: Peer, text: String)
+    case invitedToVoiceChat(context: AccountContext, peer: EnginePeer, text: String)
     case linkCopied(text: String)
     case banned(text: String)
     case importedMessage(text: String)

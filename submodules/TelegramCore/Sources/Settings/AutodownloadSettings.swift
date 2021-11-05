@@ -8,12 +8,12 @@ public func updateAutodownloadSettingsInteractively(accountManager: AccountManag
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(SharedDataKeys.autodownloadSettings, { entry in
             let currentSettings: AutodownloadSettings
-            if let entry = entry as? AutodownloadSettings {
+            if let entry = entry?.get(AutodownloadSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = AutodownloadSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

@@ -88,6 +88,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, pres
 final class OverlayPlayerControlsNode: ASDisplayNode {
     private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let postbox: Postbox
+    private let engine: TelegramEngine
     private var presentationData: PresentationData
     
     private let backgroundNode: ASImageNode
@@ -153,9 +154,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
-    init(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError>) {
+    init(account: Account, engine: TelegramEngine, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError>) {
         self.accountManager = accountManager
         self.postbox = account.postbox
+        self.engine = engine
         self.presentationData = presentationData
         
         self.backgroundNode = ASImageNode()
@@ -610,9 +612,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         if self.currentAlbumArt != albumArt || !self.currentAlbumArtInitialized {
             self.currentAlbumArtInitialized = true
             self.currentAlbumArt = albumArt
-            self.albumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: true))
+            self.albumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: true))
             if let largeAlbumArtNode = self.largeAlbumArtNode {
-                largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: false))
+                largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: false))
             }
         }
     }
@@ -710,7 +712,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 self.largeAlbumArtNode = largeAlbumArtNode
                 self.addSubnode(largeAlbumArtNode)
                 if self.currentAlbumArtInitialized {
-                    largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, fileReference: self.currentFileReference, albumArt: self.currentAlbumArt, thumbnail: false))
+                    largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: self.currentAlbumArt, thumbnail: false))
                 }
             }
             

@@ -14,17 +14,6 @@ import SearchBarNode
 import SearchUI
 import ChatListSearchItemHeader
 
-/*extension NavigationBarSearchContentNode: ItemListControllerSearchNavigationContentNode {
-    public func activate() {
-    }
-    
-    public func deactivate() {
-    }
-    
-    public func setQueryUpdated(_ f: @escaping (String) -> Void) {
-    }
-}*/
-
 extension SettingsSearchableItemIcon {
     func image() -> UIImage? {
         switch self {
@@ -298,8 +287,14 @@ private enum SettingsSearchRecentEntry: Comparable, Identifiable {
     
     func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, interaction: SettingsSearchInteraction) -> ListViewItem {
         switch self {
-            case let .recent(_, item, header), let .faq(_, item, header):
-                return SettingsSearchRecentItem(account: account, theme: theme, strings: strings, title: item.title, breadcrumbs: item.breadcrumbs, action: {
+            case let .recent(_, item, header):
+                return SettingsSearchRecentItem(account: account, theme: theme, strings: strings, title: item.title, breadcrumbs: item.breadcrumbs, isFaq: false, action: {
+                    interaction.openItem(item)
+                }, deleted: {
+                    interaction.deleteRecentItem(item.id)
+                }, header: header)
+            case let .faq(_, item, header):
+                return SettingsSearchRecentItem(account: account, theme: theme, strings: strings, title: item.title, breadcrumbs: item.breadcrumbs, isFaq: true, action: {
                     interaction.openItem(item)
                 }, deleted: {
                     interaction.deleteRecentItem(item.id)

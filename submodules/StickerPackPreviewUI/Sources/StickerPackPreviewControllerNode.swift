@@ -74,7 +74,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
-    private let actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?
+    private let actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -90,7 +90,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
     
     private weak var peekController: PeekController?
     
-    init(context: AccountContext, presentationData: PresentationData, openShare: (() -> Void)?, openMention: @escaping (String) -> Void, actionPerformed: ((StickerPackCollectionInfo, [ItemCollectionItem], StickerPackScreenPerformedAction) -> Void)?) {
+    init(context: AccountContext, presentationData: PresentationData, openShare: (() -> Void)?, openMention: @escaping (String) -> Void, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)?) {
         self.context = context
         self.openShare = openShare
         self.presentationData = presentationData
@@ -385,9 +385,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                     
                     var updatedItems: [StickerPackPreviewGridEntry] = []
                     for item in items {
-                        if let item = item as? StickerPackItem {
-                            updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item))
-                        }
+                        updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item))
                     }
                     
                     if self.currentItems.isEmpty && !updatedItems.isEmpty {

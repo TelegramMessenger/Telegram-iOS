@@ -1,6 +1,6 @@
 import Postbox
 
-public final class CachedStickerPack: PostboxCoding {
+public final class CachedStickerPack: Codable {
     public let info: StickerPackCollectionInfo?
     public let items: [StickerPackItem]
     public let hash: Int32
@@ -11,20 +11,36 @@ public final class CachedStickerPack: PostboxCoding {
         self.hash = hash
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.info = decoder.decodeObjectForKey("in", decoder: { StickerPackCollectionInfo(decoder: $0) }) as? StickerPackCollectionInfo
-        self.items = decoder.decodeObjectArrayForKey("it").map { $0 as! StickerPackItem }
-        self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        if let infoData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "in") {
+            self.info = StickerPackCollectionInfo(decoder: PostboxDecoder(buffer: MemoryBuffer(data: infoData.data)))
+        } else {
+            self.info = nil
+        }
+
+        self.items = (try container.decode([AdaptedPostboxDecoder.RawObjectData].self, forKey: "it")).map { itemData in
+            return StickerPackItem(decoder: PostboxDecoder(buffer: MemoryBuffer(data: itemData.data)))
+        }
+
+        self.hash = try container.decode(Int32.self, forKey: "h")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
         if let info = self.info {
-            encoder.encodeObject(info, forKey: "in")
+            try container.encode(PostboxEncoder().encodeObjectToRawData(info), forKey: "in")
         } else {
-            encoder.encodeNil(forKey: "in")
+            try container.encodeNil(forKey: "in")
         }
-        encoder.encodeObjectArray(self.items, forKey: "it")
-        encoder.encodeInt32(self.hash, forKey: "h")
+
+        try container.encode(self.items.map { item in
+            return PostboxEncoder().encodeObjectToRawData(item)
+        }, forKey: "it")
+
+        try container.encode(self.hash, forKey: "h")
     }
     
     public static func cacheKey(_ id: ItemCollectionId) -> ValueBoxKey {

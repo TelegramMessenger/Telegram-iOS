@@ -129,7 +129,7 @@ public func watchSettingsController(context: AccountContext) -> ViewController {
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.watchPresetSettings]))
     |> deliverOnMainQueue
     |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.watchPresetSettings] as? WatchPresetSettings) ?? WatchPresetSettings.defaultSettings
+        let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.watchPresetSettings]?.get(WatchPresetSettings.self) ?? WatchPresetSettings.defaultSettings
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.AppleWatch_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: watchSettingsControllerEntries(presentationData: presentationData, customPresets: settings.customPresets), style: .blocks, animateChanges: false)

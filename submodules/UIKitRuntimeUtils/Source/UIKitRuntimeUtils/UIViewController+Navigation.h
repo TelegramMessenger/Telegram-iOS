@@ -18,6 +18,13 @@ typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
 
 @end
 
+@interface UIApplication (Additions)
+
+- (void)internalSetStatusBarStyle:(UIStatusBarStyle)style animated:(BOOL)animated;
+- (void)internalSetStatusBarHidden:(BOOL)hidden animation:(UIStatusBarAnimation)animation;
+
+@end
+
 @interface UIView (Navigation)
 
 @property (nonatomic) bool disablesInteractiveTransitionGestureRecognizer;

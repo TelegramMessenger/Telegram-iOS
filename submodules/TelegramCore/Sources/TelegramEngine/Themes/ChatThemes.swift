@@ -3,60 +3,27 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-public struct ChatTheme: PostboxCoding, Equatable {
-    public static func == (lhs: ChatTheme, rhs: ChatTheme) -> Bool {
-        return lhs.emoji == rhs.emoji && lhs.theme == rhs.theme && lhs.darkTheme == rhs.darkTheme
-    }
-
-    public let emoji: String
-    public let theme: TelegramTheme
-    public let darkTheme: TelegramTheme
-    
-    public init(emoji: String, theme: TelegramTheme, darkTheme: TelegramTheme) {
-        self.emoji = emoji
-        self.theme = theme
-        self.darkTheme = darkTheme
-    }
-    
-    public init(decoder: PostboxDecoder) {
-        self.emoji = decoder.decodeStringForKey("e", orElse: "")
-        self.theme = decoder.decodeObjectForKey("t", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme
-        self.darkTheme = decoder.decodeObjectForKey("dt", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.emoji, forKey: "e")
-        encoder.encodeObject(self.theme, forKey: "t")
-        encoder.encodeObject(self.darkTheme, forKey: "dt")
-    }
-}
-
-
-public final class ChatThemes: PreferencesEntry, Equatable {
-    public let chatThemes: [ChatTheme]
-    public let hash: Int32
+public final class ChatThemes: Codable, Equatable {
+    public let chatThemes: [TelegramTheme]
+    public let hash: Int64
  
-    public init(chatThemes: [ChatTheme], hash: Int32) {
+    public init(chatThemes: [TelegramTheme], hash: Int64) {
         self.chatThemes = chatThemes
         self.hash = hash
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.chatThemes = decoder.decodeObjectArrayForKey("c").map { $0 as! ChatTheme }
-        self.hash = decoder.decodeInt32ForKey("h", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.chatThemes = try container.decode([TelegramThemeNativeCodable].self, forKey: "c").map { $0.value }
+        self.hash = try container.decode(Int64.self, forKey: "h")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObjectArray(self.chatThemes, forKey: "c")
-        encoder.encodeInt32(self.hash, forKey: "h")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? ChatThemes {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.chatThemes.map { TelegramThemeNativeCodable($0) }, forKey: "c")
+        try container.encode(self.hash, forKey: "h")
     }
     
     public static func ==(lhs: ChatThemes, rhs: ChatThemes) -> Bool {
@@ -64,25 +31,25 @@ public final class ChatThemes: PreferencesEntry, Equatable {
     }
 }
 
-func _internal_getChatThemes(accountManager: AccountManager<TelegramAccountManagerTypes>, network: Network, forceUpdate: Bool = false, onlyCached: Bool = false) -> Signal<[ChatTheme], NoError> {
-    let fetch: ([ChatTheme]?, Int32?) -> Signal<[ChatTheme], NoError> = { current, hash in
+func _internal_getChatThemes(accountManager: AccountManager<TelegramAccountManagerTypes>, network: Network, forceUpdate: Bool = false, onlyCached: Bool = false) -> Signal<[TelegramTheme], NoError> {
+    let fetch: ([TelegramTheme]?, Int64?) -> Signal<[TelegramTheme], NoError> = { current, hash in
         return network.request(Api.functions.account.getChatThemes(hash: hash ?? 0))
         |> retryRequest
-        |> mapToSignal { result -> Signal<[ChatTheme], NoError> in
+        |> mapToSignal { result -> Signal<[TelegramTheme], NoError> in
             switch result {
-                case let .chatThemes(hash, apiThemes):
-                    let result = apiThemes.compactMap { ChatTheme(apiChatTheme: $0) }
+                case let .themes(hash, apiThemes):
+                    let result = apiThemes.compactMap { TelegramTheme(apiTheme: $0) }
                     if result == current {
                         return .complete()
                     } else {
                         let _ = accountManager.transaction { transaction in
                             transaction.updateSharedData(SharedDataKeys.chatThemes, { _ in
-                                return ChatThemes(chatThemes: result, hash: hash)
+                                return PreferencesEntry(ChatThemes(chatThemes: result, hash: hash))
                             })
                         }.start()
                         return .single(result)
                     }
-                case .chatThemesNotModified:
+                case .themesNotModified:
                     return .complete()
             }
         }
@@ -93,14 +60,14 @@ func _internal_getChatThemes(accountManager: AccountManager<TelegramAccountManag
     } else {
         return accountManager.sharedData(keys: [SharedDataKeys.chatThemes])
         |> take(1)
-        |> map { sharedData -> ([ChatTheme], Int32) in
-            if let chatThemes = sharedData.entries[SharedDataKeys.chatThemes] as? ChatThemes {
+        |> map { sharedData -> ([TelegramTheme], Int64) in
+            if let chatThemes = sharedData.entries[SharedDataKeys.chatThemes]?.get(ChatThemes.self) {
                 return (chatThemes.chatThemes, chatThemes.hash)
             } else {
                 return ([], 0)
             }
         }
-        |> mapToSignal { current, hash -> Signal<[ChatTheme], NoError> in
+        |> mapToSignal { current, hash -> Signal<[TelegramTheme], NoError> in
             if onlyCached && !current.isEmpty {
                 return .single(current)
             } else {
@@ -140,15 +107,6 @@ func _internal_setChatTheme(postbox: Postbox, network: Network, stateManager: Ac
                 return .complete()
             }
         } |> switchToLatest
-    }
-}
-
-extension ChatTheme {
-    init(apiChatTheme: Api.ChatTheme) {
-        switch apiChatTheme {
-            case let .chatTheme(emoticon, theme, darkTheme):
-                self.init(emoji: emoticon, theme: TelegramTheme(apiTheme: theme), darkTheme: TelegramTheme(apiTheme: darkTheme))
-        }
     }
 }
 

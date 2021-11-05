@@ -132,7 +132,7 @@ private func outgoingMessageWithChatContextResult(to peerId: PeerId, results: Ch
                         return .message(text: caption, attributes: attributes, mediaReference: nil, replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: correlationId)
                     }
             }
-        case let .text(text, entities, disableUrlPreview, replyMarkup):
+        case let .text(text, entities, _, replyMarkup):
             if let entities = entities {
                 attributes.append(entities)
             }

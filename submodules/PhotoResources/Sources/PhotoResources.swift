@@ -16,6 +16,7 @@ import FastBlur
 import TinyThumbnail
 import ImageTransparency
 import AppBundle
+import MusicAlbumArtResources
 
 private enum ResourceFileData {
     case data(Data)
@@ -1698,13 +1699,41 @@ public func standaloneChatMessagePhotoInteractiveFetched(account: Account, photo
     }
 }
 
-public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, displayAtSize: Int?, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
+public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, displayAtSize: Int?, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Never, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         var fetchRange: (Range<Int>, MediaBoxFetchPriority)?
         if let displayAtSize = displayAtSize, let range = representationFetchRangeForDisplayAtSize(representation: largestRepresentation, dimension: displayAtSize) {
             fetchRange = (range, .default)
         }
-        
+
+        /*switch photoReference {
+        case let .message(message, _):
+            if let id = message.id {
+                let ranges: IndexSet
+                if let (range, _) = fetchRange {
+                    ranges = IndexSet(integersIn: range)
+                } else {
+                    ranges = IndexSet(integersIn: 0 ..< Int(Int32.max) as Range<Int>)
+                }
+                return context.fetchManager.interactivelyFetched(
+                    category: .image,
+                    location: .chat(id.peerId),
+                    locationKey: .messageId(id),
+                    mediaReference: photoReference.abstract,
+                    resourceReference: photoReference.resourceReference(largestRepresentation.resource),
+                    ranges: ranges,
+                    statsCategory: .image,
+                    elevatedPriority: false,
+                    userInitiated: false,
+                    priority: .userInitiated,
+                    storeToDownloadsPeerType: nil
+                )
+                |> ignoreValues
+            }
+        default:
+            break
+        }*/
+
         return fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: photoReference.resourceReference(largestRepresentation.resource), range: fetchRange, statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
             if case .remote = type, let peerType = storeToDownloadsPeerType {
@@ -1715,6 +1744,10 @@ public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoRef
                 |> then(.single(type))
             }
             return .single(type)
+        }
+        |> ignoreValues
+        |> `catch` { _ -> Signal<Never, NoError> in
+            return .complete()
         }
     } else {
         return .never()
@@ -2476,102 +2509,80 @@ public func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Si
 
 private let precomposedSmallAlbumArt = Atomic<UIImage?>(value: nil)
 
-private func albumArtThumbnailData(postbox: Postbox, thumbnail: MediaResource, attemptSynchronously: Bool = false) -> Signal<Data?, NoError> {
-    let thumbnailResource = postbox.mediaBox.resourceData(thumbnail, attemptSynchronously: attemptSynchronously)
-    
-    let signal = thumbnailResource |> take(1) |> mapToSignal { maybeData -> Signal<Data?, NoError> in
-        if maybeData.complete {
-            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-            return .single((loadedData))
+public func albumArtThumbnailData(engine: TelegramEngine, thumbnail: ExternalMusicAlbumArtResource, attemptSynchronously: Bool = false) -> Signal<Data?, NoError> {
+    return engine.resources.custom(
+        id: thumbnail.id.stringRepresentation,
+        fetch: EngineMediaResource.Fetch {
+            return fetchExternalMusicAlbumArtResource(engine: engine, resource: thumbnail)
+        },
+        attemptSynchronously: attemptSynchronously
+    )
+    |> mapToSignal { data in
+        if data.isComplete {
+            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [])
+            return .single(loadedData)
         } else {
-            let fetchedThumbnail = postbox.mediaBox.fetchedResource(thumbnail, parameters: nil)
-            
-            let thumbnail = Signal<Data?, NoError> { subscriber in
-                let fetchedDisposable = fetchedThumbnail.start()
-                let thumbnailDisposable = thumbnailResource.start(next: { next in
-                    subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
-                }, error: subscriber.putError, completed: subscriber.putCompletion)
-                
-                return ActionDisposable {
-                    fetchedDisposable.dispose()
-                    thumbnailDisposable.dispose()
-                }
-            }
-            
-            return thumbnail
+            return .single(nil)
         }
-    } |> distinctUntilChanged(isEqual: { lhs, rhs in
+    }
+    |> distinctUntilChanged(isEqual: { lhs, rhs in
         if lhs == nil && rhs == nil {
             return true
         } else {
             return false
         }
     })
-    
-    return signal
 }
 
-private func albumArtFullSizeDatas(postbox: Postbox, thumbnail: MediaResource, fullSize: MediaResource, autoFetchFullSize: Bool = true) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
-    let fullSizeResource = postbox.mediaBox.resourceData(fullSize)
-    let thumbnailResource = postbox.mediaBox.resourceData(thumbnail)
-        
-    let signal = fullSizeResource |> take(1) |> mapToSignal { maybeData -> Signal<Tuple3<Data?, Data?, Bool>, NoError> in
-        if maybeData.complete {
-            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+private func albumArtFullSizeDatas(engine: TelegramEngine, thumbnail: ExternalMusicAlbumArtResource, fullSize: ExternalMusicAlbumArtResource, autoFetchFullSize: Bool = true) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
+    return engine.resources.custom(
+        id: thumbnail.id.stringRepresentation,
+        fetch: nil,
+        attemptSynchronously: false
+    )
+    |> take(1)
+    |> mapToSignal { data in
+        if data.isComplete {
+            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [])
             return .single(Tuple(nil, loadedData, true))
         } else {
-            let fetchedThumbnail = postbox.mediaBox.fetchedResource(thumbnail, parameters: nil)
-            let fetchedFullSize = postbox.mediaBox.fetchedResource(fullSize, parameters: nil)
-            
-            let thumbnail = Signal<Data?, NoError> { subscriber in
-                let fetchedDisposable = fetchedThumbnail.start()
-                let thumbnailDisposable = thumbnailResource.start(next: { next in
-                    subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
-                }, error: subscriber.putError, completed: subscriber.putCompletion)
-                
-                return ActionDisposable {
-                    fetchedDisposable.dispose()
-                    thumbnailDisposable.dispose()
+            return combineLatest(
+                engine.resources.custom(
+                    id: thumbnail.id.stringRepresentation,
+                    fetch: EngineMediaResource.Fetch {
+                        return fetchExternalMusicAlbumArtResource(engine: engine, resource: thumbnail)
+                    },
+                    attemptSynchronously: false
+                ),
+                engine.resources.custom(
+                    id: fullSize.id.stringRepresentation,
+                    fetch: autoFetchFullSize ? EngineMediaResource.Fetch {
+                        return fetchExternalMusicAlbumArtResource(engine: engine, resource: fullSize)
+                    } : nil,
+                    attemptSynchronously: false
+                )
+            )
+            |> mapToSignal { thumbnail, fullSize in
+                if fullSize.isComplete {
+                    let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: fullSize.path), options: [])
+                    return .single(Tuple(nil, loadedData, true))
+                } else if thumbnail.isComplete {
+                    let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: thumbnail.path), options: [])
+                    return .single(Tuple(loadedData, nil, false))
+                } else {
+                    return .single(Tuple(nil, nil, false))
                 }
             }
-            
-            let fullSizeData: Signal<Tuple2<Data?, Bool>, NoError>
-            
-            if autoFetchFullSize {
-                fullSizeData = Signal<Tuple2<Data?, Bool>, NoError> { subscriber in
-                    let fetchedFullSizeDisposable = fetchedFullSize.start()
-                    let fullSizeDisposable = fullSizeResource.start(next: { next in
-                        subscriber.putNext(Tuple(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete))
-                    }, error: subscriber.putError, completed: subscriber.putCompletion)
-                    
-                    return ActionDisposable {
-                        fetchedFullSizeDisposable.dispose()
-                        fullSizeDisposable.dispose()
-                    }
-                }
-            } else {
-                fullSizeData = fullSizeResource
-            |> map { next -> Tuple2<Data?, Bool> in
-                    return Tuple(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []), next.complete)
-                }
-            }
-            
-            
-            return thumbnail |> mapToSignal { thumbnailData in
-                return fullSizeData |> map { value in
-                    return Tuple(thumbnailData, value._0, value._1)
-                }
-            }
+
         }
-        } |> distinctUntilChanged(isEqual: { lhs, rhs in
-            if (lhs._0 == nil && lhs._1 == nil) && (rhs._0 == nil && rhs._1 == nil) {
-                return true
-            } else {
-                return false
-            }
-        })
-    
-    return signal
+    }
+    |> distinctUntilChanged(isEqual: { lhs, rhs in
+        if (lhs._0 == nil && lhs._1 == nil) && (rhs._0 == nil && rhs._1 == nil) {
+            return true
+        } else {
+            return false
+        }
+    })
 }
 
 private func drawAlbumArtPlaceholder(into c: CGContext, arguments: TransformImageArguments, thumbnail: Bool) {
@@ -2613,7 +2624,7 @@ private func drawAlbumArtPlaceholder(into c: CGContext, arguments: TransformImag
     }
 }
 
-public func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool, overlayColor: UIColor? = nil, emptyColor: UIColor? = nil, drawPlaceholderWhenEmpty: Bool = true, attemptSynchronously: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func playerAlbumArt(postbox: Postbox, engine: TelegramEngine, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool, overlayColor: UIColor? = nil, emptyColor: UIColor? = nil, drawPlaceholderWhenEmpty: Bool = true, attemptSynchronously: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     var fileArtworkData: Signal<Data?, NoError> = .single(nil)
     if let fileReference = fileReference {
         let size = thumbnail ? CGSize(width: 48.0, height: 48.0) : CGSize(width: 320.0, height: 320.0)
@@ -2654,12 +2665,12 @@ public func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?,
         }
     } else if let albumArt = albumArt {
         if thumbnail {
-            immediateArtworkData = albumArtThumbnailData(postbox: postbox, thumbnail: albumArt.thumbnailResource, attemptSynchronously: attemptSynchronously)
+            immediateArtworkData = albumArtThumbnailData(engine: engine, thumbnail: albumArt.thumbnailResource, attemptSynchronously: attemptSynchronously)
             |> map { thumbnailData in
                 return Tuple(thumbnailData, nil, false)
             }
         } else {
-            immediateArtworkData = albumArtFullSizeDatas(postbox: postbox, thumbnail: albumArt.thumbnailResource, fullSize: albumArt.fullSizeResource)
+            immediateArtworkData = albumArtFullSizeDatas(engine: engine, thumbnail: albumArt.thumbnailResource, fullSize: albumArt.fullSizeResource)
         }
     }
     
@@ -2789,112 +2800,6 @@ public func securePhotoInternal(account: Account, resource: TelegramMediaResourc
                 return nil
             }
         })
-    }
-}
-
-private func openInAppIconData(postbox: Postbox, appIcon: MediaResource) -> Signal<Data?, NoError> {
-    let appIconResource = postbox.mediaBox.resourceData(appIcon)
-    
-    let signal = appIconResource |> take(1) |> mapToSignal { maybeData -> Signal<Data?, NoError> in
-        if maybeData.complete {
-            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-            return .single((loadedData))
-        } else {
-            let fetchedAppIcon = postbox.mediaBox.fetchedResource(appIcon, parameters: nil)
-            
-            let appIcon = Signal<Data?, NoError> { subscriber in
-                let fetchedDisposable = fetchedAppIcon.start()
-                let appIconDisposable = appIconResource.start(next: { next in
-                    subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
-                }, error: subscriber.putError, completed: subscriber.putCompletion)
-                
-                return ActionDisposable {
-                    fetchedDisposable.dispose()
-                    appIconDisposable.dispose()
-                }
-            }
-            
-            return appIcon
-        }
-    } |> distinctUntilChanged(isEqual: { lhs, rhs in
-        if lhs == nil && rhs == nil {
-            return true
-        } else {
-            return false
-        }
-    })
-    
-    return signal
-}
-
-private func drawOpenInAppIconBorder(into c: CGContext, arguments: TransformImageArguments) {
-    c.setBlendMode(.normal)
-    c.setStrokeColor(UIColor(rgb: 0xe5e5e5).cgColor)
-    
-    let lineWidth: CGFloat = arguments.drawingRect.size.width < 30.0 ? 1.0 - UIScreenPixel : 1.0
-    c.setLineWidth(lineWidth)
-    
-    var radius: CGFloat = 0.0
-    if case let .Corner(cornerRadius) = arguments.corners.topLeft, cornerRadius > CGFloat.ulpOfOne {
-        radius = max(0, cornerRadius - 0.5)
-    }
-    
-    let rect = arguments.drawingRect.insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0)
-    c.move(to: CGPoint(x: rect.minX, y: rect.midY))
-    c.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.midX, y: rect.minY), radius: radius)
-    c.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.midY), radius: radius)
-    c.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.midX, y: rect.maxY), radius: radius)
-    c.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX, y: rect.midY), radius: radius)
-    c.closePath()
-    c.strokePath()
-}
-
-public enum OpenInAppIcon {
-    case resource(resource: TelegramMediaResource)
-    case image(image: UIImage)
-}
-
-public func openInAppIcon(postbox: Postbox, appIcon: OpenInAppIcon) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    switch appIcon {
-        case let .resource(resource):
-            return openInAppIconData(postbox: postbox, appIcon: resource) |> map { data in
-                return { arguments in
-                    let context = DrawingContext(size: arguments.drawingSize, clear: true)
-                    
-                    var sourceImage: UIImage?
-                    if let data = data, let image = UIImage(data: data) {
-                        sourceImage = image
-                    }
-                    
-                    if let sourceImage = sourceImage, let cgImage = sourceImage.cgImage {
-                        context.withFlippedContext { c in
-                            c.draw(cgImage, in: CGRect(origin: CGPoint(), size: arguments.drawingRect.size))
-                            drawOpenInAppIconBorder(into: c, arguments: arguments)
-                        }
-                    } else {
-                        context.withFlippedContext { c in
-                            drawOpenInAppIconBorder(into: c, arguments: arguments)
-                        }
-                    }
-                    
-                    addCorners(context, arguments: arguments)
-                    
-                    return context
-                }
-            }
-        case let .image(image):
-            return .single({ arguments in
-                let context = DrawingContext(size: arguments.drawingSize, clear: true)
-                
-                context.withFlippedContext { c in
-                    c.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: arguments.drawingSize))
-                    drawOpenInAppIconBorder(into: c, arguments: arguments)
-                }
-                
-                addCorners(context, arguments: arguments)
-                
-                return context
-            })
     }
 }
 

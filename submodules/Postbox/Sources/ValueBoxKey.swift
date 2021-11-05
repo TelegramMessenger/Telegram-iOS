@@ -41,7 +41,8 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
     public func setData(_ offset: Int, value: Data) {
         assert(offset >= 0 && offset + value.count <= self.length)
         let valueLength = value.count
-        value.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        value.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             memcpy(self.memory + offset, bytes, valueLength)
         }
     }
@@ -222,14 +223,9 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
         assert(range.lowerBound >= 0 && range.upperBound <= self.length)
         return String(data: Data(bytes: self.memory.advanced(by: range.lowerBound), count: range.count), encoding: .utf8)
     }
-    
-    public var hashValue: Int {
-        var hash = 37
-        let bytes = self.memory.assumingMemoryBound(to: Int8.self)
-        for i in 0 ..< self.length {
-            hash = (hash &* 54059) ^ (Int(bytes[i]) &* 76963)
-        }
-        return hash
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(bytes: UnsafeRawBufferPointer(start: self.memory, count: self.length))
     }
     
     public static func ==(lhs: ValueBoxKey, rhs: ValueBoxKey) -> Bool {

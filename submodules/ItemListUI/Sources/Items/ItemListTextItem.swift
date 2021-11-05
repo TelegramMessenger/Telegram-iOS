@@ -134,7 +134,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
             
             let contentSize: CGSize
             
-            var insets = itemListNeighborsGroupedInsets(neighbors)
+            var insets = itemListNeighborsGroupedInsets(neighbors, params)
             if case .large = item.text {
                 insets.top = 14.0
                 bottomInset = -6.0

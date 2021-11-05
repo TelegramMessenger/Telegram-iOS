@@ -22,6 +22,7 @@
 #include "gtest/gtest.h"
 #include "absl/base/attributes.h"
 #include "absl/container/internal/have_sse.h"
+#include "absl/profiling/internal/sample_recorder.h"
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/synchronization/internal/thread_pool.h"
 #include "absl/synchronization/mutex.h"
@@ -38,6 +39,7 @@ constexpr int kProbeLength = 8;
 namespace absl {
 ABSL_NAMESPACE_BEGIN
 namespace container_internal {
+#if defined(ABSL_INTERNAL_HASHTABLEZ_SAMPLE)
 class HashtablezInfoHandlePeer {
  public:
   static bool IsSampled(const HashtablezInfoHandle& h) {
@@ -46,6 +48,13 @@ class HashtablezInfoHandlePeer {
 
   static HashtablezInfo* GetInfo(HashtablezInfoHandle* h) { return h->info_; }
 };
+#else
+class HashtablezInfoHandlePeer {
+ public:
+  static bool IsSampled(const HashtablezInfoHandle&) { return false; }
+  static HashtablezInfo* GetInfo(HashtablezInfoHandle*) { return nullptr; }
+};
+#endif  // defined(ABSL_INTERNAL_HASHTABLEZ_SAMPLE)
 
 namespace {
 using ::absl::synchronization_internal::ThreadPool;
@@ -76,10 +85,13 @@ TEST(HashtablezInfoTest, PrepareForSampling) {
   EXPECT_EQ(info.capacity.load(), 0);
   EXPECT_EQ(info.size.load(), 0);
   EXPECT_EQ(info.num_erases.load(), 0);
+  EXPECT_EQ(info.num_rehashes.load(), 0);
   EXPECT_EQ(info.max_probe_length.load(), 0);
   EXPECT_EQ(info.total_probe_length.load(), 0);
   EXPECT_EQ(info.hashes_bitwise_or.load(), 0);
   EXPECT_EQ(info.hashes_bitwise_and.load(), ~size_t{});
+  EXPECT_EQ(info.hashes_bitwise_xor.load(), 0);
+  EXPECT_EQ(info.max_reserve.load(), 0);
   EXPECT_GE(info.create_time, test_start);
 
   info.capacity.store(1, std::memory_order_relaxed);
@@ -89,16 +101,21 @@ TEST(HashtablezInfoTest, PrepareForSampling) {
   info.total_probe_length.store(1, std::memory_order_relaxed);
   info.hashes_bitwise_or.store(1, std::memory_order_relaxed);
   info.hashes_bitwise_and.store(1, std::memory_order_relaxed);
+  info.hashes_bitwise_xor.store(1, std::memory_order_relaxed);
+  info.max_reserve.store(1, std::memory_order_relaxed);
   info.create_time = test_start - absl::Hours(20);
 
   info.PrepareForSampling();
   EXPECT_EQ(info.capacity.load(), 0);
   EXPECT_EQ(info.size.load(), 0);
   EXPECT_EQ(info.num_erases.load(), 0);
+  EXPECT_EQ(info.num_rehashes.load(), 0);
   EXPECT_EQ(info.max_probe_length.load(), 0);
   EXPECT_EQ(info.total_probe_length.load(), 0);
   EXPECT_EQ(info.hashes_bitwise_or.load(), 0);
   EXPECT_EQ(info.hashes_bitwise_and.load(), ~size_t{});
+  EXPECT_EQ(info.hashes_bitwise_xor.load(), 0);
+  EXPECT_EQ(info.max_reserve.load(), 0);
   EXPECT_GE(info.create_time, test_start);
 }
 
@@ -123,14 +140,17 @@ TEST(HashtablezInfoTest, RecordInsert) {
   EXPECT_EQ(info.max_probe_length.load(), 6);
   EXPECT_EQ(info.hashes_bitwise_and.load(), 0x0000FF00);
   EXPECT_EQ(info.hashes_bitwise_or.load(), 0x0000FF00);
+  EXPECT_EQ(info.hashes_bitwise_xor.load(), 0x0000FF00);
   RecordInsertSlow(&info, 0x000FF000, 4 * kProbeLength);
   EXPECT_EQ(info.max_probe_length.load(), 6);
   EXPECT_EQ(info.hashes_bitwise_and.load(), 0x0000F000);
   EXPECT_EQ(info.hashes_bitwise_or.load(), 0x000FFF00);
+  EXPECT_EQ(info.hashes_bitwise_xor.load(), 0x000F0F00);
   RecordInsertSlow(&info, 0x00FF0000, 12 * kProbeLength);
   EXPECT_EQ(info.max_probe_length.load(), 12);
   EXPECT_EQ(info.hashes_bitwise_and.load(), 0x00000000);
   EXPECT_EQ(info.hashes_bitwise_or.load(), 0x00FFFF00);
+  EXPECT_EQ(info.hashes_bitwise_xor.load(), 0x00F00F00);
 }
 
 TEST(HashtablezInfoTest, RecordErase) {
@@ -167,9 +187,26 @@ TEST(HashtablezInfoTest, RecordRehash) {
   EXPECT_EQ(info.size.load(), 2);
   EXPECT_EQ(info.total_probe_length.load(), 3);
   EXPECT_EQ(info.num_erases.load(), 0);
+  EXPECT_EQ(info.num_rehashes.load(), 1);
 }
 
-#if defined(ABSL_HASHTABLEZ_SAMPLE)
+TEST(HashtablezInfoTest, RecordReservation) {
+  HashtablezInfo info;
+  absl::MutexLock l(&info.init_mu);
+  info.PrepareForSampling();
+  RecordReservationSlow(&info, 3);
+  EXPECT_EQ(info.max_reserve.load(), 3);
+
+  RecordReservationSlow(&info, 2);
+  // High watermark does not change
+  EXPECT_EQ(info.max_reserve.load(), 3);
+
+  RecordReservationSlow(&info, 10);
+  // High watermark does change
+  EXPECT_EQ(info.max_reserve.load(), 10);
+}
+
+#if defined(ABSL_INTERNAL_HASHTABLEZ_SAMPLE)
 TEST(HashtablezSamplerTest, SmallSampleParameter) {
   SetHashtablezEnabled(true);
   SetHashtablezSampleParameter(100);
@@ -213,10 +250,9 @@ TEST(HashtablezSamplerTest, Sample) {
   }
   EXPECT_NEAR(sample_rate, 0.01, 0.005);
 }
-#endif
 
 TEST(HashtablezSamplerTest, Handle) {
-  auto& sampler = HashtablezSampler::Global();
+  auto& sampler = GlobalHashtablezSampler();
   HashtablezInfoHandle h(sampler.Register());
   auto* info = HashtablezInfoHandlePeer::GetInfo(&h);
   info->hashes_bitwise_and.store(0x12345678, std::memory_order_relaxed);
@@ -243,6 +279,8 @@ TEST(HashtablezSamplerTest, Handle) {
   });
   EXPECT_FALSE(found);
 }
+#endif
+
 
 TEST(HashtablezSamplerTest, Registration) {
   HashtablezSampler sampler;

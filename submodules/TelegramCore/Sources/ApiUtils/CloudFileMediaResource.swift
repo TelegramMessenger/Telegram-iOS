@@ -7,7 +7,7 @@ protocol TelegramCloudMediaResource: TelegramMediaResource {
     func apiInputLocation(fileReference: Data?) -> Api.InputFileLocation?
 }
 
-protocol TelegramMultipartFetchableResource: TelegramMediaResource {
+public protocol TelegramMultipartFetchableResource: TelegramMediaResource {
     var datacenterId: Int { get }
 }
 

@@ -107,8 +107,8 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
         if let resource = file.resource as? CloudDocumentMediaResource {
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 for attribute in file.attributes {
-                    if case let .Sticker(sticker) = attribute {
-                        if let _ = sticker.packReference {
+                    if case let .Sticker(_, packReferenceValue, _) = attribute {
+                        if let _ = packReferenceValue {
                             return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: PendingMessageUploadedContent.text(text), reuploadInfo: nil)))
                         }
                     }
@@ -234,7 +234,9 @@ private func maybePredownloadedImageResource(postbox: Postbox, peerId: PeerId, r
             if data.complete {
                 if data.size < 5 * 1024 * 1024, let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: .mappedRead) {
                     let md5 = IncrementalMD5()
-                    fileData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+                    fileData.withUnsafeBytes { rawBytes -> Void in
+                        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
                         var offset = 0
                         let bufferSize = 32 * 1024
                         
@@ -252,7 +254,7 @@ private func maybePredownloadedImageResource(postbox: Postbox, peerId: PeerId, r
                         subscriber.putNext(.single(.localReference(reference)))
                     } else {
                         subscriber.putNext(cachedSentMediaReference(postbox: postbox, key: reference)
-                            |> mapError { _ -> PendingMessageUploadError in return .generic } |> map { media -> PredownloadedResource in
+                            |> mapError { _ -> PendingMessageUploadError in } |> map { media -> PredownloadedResource in
                             if let media = media {
                                 return .media(media)
                             } else {
@@ -302,7 +304,7 @@ private func maybePredownloadedFileResource(postbox: Postbox, auxiliaryMethods: 
             return .single(.localReference(nil))
         }
     }
-    |> mapError { _ -> PendingMessageUploadError in return .generic }
+    |> mapError { _ -> PendingMessageUploadError in }
 }
 
 private func maybeCacheUploadedResource(postbox: Postbox, key: CachedSentMediaReferenceKey?, result: PendingMessageUploadedContentResult, media: Media) -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> {
@@ -310,7 +312,7 @@ private func maybeCacheUploadedResource(postbox: Postbox, key: CachedSentMediaRe
         return postbox.transaction { transaction -> PendingMessageUploadedContentResult in
             storeCachedSentMediaReference(transaction: transaction, key: key, media: media)
             return result
-        } |> mapError { _ -> PendingMessageUploadError in return .generic }
+        } |> mapError { _ -> PendingMessageUploadError in }
     } else {
         return .single(result)
     }
@@ -391,7 +393,6 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
         
         return transform
         |> mapError { _ -> PendingMessageUploadError in
-            return .generic
         }
         |> mapToSignal { transformResult -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
             switch transformResult {
@@ -440,7 +441,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                             return postbox.transaction { transaction -> Api.InputPeer? in
                                 return transaction.getPeer(peerId).flatMap(apiInputPeer)
                             }
-                            |> mapError { _ -> PendingMessageUploadError in return .generic }
+                            |> mapError { _ -> PendingMessageUploadError in }
                             |> mapToSignal { inputPeer -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                                 if let inputPeer = inputPeer {
                                     if autoclearMessageAttribute != nil {
@@ -538,7 +539,7 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 var waveformBuffer: Buffer?
                 if let waveform = waveform {
                     flags |= Int32(1 << 2)
-                    waveformBuffer = Buffer(data: waveform.makeData())
+                    waveformBuffer = Buffer(data: waveform)
                 }
                 attributes.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
         }
@@ -774,7 +775,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                         return postbox.transaction { transaction -> Api.InputPeer? in
                             return transaction.getPeer(peerId).flatMap(apiInputPeer)
                         }
-                        |> mapError { _ -> PendingMessageUploadError in return .generic }
+                        |> mapError { _ -> PendingMessageUploadError in }
                         |> mapToSignal { inputPeer -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
                             if let inputPeer = inputPeer {
                                 return network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: .inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFileAttributes(file.attributes), stickers: stickers, ttlSeconds: ttlSeconds)))

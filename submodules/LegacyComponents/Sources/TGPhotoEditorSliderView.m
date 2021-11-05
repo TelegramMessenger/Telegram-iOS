@@ -112,7 +112,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     CGContextRef context = UIGraphicsGetCurrentContext();
     
     CGFloat margin = TGPhotoEditorSliderViewInternalMargin;
-    CGFloat visualMargin = _positionsCount > 1 ? margin : 1.0f;
+    CGFloat visualMargin = _positionsCount > 1 ? margin : 2.0f;
     CGFloat totalLength = self.frame.size.width - margin * 2;
     CGFloat visualTotalLength = self.frame.size.width - 2 * (_positionsCount > 1 ? margin : visualMargin);
     CGFloat sideLength = self.frame.size.height;
@@ -146,8 +146,8 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
     
     CGRect backFrame = CGRectMake(visualMargin, (sideLength - _lineSize) / 2, visualTotalLength, _lineSize);
     CGRect trackFrame = CGRectMake(origin, (sideLength - _lineSize) / 2, track, _lineSize);
-    CGRect startFrame = CGRectMake(startPosition - 2 / 2, (sideLength - 8) / 2, 2, 8);
-    CGRect endFrame = CGRectMake(endPosition - 2 / 2, (sideLength - 8) / 2, 2, 8);
+    CGRect startFrame = CGRectMake(startPosition - 4 / 2, (sideLength - 12) / 2, 4, 12);
+    CGRect endFrame = CGRectMake(endPosition - 4 / 2, (sideLength - 12) / 2, 4, 12);
     CGRect knobFrame = CGRectMake(knobPosition - _knobView.image.size.width / 2, (sideLength - _knobView.image.size.height) / 2, _knobView.image.size.width, _knobView.image.size.height);
     if (vertical)
     {
@@ -209,7 +209,7 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
         for (NSInteger i = 0; i < self.positionsCount; i++)
         {
             if (self.useLinesForPositions) {
-                CGSize lineSize = CGSizeMake(2.0, 8.0);
+                CGSize lineSize = CGSizeMake(4.0, 12.0);
                 CGRect lineRect = CGRectMake(margin - lineSize.width / 2.0f + totalLength / (self.positionsCount - 1) * i, (sideLength - lineSize.height) / 2, lineSize.width, lineSize.height);
                 if (vertical)
                     lineRect = CGRectMake(lineRect.origin.y, lineRect.origin.x, lineRect.size.height, lineRect.size.width);

@@ -280,6 +280,8 @@ open class ItemListControllerNode: ASDisplayNode {
 
     var alwaysSynchronous = false
     
+    private var previousContentOffset: ListViewVisibleContentOffset?
+    
     public init(controller: ItemListController?, navigationBar: NavigationBar, state: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError>) {
         self.navigationBar = navigationBar
         
@@ -343,7 +345,33 @@ open class ItemListControllerNode: ASDisplayNode {
             if let validLayout = self?.validLayout {
                 inVoiceOver = validLayout.0.inVoiceOver
             }
+            
             self?.contentOffsetChanged?(offset, inVoiceOver)
+            
+            if let strongSelf = self {
+                var previousContentOffsetValue: CGFloat?
+                if let previousContentOffset = strongSelf.previousContentOffset {
+                    if case let .known(value) = previousContentOffset {
+                        previousContentOffsetValue = value
+                    } else {
+                        previousContentOffsetValue = 30.0
+                    }
+                }
+                switch offset {
+                    case let .known(value):
+                        let transition: ContainedViewLayoutTransition
+                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue >= 30.0 {
+                            transition = .animated(duration: 0.2, curve: .easeInOut)
+                        } else {
+                            transition = .immediate
+                        }
+                        strongSelf.navigationBar.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
+                    case .unknown, .none:
+                        strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)
+                }
+                
+                strongSelf.previousContentOffset = offset
+            }
         }
         
         self.listNode.beganInteractiveDragging = { [weak self] _ in
@@ -403,6 +431,8 @@ open class ItemListControllerNode: ASDisplayNode {
     override open func didLoad() {
         super.didLoad()
         
+        self.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
+        
         (self.view as? ItemListControllerNodeView)?.onLayout = { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -442,30 +472,20 @@ open class ItemListControllerNode: ASDisplayNode {
         insets.bottom = max(insets.bottom, additionalInsets.bottom)
         
         var addedInsets: UIEdgeInsets?
-        if layout.size.width > 480.0 {
-            let inset = max(20.0, floor((layout.size.width - 674.0) / 2.0))
+        let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+        if layout.size.width >= 375.0 {
             insets.left += inset
             insets.right += inset
-            addedInsets = UIEdgeInsets(top: 0.0, left: inset, bottom: 0.0, right: inset)
-            
-            if self.leftOverlayNode.supernode == nil {
-                self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
-            }
-            if self.rightOverlayNode.supernode == nil {
-                self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.listNode)
-            }
-        } else {
-            insets.left += layout.safeInsets.left
-            insets.right += layout.safeInsets.right
-            
-            if self.leftOverlayNode.supernode != nil {
-                self.leftOverlayNode.removeFromSupernode()
-            }
-            if self.rightOverlayNode.supernode != nil {
-                self.rightOverlayNode.removeFromSupernode()
-            }
         }
+        addedInsets = UIEdgeInsets(top: 0.0, left: inset, bottom: 0.0, right: inset)
         
+        if self.rightOverlayNode.supernode == nil {
+            self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.listNode)
+        }
+        if self.leftOverlayNode.supernode == nil {
+            self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
+        }
+
         if let toolbarItem = self.toolbarItem {
             var tabBarHeight: CGFloat
             let bottomInset: CGFloat = insets.bottom
@@ -606,11 +626,17 @@ open class ItemListControllerNode: ASDisplayNode {
                             self.listNode.backgroundColor = transition.theme.list.plainBackgroundColor
                             self.leftOverlayNode.backgroundColor = transition.theme.list.plainBackgroundColor
                             self.rightOverlayNode.backgroundColor = transition.theme.list.plainBackgroundColor
+                        
+                            self.leftOverlayNode.isHidden = true
+                            self.rightOverlayNode.isHidden = true
                         case .blocks:
                             self.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.leftOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.rightOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
+                        
+                            self.leftOverlayNode.isHidden = false
+                            self.rightOverlayNode.isHidden = false
                     }
                 }
             }
@@ -685,7 +711,11 @@ open class ItemListControllerNode: ASDisplayNode {
                         if let validLayout = self.validLayout {
                             updatedNode.updateLayout(layout: validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
                         }
-                        self.insertSubnode(updatedNode, aboveSubnode: self.listNode)
+                        if self.rightOverlayNode.supernode != nil {
+                            self.insertSubnode(updatedNode, aboveSubnode: self.rightOverlayNode)
+                        } else {
+                            self.insertSubnode(updatedNode, aboveSubnode: self.listNode)
+                        }
                         updatedNode.activate()
                     }
                 } else {

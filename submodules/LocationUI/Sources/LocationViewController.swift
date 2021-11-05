@@ -15,6 +15,7 @@ import OpenInExternalAppUI
 import ShareController
 import DeviceAccess
 import UndoUI
+import MapKit
 
 public class LocationViewParams {
     let sendLiveLocation: (TelegramMediaMap) -> Void
@@ -43,7 +44,7 @@ class LocationViewInteraction {
     let updateMapMode: (LocationMapMode) -> Void
     let toggleTrackingMode: () -> Void
     let goToCoordinate: (CLLocationCoordinate2D) -> Void
-    let requestDirections: () -> Void
+    let requestDirections: (TelegramMediaMap, String?, OpenInLocationDirections) -> Void
     let share: () -> Void
     let setupProximityNotification: (Bool, MessageId?) -> Void
     let updateSendActionHighlight: (Bool) -> Void
@@ -52,7 +53,7 @@ class LocationViewInteraction {
     let updateRightBarButton: (LocationViewRightBarButton) -> Void
     let present: (ViewController) -> Void
     
-    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, toggleTrackingMode: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, MessageId?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void, present: @escaping (ViewController) -> Void) {
+    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, toggleTrackingMode: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping (TelegramMediaMap, String?, OpenInLocationDirections) -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, MessageId?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void, present: @escaping (ViewController) -> Void) {
         self.toggleMapModeSelection = toggleMapModeSelection
         self.updateMapMode = updateMapMode
         self.toggleTrackingMode = toggleTrackingMode
@@ -161,12 +162,31 @@ public final class LocationViewController: ViewController {
                 state.selectedLocation = .coordinate(coordinate, false)
                 return state
             }
-        }, requestDirections: { [weak self] in
+        }, requestDirections: { [weak self] location, peerName, directions in
             guard let strongSelf = self else {
                 return
             }
-            if let location = getLocation(from: strongSelf.subject) {
-                strongSelf.present(OpenInActionSheetController(context: context, updatedPresentationData: updatedPresentationData, item: .location(location: location, withDirections: true), additionalAction: nil, openUrl: params.openUrl), in: .window(.root), with: nil)
+            let item: OpenInItem = .location(location: location, directions: directions)
+            let openInOptions = availableOpenInOptions(context: context, item: item)
+            if openInOptions.count == 1, let action = openInOptions.first?.action() {
+                if case let .openLocation(latitude, longitude, directions) = action {
+                    let placemark = MKPlacemark(coordinate: CLLocationCoordinate2DMake(latitude, longitude), addressDictionary: [:])
+                    let mapItem = MKMapItem(placemark: placemark)
+                    if let title = location.venue?.title {
+                        mapItem.name = title
+                    } else if let peerName = peerName {
+                        mapItem.name = peerName
+                    }
+                    
+                    if let directions = directions {
+                        let options = [ MKLaunchOptionsDirectionsModeKey: directions.launchOptions ]
+                        MKMapItem.openMaps(with: [MKMapItem.forCurrentLocation(), mapItem], launchOptions: options)
+                    } else {
+                        mapItem.openInMaps(launchOptions: nil)
+                    }
+                }
+            } else {
+                strongSelf.present(OpenInActionSheetController(context: context, updatedPresentationData: updatedPresentationData, item: .location(location: location, directions: directions), additionalAction: nil, openUrl: params.openUrl), in: .window(.root), with: nil)
             }
         }, share: { [weak self] in
             guard let strongSelf = self else {
@@ -176,7 +196,7 @@ public final class LocationViewController: ViewController {
                 let shareAction = OpenInControllerAction(title: strongSelf.presentationData.strings.Conversation_ContextMenuShare, action: {
                     strongSelf.present(ShareController(context: context, subject: .mapMedia(location), externalShare: true), in: .window(.root), with: nil)
                 })
-                strongSelf.present(OpenInActionSheetController(context: context, updatedPresentationData: updatedPresentationData, item: .location(location: location, withDirections: false), additionalAction: shareAction, openUrl: params.openUrl), in: .window(.root), with: nil)
+                strongSelf.present(OpenInActionSheetController(context: context, updatedPresentationData: updatedPresentationData, item: .location(location: location, directions: nil), additionalAction: shareAction, openUrl: params.openUrl), in: .window(.root), with: nil)
             }
         }, setupProximityNotification: { [weak self] reset, messageId in
             guard let strongSelf = self else {
@@ -240,7 +260,7 @@ public final class LocationViewController: ViewController {
                         
                         var compactDisplayTitle: String?
                         if let peer = peer as? TelegramUser {
-                            compactDisplayTitle = peer.compactDisplayTitle
+                            compactDisplayTitle = EnginePeer(peer).compactDisplayTitle
                         }
                         
                         let controller = LocationDistancePickerScreen(context: context, style: .default, compactDisplayTitle: compactDisplayTitle, distances: strongSelf.controllerNode.headerNode.mapNode.distancesToAllAnnotations, updated: { [weak self] distance in
@@ -345,7 +365,7 @@ public final class LocationViewController: ViewController {
                         
                         var compactDisplayTitle: String?
                         if let peer = peer as? TelegramUser {
-                            compactDisplayTitle = peer.compactDisplayTitle
+                            compactDisplayTitle = EnginePeer(peer).compactDisplayTitle
                         }
                         
                         var text: String
@@ -379,7 +399,7 @@ public final class LocationViewController: ViewController {
                         let controller = ActionSheetController(presentationData: strongSelf.presentationData)
                         var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
                         if let user = peer as? TelegramUser {
-                            title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(user.compactDisplayTitle).string
+                            title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(EnginePeer(user).compactDisplayTitle).string
                         }
                         
                         let sendLiveLocationImpl: (Int32) -> Void = { [weak controller] period in

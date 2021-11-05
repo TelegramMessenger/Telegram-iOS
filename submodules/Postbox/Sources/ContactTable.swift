@@ -10,10 +10,10 @@ final class ContactTable: Table {
     private var peerIdsBeforeModification: Set<PeerId>?
     private var peerIds: Set<PeerId>?
     
-    init(valueBox: ValueBox, table: ValueBoxTable, peerNameIndexTable: PeerNameIndexTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, peerNameIndexTable: PeerNameIndexTable) {
         self.peerNameIndexTable = peerNameIndexTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ id: PeerId, sharedKey: ValueBoxKey = ValueBoxKey(length: 8)) -> ValueBoxKey {
@@ -97,6 +97,10 @@ final class ContactTable: Table {
             }
             
             self.peerIdsBeforeModification = nil
+        }
+
+        if !self.useCaches {
+            self.peerIds = nil
         }
     }
 }

@@ -148,6 +148,8 @@ final class PrivacyIntroController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = PrivacyIntroControllerNode(context: self.context, mode: self.mode, proceedAction: self.proceedAction)
         self.displayNodeDidLoad()
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
     override func viewDidAppear(_ animated: Bool) {

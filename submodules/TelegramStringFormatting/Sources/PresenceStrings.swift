@@ -345,10 +345,44 @@ public func stringForRelativeLiveLocationUpdateTimestamp(strings: PresentationSt
     }
 }
 
-public func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: TelegramUserPresence, relativeTo timestamp: Int32, expanded: Bool = false) -> (String, Bool) {
+public func stringForRelativeActivityTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
+    let difference = timestamp - relativeTimestamp
+    if difference < 60 {
+        return strings.Time_JustNow
+    } else if difference < 60 * 60 {
+        let minutes = difference / 60
+        return strings.Time_MinutesAgo(minutes)
+    } else {
+        var t: time_t = time_t(relativeTimestamp)
+        var timeinfo: tm = tm()
+        localtime_r(&t, &timeinfo)
+        
+        var now: time_t = time_t(timestamp)
+        var timeinfoNow: tm = tm()
+        localtime_r(&now, &timeinfoNow)
+        
+        if timeinfo.tm_year != timeinfoNow.tm_year {
+            return strings.Time_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).string
+        }
+        
+        let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
+        if dayDifference == 0 || dayDifference == -1 {
+            let day: RelativeTimestampFormatDay
+            if dayDifference == 0 {
+                let minutes = difference / (60 * 60)
+                return strings.Time_HoursAgo(minutes)
+            } else {
+                day = .yesterday
+            }
+            return humanReadableStringForTimestamp(strings: strings, day: day, dateTimeFormat: dateTimeFormat, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min).string
+        } else {
+            return strings.Time_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).string
+        }
+    }
+}
+
+public func stringAndActivityForUserPresence(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, presence: EnginePeer.Presence, relativeTo timestamp: Int32, expanded: Bool = false) -> (String, Bool) {
     switch presence.status {
-    case .none:
-        return (strings.LastSeen_Offline, false)
     case let .present(statusTimestamp):
         if statusTimestamp >= timestamp {
             return (strings.Presence_online, true)
@@ -402,6 +436,8 @@ public func stringAndActivityForUserPresence(strings: PresentationStrings, dateT
         return (strings.LastSeen_WithinAWeek, false)
     case .lastMonth:
         return (strings.LastSeen_WithinAMonth, false)
+    case .longTimeAgo:
+        return (strings.LastSeen_ALongTimeAgo, false)
     }
 }
 

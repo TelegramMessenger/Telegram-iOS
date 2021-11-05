@@ -1,11 +1,9 @@
 import Foundation
-
-import Postbox
 import TelegramCore
 import WidgetItems
 
 public extension WidgetDataPeer.Message {
-    init(accountPeerId: PeerId, message: Message) {
+    init(accountPeerId: EnginePeer.Id, message: EngineMessage) {
         var content: WidgetDataPeer.Message.Content = .text
         for media in message.media {
             switch media {

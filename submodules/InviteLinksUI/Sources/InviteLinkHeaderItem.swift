@@ -9,18 +9,24 @@ import PresentationDataUtils
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import AccountContext
+import Markdown
+import TextFormat
 
 class InviteLinkHeaderItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let theme: PresentationTheme
     let text: String
+    let animationName: String
     let sectionId: ItemListSectionId
+    let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, text: String, sectionId: ItemListSectionId) {
+    init(context: AccountContext, theme: PresentationTheme, text: String, animationName: String, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
         self.context = context
         self.theme = theme
         self.text = text
+        self.animationName = animationName
         self.sectionId = sectionId
+        self.linkAction = linkAction
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -82,6 +88,16 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
         self.addSubnode(self.animationNode)
     }
     
+    override public func didLoad() {
+        super.didLoad()
+        
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { _ in
+            return .waitForSingleTap
+        }
+        self.view.addGestureRecognizer(recognizer)
+    }
+    
     func asyncLayout() -> (_ item: InviteLinkHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
@@ -89,18 +105,21 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
             let leftInset: CGFloat = 32.0 + params.leftInset
             let topInset: CGFloat = 92.0
             
-            let attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: item.theme.list.freeTextColor)
+            let attributedText = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.itemAccentColor), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            }))
+                
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height)
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     if strongSelf.item == nil {
-                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Invite"), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.animationName), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                         strongSelf.animationNode.visibility = true
                     }
                     strongSelf.item = item
@@ -123,5 +142,28 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            let titleFrame = self.titleNode.frame
+                            if let item = self.item, titleFrame.contains(location) {
+                                if let (_, attributes) = self.titleNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
+                                    if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                                        item.linkAction?(.tap(url))
+                                    }
+                                }
+                            }
+                        default:
+                            break
+                    }
+                }
+            default:
+                break
+        }
     }
 }

@@ -3,12 +3,13 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import AppBundle
+import ObjCRuntimeUtils
 
 private let innerCircleDiameter: CGFloat = 110.0
 private let outerCircleDiameter = innerCircleDiameter + 50.0
 private let outerCircleMinScale = innerCircleDiameter / outerCircleDiameter
-private let innerCircleImage = generateFilledCircleImage(diameter: innerCircleDiameter, color: UIColor(rgb: 0x007ee5))
-private let outerCircleImage = generateFilledCircleImage(diameter: outerCircleDiameter, color: UIColor(rgb: 0x007ee5, alpha: 0.2))
+private let innerCircleImage = generateFilledCircleImage(diameter: innerCircleDiameter, color: UIColor(rgb: 0x007aff))
+private let outerCircleImage = generateFilledCircleImage(diameter: outerCircleDiameter, color: UIColor(rgb: 0x007aff, alpha: 0.2))
 private let micIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: .white)!
 
 private final class ChatTextInputAudioRecordingOverlayDisplayLinkTarget: NSObject {
@@ -138,7 +139,7 @@ final class ChatTextInputAudioRecordingOverlay {
         })
         
         var currentScaleValue: CGFloat = outerCircleMinScale
-        if let currentScale = self.outerCircleNode.layer.value(forKeyPath: "transform.scale") as? AnyObject, currentScale.responds(to: Selector("floatValue")) {
+        if let currentScale = self.outerCircleNode.layer.floatValue(forKeyPath: "transform.scale") {
             currentScaleValue = CGFloat(currentScale.floatValue)
         }
         

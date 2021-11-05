@@ -296,8 +296,8 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         
         let sliderView = TGPhotoEditorSliderView()
         sliderView.disableSnapToPositions = true
-        sliderView.trackCornerRadius = 1.0
-        sliderView.lineSize = 2.0
+        sliderView.trackCornerRadius = 2.0
+        sliderView.lineSize = 4.0
         sliderView.startValue = 0.0
         sliderView.minimumValue = 0.0
         sliderView.maximumValue = 200.0
@@ -308,7 +308,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         sliderView.value = intensityToSliderValue(50, allowDark: self.allowDark)
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         sliderView.backgroundColor = .clear
-        sliderView.backColor = self.theme.list.disclosureArrowColor
+        sliderView.backColor = self.theme.list.itemSwitchColors.frameColor
         if self.allowDark {
             sliderView.trackColor = self.theme.list.disclosureArrowColor
         } else {
@@ -392,7 +392,7 @@ final class WallpaperPatternPanelNode: ASDisplayNode {
         self.backgroundNode.updateColor(color: self.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
             
-        self.sliderView?.backColor = self.theme.list.disclosureArrowColor
+        self.sliderView?.backColor = self.theme.list.itemSwitchColors.frameColor
         if self.allowDark {
             self.sliderView?.trackColor = self.theme.list.disclosureArrowColor
         } else {

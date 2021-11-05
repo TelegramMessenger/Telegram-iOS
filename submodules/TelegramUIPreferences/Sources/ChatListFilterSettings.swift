@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-public struct ChatListFilterSettings: Equatable, PreferencesEntry {
+public struct ChatListFilterSettings: Equatable, Codable {
     public static var `default`: ChatListFilterSettings {
         return ChatListFilterSettings()
     }
@@ -10,29 +10,21 @@ public struct ChatListFilterSettings: Equatable, PreferencesEntry {
     public init() {
     }
     
-    public init(decoder: PostboxDecoder) {
+    public init(from decoder: Decoder) throws {
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? ChatListFilterSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
     }
 }
 
 public func updateChatListFilterSettings(transaction: Transaction, _ f: @escaping (ChatListFilterSettings) -> ChatListFilterSettings) {
     transaction.updatePreferencesEntry(key: ApplicationSpecificPreferencesKeys.chatListFilterSettings, { entry in
         let currentSettings: ChatListFilterSettings
-        if let entry = entry as? ChatListFilterSettings {
+        if let entry = entry?.get(ChatListFilterSettings.self) {
             currentSettings = entry
         } else {
             currentSettings = .default
         }
-        return f(currentSettings)
+        return PreferencesEntry(f(currentSettings))
     })
 }

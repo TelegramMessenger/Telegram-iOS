@@ -296,6 +296,14 @@
 "Weekday.Today" = "Today";
 "Weekday.Yesterday" = "Yesterday";
 
+"Calendar.ShortMonday" = "M";
+"Calendar.ShortTuesday" = "T";
+"Calendar.ShortWednesday" = "W";
+"Calendar.ShortThursday" = "T";
+"Calendar.ShortFriday" = "F";
+"Calendar.ShortSaturday" = "S";
+"Calendar.ShortSunday" = "S";
+
 "Time.TodayAt" = "today at %@";
 "Time.YesterdayAt" = "yesterday at %@";
 
@@ -4097,6 +4105,7 @@ Unused sets are archived when you add more.";
 
 "ChatSettings.AutoDownloadSettings.TypePhoto" = "Photos";
 "ChatSettings.AutoDownloadSettings.TypeVideo" = "Videos (%@)";
+"ChatSettings.AutoDownloadSettings.TypeMedia" = "Media (%@)";
 "ChatSettings.AutoDownloadSettings.TypeFile" = "Files (%@)";
 "ChatSettings.AutoDownloadSettings.OffForAll" = "Disabled";
 "ChatSettings.AutoDownloadSettings.Delimeter" = ", ";
@@ -6706,6 +6715,8 @@ Sorry for the inconvenience.";
 "Activity.ChoosingSticker" = "choosing sticker";
 "DialogList.SingleChoosingStickerSuffix" = "%@ is choosing sticker";
 
+"Activity.TappingInteractiveEmoji" = "tapping on %@";
+
 "WallpaperPreview.Animate" = "Animate";
 "WallpaperPreview.AnimateDescription" = "Colors will move when you send messages";
 
@@ -6781,13 +6792,7 @@ Sorry for the inconvenience.";
 
 "SponsoredMessageMenu.Info" = "What are sponsored\nmessages?";
 "SponsoredMessageInfoScreen.Title" = "What are sponsored messages?";
-"SponsoredMessageInfoScreen.Text" = "Unlike other apps, Telegram never uses your private data to target ads. You are seeing this message only because someone chose this public one-to many channel as a space to promote their messages. This means that no user data is mined or analyzed to display ads, and every user viewing a channel on Telegram sees the same sponsored message.
-
-Unline other apps, Telegram doesn't track whether you tapped on a sponsored message and doesn't profile you based on your activity. We also prevent external links in sponsored messages to ensure that third parties can't spy on our users. We believe that everyone has the right to privacy, and technological platforms should respect that.
-
-Telegram offers free and unlimited service to hundreds of millions of users, which involves significant server and traffic costs. In order to remain independent and stay true to its values, Telegram developed a paid tool to promote messages with user privacy in mind. We welcome responsible adverticers at:
-[url]
-Ads should no longer be synonymous with abuse of user privacy. Let us redefine how a tech compony should operate — together.";
+"SponsoredMessageInfoScreen.Text" = "Unlike other apps, Telegram never uses your private data to target ads. You are seeing this message only because someone chose this public one-to many channel as a space to promote their messages. This means that no user data is mined or analyzed to display ads, and every user viewing a channel on Telegram sees the same sponsored message.\n\nUnline other apps, Telegram doesn't track whether you tapped on a sponsored message and doesn't profile you based on your activity. We also prevent external links in sponsored messages to ensure that third parties can't spy on our users. We believe that everyone has the right to privacy, and technological platforms should respect that.\n\nTelegram offers free and unlimited service to hundreds of millions of users, which involves significant server and traffic costs. In order to remain independent and stay true to its values, Telegram developed a paid tool to promote messages with user privacy in mind. We welcome responsible adverticers at:\n[url]\nAds should no longer be synonymous with abuse of user privacy. Let us redefine how a tech compony should operate — together.";
 "SponsoredMessageInfo.Action" = "Learn More";
 "SponsoredMessageInfo.Url" = "https://telegram.org/ads";
 
@@ -6862,3 +6867,168 @@ Ads should no longer be synonymous with abuse of user privacy. Let us redefine h
 "VoiceChat.RecordPortrait" = "Portrait";
 "VoiceChat.RecordLandscape" = "Landscape";
 "VoiceChat.RecordStartRecording" = "Start Recording";
+
+"MediaPicker.JpegConversionText" = "Do you want to convert photos to JPEG?";
+"MediaPicker.KeepHeic" = "Keep HEIC";
+"MediaPicker.ConvertToJpeg" = "Convert to JPEG";
+
+"GroupInfo.MemberRequests" = "Member Requests";
+
+"InviteLink.Create.RequestApproval" = "Request Admin Approval";
+"InviteLink.Create.RequestApprovalOffInfoGroup" = "New users will be able to join the group without being approved by the admins.";
+"InviteLink.Create.RequestApprovalOffInfoChannel" = "New users will be able to join the channel without being approved by the admins.";
+"InviteLink.Create.RequestApprovalOnInfoGroup" = "New users will be able to join the group only after having been approved by the admins.";
+"InviteLink.Create.RequestApprovalOnInfoChannel" = "New users will be able to join the channel only after having been approved by the admins.";
+
+"InviteLink.Create.LinkNameTitle" = "Link Name";
+"InviteLink.Create.LinkName" = "Link Name (Optional)";
+"InviteLink.Create.LinkNameInfo" = "Only you and other admins will see this name.";
+
+"MemberRequests.Title" = "Member Requests";
+"MemberRequests.DescriptionGroup" = "Some [additional links]() are set up to accept requests to join the group.";
+"MemberRequests.DescriptionChannel" = "Some [additional links]() are set up to accept requests to join the channel.";
+
+"MemberRequests.PeopleRequested_1" = "%@ requested to join";
+"MemberRequests.PeopleRequested_2" = "%@ requested to join";
+"MemberRequests.PeopleRequested_3_10" = "%@ requested to join";
+"MemberRequests.PeopleRequested_many" = "%@ requested to join";
+"MemberRequests.PeopleRequested_any" = "%@ requested to join";
+
+"MemberRequests.PeopleRequestedShort_1" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_2" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_3_10" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_many" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_any" = "%@ requested";
+
+"MemberRequests.AddToGroup" = "Add to Group";
+"MemberRequests.AddToChannel" = "Add to Channel";
+"MemberRequests.Dismiss" = "Dismiss";
+
+"MemberRequests.UserAddedToGroup" = "%@ has been added to the group.";
+"MemberRequests.UserAddedToChannel" = "%@ has been added to the channel.";
+
+"MemberRequests.NoRequests" = "No Member Requests";
+"MemberRequests.NoRequestsDescriptionGroup" = "You have no pending requests to join the group.";
+"MemberRequests.NoRequestsDescriptionChannel" = "You have no pending requests to join the channel.";
+
+"Conversation.RequestsToJoin_1" = "%@ Request to Join";
+"Conversation.RequestsToJoin_2" = "%@ Requests to Join";
+"Conversation.RequestsToJoin_3_10" = "%@ Requests to Join";
+"Conversation.RequestsToJoin_many" = "%@ Requests to Join";
+"Conversation.RequestsToJoin_any" = "%@ Requests to Join";
+
+"MemberRequests.RequestToJoinGroup" = "Request to Join Group";
+"MemberRequests.RequestToJoinChannel" = "Request to Join Channel";
+
+"MemberRequests.RequestToJoinDescriptionGroup" = "This group accepts new members only after they are approved by its admins.";
+"MemberRequests.RequestToJoinDescriptionChannel" = "This channel accepts new subscribers only after they are approved by its admins.";
+
+"MemberRequests.RequestToJoinSent" = "Request to join Sent";
+"MemberRequests.RequestToJoinSentDescriptionGroup" = "You will be added to the group once it admins approve your request.";
+"MemberRequests.RequestToJoinSentDescriptionChannel" = "You will be added to the channel once it admins approve your request.";
+
+"Notification.JoinedChatByRequestYou" = "Your request to join the channel was approved";
+"Notification.JoinedGroupByRequestYou" = "Your request to join the group was approved";
+"Notification.JoinedGroupByRequest" = "%@ was accepted to the group chat";
+
+"Notification.JoinedGroupByLinkYou" = "You joined the group via invite link";
+
+"InviteLink.InviteLinkForwardTooltip.Chat.One" = "Invite link forwarded to **%@**";
+"InviteLink.InviteLinkForwardTooltip.TwoChats.One" = "Invite link forwarded to **%@** and **%@**";
+"InviteLink.InviteLinkForwardTooltip.ManyChats.One" = "Invite link forwarded to **%@** and %@ others";
+"InviteLink.InviteLinkForwardTooltip.SavedMessages.One" = "Invite link forwarded to **Saved Messages**";
+
+"Conversation.RequestToJoinChannel" = "REQUEST TO JOIN";
+"Conversation.RequestToJoinGroup" = "REQUEST TO JOIN";
+
+"Channel.AdminLog.JoinedViaRequest" = "%1$@ joined via invite link %2$@, approved by %3$@";
+
+"Appearance.NightTheme" = "Night Mode";
+
+"Map.ETADays_0" = "%@ days";
+"Map.ETADays_1" = "%@ day";
+"Map.ETADays_2" = "%@ days";
+"Map.ETADays_3_10" = "%@ days";
+"Map.ETADays_many" = "%@ days";
+"Map.ETADays_any" = "%@ days";
+
+"ChatSettings.UseLessDataForCalls" = "Use Less Data for Calls";
+
+"Time.JustNow" = "just now";
+"Time.MinutesAgo_0" = "%@ minutes ago"; //three to ten
+"Time.MinutesAgo_1" = "%@ minute ago"; //one
+"Time.MinutesAgo_2" = "%@ minutes ago"; //two
+"Time.MinutesAgo_3_10" = "%@ minutes ago"; //three to ten
+"Time.MinutesAgo_many" = "%@ minutes ago"; // more than ten
+"Time.MinutesAgo_any" = "%@ minutes ago"; // more than ten
+"Time.HoursAgo_0" = "%@ hours ago";
+"Time.HoursAgo_1" = "%@ hour ago";
+"Time.HoursAgo_2" = "%@ hours ago";
+"Time.HoursAgo_3_10" = "%@ hours ago";
+"Time.HoursAgo_any" = "%@ hours ago";
+"Time.HoursAgo_many" = "%@ hours ago";
+"Time.HoursAgo_0" = "%@ hours ago";
+"Time.AtDate" = "%@";
+
+"Stickers.ShowMore" = "Show More";
+
+"Notifications.PrivateChats" = "Private Chats";
+"Notifications.GroupChats" = "Group Chats";
+"Notifications.Channels" = "Channels";
+
+"Notifications.CategoryExceptions_0" = "%@ exceptions";
+"Notifications.CategoryExceptions_1" = "%@ exception";
+"Notifications.CategoryExceptions_2" = "%@ exceptions";
+"Notifications.CategoryExceptions_3_10" = "%@ exceptions";
+"Notifications.CategoryExceptions_many" = "%@ exceptions";
+"Notifications.CategoryExceptions_any" = "%@ exceptions";
+
+"Notifications.DeleteAllExceptions" = "Delete All Exceptions";
+
+"Notifications.On" = "On";
+"Notifications.Off" = "Off";
+
+"AuthSessions.View.Browser" = "Browser";
+"AuthSessions.View.Device" = "Device";
+"AuthSessions.View.Location" = "Location";
+"AuthSessions.View.IP" = "IP Address";
+"AuthSessions.View.TerminateSession" = "Terminate Session";
+"AuthSessions.View.Logout" = "Log Out";
+
+"MessageCalendar.Title" = "Calendar";
+"MessageCalendar.DaysSelectedTitle_1" = "1 day selected";
+"MessageCalendar.DaysSelectedTitle_any" = "%@ days selected";
+"MessageCalendar.DeleteAlertText_1" = "Are you sure you want to delete all messages for the selected day?";
+"MessageCalendar.DeleteAlertText_any" = "Are you sure you want to delete all messages for the selected %@ days?";
+
+"SharedMedia.PhotoCount_1" = "1 photo";
+"SharedMedia.PhotoCount_any" = "%@ photos";
+"SharedMedia.VideoCount_1" = "1 video";
+"SharedMedia.VideoCount_any" = "%@ videos";
+"SharedMedia.GifCount_1" = "1 gif";
+"SharedMedia.GifCount_any" = "%@ gifs";
+"SharedMedia.FileCount_1" = "1 file";
+"SharedMedia.FileCount_any" = "%@ files";
+"SharedMedia.MusicCount_1" = "1 music file";
+"SharedMedia.MusicCount_any" = "%@ music files";
+"SharedMedia.VoiceMessageCount_1" = "1 voice message";
+"SharedMedia.VoiceMessageCount_any" = "%@ voice messages";
+"SharedMedia.LinkCount_1" = "1 link";
+"SharedMedia.LinkCount_any" = "%@ links";
+
+"SharedMedia.FastScrollTooltip" = "You can hold and move this bar for faster scrolling";
+"SharedMedia.CalendarTooltip" = "Tap on this icon for calendar view";
+
+"SharedMedia.ZoomIn" = "Zoom In";
+"SharedMedia.ZoomOut" = "Zoom Out";
+"SharedMedia.ShowCalendar" = "Show Calendar";
+"SharedMedia.ShowPhotos" = "Show Photos";
+"SharedMedia.ShowVideos" = "Show Videos";
+
+"Settings.ChatThemes" = "Chat Themes";
+
+"Themes.Title" = "Chat Themes";
+"Themes.SelectTheme" = "Select Theme";
+"Themes.BuildOwn" = "Build Your Own Theme";
+"Themes.EditCurrentTheme" = "Edit Current Theme";
+"Themes.CreateNewTheme" = "Create a New Theme";

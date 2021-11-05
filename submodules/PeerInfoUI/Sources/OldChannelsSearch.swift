@@ -141,7 +141,7 @@ private enum OldChannelsSearchEntry: Comparable, Identifiable {
     func item(context: AccountContext, presentationData: ItemListPresentationData, interaction: OldChannelsSearchInteraction)  -> ListViewItem {
         switch self {
         case let .peer(_, peer, selected):
-            return ContactsPeerItem(presentationData: presentationData, style: .plain, sortOrder: .firstLast, displayOrder: .firstLast, context: context, peerMode: .peer, peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .custom(string: localizedOldChannelDate(peer: peer, strings: presentationData.strings), multiline: false), badge: nil, enabled: true, selection: ContactsPeerItemSelection.selectable(selected: selected), editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .none, index: nil, header: nil, action: { _ in
+            return ContactsPeerItem(presentationData: presentationData, style: .plain, sortOrder: .firstLast, displayOrder: .firstLast, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(peer.peer), chatPeer: EnginePeer(peer.peer)), status: .custom(string: localizedOldChannelDate(peer: peer, strings: presentationData.strings), multiline: false), badge: nil, enabled: true, selection: ContactsPeerItemSelection.selectable(selected: selected), editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), options: [], actionIcon: .none, index: nil, header: nil, action: { _ in
                 interaction.togglePeer(peer.peer.id)
             }, setPeerIdWithRevealedOptions: nil, deletePeer: nil, itemHighlighting: nil, contextAction: nil)
         }

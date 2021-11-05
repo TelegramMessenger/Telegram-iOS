@@ -98,10 +98,6 @@ public extension TelegramEngine {
             }
         }
 
-        public func searchPeers(query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
-            return _internal_searchPeers(account: self.account, query: query)
-        }
-
         public func updatedRemotePeer(peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
             return _internal_updatedRemotePeer(postbox: self.account.postbox, network: self.account.network, peer: peer)
         }
@@ -423,12 +419,12 @@ public extension TelegramEngine {
             return _internal_checkPeerChatServiceActions(postbox: self.account.postbox, peerId: peerId)
         }
 
-        public func createPeerExportedInvitation(peerId: PeerId, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
-            return _internal_createPeerExportedInvitation(account: self.account, peerId: peerId, expireDate: expireDate, usageLimit: usageLimit)
+        public func createPeerExportedInvitation(peerId: PeerId, title: String?, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Bool?) -> Signal<ExportedInvitation?, CreatePeerExportedInvitationError> {
+            return _internal_createPeerExportedInvitation(account: self.account, peerId: peerId, title: title, expireDate: expireDate, usageLimit: usageLimit, requestNeeded: requestNeeded)
         }
 
-        public func editPeerExportedInvitation(peerId: PeerId, link: String, expireDate: Int32?, usageLimit: Int32?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
-            return _internal_editPeerExportedInvitation(account: self.account, peerId: peerId, link: link, expireDate: expireDate, usageLimit: usageLimit)
+        public func editPeerExportedInvitation(peerId: PeerId, link: String, title: String?, expireDate: Int32?, usageLimit: Int32?, requestNeeded: Bool?) -> Signal<ExportedInvitation?, EditPeerExportedInvitationError> {
+            return _internal_editPeerExportedInvitation(account: self.account, peerId: peerId, link: link, title: title, expireDate: expireDate, usageLimit: usageLimit, requestNeeded: requestNeeded)
         }
 
         public func revokePeerExportedInvitation(peerId: PeerId, link: String) -> Signal<RevokeExportedInvitationResult?, RevokePeerExportedInvitationError> {
@@ -458,8 +454,8 @@ public extension TelegramEngine {
             return _internal_revokePersistentPeerExportedInvitation(account: self.account, peerId: peerId)
         }
 
-        public func peerInvitationImporters(peerId: PeerId, invite: ExportedInvitation) -> PeerInvitationImportersContext {
-            return PeerInvitationImportersContext(account: self.account, peerId: peerId, invite: invite)
+        public func peerInvitationImporters(peerId: PeerId, subject: PeerInvitationImportersContext.Subject) -> PeerInvitationImportersContext {
+            return PeerInvitationImportersContext(account: self.account, peerId: peerId, subject: subject)
         }
 
         public func notificationExceptionsList() -> Signal<NotificationExceptionsList, NoError> {
@@ -490,7 +486,7 @@ public extension TelegramEngine {
             return _internal_joinChatInteractively(with: hash, account: self.account)
         }
 
-        public func joinLinkInformation(_ hash: String) -> Signal<ExternalJoiningChatState, NoError> {
+        public func joinLinkInformation(_ hash: String) -> Signal<ExternalJoiningChatState, JoinLinkInfoError> {
             return _internal_joinLinkInformation(hash, account: self.account)
         }
 

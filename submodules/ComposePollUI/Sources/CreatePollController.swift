@@ -10,7 +10,6 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import TextFormat
-import Postbox
 
 private struct OrderedLinkedListItemOrderingId: RawRepresentable, Hashable {
     var rawValue: Int
@@ -483,7 +482,36 @@ private func createPollControllerEntries(presentationData: PresentationData, pee
     return entries
 }
 
-public func createPollController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, isQuiz: Bool? = nil, completion: @escaping (EnqueueMessage) -> Void) -> ViewController {
+public final class ComposedPoll {
+    public let publicity: TelegramMediaPollPublicity
+    public let kind: TelegramMediaPollKind
+
+    public let text: String
+    public let options: [TelegramMediaPollOption]
+    public let correctAnswers: [Data]?
+    public let results: TelegramMediaPollResults
+    public let deadlineTimeout: Int32?
+
+    public init(
+        publicity: TelegramMediaPollPublicity,
+        kind: TelegramMediaPollKind,
+        text: String,
+        options: [TelegramMediaPollOption],
+        correctAnswers: [Data]?,
+        results: TelegramMediaPollResults,
+        deadlineTimeout: Int32?
+    ) {
+        self.publicity = publicity
+        self.kind = kind
+        self.text = text
+        self.options = options
+        self.correctAnswers = correctAnswers
+        self.results = results
+        self.deadlineTimeout = deadlineTimeout
+    }
+}
+
+public func createPollController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, isQuiz: Bool? = nil, completion: @escaping (ComposedPoll) -> Void) -> ViewController {
     var initialState = CreatePollControllerState()
     if let isQuiz = isQuiz {
         initialState.isQuiz = isQuiz
@@ -819,14 +847,19 @@ public func createPollController(context: AccountContext, updatedPresentationDat
                 kind = .poll(multipleAnswers: state.isMultipleChoice)
             }
             
-            var deadlineTimeout: Int32?
-            #if DEBUG
-            deadlineTimeout = 65
-            #endif
+            let deadlineTimeout: Int32? = nil
             
             dismissImpl?()
             
-            completion(.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min ... Int64.max)), publicity: publicity, kind: kind, text: processPollText(state.text), options: options, correctAnswers: correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: resolvedSolution), isClosed: false, deadlineTimeout: deadlineTimeout)), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+            completion(ComposedPoll(
+                publicity: publicity,
+                kind: kind,
+                text: processPollText(state.text),
+                options: options,
+                correctAnswers: correctAnswers,
+                results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: resolvedSolution),
+                deadlineTimeout: deadlineTimeout
+            ))
         })
         
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {

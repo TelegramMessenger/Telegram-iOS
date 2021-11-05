@@ -6,12 +6,23 @@ public struct AccountBackupData: Codable, Equatable {
     public var peerId: Int64
     public var masterDatacenterKey: Data
     public var masterDatacenterKeyId: Int64
+    public var notificationEncryptionKeyId: Data?
+    public var notificationEncryptionKey: Data?
 
-    public init(masterDatacenterId: Int32, peerId: Int64, masterDatacenterKey: Data, masterDatacenterKeyId: Int64) {
+    public init(
+        masterDatacenterId: Int32,
+        peerId: Int64,
+        masterDatacenterKey: Data,
+        masterDatacenterKeyId: Int64,
+        notificationEncryptionKeyId: Data?,
+        notificationEncryptionKey: Data?
+    ) {
     	self.masterDatacenterId = masterDatacenterId
     	self.peerId = peerId
     	self.masterDatacenterKey = masterDatacenterKey
     	self.masterDatacenterKeyId = masterDatacenterKeyId
+        self.notificationEncryptionKeyId = notificationEncryptionKeyId
+        self.notificationEncryptionKey = notificationEncryptionKey
     }
 }
 

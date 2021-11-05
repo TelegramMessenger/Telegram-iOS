@@ -102,9 +102,9 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             let peerString: String
             if let peer = peer {
                 if let authorName = authorName {
-                    peerString = "\(peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)) (\(authorName))"
+                    peerString = "\(EnginePeer(peer).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)) (\(authorName))"
                 } else {
-                    peerString = peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
+                    peerString = EnginePeer(peer).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
                 }
             } else if let authorName = authorName {
                 peerString = authorName

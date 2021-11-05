@@ -134,7 +134,7 @@ class SettingsSearchResultItemNode: ListViewItemNode {
             var leftInset: CGFloat = params.leftInset
             let contentInset: CGFloat = 58.0
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             leftInset += contentInset
             

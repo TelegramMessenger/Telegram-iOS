@@ -156,7 +156,7 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 } else {
                     text = strings.Channel_DiscussionGroup_PrivateGroup
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: nameOrder, context: arguments.context, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: nameOrder, context: arguments.context, peer: EnginePeer(peer), aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.selectGroup(peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .groupsInfo(_, title):
@@ -181,9 +181,9 @@ private func channelDiscussionGroupSetupControllerEntries(presentationData: Pres
     if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId {
         if let group = view.peers[linkedDiscussionPeerId] {
             if case .group = peer.info {
-                entries.append(.header(presentationData.theme, presentationData.strings, group.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), true, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
+                entries.append(.header(presentationData.theme, presentationData.strings, EnginePeer(group).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), true, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
             } else {
-                entries.append(.header(presentationData.theme, presentationData.strings, group.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), false, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
+                entries.append(.header(presentationData.theme, presentationData.strings, EnginePeer(group).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), false, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
             }
             
             entries.append(.group(0, presentationData.theme, presentationData.strings, group, presentationData.nameDisplayOrder))
@@ -258,7 +258,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, updat
                 return
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            pushControllerImpl?(context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) + " Chat", mode: .supergroup, completion: { groupId, dismiss in
+            pushControllerImpl?(context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) + " Chat", mode: .supergroup, completion: { groupId, dismiss in
                 var applySignal = context.engine.peers.updateGroupDiscussionForChannel(channelId: peerId, groupId: groupId)
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in

@@ -100,12 +100,7 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 result.append(.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags))
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
-                var waveformBuffer: MemoryBuffer?
-                if let waveform = waveform {
-                    let memory = malloc(waveform.size)!
-                    memcpy(memory, waveform.data, waveform.size)
-                    waveformBuffer = MemoryBuffer(memory: memory, capacity: waveform.size, length: waveform.size, freeWhenDone: true)
-                }
+                let waveformBuffer: Data? = waveform?.makeData()
                 result.append(.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: performer, waveform: waveformBuffer))
         }
     }

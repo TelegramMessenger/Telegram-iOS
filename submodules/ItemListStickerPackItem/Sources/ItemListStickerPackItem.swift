@@ -204,6 +204,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.imageNode = TransformImageNode()
         self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
@@ -387,7 +388,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             let verticalInset: CGFloat = 11.0
             let titleSpacing: CGFloat = 2.0
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let separatorHeight = UIScreenPixel
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
@@ -659,7 +660,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     if strongSelf.maskNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        strongSelf.addSubnode(strongSelf.maskNode)
                     }
                     
                     let hasCorners = itemListHasRoundedBlockLayout(params)

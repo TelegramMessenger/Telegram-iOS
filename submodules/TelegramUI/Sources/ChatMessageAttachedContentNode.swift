@@ -285,7 +285,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         
         return { presentationData, automaticDownloadSettings, associatedData, attributes, context, controllerInteraction, message, messageRead, chatLocation, title, subtitle, text, entities, mediaAndFlags, mediaBadge, actionIcon, actionTitle, displayLine, layoutConstants, preparePosition, constrainedSize in
             let isPreview = presentationData.isPreview
-            let fontSize: CGFloat = floor(presentationData.fontSize.baseDisplaySize * 15.0 / 17.0)
+            let fontSize: CGFloat
+            if message.adAttribute != nil {
+                fontSize = floor(presentationData.fontSize.baseDisplaySize)
+            } else {
+                fontSize = floor(presentationData.fontSize.baseDisplaySize * 15.0 / 17.0)
+            }
             
             let titleFont = Font.semibold(fontSize)
             let textFont = Font.regular(fontSize)
@@ -329,20 +334,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 }
             }
             
-            var dateReactions: [MessageReaction] = []
-            var dateReactionCount = 0
-            if let reactionsAttribute = mergedMessageReactions(attributes: message.attributes), !reactionsAttribute.reactions.isEmpty {
-                for reaction in reactionsAttribute.reactions {
-                    if reaction.isSelected {
-                        dateReactions.insert(reaction, at: 0)
-                    } else {
-                        dateReactions.append(reaction)
-                    }
-                    dateReactionCount += Int(reaction.count)
-                }
-            }
-            
-            let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, reactionCount: dateReactionCount)
+            let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
             
             var webpageGalleryMediaCount: Int?
             for media in message.media {
@@ -506,7 +498,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     edited: edited,
                     viewCount: viewCount,
                     dateReplies: dateReplies,
-                    dateReactions: dateReactions,
                     isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                     dateText: dateText
                 )
@@ -626,7 +617,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 let textConstrainedSize = CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height - insets.top - insets.bottom)
 
                 if let textStatusType = textStatusType {
-                    statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, textStatusType, textConstrainedSize, dateReactions, dateReplies, message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread, message.isSelfExpiring)
+                    statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, textStatusType, textConstrainedSize, dateReplies, message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread, message.isSelfExpiring)
                 }
                 
                 var updatedAdditionalImageBadge: ChatMessageInteractiveMediaBadge?
@@ -1119,12 +1110,5 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     
     func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.contentImageNode?.playMediaWithSound()
-    }
-    
-    func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        if !self.statusNode.isHidden {
-            return self.statusNode.reactionNode(value: value)
-        }
-        return nil
     }
 }

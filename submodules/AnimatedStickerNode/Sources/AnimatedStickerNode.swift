@@ -976,14 +976,16 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var isSetUpForPlayback = false
         
     public func play(firstFrame: Bool = false, fromIndex: Int? = nil) {
-        switch self.playbackMode {
-        case .once:
-            self.isPlaying = true
-        case .count:
-            self.currentLoopCount = 0
-            self.isPlaying = true
-        default:
-            break
+        if !firstFrame {
+            switch self.playbackMode {
+            case .once:
+                self.isPlaying = true
+            case .count:
+                self.currentLoopCount = 0
+                self.isPlaying = true
+            default:
+                break
+            }
         }
         if self.isSetUpForPlayback {
             let directData = self.directData
@@ -992,7 +994,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
             let timerHolder = self.timer
             let frameSourceHolder = self.frameSource
             self.queue.async { [weak self] in
-                var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }?.value
+                var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }.value
                 if maybeFrameSource == nil {
                     let notifyUpdated: (() -> Void)? = nil
                     if let directData = directData {
@@ -1025,10 +1027,10 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 let frameRate = frameSource.frameRate
                 
                 let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(frameRate), repeat: !firstFrame, completion: {
-                    let maybeFrame = frameQueue.syncWith { frameQueue in
+                    let frame = frameQueue.syncWith { frameQueue in
                         return frameQueue.take(draw: true)
                     }
-                    if let maybeFrame = maybeFrame, let frame = maybeFrame {
+                    if let frame = frame {
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
                                 return
@@ -1124,10 +1126,10 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 let frameRate = frameSource.frameRate
                 
                 let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(frameRate), repeat: !firstFrame, completion: {
-                    let maybeFrame = frameQueue.syncWith { frameQueue in
+                    let frame = frameQueue.syncWith { frameQueue in
                         return frameQueue.take(draw: true)
                     }
-                    if let maybeFrame = maybeFrame, let frame = maybeFrame {
+                    if let frame = frame {
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
                                 return
@@ -1206,7 +1208,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         let frameSourceHolder = self.frameSource
         let timerHolder = self.timer
         self.queue.async { [weak self] in
-            var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }?.value
+            var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }.value
             if case .timestamp = position {
             } else {
                 if let directData = directData {

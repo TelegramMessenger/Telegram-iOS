@@ -68,7 +68,6 @@
 - (SSignal *)captionSignalForItem:(NSObject<TGMediaEditableItem> *)item;
 - (void)setCaption:(NSString *)caption entities:(NSArray *)entities forItem:(NSObject<TGMediaEditableItem> *)item;
 
-- (void)setInitialCaption:(NSString *)caption entities:(NSArray *)entities;
 - (void)setForcedCaption:(NSString *)caption entities:(NSArray *)entities;
 
 - (NSObject<TGMediaEditAdjustments> *)adjustmentsForItem:(NSObject<TGMediaEditableItem> *)item;

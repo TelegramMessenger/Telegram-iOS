@@ -78,9 +78,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
-    case demoVideoChats(Bool)
     case experimentalCompatibility(Bool)
     case enableDebugDataDisplay(Bool)
+    case acceleratedStickers(Bool)
+    case mockICE(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case voiceConference
@@ -103,7 +104,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .demoVideoChats, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .mockICE:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -168,20 +169,22 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 23
         case .knockoutWallpaper:
             return 24
-        case .demoVideoChats:
-            return 25
         case .experimentalCompatibility:
             return 26
         case .enableDebugDataDisplay:
             return 27
-        case .playerEmbedding:
-            return 28
-        case .playlistPlayback:
+        case .acceleratedStickers:
             return 29
-        case .voiceConference:
+        case .mockICE:
             return 30
+        case .playerEmbedding:
+            return 31
+        case .playlistPlayback:
+            return 32
+        case .voiceConference:
+            return 33
         case let .preferredVideoCodec(index, _, _, _):
-            return 31 + index
+            return 34 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -735,9 +738,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Media Preview (Updated)", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.chatListPhotos = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -745,19 +748,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Knockout Wallpaper", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.knockoutWallpaper = value
-                        return settings
-                    })
-                }).start()
-            })
-        case let .demoVideoChats(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Demo Video", value: value, sectionId: self.section, style: .blocks, updated: { value in
-                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
-                        settings.demoVideoChats = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -765,9 +758,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Experimental Compatibility", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.experimentalCompatibility = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -775,9 +768,29 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Debug Data Display", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.enableDebugDataDisplay = value
-                        return settings
+                        return PreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .acceleratedStickers(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Accelerated Stickers", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.acceleratedStickers = value
+                        return PreferencesEntry(settings)
+                    })
+                }).start()
+            })
+        case let .mockICE(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "mockICE", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.mockICE = value
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -785,9 +798,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Player Embedding", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.playerEmbedding = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -795,9 +808,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Playlist Playback", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.playlistPlayback = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -811,9 +824,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.preferredVideoCodec = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -821,9 +834,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Video Cropping Optimization", value: !value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.disableVideoAspectScaling = !value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -831,9 +844,9 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: "Enable VoIP TCP", value: !value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.enableVoipTcp = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })
@@ -907,9 +920,10 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.optimizeDatabase(presentationData.theme))
     if isMainApp {
         entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
-        entries.append(.demoVideoChats(experimentalSettings.demoVideoChats))
         entries.append(.experimentalCompatibility(experimentalSettings.experimentalCompatibility))
         entries.append(.enableDebugDataDisplay(experimentalSettings.enableDebugDataDisplay))
+        entries.append(.acceleratedStickers(experimentalSettings.acceleratedStickers))
+        entries.append(.mockICE(experimentalSettings.mockICE))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }
@@ -978,22 +992,22 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
     let signal = combineLatest(sharedContext.presentationData, sharedContext.accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])), preferencesSignal)
     |> map { presentationData, sharedData, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let loggingSettings: LoggingSettings
-        if let value = sharedData.entries[SharedDataKeys.loggingSettings] as? LoggingSettings {
+        if let value = sharedData.entries[SharedDataKeys.loggingSettings]?.get(LoggingSettings.self) {
             loggingSettings = value
         } else {
             loggingSettings = LoggingSettings.defaultSettings
         }
         
         let mediaInputSettings: MediaInputSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaInputSettings] as? MediaInputSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaInputSettings]?.get(MediaInputSettings.self) {
             mediaInputSettings = value
         } else {
             mediaInputSettings = MediaInputSettings.defaultSettings
         }
         
-        let experimentalSettings: ExperimentalUISettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
+        let experimentalSettings: ExperimentalUISettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
         
-        let networkSettings: NetworkSettings? = preferences?.values[PreferencesKeys.networkSettings] as? NetworkSettings
+        let networkSettings: NetworkSettings? = preferences?.values[PreferencesKeys.networkSettings]?.get(NetworkSettings.self)
         
         var leftNavigationButton: ItemListNavigationButton?
         if modal {

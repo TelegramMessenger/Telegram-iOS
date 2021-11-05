@@ -13,7 +13,6 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
-        "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
@@ -54,6 +53,9 @@ swift_library(
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/AvatarNode:AvatarNode",
+        "//submodules/LocalizedPeerData:LocalizedPeerData",
+        "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
     ],
     visibility = [
         "//visibility:public",

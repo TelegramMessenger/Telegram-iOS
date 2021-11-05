@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
-import Postbox
 import TelegramPresentationData
 import TelegramStringFormatting
 

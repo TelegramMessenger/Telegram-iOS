@@ -4,6 +4,7 @@ import Postbox
 import TelegramUIPreferences
 import SwiftSignalKit
 import UniversalMediaPlayer
+import MusicAlbumArtResources
 
 public enum SharedMediaPlaybackDataType {
     case music
@@ -44,24 +45,12 @@ public struct SharedMediaPlaybackData: Equatable {
 }
 
 public struct SharedMediaPlaybackAlbumArt: Equatable {
-    public let thumbnailResource: TelegramMediaResource
-    public let fullSizeResource: TelegramMediaResource
+    public let thumbnailResource: ExternalMusicAlbumArtResource
+    public let fullSizeResource: ExternalMusicAlbumArtResource
     
-    public init(thumbnailResource: TelegramMediaResource, fullSizeResource: TelegramMediaResource) {
+    public init(thumbnailResource: ExternalMusicAlbumArtResource, fullSizeResource: ExternalMusicAlbumArtResource) {
         self.thumbnailResource = thumbnailResource
         self.fullSizeResource = fullSizeResource
-    }
-    
-    public static func ==(lhs: SharedMediaPlaybackAlbumArt, rhs: SharedMediaPlaybackAlbumArt) -> Bool {
-        if !lhs.thumbnailResource.isEqual(to: rhs.thumbnailResource) {
-            return false
-        }
-        
-        if !lhs.fullSizeResource.isEqual(to: rhs.fullSizeResource) {
-            return false
-        }
-        
-        return true
     }
 }
 

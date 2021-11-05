@@ -8,7 +8,35 @@ import UrlEscaping
 
 public enum OpenInItem {
     case url(url: String)
-    case location(location: TelegramMediaMap, withDirections: Bool)
+    case location(location: TelegramMediaMap, directions: OpenInLocationDirections?)
+}
+
+public enum OpenInLocationDirections: Equatable {
+    case walking
+    case driving
+    case transit
+    
+    var transportType: MKDirectionsTransportType {
+        switch self {
+            case .walking:
+                return .walking
+            case .transit:
+                return .transit
+            case .driving:
+                return .automobile
+        }
+    }
+    
+    public var launchOptions: String {
+        switch self {
+            case .walking:
+                return MKLaunchOptionsDirectionsModeWalking
+            case .transit:
+                return MKLaunchOptionsDirectionsModeTransit
+            case .driving:
+                return MKLaunchOptionsDirectionsModeDriving
+        }
+    }
 }
 
 public enum OpenInApplication: Equatable {
@@ -20,7 +48,7 @@ public enum OpenInApplication: Equatable {
 public enum OpenInAction {
     case none
     case openUrl(url: String)
-    case openLocation(latitude: Double, longitude: Double, withDirections: Bool)
+    case openLocation(latitude: Double, longitude: Double, directions: OpenInLocationDirections?)
 }
 
 public final class OpenInOption {
@@ -170,11 +198,11 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             options.append(OpenInOption(identifier: "alook", application: .other(title: "Alook Browser", identifier: 1261944766, scheme: "alook", store: nil), action: {
                 return .openUrl(url: "alook://\(url)")
             }))
-        case let .location(location, withDirections):
+        case let .location(location, directions):
             let lat = location.latitude
             let lon = location.longitude
         
-            if !withDirections {
+            if directions == nil {
                 if let venue = location.venue, let venueId = venue.id, let provider = venue.provider, provider == "foursquare" {
                     options.append(OpenInOption(identifier: "foursquare", application: .other(title: "Foursquare", identifier: 306934924, scheme: "foursquare", store: nil), action: {
                         return .openUrl(url: "foursquare://venues/\(venueId)")
@@ -183,13 +211,22 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             }
             
             options.append(OpenInOption(identifier: "appleMaps", application: .maps, action: {
-                return .openLocation(latitude: lat, longitude: lon, withDirections: withDirections)
+                return .openLocation(latitude: lat, longitude: lon, directions: directions)
             }))
         
             options.append(OpenInOption(identifier: "googleMaps", application: .other(title: "Google Maps", identifier: 585027354, scheme: "comgooglemaps-x-callback", store: nil), action: {
                 let coordinates = "\(lat),\(lon)"
-                if withDirections {
-                    return .openUrl(url: "comgooglemaps-x-callback://?daddr=\(coordinates)&directionsmode=driving&x-success=telegram://?resume=true&x-source=Telegram")
+                if let directions = directions {
+                    let directionsMode: String
+                    switch directions {
+                        case .walking:
+                            directionsMode = "walking"
+                        case .driving:
+                            directionsMode = "driving"
+                        case .transit:
+                            directionsMode = "transit"
+                    }
+                    return .openUrl(url: "comgooglemaps-x-callback://?daddr=\(coordinates)&directionsmode=\(directionsMode)&x-success=telegram://?resume=true&x-source=Telegram")
                 } else {
                     if let venue = location.venue, let venueId = venue.id, let provider = venue.provider, provider == "gplaces" {
                         return .openUrl(url: "https://www.google.com/maps/search/?api=1&query=\(venue.address ?? "")&query_place_id=\(venueId)")
@@ -200,7 +237,7 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             }))
         
             options.append(OpenInOption(identifier: "yandexMaps", application: .other(title: "Yandex.Maps", identifier: 313877526, scheme: "yandexmaps", store: nil), action: {
-                if withDirections {
+                if let _ = directions {
                     return .openUrl(url: "yandexmaps://build_route_on_map?lat_to=\(lat)&lon_to=\(lon)")
                 } else {
                     return .openUrl(url: "yandexmaps://maps.yandex.ru/?pt=\(lon),\(lat)&z=16")
@@ -227,7 +264,7 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 return .openUrl(url: "lyft://ridetype?id=lyft&destination[latitude]=\(lat)&destination[longitude]=\(lon)")
             }))
             
-            if withDirections {
+            if let _ = directions {
                 options.append(OpenInOption(identifier: "citymapper", application: .other(title: "Citymapper", identifier: 469463298, scheme: "citymapper", store: nil), action: {
                     let endName: String
                     let endAddress: String
@@ -251,7 +288,7 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             
             options.append(OpenInOption(identifier: "2gis", application: .other(title: "2GIS", identifier: 481627348, scheme: "dgis", store: nil), action: {
                 let coordinates = "\(lon),\(lat)"
-                if withDirections {
+                if let _ = directions {
                     return .openUrl(url: "dgis://2gis.ru/routeSearch/to/\(coordinates)/go")
                 } else {
                     return .openUrl(url: "dgis://2gis.ru/geo/\(coordinates)")
@@ -259,7 +296,7 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             }))
             
             options.append(OpenInOption(identifier: "moovit", application: .other(title: "Moovit", identifier: 498477945, scheme: "moovit", store: nil), action: {
-                if withDirections {
+                if let _ = directions {
                     let destName: String
                     if let title = location.venue?.title.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed), title.count > 0 {
                         destName = title
@@ -272,7 +309,7 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 }
             }))
         
-            if !withDirections {
+            if directions == nil {
                 options.append(OpenInOption(identifier: "hereMaps", application: .other(title: "HERE Maps", identifier: 955837609, scheme: "here-location", store: nil), action: {
                     return .openUrl(url: "here-location://\(lat),\(lon)")
                 }))
@@ -280,7 +317,7 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
             
             options.append(OpenInOption(identifier: "waze", application: .other(title: "Waze", identifier: 323229106, scheme: "waze", store: nil), action: {
                 let url = "waze://?ll=\(lat),\(lon)"
-                if withDirections {
+                if let _ = directions {
                     return .openUrl(url: url.appending("&navigate=yes"))
                 } else {
                     return .openUrl(url: url)

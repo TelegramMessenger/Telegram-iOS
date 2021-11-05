@@ -68,7 +68,11 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     if let bot = author as? TelegramUser, bot.botInfo != nil, let startParam = adAttribute.startParam {
                         navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
                     } else {
-                        navigationData = .chat(textInputState: nil, subject: nil, peekData: nil)
+                        var subject: ChatControllerSubject?
+                        if let messageId = adAttribute.messageId {
+                            subject = .message(id: messageId, highlight: true, timecode: nil)
+                        }
+                        navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
                     }
                     item.controllerInteraction.openPeer(author.id, navigationData, nil)
                 } else {
@@ -283,6 +287,10 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else if let type = webpage.type {
                     switch type {
+                        case "telegram_channel_request":
+                            actionTitle = item.presentationData.strings.Conversation_RequestToJoinChannel
+                        case "telegram_chat_request", "telegram_megagroup_request":
+                            actionTitle = item.presentationData.strings.Conversation_RequestToJoinGroup
                         case "telegram_channel":
                             actionTitle = item.presentationData.strings.Conversation_ViewChannel
                         case "telegram_chat", "telegram_megagroup":
@@ -525,9 +533,5 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     override func updateTouchesAtPoint(_ point: CGPoint?) {
         let contentNodeFrame = self.contentNode.frame
         self.contentNode.updateTouchesAtPoint(point.flatMap { $0.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY) })
-    }
-    
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        return self.contentNode.reactionTargetNode(value: value)
     }
 }

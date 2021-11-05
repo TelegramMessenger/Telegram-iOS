@@ -64,6 +64,7 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case cachedWallpapers = 2
     case mediaPlaybackStoredState = 3
     case cachedGeocodes = 4
+    case visualMediaStoredState = 5
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
@@ -72,6 +73,7 @@ public struct ApplicationSpecificItemCacheCollectionId {
     public static let cachedWallpapers = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedWallpapers.rawValue)
     public static let mediaPlaybackStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.mediaPlaybackStoredState.rawValue)
     public static let cachedGeocodes = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedGeocodes.rawValue)
+    public static let visualMediaStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.visualMediaStoredState.rawValue)
 }
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
@@ -79,6 +81,7 @@ private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
     case wallpaperSearchRecentQueries = 1
     case settingsSearchRecentItems = 2
     case localThemes = 3
+    case visualMediaStoredState = 4
 }
 
 public struct ApplicationSpecificOrderedItemListCollectionId {

@@ -1,5 +1,6 @@
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 
 private var backArrowImageCache: [Int32: UIImage] = [:]
 
@@ -146,7 +147,23 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         self.updateColor(color: color, transition: .immediate)
     }
 
+    
+    public override func didLoad() {
+        super.didLoad()
+        
+        if self.scheduledUpdate {
+            self.scheduledUpdate = false
+            self.updateBackgroundBlur(forceKeepBlur: false)
+        }
+    }
+    
+    private var scheduledUpdate = false
+    
     private func updateBackgroundBlur(forceKeepBlur: Bool) {
+        guard self.isNodeLoaded else {
+            self.scheduledUpdate = true
+            return
+        }
         if self.enableBlur && !sharedIsReduceTransparencyEnabled && ((self._color.alpha > .ulpOfOne && self._color.alpha < 0.95) || forceKeepBlur) {
             if self.effectView == nil {
                 let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
@@ -902,6 +919,16 @@ open class NavigationBar: ASDisplayNode {
                 }
             }
         }
+    }
+    
+    public var isBackgroundVisible: Bool {
+        return self.backgroundNode.alpha == 1.0
+    }
+    
+    public func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
+        let alpha = max(0.0, min(1.0, alpha))
+        transition.updateAlpha(node: self.backgroundNode, alpha: alpha, delay: 0.15)
+        transition.updateAlpha(node: self.stripeNode, alpha: alpha, delay: 0.15)
     }
     
     public func updatePresentationData(_ presentationData: NavigationBarPresentationData) {

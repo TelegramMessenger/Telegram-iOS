@@ -5,7 +5,7 @@ import Postbox
 import TelegramCore
 import TelegramUIPreferences
 
-public final class InstantPageStoredDetailsState: PostboxCoding {
+public final class InstantPageStoredDetailsState: Codable {
     public let index: Int32
     public let expanded: Bool
     public let details: [InstantPageStoredDetailsState]
@@ -16,20 +16,24 @@ public final class InstantPageStoredDetailsState: PostboxCoding {
         self.details = details
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.index = decoder.decodeInt32ForKey("index", orElse: 0)
-        self.expanded = decoder.decodeBoolForKey("expanded", orElse: false)
-        self.details = decoder.decodeObjectArrayForKey("details")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.index = try container.decode(Int32.self, forKey: "index")
+        self.expanded = try container.decode(Bool.self, forKey: "expanded")
+        self.details = try container.decode([InstantPageStoredDetailsState].self, forKey: "details")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.index, forKey: "index")
-        encoder.encodeBool(self.expanded, forKey: "expanded")
-        encoder.encodeObjectArray(self.details, forKey: "details")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.index, forKey: "index")
+        try container.encode(self.expanded, forKey: "expanded")
+        try container.encode(self.details, forKey: "details")
     }
 }
 
-public final class InstantPageStoredState: PostboxCoding {
+public final class InstantPageStoredState: Codable {
     public let contentOffset: Double
     public let details: [InstantPageStoredDetailsState]
     
@@ -38,14 +42,18 @@ public final class InstantPageStoredState: PostboxCoding {
         self.details = details
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.contentOffset = decoder.decodeDoubleForKey("offset", orElse: 0.0)
-        self.details = decoder.decodeObjectArrayForKey("details")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.contentOffset = try container.decode(Double.self, forKey: "offset")
+        self.details = try container.decode([InstantPageStoredDetailsState].self, forKey: "details")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeDouble(self.contentOffset, forKey: "offset")
-        encoder.encodeObjectArray(self.details, forKey: "details")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.contentOffset, forKey: "offset")
+        try container.encode(self.details, forKey: "details")
     }
 }
 
@@ -53,7 +61,7 @@ public func instantPageStoredState(postbox: Postbox, webPage: TelegramMediaWebpa
     return postbox.transaction { transaction -> InstantPageStoredState? in
         let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: webPage.webpageId.id)
-        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.instantPageStoredState, key: key)) as? InstantPageStoredState {
+        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.instantPageStoredState, key: key))?.get(InstantPageStoredState.self) {
             return entry
         } else {
             return nil
@@ -68,8 +76,8 @@ public func updateInstantPageStoredStateInteractively(postbox: Postbox, webPage:
         let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: webPage.webpageId.id)
         let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.instantPageStoredState, key: key)
-        if let state = state {
-            transaction.putItemCacheEntry(id: id, entry: state, collectionSpec: collectionSpec)
+        if let state = state, let entry = CodableEntry(state) {
+            transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)
         } else {
             transaction.removeItemCacheEntry(id: id)
         }

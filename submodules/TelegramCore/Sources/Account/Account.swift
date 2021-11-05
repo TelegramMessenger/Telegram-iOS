@@ -21,30 +21,30 @@ private func makeExclusiveKeychain(id: AccountRecordId, postbox: Postbox) -> Key
         }
         return dict
     }
-    return Keychain(get: { key in
+    return Keychain(get: { [weak postbox] key in
         let enabled = accountRecordToActiveKeychainId.with { dict -> Bool in
             return dict[id] == keychainId
         }
-        if enabled {
+        if enabled, let postbox = postbox {
             return postbox.keychainEntryForKey(key)
         } else {
             Logger.shared.log("Keychain", "couldn't get \(key) — not current")
             return nil
         }
-    }, set: { (key, data) in
+    }, set: { [weak postbox] key, data in
         let enabled = accountRecordToActiveKeychainId.with { dict -> Bool in
             return dict[id] == keychainId
         }
-        if enabled {
+        if enabled, let postbox = postbox {
             postbox.setKeychainEntryForKey(key, value: data)
         } else {
             Logger.shared.log("Keychain", "couldn't set \(key) — not current")
         }
-    }, remove: { key in
+    }, remove: { [weak postbox] key in
         let enabled = accountRecordToActiveKeychainId.with { dict -> Bool in
             return dict[id] == keychainId
         }
-        if enabled {
+        if enabled, let postbox = postbox {
             postbox.removeKeychainEntryForKey(key)
         } else {
             Logger.shared.log("Keychain", "couldn't remove \(key) — not current")
@@ -129,11 +129,11 @@ public class UnauthorizedAccount {
             let keychain = makeExclusiveKeychain(id: self.id, postbox: self.postbox)
             
             return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
-                return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)
+                return (transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self), transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self))
             }
             |> mapToSignal { localizationSettings, proxySettings -> Signal<(LocalizationSettings?, ProxySettings?, NetworkSettings?), NoError> in
                 return self.postbox.transaction { transaction -> (LocalizationSettings?, ProxySettings?, NetworkSettings?) in
-                    return (localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                    return (localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self))
                 }
             }
             |> mapToSignal { (localizationSettings, proxySettings, networkSettings) -> Signal<UnauthorizedAccount, NoError> in
@@ -162,85 +162,19 @@ public enum AccountResult {
     case authorized(Account)
 }
 
-public enum AccountPreferenceEntriesResult {
-    case progress(Float)
-    case result(String, [ValueBoxKey: PreferencesEntry])
-}
-
-public func accountPreferenceEntries(rootPath: String, id: AccountRecordId, keys: Set<ValueBoxKey>, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountPreferenceEntriesResult, NoError> {
-    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true, isReadOnly: true, useCopy: false)
-    return postbox
-    |> mapToSignal { value -> Signal<AccountPreferenceEntriesResult, NoError> in
-        switch value {
-            case let .upgrading(progress):
-                return .single(.progress(progress))
-            case let .postbox(postbox):
-                return postbox.transaction { transaction -> AccountPreferenceEntriesResult in
-                    var result: [ValueBoxKey: PreferencesEntry] = [:]
-                    for key in keys {
-                        if let value = transaction.getPreferencesEntry(key: key) {
-                            result[key] = value
-                        }
-                    }
-                    return .result(path, result)
-                }
-            case .error:
-                return .single(.progress(0.0))
-        }
-    }
-}
-
-public enum AccountNoticeEntriesResult {
-    case progress(Float)
-    case result(String, [ValueBoxKey: NoticeEntry])
-}
-
-public func accountNoticeEntries(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<AccountNoticeEntriesResult, NoError> {
-    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true, isReadOnly: true, useCopy: false)
-    return postbox
-    |> mapToSignal { value -> Signal<AccountNoticeEntriesResult, NoError> in
-        switch value {
-            case let .upgrading(progress):
-                return .single(.progress(progress))
-            case let .postbox(postbox):
-                return postbox.transaction { transaction -> AccountNoticeEntriesResult in
-                    return .result(path, transaction.getAllNoticeEntries())
-                }
-            case .error:
-                return .single(.progress(0.0))
-        }
-    }
-}
-
-public enum LegacyAccessChallengeDataResult {
-    case progress(Float)
-    case result(PostboxAccessChallengeData)
-}
-
-public func accountLegacyAccessChallengeData(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<LegacyAccessChallengeDataResult, NoError> {
-    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: true, isReadOnly: true, useCopy: false)
-    return postbox
-    |> mapToSignal { value -> Signal<LegacyAccessChallengeDataResult, NoError> in
-        switch value {
-            case let .upgrading(progress):
-                return .single(.progress(progress))
-            case let .postbox(postbox):
-                return postbox.transaction { transaction -> LegacyAccessChallengeDataResult in
-                    return .result(transaction.legacyGetAccessChallengeData())
-                }
-            case .error:
-                return .single(.progress(0.0))
-        }
-    }
-}
-
 public func accountWithId(accountManager: AccountManager<TelegramAccountManagerTypes>, networkArguments: NetworkInitializationArguments, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, supplementary: Bool, rootPath: String, beginWithTestingEnvironment: Bool, backupData: AccountBackupData?, auxiliaryMethods: AccountAuxiliaryMethods, shouldKeepAutoConnection: Bool = true) -> Signal<AccountResult, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
     
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970), isTemporary: false, isReadOnly: false, useCopy: false)
+    let postbox = openPostbox(
+        basePath: path + "/postbox",
+        seedConfiguration: telegramPostboxSeedConfiguration,
+        encryptionParameters: encryptionParameters,
+        timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970),
+        isTemporary: false,
+        isReadOnly: false,
+        useCopy: false,
+        useCaches: !supplementary
+    )
     
     return postbox
     |> mapToSignal { result -> Signal<AccountResult, NoError> in
@@ -251,7 +185,11 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                 return .single(.upgrading(0.0))
             case let .postbox(postbox):
                 return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
-                    return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)
+                    var localizationSettings: LocalizationSettings?
+                    if !supplementary {
+                        localizationSettings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self)
+                    }
+                    return (localizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self))
                 }
                 |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountResult, NoError> in
                     return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
@@ -266,7 +204,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                             transaction.setKeychainEntry(data, forKey: "persistent:datacenterAuthInfoById")
                         }
                         
-                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self))
                     }
                     |> mapToSignal { (accountState, localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
                         let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
@@ -407,7 +345,8 @@ func _internal_twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MT
 
 public func hexString(_ data: Data) -> String {
     let hexString = NSMutableString()
-    data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+    data.withUnsafeBytes { rawBytes -> Void in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
         for i in 0 ..< data.count {
             hexString.appendFormat("%02x", UInt(bytes.advanced(by: i).pointee))
         }
@@ -437,19 +376,22 @@ public func dataWithHexString(_ string: String) -> Data {
 }
 
 func sha1Digest(_ data : Data) -> Data {
-    return data.withUnsafeBytes { bytes -> Data in
+    return data.withUnsafeBytes { rawBytes -> Data in
+        let bytes = rawBytes.baseAddress!
         return CryptoSHA1(bytes, Int32(data.count))
     }
 }
 
 func sha256Digest(_ data : Data) -> Data {
-    return data.withUnsafeBytes { bytes -> Data in
+    return data.withUnsafeBytes { rawBytes -> Data in
+        let bytes = rawBytes.baseAddress!
         return CryptoSHA256(bytes, Int32(data.count))
     }
 }
 
 func sha512Digest(_ data : Data) -> Data {
-    return data.withUnsafeBytes { bytes -> Data in
+    return data.withUnsafeBytes { rawBytes -> Data in
+        let bytes = rawBytes.baseAddress!
         return CryptoSHA512(bytes, Int32(data.count))
     }
 }
@@ -466,7 +408,8 @@ func passwordUpdateKDF(encryptionProvider: EncryptionProvider, password: String,
             var nextSalt1 = salt1
             var randomSalt1 = Data()
             randomSalt1.count = 32
-            randomSalt1.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            randomSalt1.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 arc4random_buf(bytes, 32)
             }
             nextSalt1.append(randomSalt1)
@@ -474,7 +417,8 @@ func passwordUpdateKDF(encryptionProvider: EncryptionProvider, password: String,
             let nextSalt2 = salt2
             
             var g = Data(count: 4)
-            g.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            g.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 var gValue = gValue
                 withUnsafeBytes(of: &gValue, { (sourceBuffer: UnsafeRawBufferPointer) -> Void in
                     let sourceBytes = sourceBuffer.bindMemory(to: Int8.self).baseAddress!
@@ -526,8 +470,10 @@ private func paddedXor(_ a: Data, _ b: Data) -> Data {
     while b.count < count {
         b.insert(0, at: 0)
     }
-    a.withUnsafeMutableBytes { (aBytes: UnsafeMutablePointer<UInt8>) -> Void in
-        b.withUnsafeBytes { (bBytes: UnsafePointer<UInt8>) -> Void in
+    a.withUnsafeMutableBytes { rawABytes -> Void in
+        let aBytes = rawABytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+        b.withUnsafeBytes { rawBBytes -> Void in
+            let bBytes = rawBBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             for i in 0 ..< count {
                 aBytes.advanced(by: i).pointee = aBytes.advanced(by: i).pointee ^ bBytes.advanced(by: i).pointee
             }
@@ -547,12 +493,14 @@ func passwordKDF(encryptionProvider: EncryptionProvider, password: String, deriv
         case let .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1, salt2, iterations, gValue, p):
             var a = Data(count: p.count)
             let aLength = a.count
-            a.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+            a.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                 let _ = SecRandomCopyBytes(nil, aLength, bytes)
             }
             
             var g = Data(count: 4)
-            g.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            g.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 var gValue = gValue
                 withUnsafeBytes(of: &gValue, { (sourceBuffer: UnsafeRawBufferPointer) -> Void in
                     let sourceBytes = sourceBuffer.bindMemory(to: Int8.self).baseAddress!
@@ -616,7 +564,8 @@ func securePasswordUpdateKDF(password: String, derivation: TwoStepSecurePassword
             var nextSalt = salt
             var randomSalt = Data()
             randomSalt.count = 32
-            randomSalt.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            randomSalt.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 arc4random_buf(bytes, 32)
             }
             nextSalt.append(randomSalt)
@@ -630,7 +579,8 @@ func securePasswordUpdateKDF(password: String, derivation: TwoStepSecurePassword
             var nextSalt = salt
             var randomSalt = Data()
             randomSalt.count = 32
-            randomSalt.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            randomSalt.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
                 arc4random_buf(bytes, 32)
             }
             nextSalt.append(randomSalt)
@@ -725,42 +675,70 @@ public struct AccountRunningImportantTasks: OptionSet {
 public struct MasterNotificationKey: Codable {
     public let id: Data
     public let data: Data
+
+    public init(id: Data, data: Data) {
+        self.id = id
+        self.data = data
+    }
 }
 
 public func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
-    return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: ignoreDisabled)
+    return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: ignoreDisabled, createIfNotExists: true)
+    |> map { value -> MasterNotificationKey in
+        return value!
+    }
 }
 
-private func masterNotificationsKey(masterNotificationKeyValue: Atomic<MasterNotificationKey?>, postbox: Postbox, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
+public func existingMasterNotificationsKey(postbox: Postbox) -> Signal<MasterNotificationKey?, NoError> {
+    let value = Atomic<MasterNotificationKey?>(value: nil)
+    return masterNotificationsKey(masterNotificationKeyValue: value, postbox: postbox, ignoreDisabled: true, createIfNotExists: false)
+}
+
+private func masterNotificationsKey(masterNotificationKeyValue: Atomic<MasterNotificationKey?>, postbox: Postbox, ignoreDisabled: Bool, createIfNotExists: Bool) -> Signal<MasterNotificationKey?, NoError> {
     if let key = masterNotificationKeyValue.with({ $0 }) {
         return .single(key)
     }
-    
-    return postbox.transaction(ignoreDisabled: ignoreDisabled, { transaction -> MasterNotificationKey in
-        if let value = transaction.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
-            let authKeyHash = sha1Digest(value)
-            let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
-            let keyData = MasterNotificationKey(id: authKeyId, data: value)
-            let _ = masterNotificationKeyValue.swap(keyData)
-            return keyData
-        } else {
-            var secretData = Data(count: 256)
-            let secretDataCount = secretData.count
-            if !secretData.withUnsafeMutableBytes({ (bytes: UnsafeMutablePointer<Int8>) -> Bool in
-                let copyResult = SecRandomCopyBytes(nil, secretDataCount, bytes)
-                return copyResult == errSecSuccess
-            }) {
-                assertionFailure()
-            }
-            
-            transaction.setKeychainEntry(secretData, forKey: "master-notification-secret")
-            let authKeyHash = sha1Digest(secretData)
-            let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
-            let keyData = MasterNotificationKey(id: authKeyId, data: secretData)
-            let _ = masterNotificationKeyValue.swap(keyData)
-            return keyData
-        }
+
+    return postbox.transaction(ignoreDisabled: ignoreDisabled, { transaction -> MasterNotificationKey? in
+        let result = masterNotificationsKey(transaction: transaction, createIfNotExists: createIfNotExists)
+        let _ = masterNotificationKeyValue.swap(result)
+        return result
     })
+}
+
+func masterNotificationsKey(transaction: Transaction, createIfNotExists: Bool) -> MasterNotificationKey? {
+    if let value = transaction.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
+        let authKeyHash = sha1Digest(value)
+        let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
+        let keyData = MasterNotificationKey(id: authKeyId, data: value)
+        return keyData
+    } else if createIfNotExists {
+        var secretData = Data(count: 256)
+        let secretDataCount = secretData.count
+        if !secretData.withUnsafeMutableBytes({ rawBytes -> Bool in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+            let copyResult = SecRandomCopyBytes(nil, secretDataCount, bytes)
+            return copyResult == errSecSuccess
+        }) {
+            assertionFailure()
+        }
+
+        transaction.setKeychainEntry(secretData, forKey: "master-notification-secret")
+        let authKeyHash = sha1Digest(secretData)
+        let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
+        let keyData = MasterNotificationKey(id: authKeyId, data: secretData)
+        return keyData
+    } else {
+        return nil
+    }
+}
+
+public func notificationPayloadKeyId(data: Data) -> Data? {
+    if data.count < 8 {
+        return nil
+    }
+
+    return data.subdata(in: 0 ..< 8)
 }
 
 public func decryptedNotificationPayload(key: MasterNotificationKey, data: Data) -> Data? {
@@ -785,7 +763,8 @@ public func decryptedNotificationPayload(key: MasterNotificationKey, data: Data)
     }
     
     var dataLength: Int32 = 0
-    data.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+    data.withUnsafeBytes { rawBytes -> Void in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
         memcpy(&dataLength, bytes, 4)
     }
     
@@ -804,8 +783,11 @@ public func decryptedNotificationPayload(key: MasterNotificationKey, data: Data)
 }
 
 public func decryptedNotificationPayload(account: Account, data: Data) -> Signal<Data?, NoError> {
-    return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: true)
+    return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: true, createIfNotExists: false)
     |> map { secret -> Data? in
+        guard let secret = secret else {
+            return nil
+        }
         return decryptedNotificationPayload(key: secret, data: data)
     }
 }
@@ -827,7 +809,15 @@ public func accountBackupData(postbox: Postbox) -> Signal<AccountBackupData?, No
         guard let authKey = datacenterAuthInfo.authKey else {
             return nil
         }
-        return AccountBackupData(masterDatacenterId: state.masterDatacenterId, peerId: state.peerId.toInt64(), masterDatacenterKey: authKey, masterDatacenterKeyId: datacenterAuthInfo.authKeyId)
+        let notificationsKey = masterNotificationsKey(transaction: transaction, createIfNotExists: true)
+        return AccountBackupData(
+            masterDatacenterId: state.masterDatacenterId,
+            peerId: state.peerId.toInt64(),
+            masterDatacenterKey: authKey,
+            masterDatacenterKeyId: datacenterAuthInfo.authKeyId,
+            notificationEncryptionKeyId: notificationsKey?.id,
+            notificationEncryptionKey: notificationsKey?.data
+        )
     }
 }
 
@@ -955,12 +945,8 @@ public class Account {
         
         let networkStateQueue = Queue()
         
-        let networkStateSignal = combineLatest(queue: networkStateQueue, self.stateManager.isUpdating, network.connectionStatus/*, delayNetworkStatus*/)
-        |> map { isUpdating, connectionStatus/*, delayNetworkStatus*/ -> AccountNetworkState in
-            /*if delayNetworkStatus {
-                return .online(proxy: nil)
-            }*/
-            
+        let networkStateSignal = combineLatest(queue: networkStateQueue, self.stateManager.isUpdating, network.connectionStatus)
+        |> map { isUpdating, connectionStatus -> AccountNetworkState in
             switch connectionStatus {
                 case .waitingForNetwork:
                     return .waitingForNetwork
@@ -1059,10 +1045,12 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeConsumeMessageContentOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedConsumePersonalMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedSynchronizeMarkAllUnseenPersonalMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedApplyPendingMessageReactionsActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedSynchronizeEmojiKeywordsOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedApplyPendingScheduledMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
-        self.managedOperationsDisposable.add(managedChatListFilters(postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
+
+        if !supplementary {
+            self.managedOperationsDisposable.add(managedChatListFilters(postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
+        }
         
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
@@ -1087,7 +1075,7 @@ public class Account {
         }))
         self.managedOperationsDisposable.add((accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
         |> map { sharedData -> ProxyServerSettings? in
-            if let settings = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings {
+            if let settings = sharedData.entries[SharedDataKeys.proxySettings]?.get(ProxySettings.self) {
                 return settings.effectiveActiveServer
             } else {
                 return nil
@@ -1126,7 +1114,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizeAppLogEventsOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedNotificationSettingsBehaviors(postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedThemesUpdates(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
-        if !self.testingEnvironment {
+        if !self.testingEnvironment && !supplementary {
             self.managedOperationsDisposable.add(managedChatThemesUpdates(accountManager: accountManager, network: self.network).start())
         }
         
@@ -1142,12 +1130,12 @@ public class Account {
                 guard let mediaBox = mediaBox else {
                     return
                 }
-                let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings] as? CacheStorageSettings ?? CacheStorageSettings.defaultSettings
+                let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings]?.get(CacheStorageSettings.self) ?? CacheStorageSettings.defaultSettings
                 mediaBox.setMaxStoreTimes(general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes)
             })
         }
         
-        let _ = masterNotificationsKey(masterNotificationKeyValue: self.masterNotificationKey, postbox: self.postbox, ignoreDisabled: false).start(next: { key in
+        let _ = masterNotificationsKey(masterNotificationKeyValue: self.masterNotificationKey, postbox: self.postbox, ignoreDisabled: false, createIfNotExists: true).start(next: { key in
             let encoder = JSONEncoder()
             if let data = try? encoder.encode(key) {
                 let _ = try? data.write(to: URL(fileURLWithPath: "\(basePath)/notificationsKey"))
@@ -1242,9 +1230,9 @@ public class Account {
     }
     
     public func addUpdates(serializedData: Data) -> Void {
-        if let object = Api.parse(Buffer(data: serializedData)) {
-            //self.stateManager.addUpdates()
-        }
+        /*if let object = Api.parse(Buffer(data: serializedData)) {
+            self.stateManager.addUpdates()
+        }*/
     }
 }
 
@@ -1259,8 +1247,7 @@ public func updateAccountNetworkUsageStats(account: Account, category: MediaReso
 public typealias FetchCachedResourceRepresentation = (_ account: Account, _ resource: MediaResource, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>
 public typealias TransformOutgoingMessageMedia = (_ postbox: Postbox, _ network: Network, _ media: AnyMediaReference, _ userInteractive: Bool) -> Signal<AnyMediaReference?, NoError>
 
-public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil, preFetchedResourcePath: @escaping (MediaResource) -> String? = { _ in return nil }) {
-    account.postbox.mediaBox.preFetchedResourcePath = preFetchedResourcePath
+public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: FetchCachedResourceRepresentation? = nil, transformOutgoingMessageMedia: TransformOutgoingMessageMedia? = nil) {
     account.postbox.mediaBox.fetchResource = { [weak account] resource, intervals, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         if let strongAccount = account {
             if let result = strongAccount.auxiliaryMethods.fetchResource(strongAccount, resource, intervals, parameters) {
@@ -1286,4 +1273,96 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     account.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     account.pendingMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
     account.pendingUpdateMessageManager.transformOutgoingMessageMedia = transformOutgoingMessageMedia
+}
+
+public func standaloneStateManager(
+    accountManager: AccountManager<TelegramAccountManagerTypes>,
+    networkArguments: NetworkInitializationArguments,
+    id: AccountRecordId,
+    encryptionParameters: ValueBoxEncryptionParameters,
+    rootPath: String,
+    auxiliaryMethods: AccountAuxiliaryMethods
+) -> Signal<AccountStateManager?, NoError> {
+    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
+
+    let postbox = openPostbox(
+        basePath: path + "/postbox",
+        seedConfiguration: telegramPostboxSeedConfiguration,
+        encryptionParameters: encryptionParameters,
+        timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970),
+        isTemporary: false,
+        isReadOnly: false,
+        useCopy: false,
+        useCaches: false
+    )
+
+    return postbox
+    |> take(1)
+    |> mapToSignal { result -> Signal<AccountStateManager?, NoError> in
+        switch result {
+        case .upgrading:
+            return .single(nil)
+        case .error:
+            return .single(nil)
+        case let .postbox(postbox):
+            return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
+                return (nil, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self))
+            }
+            |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountStateManager?, NoError> in
+                return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                    let state = transaction.getState()
+
+                    return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self))
+                }
+                |> mapToSignal { accountState, localizationSettings, proxySettings, networkSettings -> Signal<AccountStateManager?, NoError> in
+                    let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
+
+                    if let accountState = accountState {
+                        switch accountState {
+                        case _ as UnauthorizedAccountState:
+                            return .single(nil)
+                        case let authorizedState as AuthorizedAccountState:
+                            return postbox.transaction { transaction -> String? in
+                                return (transaction.getPeer(authorizedState.peerId) as? TelegramUser)?.phone
+                            }
+                            |> mapToSignal { phoneNumber in
+                                return initializedNetwork(
+                                    accountId: id,
+                                    arguments: networkArguments,
+                                    supplementary: true,
+                                    datacenterId: Int(authorizedState.masterDatacenterId),
+                                    keychain: keychain,
+                                    basePath: path,
+                                    testingEnvironment: authorizedState.isTestingEnvironment,
+                                    languageCode: localizationSettings?.primaryComponent.languageCode,
+                                    proxySettings: proxySettings,
+                                    networkSettings: networkSettings,
+                                    phoneNumber: phoneNumber
+                                )
+                                |> map { network -> AccountStateManager? in
+                                    return AccountStateManager(
+                                        accountPeerId: authorizedState.peerId,
+                                        accountManager: accountManager,
+                                        postbox: postbox,
+                                        network: network,
+                                        callSessionManager: nil,
+                                        addIsContactUpdates: { _ in
+                                        },
+                                        shouldKeepOnlinePresence: .single(false),
+                                        peerInputActivityManager: nil,
+                                        auxiliaryMethods: auxiliaryMethods
+                                    )
+                                }
+                            }
+                        default:
+                            assertionFailure("Unexpected accountState \(accountState)")
+                            return .single(nil)
+                        }
+                    } else {
+                        return .single(nil)
+                    }
+                }
+            }
+        }
+    }
 }

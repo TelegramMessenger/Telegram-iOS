@@ -199,7 +199,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
             for node in nodes {
                 contentSize.height += node.frame.size.height
             }
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size

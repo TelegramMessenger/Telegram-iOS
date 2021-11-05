@@ -168,8 +168,8 @@ final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
     func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor, controllerInteraction: ChatControllerInteraction) {
         self.controllerInteraction = controllerInteraction
         self.peer = peer
-        if let messageReference = authorOfMessage, case let .message(m) = messageReference.content {
-            self.messageId = m.id
+        if let messageReference = authorOfMessage, case let .message(_, id, _, _, _) = messageReference.content {
+            self.messageId = id
         }
         
         self.contextActionIsEnabled = peer.smallProfileImage != nil

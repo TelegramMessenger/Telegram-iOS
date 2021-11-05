@@ -703,7 +703,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             if let entries = entries {   
                 for entry in entries {
                     if case let .message(message, _, _, _, _, _, _) = entry {
-                        self.mediaItems.append(VisualMediaItem(message: message, index: nil))
+                        self.mediaItems.append(VisualMediaItem(message: message._asMessage(), index: nil))
                     }
                     index += 1
                 }

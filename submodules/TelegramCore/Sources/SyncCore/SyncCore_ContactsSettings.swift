@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public struct ContactsSettings: Equatable, PreferencesEntry {
+public struct ContactsSettings: Codable {
     public var synchronizeContacts: Bool
     
     public static var defaultSettings: ContactsSettings {
@@ -12,19 +12,15 @@ public struct ContactsSettings: Equatable, PreferencesEntry {
         self.synchronizeContacts = synchronizeContacts
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.synchronizeContacts = decoder.decodeInt32ForKey("synchronizeContacts", orElse: 0) != 0
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.synchronizeContacts = ((try? container.decode(Int32.self, forKey: "synchronizeContacts")) ?? 0) != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.synchronizeContacts ? 1 : 0, forKey: "synchronizeContacts")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? ContactsSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.synchronizeContacts ? 1 : 0) as Int32, forKey: "synchronizeContacts")
     }
 }

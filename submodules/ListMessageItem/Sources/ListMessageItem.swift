@@ -48,7 +48,7 @@ public final class ListMessageItem: ListViewItem {
     let chatLocation: ChatLocation
     let interaction: ListMessageItemInteraction
     let message: Message
-    let selection: ChatHistoryMessageSelection
+    public let selection: ChatHistoryMessageSelection
     let hintIsLink: Bool
     let isGlobalSearchResult: Bool
     

@@ -210,10 +210,6 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
     }
     
-    func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        return nil
-    }
-    
     func getStatusNode() -> ASDisplayNode? {
         return nil
     }

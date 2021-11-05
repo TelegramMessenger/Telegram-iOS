@@ -88,7 +88,7 @@ func managedPromoInfoUpdates(postbox: Postbox, network: Network, viewTracker: Ac
                     switch data {
                     case .promoDataEmpty:
                         transaction.replaceAdditionalChatListItems([])
-                    case let .promoData(_, expires, peer, chats, users, psaType, psaMessage):
+                    case let .promoData(_, _, peer, chats, users, psaType, psaMessage):
                         var peers: [Peer] = []
                         var peerPresences: [PeerId: PeerPresence] = [:]
                         for chat in chats {

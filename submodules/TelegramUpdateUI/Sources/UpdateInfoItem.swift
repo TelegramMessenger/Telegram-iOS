@@ -225,7 +225,7 @@ class UpdateInfoItemNode: ListViewItemNode {
                     insets = itemListNeighborsPlainInsets(neighbors)
                 case .blocks:
                     contentSize = CGSize(width: params.width, height: 88.0 + textLayout.size.height + inset)
-                    insets = itemListNeighborsGroupedInsets(neighbors)
+                    insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)

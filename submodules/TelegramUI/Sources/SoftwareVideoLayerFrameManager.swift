@@ -67,7 +67,7 @@ final class SoftwareVideoLayerFrameManager {
             if let resource = resource as? WebFileReferenceMediaResource {
                 return resource.url
             } else {
-                return resource.id.uniqueId
+                return resource.id.stringRepresentation
             }
         }
         Logger.shared.log("SoftwareVideo", "load video from \(stringForResource(self.resource)) or \(stringForResource(self.secondaryResource))")

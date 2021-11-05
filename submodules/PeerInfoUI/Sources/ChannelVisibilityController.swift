@@ -33,8 +33,9 @@ private final class ChannelVisibilityControllerArguments {
     let shareLink: (ExportedInvitation) -> Void
     let linkContextAction: (ASDisplayNode, ContextGesture?) -> Void
     let manageInviteLinks: () -> Void
+    let openLink: (ExportedInvitation) -> Void
     
-    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode, ContextGesture?) -> Void, manageInviteLinks: @escaping () -> Void) {
+    init(context: AccountContext, updateCurrentType: @escaping (CurrentChannelType) -> Void, updatePublicLinkText: @escaping (String?, String) -> Void, scrollToPublicLinkText: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, revokePeerId: @escaping (PeerId) -> Void, copyLink: @escaping (ExportedInvitation) -> Void, shareLink: @escaping (ExportedInvitation) -> Void, linkContextAction: @escaping (ASDisplayNode, ContextGesture?) -> Void, manageInviteLinks: @escaping () -> Void, openLink: @escaping (ExportedInvitation) -> Void) {
         self.context = context
         self.updateCurrentType = updateCurrentType
         self.updatePublicLinkText = updatePublicLinkText
@@ -45,6 +46,7 @@ private final class ChannelVisibilityControllerArguments {
         self.shareLink = shareLink
         self.linkContextAction = linkContextAction
         self.manageInviteLinks = manageInviteLinks
+        self.openLink = openLink
     }
 }
 
@@ -77,7 +79,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     case publicLinkAvailability(PresentationTheme, String, Bool)
     case editablePublicLink(PresentationTheme, PresentationStrings, String, String)
     case privateLinkHeader(PresentationTheme, String)
-    case privateLink(PresentationTheme, ExportedInvitation?, Bool)
+    case privateLink(PresentationTheme, ExportedInvitation?, [EnginePeer], Int32, Bool)
     case privateLinkInfo(PresentationTheme, String)
     case privateLinkManage(PresentationTheme, String)
     case privateLinkManageInfo(PresentationTheme, String)
@@ -182,8 +184,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .privateLink(lhsTheme, lhsInvite, lhsDisplayImporters):
-                if case let .privateLink(rhsTheme, rhsInvite, rhsDisplayImporters) = rhs, lhsTheme === rhsTheme, lhsInvite == rhsInvite, lhsDisplayImporters == rhsDisplayImporters {
+            case let .privateLink(lhsTheme, lhsInvite, lhsPeers, lhsImportersCount, lhsDisplayImporters):
+                if case let .privateLink(rhsTheme, rhsInvite, rhsPeers, rhsImportersCount, rhsDisplayImporters) = rhs, lhsTheme === rhsTheme, lhsInvite == rhsInvite, lhsPeers == rhsPeers, lhsImportersCount == rhsImportersCount, lhsDisplayImporters == rhsDisplayImporters {
                     return true
                 } else {
                     return false
@@ -290,8 +292,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return ItemListActivityTextItem(displayActivity: value, presentationData: presentationData, text: attr, sectionId: self.section)
             case let .privateLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
-            case let .privateLink(_, invite, displayImporters):
-                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, count: 0, peers: [], displayButton: true, displayImporters: displayImporters, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
+            case let .privateLink(_, invite, peers, importersCount, displayImporters):
+                return ItemListPermanentInviteLinkItem(context: arguments.context, presentationData: presentationData, invite: invite, count: importersCount, peers: peers, displayButton: true, displayImporters: displayImporters, buttonColor: nil, sectionId: self.section, style: .blocks, copyAction: {
                     if let invite = invite {
                         arguments.copyLink(invite)
                     }
@@ -302,7 +304,9 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 }, contextAction: { node, gesture in
                     arguments.linkContextAction(node, gesture)
                 }, viewAction: {
-                    
+                    if let invite = invite {
+                        arguments.openLink(invite)
+                    }
                 })
             case let .editablePublicLink(theme, _, placeholder, currentText):
                 return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: "t.me/", textColor: theme.list.itemPrimaryTextColor), text: currentText, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), clearType: .always, tag: ChannelVisibilityEntryTag.publicLink, sectionId: self.section, textUpdated: { updatedText in
@@ -350,7 +354,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 if let addressName = peer.addressName {
                     label = "t.me/" + addressName
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(label, .secondary), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(peer), presence: nil, text: .text(label, .secondary), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.revokePeerId(peerId)
@@ -452,7 +456,7 @@ private struct ChannelVisibilityControllerState: Equatable {
     }
 }
 
-private func channelVisibilityControllerEntries(presentationData: PresentationData, mode: ChannelVisibilityControllerMode, view: PeerView, publicChannelsToRevoke: [Peer]?, state: ChannelVisibilityControllerState) -> [ChannelVisibilityEntry] {
+private func channelVisibilityControllerEntries(presentationData: PresentationData, mode: ChannelVisibilityControllerMode, view: PeerView, publicChannelsToRevoke: [Peer]?, importers: PeerInvitationImportersState?, state: ChannelVisibilityControllerState) -> [ChannelVisibilityEntry] {
     var entries: [ChannelVisibilityEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramChannel {
@@ -615,7 +619,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             case .privateChannel:
                 let invite = (view.cachedData as? CachedChannelData)?.exportedInvitation
                 entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
-                entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
+            entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
                 if isGroup {
                     entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
                 } else {
@@ -634,7 +638,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             case .privateLink:
                 let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
                 entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
-                entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
+            entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
                 entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.GroupInfo_InviteLink_Help))
                 switch mode {
                     case .initialSetup:
@@ -733,7 +737,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     case .privateChannel:
                         let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
                         entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
-                        entries.append(.privateLink(presentationData.theme, invite, mode != .initialSetup))
+                    entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
                         entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
                         switch mode {
                             case .initialSetup:
@@ -926,7 +930,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }
         presentControllerImpl?(shareController, nil)
     }, linkContextAction: { node, gesture in
-        guard let node = node as? ContextExtractedContentContainingNode, let controller = getControllerImpl?() else {
+        guard let node = node as? ContextReferenceContentNode, let controller = getControllerImpl?() else {
             return
         }
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -1050,10 +1054,13 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             })
         })))
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(InviteLinkContextExtractedContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, manageInviteLinks: {
         let controller = inviteLinkListController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, admin: nil)
+        pushControllerImpl?(controller)
+    }, openLink: { invite in
+        let controller = InviteLinkViewController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, invite: invite, invitationsContext: nil, revokedInvitationsContext: nil, importersContext: nil)
         pushControllerImpl?(controller)
     })
     
@@ -1063,10 +1070,28 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     let previousHadNamesToRevoke = Atomic<Bool?>(value: nil)
     let previousInvitation = Atomic<ExportedInvitation?>(value: nil)
     
-    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
-    let signal = combineLatest(presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
+    let mainLink = context.engine.data.subscribe(
+        TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId)
+    )
+    
+    let importersState = Promise<PeerInvitationImportersState?>(nil)
+    let importersContext: Signal<PeerInvitationImportersContext?, NoError> = mainLink
+    |> distinctUntilChanged
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, publicChannelsToRevoke -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { invite -> PeerInvitationImportersContext? in
+        return invite.flatMap { context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: $0, requested: false)) }
+    } |> afterNext { context in
+        if let context = context {
+            importersState.set(context.state |> map(Optional.init))
+        } else {
+            importersState.set(.single(nil))
+        }
+    }
+    
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue, importersContext, importersState.get())
+    |> deliverOnMainQueue
+    |> map { presentationData, state, view, publicChannelsToRevoke, importersContext, importers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peer = peerViewMainPeer(view)
         
         var rightNavigationButton: ItemListNavigationButton?
@@ -1302,7 +1327,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             }
         }
         
-        let entries = channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, state: state)
+        let entries = channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, importers: importers, state: state)
         
         var focusItemTag: ItemListItemTag?
         if entries.count > 1, let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
@@ -1439,26 +1464,16 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     return controller
 }
 
-private final class InviteLinkContextExtractedContentSource: ContextExtractedContentSource {
-    var keepInPlace: Bool
-    let ignoreContentTouches: Bool = true
-    let blurBackground: Bool
-    
+final class InviteLinkContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
-    private let sourceNode: ContextExtractedContentContainingNode
+    private let sourceNode: ContextReferenceContentNode
     
-    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode) {
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
         self.controller = controller
         self.sourceNode = sourceNode
-        self.keepInPlace = false
-        self.blurBackground = false
     }
     
-    func takeView() -> ContextControllerTakeViewInfo? {
-        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
-    }
-    
-    func putBack() -> ContextControllerPutBackViewInfo? {
-        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

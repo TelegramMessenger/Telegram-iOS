@@ -644,7 +644,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
             controlColor: mainSecondaryTextColor.withAlphaComponent(0.5)
         ),
         mediaPlaceholderColor: UIColor(rgb: 0xffffff).mixedWith(mainBackgroundColor, alpha: 0.9),
-        scrollIndicatorColor: UIColor(white: 1.0, alpha: 0.3),
+        scrollIndicatorColor: UIColor(white: 1.0, alpha: 0.5),
         pageIndicatorInactiveColor: mainSecondaryTextColor.withAlphaComponent(0.4),
         inputClearButtonColor: mainSecondaryColor,
         itemBarChart: PresentationThemeItemBarChart(color1: accentColor, color2: mainSecondaryTextColor.withAlphaComponent(0.5), color3: accentColor.withMultiplied(hue: 1.038, saturation: 0.329, brightness: 0.33)),

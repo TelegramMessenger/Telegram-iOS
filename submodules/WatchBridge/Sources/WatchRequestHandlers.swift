@@ -313,11 +313,11 @@ private func mediaForSticker(documentId: Int64, account: Account) -> Signal<Tele
     |> map { view -> TelegramMediaFile? in
         for view in view.orderedItemListsViews {
             for entry in view.items {
-                if let file = (entry.contents as? SavedStickerItem)?.file {
+                if let file = entry.contents.get(SavedStickerItem.self)?.file {
                     if file.id?.id == documentId {
                         return file
                     }
-                } else if let file = (entry.contents as? RecentMediaItem)?.media as? TelegramMediaFile {
+                } else if let file = entry.contents.get(RecentMediaItem.self)?.media {
                     if file.id?.id == documentId {
                         return file
                     }
@@ -618,12 +618,12 @@ final class WatchStickersHandler: WatchRequestHandler {
                     var added: Set<Int64> = []
                     outer: for view in view.orderedItemListsViews {
                         for entry in view.items {
-                            if let file = (entry.contents as? SavedStickerItem)?.file {
+                            if let file = entry.contents.get(SavedStickerItem.self)?.file {
                                 if let sticker = makeBridgeDocument(file), !added.contains(sticker.documentId) {
                                     stickers.append(sticker)
                                     added.insert(sticker.documentId)
                                 }
-                            } else if let file = (entry.contents as? RecentMediaItem)?.media as? TelegramMediaFile {
+                            } else if let file = entry.contents.get(RecentMediaItem.self)?.media {
                                 if let sticker = makeBridgeDocument(file), !added.contains(sticker.documentId) {
                                     stickers.append(sticker)
                                     added.insert(sticker.documentId)

@@ -7,7 +7,7 @@ final class MutableMessageHistoryTagSummaryView: MutablePostboxView {
     
     fileprivate var count: Int32?
     
-    init(postbox: Postbox, tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace) {
+    init(postbox: PostboxImpl, tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace) {
         self.tag = tag
         self.peerId = peerId
         self.namespace = namespace
@@ -15,7 +15,7 @@ final class MutableMessageHistoryTagSummaryView: MutablePostboxView {
         self.count = postbox.messageHistoryTagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: tag, peerId: peerId, namespace: namespace))?.count
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var hasChanges = false
         
         if let summary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: self.tag, peerId: self.peerId, namespace: self.namespace)] {

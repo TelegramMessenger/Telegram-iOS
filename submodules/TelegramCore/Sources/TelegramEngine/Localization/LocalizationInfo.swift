@@ -6,8 +6,8 @@ import TelegramApi
 extension LocalizationInfo {
     init(apiLanguage: Api.LangPackLanguage) {
         switch apiLanguage {
-            case let .langPackLanguage(language):
-                self.init(languageCode: language.langCode, baseLanguageCode: language.baseLangCode, customPluralizationCode: language.pluralCode, title: language.name, localizedTitle: language.nativeName, isOfficial: (language.flags & (1 << 0)) != 0, totalStringCount: language.stringsCount, translatedStringCount: language.translatedCount, platformUrl: language.translationsUrl)
+            case let .langPackLanguage(flags, name, nativeName, langCode, baseLangCode, pluralCode, stringsCount, translatedCount, translationsUrl):
+                self.init(languageCode: langCode, baseLanguageCode: baseLangCode, customPluralizationCode: pluralCode, title: name, localizedTitle: nativeName, isOfficial: (flags & (1 << 0)) != 0, totalStringCount: stringsCount, translatedStringCount: translatedCount, platformUrl: translationsUrl)
         }
     }
 }

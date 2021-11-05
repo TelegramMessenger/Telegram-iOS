@@ -7,10 +7,10 @@ final class PeerMergedOperationLogIndexTable: Table {
     
     private let metadataTable: PeerOperationLogMetadataTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, metadataTable: PeerOperationLogMetadataTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, metadataTable: PeerOperationLogMetadataTable) {
         self.metadataTable = metadataTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(tag: PeerOperationLogTag, index: Int32) -> ValueBoxKey {

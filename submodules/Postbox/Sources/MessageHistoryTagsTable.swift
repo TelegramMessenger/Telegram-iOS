@@ -14,11 +14,11 @@ class MessageHistoryTagsTable: Table {
     private let summaryTable: MessageHistoryTagsSummaryTable
     private let summaryTags: MessageTags
     
-    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration, summaryTable: MessageHistoryTagsSummaryTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, seedConfiguration: SeedConfiguration, summaryTable: MessageHistoryTagsSummaryTable) {
         self.summaryTable = summaryTable
         self.summaryTags = seedConfiguration.messageTagsWithSummary
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(tag: MessageTags, index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 4 + 4 + 4 + 4)) -> ValueBoxKey {
@@ -84,7 +84,7 @@ class MessageHistoryTagsTable: Table {
         return nil
     }
     
-    func earlierIndices(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace, index: MessageIndex?, includeFrom: Bool, count: Int) -> [MessageIndex] {
+    func earlierIndices(tag: MessageTags, peerId: PeerId, namespace: MessageId.Namespace, index: MessageIndex?, includeFrom: Bool, minIndex: MessageIndex? = nil, count: Int) -> [MessageIndex] {
         var indices: [MessageIndex] = []
         let key: ValueBoxKey
         if let index = index {
@@ -96,7 +96,13 @@ class MessageHistoryTagsTable: Table {
         } else {
             key = self.upperBound(tag: tag, peerId: peerId, namespace: namespace)
         }
-        self.valueBox.range(self.table, start: key, end: self.lowerBound(tag: tag, peerId: peerId, namespace: namespace), keys: { key in
+        let endKey: ValueBoxKey
+        if let minIndex = minIndex {
+            endKey = self.key(tag: tag, index: minIndex)
+        } else {
+            endKey = self.lowerBound(tag: tag, peerId: peerId, namespace: namespace)
+        }
+        self.valueBox.range(self.table, start: key, end: endKey, keys: { key in
             indices.append(extractKey(key))
             return true
         }, limit: count)

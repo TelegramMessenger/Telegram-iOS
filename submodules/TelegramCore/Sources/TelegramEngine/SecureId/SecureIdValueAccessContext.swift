@@ -25,7 +25,9 @@ public func generateSecureIdValueAccessContext() -> SecureIdValueAccessContext? 
     }
     let secretHashData = sha512Digest(secret)
     var secretHash: Int64 = 0
-    secretHashData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+    secretHashData.withUnsafeBytes { rawBytes -> Void in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
         memcpy(&secretHash, bytes.advanced(by: secretHashData.count - 8), 8)
     }
     return SecureIdValueAccessContext(secret: secret, id: secretHash)

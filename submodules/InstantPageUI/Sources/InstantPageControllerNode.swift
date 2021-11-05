@@ -801,7 +801,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let current = self.linkHighlightingNode {
                 linkHighlightingNode = current
             } else {
-                let highlightColor = self.theme?.linkHighlightColor ?? UIColor(rgb: 0x007ee5).withAlphaComponent(0.4)
+                let highlightColor = self.theme?.linkHighlightColor ?? UIColor(rgb: 0x007aff).withAlphaComponent(0.4)
                 linkHighlightingNode = LinkHighlightingNode(color: highlightColor)
                 linkHighlightingNode.isUserInteractionEnabled = false
                 self.linkHighlightingNode = linkHighlightingNode
@@ -1221,7 +1221,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                     let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                                     |> deliverOnMainQueue).start(next: { peer in
                                         if let strongSelf = self {
-                                            if let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                                            if let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                                                 strongSelf.getNavigationController()?.pushViewController(controller)
                                             }
                                         }

@@ -520,7 +520,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             avatarListNode.controlsClippingNode.frame = CGRect(x: -targetRect.width / 2.0, y: -targetRect.height / 2.0, width: targetRect.width, height: targetRect.height)
                             avatarListNode.controlsClippingOffsetNode.frame = CGRect(origin: CGPoint(x: targetRect.width / 2.0, y: targetRect.height / 2.0), size: CGSize())
                             avatarListNode.stripContainerNode.frame = CGRect(x: 0.0, y: 13.0, width: targetRect.width, height: 2.0)
-                            avatarListNode.shadowNode.frame = CGRect(x: 0.0, y: 0.0, width: targetRect.width, height: 44.0)
+                            avatarListNode.topShadowNode.frame = CGRect(x: 0.0, y: 0.0, width: targetRect.width, height: 44.0)
                             
                             avatarListContainerNode.addSubnode(avatarListNode)
                             avatarListContainerNode.addSubnode(avatarListNode.controlsClippingOffsetNode)

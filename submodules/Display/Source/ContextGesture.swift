@@ -22,7 +22,7 @@ private class TimerTargetWrapper: NSObject {
 
 private let beginDelay: Double = 0.12
 
-private func cancelParentGestures(view: UIView) {
+public func cancelParentGestures(view: UIView) {
     if let gestureRecognizers = view.gestureRecognizers {
         for recognizer in gestureRecognizers {
             recognizer.state = .failed
@@ -30,6 +30,9 @@ private func cancelParentGestures(view: UIView) {
     }
     if let node = (view as? ListViewBackingView)?.target {
         node.cancelSelection()
+    }
+    if let node = view.asyncdisplaykit_node as? HighlightTrackingButtonNode {
+        node.highligthedChanged(false)
     }
     if let superview = view.superview {
         cancelParentGestures(view: superview)

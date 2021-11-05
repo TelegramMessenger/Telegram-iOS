@@ -261,7 +261,6 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                     }
                     return pushSignal
                     |> mapError { _ -> PeerReadStateValidationError in
-                        return .retry
                     }
                     |> mapToSignal { _ -> Signal<PeerReadState, PeerReadStateValidationError> in
                         return .complete()
@@ -301,7 +300,6 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                     
                     return pushSignal
                     |> mapError { _ -> PeerReadStateValidationError in
-                        return .retry
                     }
                     |> mapToSignal { _ -> Signal<PeerReadState, PeerReadStateValidationError> in
                         return .complete()

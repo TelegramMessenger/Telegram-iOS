@@ -31,69 +31,84 @@ public enum PostboxViewKey: Hashable {
     case allChatListHoles(PeerGroupId)
     case historyTagInfo(peerId: PeerId, tag: MessageTags)
     case topChatMessage(peerIds: [PeerId])
-    
-    public var hashValue: Int {
+    case contacts(accountPeerId: PeerId?, includePresences: Bool)
+    case deletedMessages(peerId: PeerId)
+
+    public func hash(into hasher: inout Hasher) {
         switch self {
         case .itemCollectionInfos:
-            return 0
+            hasher.combine(0)
         case .itemCollectionIds:
-            return 1
+            hasher.combine(1)
         case let .peerChatState(peerId):
-            return peerId.hashValue
+            hasher.combine(peerId)
         case let .itemCollectionInfo(id):
-            return id.hashValue
+            hasher.combine(id)
         case let .orderedItemList(id):
-            return id.hashValue
+            hasher.combine(id)
         case .preferences:
-            return 3
+            hasher.combine(3)
         case .globalMessageTags:
-            return 4
+            hasher.combine(4)
         case let .peer(peerId, _):
-            return peerId.hashValue
+            hasher.combine(peerId)
         case let .pendingMessageActions(type):
-            return type.hashValue
+            hasher.combine(type)
         case let .invalidatedMessageHistoryTagSummaries(tagMask, namespace):
-            return tagMask.rawValue.hashValue ^ namespace.hashValue
+            hasher.combine(tagMask)
+            hasher.combine(namespace)
         case let .pendingMessageActionsSummary(type, peerId, namespace):
-            return type.hashValue ^ peerId.hashValue ^ namespace.hashValue
+            hasher.combine(type)
+            hasher.combine(peerId)
+            hasher.combine(namespace)
         case let .historyTagSummaryView(tag, peerId, namespace):
-            return tag.rawValue.hashValue ^ peerId.hashValue ^ namespace.hashValue
+            hasher.combine(tag)
+            hasher.combine(peerId)
+            hasher.combine(namespace)
         case let .cachedPeerData(peerId):
-            return peerId.hashValue
+            hasher.combine(peerId)
         case .unreadCounts:
-            return 5
+            hasher.combine(5)
         case .combinedReadState:
-            return 16
+            hasher.combine(16)
         case .peerNotificationSettings:
-            return 6
+            hasher.combine(6)
         case .pendingPeerNotificationSettings:
-            return 7
+            hasher.combine(7)
         case let .messageOfInterestHole(location, namespace, count):
-            return 8 &+ 31 &* location.hashValue &+ 31 &* namespace.hashValue &+ 31 &* count.hashValue
+            hasher.combine(8)
+            hasher.combine(location)
+            hasher.combine(namespace)
+            hasher.combine(count)
         case let .localMessageTag(tag):
-            return tag.hashValue
+            hasher.combine(tag)
         case .messages:
-            return 10
+            hasher.combine(10)
         case .additionalChatListItems:
-            return 11
+            hasher.combine(11)
         case let .cachedItem(id):
-            return id.hashValue
+            hasher.combine(id)
         case .peerPresences:
-            return 13
+            hasher.combine(13)
         case .synchronizeGroupMessageStats:
-            return 14
+            hasher.combine(14)
         case .peerNotificationSettingsBehaviorTimestampView:
-            return 15
+            hasher.combine(15)
         case let .peerChatInclusion(peerId):
-            return peerId.hashValue
+            hasher.combine(peerId)
         case let .basicPeer(peerId):
-            return peerId.hashValue
+            hasher.combine(peerId)
         case let .allChatListHoles(groupId):
-            return groupId.hashValue
+            hasher.combine(groupId)
         case let .historyTagInfo(peerId, tag):
-            return peerId.hashValue ^ tag.hashValue
+            hasher.combine(peerId)
+            hasher.combine(tag)
         case let .topChatMessage(peerIds):
-            return peerIds.hashValue
+            hasher.combine(peerIds)
+        case .contacts:
+            hasher.combine(16)
+        case let .deletedMessages(peerId):
+            hasher.combine(peerId)
         }
     }
     
@@ -279,11 +294,23 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case let .contacts(accountPeerId, includePresences):
+            if case .contacts(accountPeerId, includePresences) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .deletedMessages(peerId):
+            if case .deletedMessages(peerId) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
 
-func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxView {
+func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePostboxView {
     switch key {
     case let .itemCollectionInfos(namespaces):
         return MutableItemCollectionInfosView(postbox: postbox, namespaces: namespaces)
@@ -345,5 +372,9 @@ func postboxViewForKey(postbox: Postbox, key: PostboxViewKey) -> MutablePostboxV
         return MutableHistoryTagInfoView(postbox: postbox, peerId: peerId, tag: tag)
     case let .topChatMessage(peerIds):
         return MutableTopChatMessageView(postbox: postbox, peerIds: Set(peerIds))
+    case let .contacts(accountPeerId, includePresences):
+        return MutableContactPeersView(postbox: postbox, accountPeerId: accountPeerId, includePresences: includePresences)
+    case let .deletedMessages(peerId):
+        return MutableDeletedMessagesView(peerId: peerId)
     }
 }

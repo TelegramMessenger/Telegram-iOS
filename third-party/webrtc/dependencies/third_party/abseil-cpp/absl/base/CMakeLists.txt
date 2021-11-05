@@ -105,11 +105,11 @@ absl_cc_library(
   HDRS
     "dynamic_annotations.h"
   SRCS
-    "dynamic_annotations.cc"
+    "internal/dynamic_annotations.h"
   COPTS
     ${ABSL_DEFAULT_COPTS}
-  DEFINES
-    "__CLANG_SUPPORT_DYN_ANNOTATION__"
+  DEPS
+    absl::config
   PUBLIC
 )
 
@@ -191,7 +191,7 @@ absl_cc_library(
     ${ABSL_DEFAULT_COPTS}
   LINKOPTS
     ${ABSL_DEFAULT_LINKOPTS}
-    $<$<BOOL:${LIBRT}>:${LIBRT}>
+    $<$<BOOL:${LIBRT}>:-lrt>
     $<$<BOOL:${MINGW}>:"advapi32">
   DEPS
     absl::atomic_hook
@@ -230,7 +230,7 @@ absl_cc_library(
     ${ABSL_DEFAULT_COPTS}
   DEPS
     absl::config
-    gtest
+    GTest::gtest
   TESTONLY
 )
 
@@ -259,7 +259,7 @@ absl_cc_library(
     absl::meta
     absl::strings
     absl::utility
-    gtest
+    GTest::gtest
   TESTONLY
 )
 
@@ -273,7 +273,7 @@ absl_cc_test(
   DEPS
     absl::exception_safety_testing
     absl::memory
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_library(
@@ -300,8 +300,8 @@ absl_cc_test(
     absl::atomic_hook_test_helper
     absl::atomic_hook
     absl::core_headers
-    gmock
-    gtest_main
+    GTest::gmock
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -314,7 +314,7 @@ absl_cc_test(
   DEPS
     absl::base
     absl::core_headers
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -327,8 +327,8 @@ absl_cc_test(
   DEPS
     absl::errno_saver
     absl::strerror
-    gmock
-    gtest_main
+    GTest::gmock
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -342,7 +342,7 @@ absl_cc_test(
     absl::base
     absl::config
     absl::throw_delegate
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -357,7 +357,7 @@ absl_cc_test(
     ${ABSL_TEST_COPTS}
   DEPS
     absl::base_internal
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -371,8 +371,8 @@ absl_cc_test(
     absl::base_internal
     absl::memory
     absl::strings
-    gmock
-    gtest_main
+    GTest::gmock
+    GTest::gtest_main
 )
 
 absl_cc_library(
@@ -384,10 +384,11 @@ absl_cc_library(
     ${ABSL_TEST_COPTS}
   DEPS
     absl::base
+    absl::config
     absl::base_internal
     absl::core_headers
     absl::synchronization
-    gtest
+    GTest::gtest
   TESTONLY
 )
 
@@ -402,9 +403,10 @@ absl_cc_test(
   DEPS
     absl::base
     absl::base_internal
+    absl::config
     absl::core_headers
     absl::synchronization
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_library(
@@ -416,6 +418,7 @@ absl_cc_library(
   COPTS
     ${ABSL_DEFAULT_COPTS}
   DEPS
+    absl::base
     absl::config
     absl::core_headers
   PUBLIC
@@ -432,7 +435,7 @@ absl_cc_test(
     absl::base
     absl::config
     absl::endian
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -445,7 +448,7 @@ absl_cc_test(
   DEPS
     absl::config
     absl::synchronization
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -459,7 +462,7 @@ absl_cc_test(
     absl::base
     absl::core_headers
     absl::synchronization
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -472,7 +475,7 @@ absl_cc_test(
   DEPS
     absl::raw_logging_internal
     absl::strings
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -485,7 +488,7 @@ absl_cc_test(
   DEPS
     absl::base
     absl::synchronization
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -497,6 +500,7 @@ absl_cc_test(
     ${ABSL_TEST_COPTS}
   DEPS
     absl::malloc_internal
+    absl::node_hash_map
     Threads::Threads
 )
 
@@ -512,31 +516,7 @@ absl_cc_test(
     absl::core_headers
     absl::synchronization
     Threads::Threads
-    gtest_main
-)
-
-absl_cc_library(
-  NAME
-    bits
-  HDRS
-    "internal/bits.h"
-  COPTS
-    ${ABSL_DEFAULT_COPTS}
-  DEPS
-    absl::config
-    absl::core_headers
-)
-
-absl_cc_test(
-  NAME
-    bits_test
-  SRCS
-    "internal/bits_test.cc"
-  COPTS
-    ${ABSL_TEST_COPTS}
-  DEPS
-    absl::bits
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_library(
@@ -563,7 +543,7 @@ absl_cc_test(
   DEPS
     absl::exponential_biased
     absl::strings
-    gmock_main
+    GTest::gmock_main
 )
 
 absl_cc_library(
@@ -590,7 +570,7 @@ absl_cc_test(
   DEPS
     absl::core_headers
     absl::periodic_sampler
-    gmock_main
+    GTest::gmock_main
 )
 
 absl_cc_library(
@@ -616,7 +596,7 @@ absl_cc_test(
     ${ABSL_TEST_COPTS}
   DEPS
     absl::scoped_set_env
-    gtest_main
+    GTest::gtest_main
 )
 
 absl_cc_test(
@@ -640,8 +620,8 @@ absl_cc_test(
     absl::flags_marshalling
     absl::log_severity
     absl::strings
-    gmock
-    gtest_main
+    GTest::gmock
+    GTest::gtest_main
 )
 
 absl_cc_library(
@@ -671,8 +651,8 @@ absl_cc_test(
   DEPS
     absl::strerror
     absl::strings
-    gmock
-    gtest_main
+    GTest::gmock
+    GTest::gtest_main
 )
 
 absl_cc_library(
@@ -697,5 +677,18 @@ absl_cc_test(
     ${ABSL_TEST_COPTS}
   DEPS
     absl::fast_type_id
-    gtest_main
+    GTest::gtest_main
+)
+
+absl_cc_test(
+  NAME
+    optimization_test
+  SRCS
+    "optimization_test.cc"
+  COPTS
+    ${ABSL_TEST_COPTS}
+  DEPS
+    absl::core_headers
+    absl::optional
+    GTest::gtest_main
 )
