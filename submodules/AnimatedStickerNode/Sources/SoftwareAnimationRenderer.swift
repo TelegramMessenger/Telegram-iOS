@@ -26,7 +26,7 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                         guard let baseAddress = bytes.baseAddress else {
                             return
                         }
-                        if bytesPerRow * height > bytes.count {
+                        if bytesPerRow <= 0 || height <= 0 || width <= 0 || bytesPerRow * height > bytes.count {
                             assert(false)
                             return
                         }
