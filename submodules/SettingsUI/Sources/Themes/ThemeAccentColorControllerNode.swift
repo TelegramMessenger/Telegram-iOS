@@ -285,7 +285,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.backgroundContainerNode = ASDisplayNode()
         self.backgroundContainerNode.clipsToBounds = true
         self.backgroundWrapperNode = ASDisplayNode()
-        self.backgroundNode = createWallpaperBackgroundNode(context: context)
+        self.backgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         
         self.messagesContainerNode = ASDisplayNode()
         self.messagesContainerNode.clipsToBounds = true

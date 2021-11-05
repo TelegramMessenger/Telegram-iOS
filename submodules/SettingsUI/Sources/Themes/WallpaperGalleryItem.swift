@@ -136,7 +136,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.wrapperNode = ASDisplayNode()
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = .subsequentUpdates
-        self.nativeNode = createWallpaperBackgroundNode(context: context)
+        self.nativeNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         self.cropNode = WallpaperCropNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         self.statusNode.frame = CGRect(x: 0.0, y: 0.0, width: progressDiameter, height: progressDiameter)

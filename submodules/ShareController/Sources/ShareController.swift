@@ -964,7 +964,7 @@ final class MessageStoryRenderer {
 
         self.containerNode = ASDisplayNode()
         
-        self.instantChatBackgroundNode = createWallpaperBackgroundNode(context: context)
+        self.instantChatBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         self.instantChatBackgroundNode.displaysAsynchronously = false
         
         self.messagesContainerNode = ASDisplayNode()

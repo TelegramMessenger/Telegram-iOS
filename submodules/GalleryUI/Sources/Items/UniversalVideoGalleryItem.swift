@@ -518,7 +518,22 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
         }
 
         public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
-            completionHandler()
+            let node = self.node
+            let _ = (self.node.status
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak node] status in
+                if let node = node, let timestamp = status?.timestamp, let duration = status?.duration {
+                    let nextTimestamp = timestamp + skipInterval.seconds
+                    if nextTimestamp > duration {
+                        node.seek(0.0)
+                        node.pause()
+                    } else {
+                        node.seek(min(duration, nextTimestamp))
+                    }
+                }
+
+                completionHandler()
+            })
         }
 
         public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
@@ -539,7 +554,9 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
 
     private var hiddenMediaManagerIndex: Int?
 
-    init(overlayController: OverlayMediaController, mediaManager: MediaManager, accountId: AccountRecordId, hiddenMedia: (MessageId, Media)?, videoNode: UniversalVideoNode, willBegin: @escaping (PictureInPictureContentImpl) -> Void, didEnd: @escaping (PictureInPictureContentImpl) -> Void, expand: @escaping (@escaping () -> Void) -> Void) {
+    private var messageRemovedDisposable: Disposable?
+
+    init(context: AccountContext, overlayController: OverlayMediaController, mediaManager: MediaManager, accountId: AccountRecordId, hiddenMedia: (MessageId, Media)?, videoNode: UniversalVideoNode, canSkip: Bool, willBegin: @escaping (PictureInPictureContentImpl) -> Void, didEnd: @escaping (PictureInPictureContentImpl) -> Void, expand: @escaping (@escaping () -> Void) -> Void) {
         self.overlayController = overlayController
         self.mediaManager = mediaManager
         self.node = videoNode
@@ -559,7 +576,7 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
         contentDelegate.pictureInPictureController = pictureInPictureController
         
         pictureInPictureController.canStartPictureInPictureAutomaticallyFromInline = false
-        pictureInPictureController.requiresLinearPlayback = true
+        pictureInPictureController.requiresLinearPlayback = !canSkip
         pictureInPictureController.delegate = self
         self.pictureInPictureController = pictureInPictureController
         let timer = SwiftSignalKit.Timer(timeout: 0.005, repeat: true, completion: { [weak self] in
@@ -586,9 +603,31 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
                 }
             })
         }
+
+        if let (messageId, _) = hiddenMedia {
+            self.messageRemovedDisposable = (context.account.postbox.combinedView(keys: [PostboxViewKey.messages([messageId])])
+            |> map { views -> Bool in
+                if let view = views.views[PostboxViewKey.messages([messageId])] as? MessagesView {
+                    if view.messages[messageId] == nil {
+                        return true
+                    }
+                }
+                return false
+            }
+            |> filter { $0 }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                overlayController.removePictureInPictureContent(content: strongSelf)
+                strongSelf.node.canAttachContent = false
+            })
+        }
     }
 
     deinit {
+        self.messageRemovedDisposable?.dispose()
         self.pictureInPictureTimer?.invalidate()
         self.node.setCanPlaybackWithoutHierarchy(false)
 
@@ -698,6 +737,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var dismissOnOrientationChange = false
     private var keepSoundOnDismiss = false
     private var hasPictureInPicture = false
+
+    private var pictureInPictureButton: UIBarButtonItem?
     
     private var requiresDownload = false
     
@@ -1328,6 +1369,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             if forceEnablePiP || (!isAnimated && !disablePlayerControls && !disablePictureInPicture) {
                 let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
+                self.pictureInPictureButton = rightBarButtonItem
                 barButtonItems.append(rightBarButtonItem)
                 self.hasPictureInPicture = true
             } else {
@@ -1427,6 +1469,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             pictureInPictureNode.removeFromSupernode()
             self.videoNode?.backgroundColor = .black
         }
+
+        self.pictureInPictureButton?.isEnabled = self.pictureInPictureNode == nil
     }
     
     private func shouldAutoplayOnCentrality() -> Bool {
@@ -2069,7 +2113,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         case let .message(message):
             for media in message.media {
                 if let media = media as? TelegramMediaFile, media.isVideo {
-                    isNativePictureInPictureSupported = true
+                    if message.id.namespace == Namespaces.Message.Cloud {
+                        isNativePictureInPictureSupported = true
+                    }
                 }
             }
         default:
@@ -2106,7 +2152,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     break
                 }
 
-                let content = PictureInPictureContentImpl(overlayController: overlayController, mediaManager: self.context.sharedContext.mediaManager, accountId: self.context.account.id, hiddenMedia: hiddenMedia, videoNode: overlayVideoNode, willBegin: { [weak self] content in
+                let content = PictureInPictureContentImpl(context: self.context, overlayController: overlayController, mediaManager: self.context.sharedContext.mediaManager, accountId: self.context.account.id, hiddenMedia: hiddenMedia, videoNode: overlayVideoNode, canSkip: true, willBegin: { [weak self] content in
                     guard let strongSelf = self else {
                         return
                     }

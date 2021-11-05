@@ -611,7 +611,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     return
                 }
                 var adPeerId: PeerId?
-                adPeerId = nil
+                adPeerId = messages.first?.author?.id
 
                 if strongSelf.preloadAdPeerId != adPeerId {
                     strongSelf.preloadAdPeerId = adPeerId

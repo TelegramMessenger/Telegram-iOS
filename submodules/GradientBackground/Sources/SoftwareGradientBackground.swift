@@ -275,7 +275,7 @@ public final class GradientBackgroundNode: ASDisplayNode {
     deinit {
     }
 
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, extendAnimation: Bool = false, backwards: Bool = false) {
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, extendAnimation: Bool, backwards: Bool, completion: @escaping () -> Void) {
         let sizeUpdated = self.validLayout != size
         self.validLayout = size
 
@@ -372,6 +372,10 @@ public final class GradientBackgroundNode: ASDisplayNode {
                         animation.beginTime = self.contentView.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.25
                     }
 
+                    animation.completion = { _ in
+                        completion()
+                    }
+
                     self.contentView.layer.removeAnimation(forKey: "contents")
                     self.contentView.layer.add(animation, forKey: "contents")
 
@@ -405,7 +409,11 @@ public final class GradientBackgroundNode: ASDisplayNode {
                     for cloneNode in self.cloneNodes {
                         cloneNode.value?.image = dimmedImage
                     }
+
+                    completion()
                 }
+            } else {
+                completion()
             }
         } else if sizeUpdated {
             let image = generateGradient(size: imageSize, colors: self.colors, positions: positions)
@@ -419,6 +427,10 @@ public final class GradientBackgroundNode: ASDisplayNode {
             }
 
             self.validPhase = self.phase
+
+            completion()
+        } else {
+            completion()
         }
 
         transition.updateFrame(view: self.contentView, frame: CGRect(origin: CGPoint(), size: size))
@@ -440,13 +452,14 @@ public final class GradientBackgroundNode: ASDisplayNode {
             self.colors = colors
             self.invalidated = true
             if let size = self.validLayout {
-                self.updateLayout(size: size, transition: .immediate)
+                self.updateLayout(size: size, transition: .immediate, extendAnimation: false, backwards: false, completion: {})
             }
         }
     }
 
-    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool = false, backwards: Bool = false) {
+    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool, backwards: Bool, completion: @escaping () -> Void) {
         guard case let .animated(duration, _) = transition, duration > 0.001 else {
+            completion()
             return
         }
 
@@ -463,7 +476,9 @@ public final class GradientBackgroundNode: ASDisplayNode {
             GradientBackgroundNode.sharedPhase = self.phase
         }
         if let size = self.validLayout {
-            self.updateLayout(size: size, transition: transition, extendAnimation: extendAnimation, backwards: backwards)
+            self.updateLayout(size: size, transition: transition, extendAnimation: extendAnimation, backwards: backwards, completion: completion)
+        } else {
+            completion()
         }
     }
 }

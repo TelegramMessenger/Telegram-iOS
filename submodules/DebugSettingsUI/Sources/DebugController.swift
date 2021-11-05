@@ -80,7 +80,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case experimentalCompatibility(Bool)
     case enableDebugDataDisplay(Bool)
     case acceleratedStickers(Bool)
-    case mockICE(Bool)
+    case experimentalBackground(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case voiceConference
@@ -102,7 +102,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .mockICE:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -171,7 +171,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 27
         case .acceleratedStickers:
             return 29
-        case .mockICE:
+        case .experimentalBackground:
             return 30
         case .playerEmbedding:
             return 31
@@ -804,12 +804,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .mockICE(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "mockICE", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .experimentalBackground(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Background Experiment", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.mockICE = value
+                        settings.experimentalBackground = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -926,7 +926,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.experimentalCompatibility(experimentalSettings.experimentalCompatibility))
         entries.append(.enableDebugDataDisplay(experimentalSettings.enableDebugDataDisplay))
         entries.append(.acceleratedStickers(experimentalSettings.acceleratedStickers))
-        entries.append(.mockICE(experimentalSettings.mockICE))
+        entries.append(.experimentalBackground(experimentalSettings.experimentalBackground))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }

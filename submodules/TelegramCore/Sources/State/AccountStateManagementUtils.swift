@@ -2001,7 +2001,7 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
         } else {
             pollPts = 1
         }
-        return (network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: pollPts, limit: limit))
+        return (network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: max(pollPts, 1), limit: limit))
         |> map(Optional.init)
         |> `catch` { error -> Signal<Api.updates.ChannelDifference?, MTRpcError> in
             switch error.errorDescription {
