@@ -4309,9 +4309,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         //|> delay(0.05, queue: Queue.mainQueue())
         let progressDisposable = progressSignal.start()
         
-        var regdateSignal = (getRegDate(peerId, requestByUserId: ownerId)  |> deliverOnMainQueue).start(next: { response in
-            let regdateString = makeNiceRegDateStr(response)
-            let title = "NGLab.RegDate.Notice"
+        // regDate signale
+        var _ = (getRegDate(peerId, requestByUserId: ownerId)  |> deliverOnMainQueue).start(next: { response in
+//            let regdateString = makeNiceRegDateStr(response)
+//            let title = "NGLab.RegDate.Notice"
 //            let regdateController = textAlertController(context: self.context, title: regdateString, text: l(title, self.presentationData.strings.baseLanguageCode), actions: [
 //                TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {
 //                    self.requestLayout()
@@ -5547,7 +5548,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         
         var premiumIntroController: PremiumIntroController? = nil
         
-        let observer = NotificationCenter.default.addObserver(forName: .IAPHelperPurchaseNotification, object: nil, queue: .main, using: {  notification in
+        // observer
+        let _ = NotificationCenter.default.addObserver(forName: .IAPHelperPurchaseNotification, object: nil, queue: .main, using: {  notification in
             let productID = notification.object as? String
             
             if productID == NicegramProducts.Premium {
@@ -5562,7 +5564,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
             }
         })
-        let errorobserver = NotificationCenter.default.addObserver(forName: .IAPHelperErrorNotification, object: nil, queue: .main, using: {  notification in
+        // error observer
+        let _ = NotificationCenter.default.addObserver(forName: .IAPHelperErrorNotification, object: nil, queue: .main, using: {  notification in
             let errorText = notification.object as! String
             let alertController = textAlertController(context: self.context, title: nil, text: errorText, actions: [ TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})])
             premiumIntroController?.present(alertController, in: .window(.root))

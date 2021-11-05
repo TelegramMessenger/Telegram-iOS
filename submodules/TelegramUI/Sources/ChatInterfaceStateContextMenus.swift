@@ -1149,7 +1149,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 actions.append(.separator)
             }
             // MARK: NG Context Menu
-            var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let locale = presentationData.strings.baseLanguageCode
             actions.append(.action(ContextMenuActionItem(text: l("AppName", locale) + "...", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "NicegramN"), color: theme.actionSheet.primaryTextColor)

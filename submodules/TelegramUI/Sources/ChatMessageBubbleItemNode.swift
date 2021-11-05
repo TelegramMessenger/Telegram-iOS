@@ -2117,6 +2117,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
+        // Suppress warnings
+        if updatedShareButtonBackground != nil && updatedTrButtonBackground != nil && updatedShareButtonNode != nil && updatedTrButtonNode != nil {}
+        
         let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
@@ -3681,13 +3684,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     @objc func trButtonPressed() {
         if let item = self.item {
             let context = item.context
-            var message = item.message
-            var presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let locale = presentationData.strings.baseLanguageCode
-            var title = l("Messages.Translate", locale)
+            let message = item.message
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+//            let locale = presentationData.strings.baseLanguageCode
+//            var title = l("Messages.Translate", locale)
             var mode = "translate"
             if message.text.contains(gTranslateSeparator) {
-                title = l("Messages.UndoTranslate", locale)
+//                title = l("Messages.UndoTranslate", locale)
                 mode = "undo-translate"
             }
             if mode == "undo-translate" {

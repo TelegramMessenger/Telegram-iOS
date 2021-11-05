@@ -339,9 +339,9 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
                 ngLog("[foldersAtBottom] invoked with \(value)", LOGTAG)
                 let _ = arguments.context.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
-                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
                         settings.foldersTabAtBottom = value
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
             })

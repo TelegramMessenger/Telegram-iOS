@@ -1024,16 +1024,16 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 network = context.context.account.network
 
                 if VarSystemNGSettings.dbReset {
-                    UIAlertView(title: nil,  message: "(1) Resetting database. Please wait...", delegate: nil, cancelButtonTitle: "OK").show()
+                    self.mainWindow?.presentNative(UIAlertController(title: "(1) Resetting database. Please wait...", message: "Please, restart the app!", preferredStyle: .alert))
                     ngLog("Resetting DB by system settings", "System NG")
                     let databasePath = context.context.sharedContext.accountManager.basePath + "/db"
                     do {
                         let _ = try FileManager.default.removeItem(atPath: databasePath)
                         ngLog("Database reset completed!", "System NG")
-                        UIAlertView(title: nil,  message: "(2) Reset completed", delegate: nil, cancelButtonTitle: "OK").show()
+                        self.mainWindow?.presentNative(UIAlertController(title: nil, message: "(2) Reset completed", preferredStyle: .alert))
                     } catch let error as NSError {
                         ngLog("Unable to reset database \(error)", "System NG")
-                        UIAlertView(title: "(2) ERROR. Unable to reset database",  message: "\(error)", delegate: nil, cancelButtonTitle: "OK").show()
+                        self.mainWindow?.presentNative(UIAlertController(title: "(2) ERROR. Unable to reset database",  message: "\(error)", preferredStyle: .alert))
                     }
                     VarSystemNGSettings.dbReset = false
                 }
