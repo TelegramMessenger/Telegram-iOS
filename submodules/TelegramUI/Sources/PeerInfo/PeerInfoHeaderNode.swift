@@ -916,10 +916,12 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
 }
 
 final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
+    let containerNode: ContextControllerSourceNode
     let contextSourceNode: ContextReferenceContentNode
     private let regularTextNode: ImmediateTextNode
     private let whiteTextNode: ImmediateTextNode
     private let iconNode: ASImageNode
+    private var animationNode: AnimationNode?
     
     private var key: PeerInfoHeaderNavigationButtonKey?
     private var theme: PresentationTheme?
@@ -933,11 +935,13 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         }
     }
     
-    var action: (() -> Void)?
+    var action: ((ASDisplayNode, ContextGesture?) -> Void)?
     
     init() {
         self.contextSourceNode = ContextReferenceContentNode()
-
+        self.containerNode = ContextControllerSourceNode()
+        self.containerNode.animateScale = false
+        
         self.regularTextNode = ImmediateTextNode()
         self.whiteTextNode = ImmediateTextNode()
         self.whiteTextNode.isHidden = true
@@ -951,17 +955,25 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.isAccessibilityElement = true
         self.accessibilityTraits = .button
         
+        self.containerNode.addSubnode(self.contextSourceNode)
         self.contextSourceNode.addSubnode(self.regularTextNode)
         self.contextSourceNode.addSubnode(self.whiteTextNode)
         self.contextSourceNode.addSubnode(self.iconNode)
 
-        self.addSubnode(self.contextSourceNode)
+        self.addSubnode(self.containerNode)
+        
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.action?(strongSelf.contextSourceNode, gesture)
+        }
         
         self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
     }
     
     @objc private func pressed() {
-        self.action?()
+        self.action?(self.contextSourceNode, nil)
     }
     
     func update(key: PeerInfoHeaderNavigationButtonKey, presentationData: PresentationData, height: CGFloat) -> CGSize {
@@ -973,6 +985,7 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             let text: String
             var icon: UIImage?
             var isBold = false
+            var isGestureEnabled = false
             switch key {
                 case .edit:
                     text = presentationData.strings.Common_Edit
@@ -991,8 +1004,10 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                 case .more:
                     text = ""
                     icon = PresentationResourcesRootController.navigationMoreCircledIcon(presentationData.theme)
+                    isGestureEnabled = true
             }
             self.accessibilityLabel = text
+            self.containerNode.isGestureEnabled = isGestureEnabled
             
             let font: UIFont = isBold ? Font.semibold(17.0) : Font.regular(17.0)
             
@@ -1016,10 +1031,12 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             self.iconNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - image.size.height) / 2.0)), size: image.size)
             
             let size = CGSize(width: image.size.width + inset * 2.0, height: height)
+            self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
             self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
             return size
         } else {
             let size = CGSize(width: textSize.width + inset * 2.0, height: height)
+            self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
             self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
             return size
         }
@@ -1059,7 +1076,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
         }
     }
     
-    var performAction: ((PeerInfoHeaderNavigationButtonKey, ContextReferenceContentNode?) -> Void)?
+    var performAction: ((PeerInfoHeaderNavigationButtonKey, ContextReferenceContentNode?, ContextGesture?) -> Void)?
     
     func update(size: CGSize, presentationData: PresentationData, buttons: [PeerInfoHeaderNavigationButtonSpec], expandFraction: CGFloat, transition: ContainedViewLayoutTransition) {
         let maximumExpandOffset: CGFloat = 14.0
@@ -1080,11 +1097,11 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
                     self.buttonNodes[spec.key] = buttonNode
                     self.addSubnode(buttonNode)
                     buttonNode.isWhite = self.isWhite
-                    buttonNode.action = { [weak self] in
+                    buttonNode.action = { [weak self] _, gesture in
                         guard let strongSelf = self, let buttonNode = strongSelf.buttonNodes[spec.key] else {
                             return
                         }
-                        strongSelf.performAction?(spec.key, buttonNode.contextSourceNode)
+                        strongSelf.performAction?(spec.key, buttonNode.contextSourceNode, gesture)
                     }
                 }
                 let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)

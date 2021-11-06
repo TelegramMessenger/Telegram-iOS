@@ -2657,6 +2657,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CaptionEdited" = "%@ edited caption:";
 "Channel.AdminLog.MessageDeleted" = "%@ deleted message:";
 "Channel.AdminLog.MessagePinned" = "%@ pinned message:";
+"Channel.AdminLog.MessageUnpinnedExtended" = "%@ unpinned message:";
 
 "Channel.AdminLog.MessageInvitedName" = "invited %1$@";
 "Channel.AdminLog.MessageInvitedNameUsername" = "invited %1$@ (%2$@)";
@@ -4848,6 +4849,7 @@ Sorry for the inconvenience.";
 "ChatList.Context.Mute" = "Mute";
 "ChatList.Context.Unmute" = "Unmute";
 "ChatList.Context.JoinChannel" = "Join Channel";
+"ChatList.Context.JoinChat" = "Join Chat";
 "ChatList.Context.Delete" = "Delete";
 
 "ContactList.Context.SendMessage" = "Send Message";
@@ -7051,3 +7053,5 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ disabled no-forwards";
 
 "VoiceChat.DiscussionGroup" = "discussion group";
+
+"Group.Edit.PrivatePublicLinkAlert" = "Please note that if you choose a public link for your group, anyone will be able to find it in search and join.\n\nDo not create this link if you want your group to stay private.";

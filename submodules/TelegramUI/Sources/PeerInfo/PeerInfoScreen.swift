@@ -1884,7 +1884,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 if actions.options.contains(.deleteGlobally) {
                                     let globalTitle: String
                                     if isChannel {
-                                        globalTitle = presentationData.strings.Conversation_DeleteMessagesForMe
+                                        globalTitle = presentationData.strings.Conversation_DeleteMessagesForEveryone
                                     } else if let personalPeerName = personalPeerName {
                                         globalTitle = presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).string
                                     } else {
@@ -1893,7 +1893,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     items.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { c, f in
                                         c.dismiss(completion: {
                                             if let strongSelf = self {
-                                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil)
+                                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                                             }
                                         })
@@ -1912,7 +1912,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     items.append(.action(ContextMenuActionItem(text: localOptionText, textColor: .destructive, icon: { _ in nil }, action: { c, f in
                                         c.dismiss(completion: {
                                             if let strongSelf = self {
-                                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil)
+                                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).start()
                                             }
                                         })
@@ -2029,7 +2029,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                             items.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { c, f in
                                                 c.dismiss(completion: {
                                                     if let strongSelf = self {
-                                                        strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil)
+                                                        strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                                                         let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                                                     }
                                                 })
@@ -2048,7 +2048,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                             items.append(.action(ContextMenuActionItem(text: localOptionText, textColor: .destructive, icon: { _ in nil }, action: { c, f in
                                                 c.dismiss(completion: {
                                                     if let strongSelf = self {
-                                                        strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil)
+                                                        strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                                                         let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).start()
                                                     }
                                                 })
@@ -2530,7 +2530,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
         }
         
-        self.headerNode.navigationButtonContainer.performAction = { [weak self] key, source in
+        self.headerNode.navigationButtonContainer.performAction = { [weak self] key, source, gesture in
             guard let strongSelf = self else {
                 return
             }
@@ -2571,7 +2571,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 strongSelf.view.endEditing(true)
                 if case .done = key {
                     guard let data = strongSelf.data else {
-                        strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                        strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                         return
                     }
                     if let peer = data.peer as? TelegramUser {
@@ -2614,10 +2614,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                                 }))
                             } else {
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                             }
                         } else if data.isContact {
                             let firstName = strongSelf.headerNode.editingContentNode.editingTextForKey(.firstName) ?? ""
@@ -2648,7 +2648,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                         guard let strongSelf = self else {
                                             return
                                         }
-                                        strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                                        strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                                     }, completed: {
                                         dismissStatus?()
                                         
@@ -2677,14 +2677,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                                 }
                                             }
                                         }).start()
-                                        strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                                        strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                                     }))
                                 }
                             } else {
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                             }
                         } else {
-                            strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                            strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                         }
                     } else if let group = data.peer as? TelegramGroup, canEditPeerInfo(context: strongSelf.context, peer: group) {
                         let title = strongSelf.headerNode.editingContentNode.editingTextForKey(.title) ?? ""
@@ -2735,14 +2735,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                             }, completed: {
                                 dismissStatus?()
                                 
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                                strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                             }))
                         }
                     } else if let channel = data.peer as? TelegramChannel, canEditPeerInfo(context: strongSelf.context, peer: channel) {
@@ -2794,21 +2794,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                                 }, completed: {
                                     dismissStatus?()
                                     
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                                 }))
                             }
                         }
                         
                         proceed()
                     } else {
-                        strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                        strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                     }
                 } else {
                     strongSelf.state = strongSelf.state.withIsEditing(false)
@@ -2839,7 +2839,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 strongSelf.activateSearch()
             case .more:
                 if let source = source {
-                    strongSelf.displayMediaGalleryContextMenu(source: source)
+                    strongSelf.displayMediaGalleryContextMenu(source: source, gesture: gesture)
                 }
             case .editPhoto, .editVideo:
                 break
@@ -3120,7 +3120,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
     
     @objc private func editingCancelPressed() {
-        self.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+        self.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
     }
     
     private func openMessage(id: MessageId) -> Bool {
@@ -4182,7 +4182,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil)
+                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel, nil, nil)
                     
                     let text: String
                     switch error {
@@ -5526,7 +5526,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             case .avatar:
                 self.openAvatarForEditing()
             case .edit:
-                self.headerNode.navigationButtonContainer.performAction?(.edit, nil)
+                self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
             case .proxy:
                 self.controller?.push(proxySettingsController(context: self.context))
             case .savedMessages:
@@ -5785,7 +5785,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil)
+                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
                             }
                         }))
@@ -5802,7 +5802,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil)
+                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                                 let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).start()
                             }
                         }))
@@ -5918,7 +5918,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: messageIds.count == 1 ? presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One : presentationData.strings.Conversation_ForwardTooltip_SavedMessages_Many), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
                         
-                        strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil)
+                        strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                         
                         let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
                             return .forward(source: id, grouping: .auto, attributes: [], correlationId: nil)
@@ -5952,7 +5952,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         })
                         |> deliverOnMainQueue).start(completed: {
                             if let strongSelf = self {
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil)
+                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                                 
                                 if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                                     let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId))
@@ -6091,7 +6091,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }), in: .current)
     }
 
-    private func displayMediaGalleryContextMenu(source: ContextReferenceContentNode) {
+    private func displayMediaGalleryContextMenu(source: ContextReferenceContentNode, gesture: ContextGesture?) {
         let summaryTags: [MessageTags] = [.photo, .video]
         let peerId = self.peerId
         let _ = (context.account.postbox.combinedView(keys: summaryTags.map { tag in
@@ -6232,7 +6232,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 })))
             }
 
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(items: items)), gesture: nil)
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(items: items)), gesture: gesture)
             contextController.passthroughTouchEvent = { sourceView, point in
                 guard let strongSelf = self else {
                     return .ignore
@@ -6591,7 +6591,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                     |> deliverOnMainQueue).start(next: { messages in
                         if let strongSelf = self, !messages.isEmpty {
-                            strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil)
+                            strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                             
                             let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
                                 return lhs.index < rhs.index
