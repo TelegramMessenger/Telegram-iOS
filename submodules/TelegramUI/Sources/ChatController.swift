@@ -4565,14 +4565,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return [FoundPeer(peer: peer, subscribers: nil)]
         }
         
-        let _ = (combineLatest(queue: Queue.mainQueue(), currentAccountPeer, self.context.engine.peers.sendAsAvailablePeers(peerId: self.chatLocation.peerId)))
-        .start(next: { [weak self] currentAccountPeer, peers in
+        let _ = (combineLatest(queue: Queue.mainQueue(), currentAccountPeer, self.context.account.postbox.peerView(id: self.chatLocation.peerId), self.context.engine.peers.sendAsAvailablePeers(peerId: self.chatLocation.peerId)))
+        .start(next: { [weak self] currentAccountPeer, peerView, peers in
             guard let strongSelf = self else {
                 return
             }
             var allPeers: [FoundPeer]?
             if !peers.isEmpty {
-                allPeers = currentAccountPeer
+                if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
+                    allPeers = []
+                } else {
+                    allPeers = currentAccountPeer
+                }
                 allPeers?.append(contentsOf: peers)
             }
             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
@@ -7397,8 +7401,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let node = node as? ContextReferenceContentNode, let peers = strongSelf.presentationInterfaceState.sendAsPeers else {
                 return
             }
-    
-            let myPeerId = strongSelf.presentationInterfaceState.currentSendAsPeerId ?? strongSelf.context.account.peerId
+            
+            let defaultMyPeerId: PeerId
+            if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
+                defaultMyPeerId = channel.id
+            } else {
+                defaultMyPeerId = strongSelf.context.account.peerId
+            }
+            let myPeerId = strongSelf.presentationInterfaceState.currentSendAsPeerId ?? defaultMyPeerId
             
             let avatarSize = CGSize(width: 28.0, height: 28.0)
             var items: [ContextMenuItem] = []
@@ -7410,8 +7420,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
                     subtitle = strongSelf.presentationData.strings.VoiceChat_PersonalAccount
                 } else if let subscribers = peer.subscribers {
-                    if let peer = peer.peer as? TelegramChannel, case .broadcast = peer.info {
-                        subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                    if let peer = peer.peer as? TelegramChannel {
+                        if case .broadcast = peer.info {
+                            subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                        } else {
+                            subtitle = strongSelf.presentationData.strings.VoiceChat_DiscussionGroup
+                        }
                     } else {
                         subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(subscribers)
                     }

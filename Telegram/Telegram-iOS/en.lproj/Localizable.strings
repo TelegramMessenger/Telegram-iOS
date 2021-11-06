@@ -7049,3 +7049,5 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.MessageToggleNoForwardsOn" = "%@ enabled no-forwards";
 "Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ disabled no-forwards";
+
+"VoiceChat.DiscussionGroup" = "discussion group";
