@@ -125,7 +125,7 @@ public enum UpdatePeerSendAsPeerError {
 
 func _internal_updatePeerSendAsPeer(account: Account, peerId: PeerId, sendAs: PeerId) -> Signal<Never, UpdatePeerSendAsPeerError> {
     return account.postbox.transaction { transaction -> (Api.InputPeer, Api.InputPeer)? in
-        if let peer = transaction.getPeer(peerId), let sendAsPeer = transaction.getPeer(sendAs), let inputPeer = apiInputPeer(peer), let sendAsInputPeer = apiInputPeer(sendAsPeer) {
+        if let peer = transaction.getPeer(peerId), let sendAsPeer = transaction.getPeer(sendAs), let inputPeer = apiInputPeer(peer), let sendAsInputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: account.peerId) {
             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                 if let cachedData = cachedData as? CachedChannelData {
                     return cachedData.withUpdatedSendAsPeerId(sendAs)

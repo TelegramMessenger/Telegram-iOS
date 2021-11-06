@@ -5123,21 +5123,6 @@ public extension Api {
                     })
                 }
             
-                public static func toggleNoForwards(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-219318255)
-                    channel.serialize(buffer, true)
-                    enabled.serialize(buffer, true)
-                    return (FunctionDescription(name: "channels.toggleNoForwards", parameters: [("channel", channel), ("enabled", enabled)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getSendAs(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.SendAsPeers>) {
                     let buffer = Buffer()
                     buffer.appendInt32(231174382)
