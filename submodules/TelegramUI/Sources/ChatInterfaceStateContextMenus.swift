@@ -281,9 +281,7 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
         return []
     }
     for attribute in message.attributes {
-        if attribute is AutoremoveTimeoutMessageAttribute {
-            return []
-        } else if attribute is AutoclearTimeoutMessageAttribute {
+        if attribute is AutoclearTimeoutMessageAttribute {
             return []
         }
     }
