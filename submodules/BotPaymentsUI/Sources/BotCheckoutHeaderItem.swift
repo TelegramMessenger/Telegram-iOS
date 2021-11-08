@@ -68,6 +68,7 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     private let imageNode: TransformImageNode
     private let titleNode: TextNode
@@ -85,6 +86,9 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.imageNode = TransformImageNode()
         
@@ -217,6 +221,29 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
                     if strongSelf.bottomStripeNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
                     }
+                    if strongSelf.maskNode.supernode == nil {
+                        strongSelf.addSubnode(strongSelf.maskNode)
+                    }
+                    
+                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    var hasTopCorners = false
+                    var hasBottomCorners = false
+                    switch neighbors.top {
+                        case .sameSection(false):
+                            strongSelf.topStripeNode.isHidden = true
+                        default:
+                            hasTopCorners = true
+                            strongSelf.topStripeNode.isHidden = hasCorners
+                    }
+                    switch neighbors.bottom {
+                        case .sameSection(false):
+                            break
+                        default:
+                            hasBottomCorners = true
+                            strongSelf.bottomStripeNode.isHidden = hasCorners
+                    }
+                    
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: contentSize.height - separatorHeight), size: CGSize(width: params.width, height: separatorHeight))
                     
@@ -231,7 +258,8 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
                     
                     strongSelf.botNameNode.frame = CGRect(origin: CGPoint(x: textFrame.minX, y: textFrame.maxY + textBotNameSpacing), size: botNameLayout.size)
 
-                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -1000.0), size: CGSize(width: params.width, height: contentSize.height + 1000.0))
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: contentSize.height))
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel + UIScreenPixel))
                 }
             })

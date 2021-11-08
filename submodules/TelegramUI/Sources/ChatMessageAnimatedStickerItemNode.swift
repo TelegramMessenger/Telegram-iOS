@@ -167,7 +167,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
     private var enableSynchronousImageApply: Bool = false
-    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    private var backgroundNode: WallpaperBubbleBackgroundNode?
     private(set) var placeholderNode: StickerShimmerEffectNode
     private(set) var animationNode: GenericAnimatedStickerNode?
     private var animationSize: CGSize?
@@ -652,7 +652,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
             
             if let backgroundNode = self.backgroundNode {
-                backgroundNode.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
+                backgroundNode.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize, transition: .immediate)
             }
         }
     }
@@ -1522,7 +1522,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         for attribute in item.content.firstMessage.attributes {
                             if let attribute = attribute as? SourceReferenceMessageAttribute {
                                 openPeerId = attribute.messageId.peerId
-                                navigate = .chat(textInputState: nil, subject: .message(id: attribute.messageId, highlight: true, timecode: nil), peekData: nil)
+                                navigate = .chat(textInputState: nil, subject: .message(id: .id(attribute.messageId), highlight: true, timecode: nil), peekData: nil)
                             }
                         }
                         

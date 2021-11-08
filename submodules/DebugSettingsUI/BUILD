@@ -24,6 +24,7 @@ swift_library(
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/GZip:GZip"
     ],
     visibility = [
         "//visibility:public",

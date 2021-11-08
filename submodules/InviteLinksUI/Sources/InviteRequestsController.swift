@@ -127,7 +127,7 @@ private enum InviteRequestsEntry: ItemListNodeEntry {
     }
 }
 
-private func inviteRequestsControllerEntries(presentationData: PresentationData, peer: EnginePeer?, importers: [PeerInvitationImportersState.Importer]?, isGroup: Bool) -> [InviteRequestsEntry] {
+private func inviteRequestsControllerEntries(presentationData: PresentationData, peer: EnginePeer?, importers: [PeerInvitationImportersState.Importer]?, count: Int32, isGroup: Bool) -> [InviteRequestsEntry] {
     var entries: [InviteRequestsEntry] = []
     
     if let importers = importers, !importers.isEmpty {
@@ -139,7 +139,7 @@ private func inviteRequestsControllerEntries(presentationData: PresentationData,
         }
         entries.append(.header(presentationData.theme, helpText))
     
-        entries.append(.requestsHeader(presentationData.theme, presentationData.strings.MemberRequests_PeopleRequested(Int32(importers.count)).uppercased()))
+        entries.append(.requestsHeader(presentationData.theme, presentationData.strings.MemberRequests_PeopleRequested(count).uppercased()))
         
         var index: Int32 = 0
         for importer in importers {
@@ -295,7 +295,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
             emptyStateItem = InviteRequestsEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings, isGroup: isGroup)
         }
         
-        let entries = inviteRequestsControllerEntries(presentationData: presentationData, peer: peer, importers: importersState.hasLoadedOnce ? importersState.importers : nil, isGroup: isGroup)
+        let entries = inviteRequestsControllerEntries(presentationData: presentationData, peer: peer, importers: importersState.hasLoadedOnce ? importersState.importers : nil, count: importersState.count, isGroup: isGroup)
         let previousEntries = previousEntries.swap(entries)
         
         let crossfade = !previousEntries.isEmpty && entries.isEmpty
@@ -358,7 +358,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         if case let .known(value) = offset, value < 40.0 {
-            
+            importersContext.loadMore()
         }
     }
     pushControllerImpl = { [weak controller] c in

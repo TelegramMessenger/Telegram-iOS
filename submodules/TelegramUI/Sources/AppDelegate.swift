@@ -462,7 +462,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider())
+        }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil)
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
@@ -1209,17 +1209,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.pushRegistry = pushRegistry
         pushRegistry.delegate = self
         
-        self.badgeDisposable.set((self.context.get()
-        |> mapToSignal { context -> Signal<Int32, NoError> in
-            if let context = context {
-                return context.applicationBadge
-            } else {
-                return .single(0)
-            }
-        }
-        |> deliverOnMainQueue).start(next: { count in
-            UIApplication.shared.applicationIconBadgeNumber = Int(count)
-        }))
+        self.resetBadge()
         
         if #available(iOS 9.1, *) {
             self.quickActionsDisposable.set((self.context.get()
@@ -1316,6 +1306,20 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         return true
     }
 
+    private func resetBadge() {
+        self.badgeDisposable.set((self.context.get()
+        |> mapToSignal { context -> Signal<Int32, NoError> in
+            if let context = context {
+                return context.applicationBadge
+            } else {
+                return .single(0)
+            }
+        }
+        |> deliverOnMainQueue).start(next: { count in
+            UIApplication.shared.applicationIconBadgeNumber = Int(count)
+        }))
+    }
+
     func applicationWillResignActive(_ application: UIApplication) {
         self.isActiveValue = false
         self.isActivePromise.set(false)
@@ -1396,6 +1400,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
         self.isActivePromise.set(true)
+
+        self.resetBadge()
         
         self.maybeCheckForUpdates()
         
@@ -1450,15 +1456,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         
         Logger.shared.log("App \(self.episodeId)", "remoteNotification: \(redactedPayload)")
-        
+
         if userInfo["p"] == nil {
+            completionHandler(.noData)
             return
         }
         
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            
             sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
                 completionHandler(.newData)
             }, timeout: 29.0)

@@ -26,6 +26,17 @@ final class MutableSynchronizeGroupMessageStatsView: MutablePostboxView {
         }
         return updated
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        /*let groupsAndNamespaces = postbox.synchronizeGroupMessageStatsTable.get()
+        if self.groupsAndNamespaces != groupsAndNamespaces {
+            self.groupsAndNamespaces = groupsAndNamespaces
+            return true
+        } else {
+            return false
+        }*/
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return SynchronizeGroupMessageStatsView(self)

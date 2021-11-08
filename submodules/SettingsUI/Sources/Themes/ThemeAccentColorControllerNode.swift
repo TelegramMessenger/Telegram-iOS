@@ -285,7 +285,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.backgroundContainerNode = ASDisplayNode()
         self.backgroundContainerNode.clipsToBounds = true
         self.backgroundWrapperNode = ASDisplayNode()
-        self.backgroundNode = WallpaperBackgroundNode(context: context)
+        self.backgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         
         self.messagesContainerNode = ASDisplayNode()
         self.messagesContainerNode.clipsToBounds = true
@@ -1354,7 +1354,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
 
     @objc private func playPressed() {
         if self.state.backgroundColors.count >= 3 || self.state.messagesColors.count >= 3 {
-            self.backgroundNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring))
+            self.backgroundNode.animateEvent(transition: .animated(duration: 0.5, curve: .spring), extendAnimation: false)
         } else {
             self.updateState({ state in
                 var state = state

@@ -80,7 +80,7 @@ final class BotCheckoutInfoController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = BotCheckoutInfoControllerNode(context: self.context, invoice: self.invoice, messageId: self.messageId, formInfo: self.initialFormInfo, focus: self.focus, theme: self.presentationData.theme, strings: self.presentationData.strings, dismiss: { [weak self] in
+        self.displayNode = BotCheckoutInfoControllerNode(context: self.context, navigationBar: self.navigationBar, invoice: self.invoice, messageId: self.messageId, formInfo: self.initialFormInfo, focus: self.focus, theme: self.presentationData.theme, strings: self.presentationData.strings, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }, openCountrySelection: { [weak self] in
             if let strongSelf = self {

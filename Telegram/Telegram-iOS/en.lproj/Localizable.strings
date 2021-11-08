@@ -180,6 +180,7 @@
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_any" = "{author} sent %d files";
 "PUSH_CHAT_MESSAGE_THEME" = "%1$@|set theme to %3$@ in the group %2$@";
 "PUSH_CHAT_MESSAGE_NOTHEME" = "%1$@|disabled theme in the group %2$@";
+"PUSH_CHAT_REQ_JOINED" = "%1$@ was accepted into the group %2$@";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -218,6 +219,8 @@
 
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
+
+"PUSH_CHAT_REQ_JOINED" = "%2$@|%1$@ was accepted into the group";
 
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
@@ -296,13 +299,13 @@
 "Weekday.Today" = "Today";
 "Weekday.Yesterday" = "Yesterday";
 
-"Calendar.ShortMonday" = "M";
-"Calendar.ShortTuesday" = "T";
-"Calendar.ShortWednesday" = "W";
-"Calendar.ShortThursday" = "T";
-"Calendar.ShortFriday" = "F";
-"Calendar.ShortSaturday" = "S";
-"Calendar.ShortSunday" = "S";
+"Calendar.ShortMon" = "M";
+"Calendar.ShortTue" = "T";
+"Calendar.ShortWed" = "W";
+"Calendar.ShortThu" = "T";
+"Calendar.ShortFri" = "F";
+"Calendar.ShortSat" = "S";
+"Calendar.ShortSun" = "S";
 
 "Time.TodayAt" = "today at %@";
 "Time.YesterdayAt" = "yesterday at %@";
@@ -6888,6 +6891,7 @@ Sorry for the inconvenience.";
 "MemberRequests.DescriptionGroup" = "Some [additional links]() are set up to accept requests to join the group.";
 "MemberRequests.DescriptionChannel" = "Some [additional links]() are set up to accept requests to join the channel.";
 
+"MemberRequests.SearchPlaceholder" = "Search Join Requests";
 "MemberRequests.PeopleRequested_1" = "%@ requested to join";
 "MemberRequests.PeopleRequested_2" = "%@ requested to join";
 "MemberRequests.PeopleRequested_3_10" = "%@ requested to join";
@@ -6927,7 +6931,7 @@ Sorry for the inconvenience.";
 "MemberRequests.RequestToJoinSentDescriptionGroup" = "You will be added to the group once it admins approve your request.";
 "MemberRequests.RequestToJoinSentDescriptionChannel" = "You will be added to the channel once it admins approve your request.";
 
-"Notification.JoinedChatByRequestYou" = "Your request to join the channel was approved";
+"Notification.JoinedChannelByRequestYou" = "Your request to join the channel was approved";
 "Notification.JoinedGroupByRequestYou" = "Your request to join the group was approved";
 "Notification.JoinedGroupByRequest" = "%@ was accepted to the group chat";
 
@@ -6976,6 +6980,10 @@ Sorry for the inconvenience.";
 "Notifications.GroupChats" = "Group Chats";
 "Notifications.Channels" = "Channels";
 
+"Notifications.PrivateChatsTitle" = "Private Chats";
+"Notifications.GroupChatsTitle" = "Group Chats";
+"Notifications.ChannelsTitle" = "Channels";
+
 "Notifications.CategoryExceptions_0" = "%@ exceptions";
 "Notifications.CategoryExceptions_1" = "%@ exception";
 "Notifications.CategoryExceptions_2" = "%@ exceptions";
@@ -6985,11 +6993,15 @@ Sorry for the inconvenience.";
 
 "Notifications.DeleteAllExceptions" = "Delete All Exceptions";
 
+"Notifications.Options" = "Options";
+
 "Notifications.On" = "On";
 "Notifications.Off" = "Off";
 
 "AuthSessions.View.Browser" = "Browser";
 "AuthSessions.View.Device" = "Device";
+"AuthSessions.View.Application" = "Application";
+"AuthSessions.View.OS" = "Operating System";
 "AuthSessions.View.Location" = "Location";
 "AuthSessions.View.IP" = "IP Address";
 "AuthSessions.View.TerminateSession" = "Terminate Session";
@@ -7032,3 +7044,5 @@ Sorry for the inconvenience.";
 "Themes.BuildOwn" = "Build Your Own Theme";
 "Themes.EditCurrentTheme" = "Edit Current Theme";
 "Themes.CreateNewTheme" = "Create a New Theme";
+
+"Chat.JumpToDate" = "Jump to Date";

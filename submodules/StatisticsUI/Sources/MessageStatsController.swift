@@ -263,7 +263,7 @@ public func messageStatsController(context: AccountContext, messageId: MessageId
     }
     navigateToMessageImpl = { [weak controller] messageId in
         if let navigationController = controller?.navigationController as? NavigationController {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(messageId.peerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
         }
     }
     return controller

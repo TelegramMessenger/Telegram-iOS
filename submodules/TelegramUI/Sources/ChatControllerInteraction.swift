@@ -87,7 +87,7 @@ public final class ChatControllerInteraction {
     let openSearch: () -> Void
     let setupReply: (MessageId) -> Void
     let canSetupReply: (Message) -> ChatControllerInteractionSwipeAction
-    let navigateToFirstDateMessage: (Int32) -> Void
+    let navigateToFirstDateMessage: (Int32, Bool) -> Void
     let requestRedeliveryOfFailedMessages: (MessageId) -> Void
     let addContact: (String) -> Void
     let rateCall: (Message, CallId, Bool) -> Void
@@ -181,7 +181,7 @@ public final class ChatControllerInteraction {
         openSearch: @escaping () -> Void,
         setupReply: @escaping (MessageId) -> Void,
         canSetupReply: @escaping (Message) -> ChatControllerInteractionSwipeAction,
-        navigateToFirstDateMessage: @escaping(Int32) ->Void,
+        navigateToFirstDateMessage: @escaping(Int32, Bool) ->Void,
         requestRedeliveryOfFailedMessages: @escaping (MessageId) -> Void,
         addContact: @escaping (String) -> Void,
         rateCall: @escaping (Message, CallId, Bool) -> Void,
@@ -315,7 +315,7 @@ public final class ChatControllerInteraction {
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
-        }, navigateToFirstDateMessage: { _ in
+        }, navigateToFirstDateMessage: { _, _ in
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
         }, rateCall: { _, _, _ in

@@ -17,6 +17,10 @@ final class MutableCachedPeerDataView: MutablePostboxView {
             return false
         }
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return CachedPeerDataView(self)

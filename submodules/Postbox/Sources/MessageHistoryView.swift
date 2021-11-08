@@ -739,7 +739,7 @@ final class MutableMessageHistoryView {
                 }
             case let .peerChatState(peerId, _):
                 if transaction.currentUpdatedPeerChatStates.contains(peerId) {
-                    updated[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId) as? PeerChatState)
+                    updated[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId)?.getLegacy() as? PeerChatState)
                     hasChanges = true
                 }
             case .totalUnreadState:

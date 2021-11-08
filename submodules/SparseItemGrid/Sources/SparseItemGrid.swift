@@ -653,39 +653,66 @@ public final class SparseItemGrid: ASDisplayNode {
             return nil
         }
 
-        func anchorItem(at point: CGPoint) -> Item? {
+        func anchorItem(at point: CGPoint, orLower: Bool = false) -> (Item, Int)? {
             guard let items = self.items, !items.items.isEmpty, let layout = self.layout else {
                 return nil
             }
 
             if layout.containerLayout.lockScrollingAtTop {
                 if let item = items.item(at: 0) {
-                    return item
+                    return (item, 0)
                 }
             }
 
             let localPoint = self.scrollView.convert(point, from: self.view)
 
-            var closestItem: (CGFloat, AnyHashable)?
+            var closestItem: (CGFloat, Int, AnyHashable)?
             for (id, visibleItem) in self.visibleItems {
                 let itemCenter = visibleItem.frame.center
+                if visibleItem.frame.minY >= localPoint.y || visibleItem.frame.maxY < localPoint.y {
+                    continue
+                }
+                let columnIndex = Int(floor(visibleItem.frame.minX / layout.itemSize.width))
                 let distanceX = itemCenter.x - localPoint.x
+                if orLower {
+                    if distanceX > 0.0 {
+                        continue
+                    }
+                }
                 let distanceY = itemCenter.y - localPoint.y
                 let distance2 = distanceX * distanceX + distanceY * distanceY
 
-                if let (currentDistance2, _) = closestItem {
+                if let (currentDistance2, _, _) = closestItem {
                     if distance2 < currentDistance2 {
-                        closestItem = (distance2, id)
+                        closestItem = (distance2, columnIndex, id)
                     }
                 } else {
-                    closestItem = (distance2, id)
+                    closestItem = (distance2, columnIndex, id)
                 }
             }
 
-            if let (_, id) = closestItem {
+            if closestItem == nil {
+                for (id, visibleItem) in self.visibleItems {
+                    let itemCenter = visibleItem.frame.center
+                    let columnIndex = Int(floor(visibleItem.frame.minX / layout.itemSize.width))
+                    let distanceX = itemCenter.x - localPoint.x
+                    let distanceY = itemCenter.y - localPoint.y
+                    let distance2 = distanceX * distanceX + distanceY * distanceY
+
+                    if let (currentDistance2, _, _) = closestItem {
+                        if distance2 < currentDistance2 {
+                            closestItem = (distance2, columnIndex, id)
+                        }
+                    } else {
+                        closestItem = (distance2, columnIndex, id)
+                    }
+                }
+            }
+
+            if let (_, columnIndex, id) = closestItem {
                 for item in items.items {
                     if item.id == id {
-                        return item
+                        return (item, columnIndex)
                     }
                 }
                 return nil
@@ -1015,6 +1042,10 @@ public final class SparseItemGrid: ASDisplayNode {
                     guard let strongSelf = self else {
                         return nil
                     }
+                    if let decelerationAnimator = strongSelf.decelerationAnimator {
+                        strongSelf.decelerationAnimator = nil
+                        decelerationAnimator.invalidate()
+                    }
                     strongSelf.items?.itemBinding.onBeginFastScrolling()
                     return strongSelf.scrollView
                 }
@@ -1079,6 +1110,7 @@ public final class SparseItemGrid: ASDisplayNode {
         let interactiveState: InteractiveState?
         let layout: ContainerLayout
         let anchorItemIndex: Int
+        let transitionAnchorPoint: CGPoint
         let fromViewport: Viewport
         let toViewport: Viewport
 
@@ -1090,10 +1122,11 @@ public final class SparseItemGrid: ASDisplayNode {
 
         let coveringOffsetUpdated: (ContainedViewLayoutTransition) -> Void
 
-        init(interactiveState: InteractiveState?, layout: ContainerLayout, anchorItemIndex: Int, from fromViewport: Viewport, to toViewport: Viewport, coveringOffsetUpdated: @escaping (ContainedViewLayoutTransition) -> Void) {
+        init(interactiveState: InteractiveState?, layout: ContainerLayout, anchorItemIndex: Int, transitionAnchorPoint: CGPoint, from fromViewport: Viewport, to toViewport: Viewport, coveringOffsetUpdated: @escaping (ContainedViewLayoutTransition) -> Void) {
             self.interactiveState = interactiveState
             self.layout = layout
             self.anchorItemIndex = anchorItemIndex
+            self.transitionAnchorPoint = transitionAnchorPoint
             self.fromViewport = fromViewport
             self.toViewport = toViewport
             self.coveringOffsetUpdated = coveringOffsetUpdated
@@ -1115,34 +1148,74 @@ public final class SparseItemGrid: ASDisplayNode {
             let previousProgress = self.currentProgress
             self.currentProgress = progress
 
-            let fixedAnchorPoint = CGPoint(x: fromAnchorFrame.minX + 1.0, y: fromAnchorFrame.minY + 1.0)
+            var fromAnchorPoint = CGPoint()
+            var toAnchorPoint = CGPoint()
+            var fromDeltaOffset = CGPoint()
+            var fromScale: CGFloat = 1.0
+            var toScale: CGFloat = 1.0
 
-            if let fromItem = self.fromViewport.anchorItem(at: fixedAnchorPoint), let fromFrame = self.fromViewport.frameForItem(at: fromItem.index) {
-                fromAnchorFrame.origin.y = fromFrame.midY
-                fromAnchorFrame.origin.x = fromFrame.midX
-                fromAnchorFrame.size.width = 0.0
+            var searchOffset: CGFloat = 0.0
+
+            while true {
+                //let fixedAnchorPoint = CGPoint(x: fromAnchorFrame.midX, y: fromAnchorFrame.midY)
+                var fixedAnchorPoint = self.transitionAnchorPoint
+                if fixedAnchorPoint.x < self.layout.size.width / 2.0 {
+                    fixedAnchorPoint.x = 0.0
+                } else {
+                    fixedAnchorPoint.x = self.layout.size.width
+                }
+
+                if let fromItem = self.fromViewport.anchorItem(at: fixedAnchorPoint), let fromFrame = self.fromViewport.frameForItem(at: fromItem.0.index) {
+                    print("fromColumn: \(fromItem.1)")
+                    fromAnchorFrame = fromFrame
+
+                    fromAnchorFrame.origin.y = fromFrame.midY
+                    fromAnchorFrame.origin.x = fromFrame.midX
+                    fromAnchorFrame.size.width = 0.0
+                } else {
+                    print("find item1")
+                }
+
+                if let toItem = self.toViewport.anchorItem(at: fixedAnchorPoint.offsetBy(dx: searchOffset, dy: 0.0)), let toFrame = self.toViewport.frameForItem(at: toItem.0.index) {
+                    toAnchorFrame = toFrame
+                    print("toColumn: \(toItem.1)")
+
+                    toAnchorFrame.origin.y = toFrame.midY
+                    toAnchorFrame.origin.x = toFrame.midX
+                    toAnchorFrame.size.width = 0.0
+                } else {
+                    print("find item2")
+                }
+
+                fromAnchorPoint = CGPoint(x: fromAnchorFrame.midX, y: fromAnchorFrame.midY)
+                toAnchorPoint = CGPoint(x: toAnchorFrame.midX, y: toAnchorFrame.midY)
+
+                let initialFromViewportScale: CGFloat = 1.0
+                let targetFromViewportScale: CGFloat = toAnchorFrame.height / fromAnchorFrame.height
+
+                let initialToViewportScale: CGFloat = fromAnchorFrame.height / toAnchorFrame.height
+                let targetToViewportScale: CGFloat = 1.0
+
+                fromScale = initialFromViewportScale * (1.0 - progress) + targetFromViewportScale * progress
+                toScale = initialToViewportScale * (1.0 - progress) + targetToViewportScale * progress
+
+                fromDeltaOffset = CGPoint(x: toAnchorPoint.x - fromAnchorPoint.x, y: toAnchorPoint.y - fromAnchorPoint.y)
+
+                if fromDeltaOffset.x > 0.0 && abs(searchOffset) < 1000.0 {
+                    searchOffset += -4.0
+                    //continue
+                    break
+                } else {
+                    if fromDeltaOffset.x <= 0.0 {
+                        print("fail")
+                    }
+                    break
+                }
             }
 
-            if let toItem = self.toViewport.anchorItem(at: fixedAnchorPoint), let toFrame = self.toViewport.frameForItem(at: toItem.index) {
-                toAnchorFrame.origin.y = toFrame.midY
-                toAnchorFrame.origin.x = toFrame.midX
-                toAnchorFrame.size.width = 0.0
-            }
-
-            let fromAnchorPoint = CGPoint(x: fromAnchorFrame.midX, y: fromAnchorFrame.midY)
-            let toAnchorPoint = CGPoint(x: toAnchorFrame.midX, y: toAnchorFrame.midY)
-
-            let initialFromViewportScale: CGFloat = 1.0
-            let targetFromViewportScale: CGFloat = toAnchorFrame.height / fromAnchorFrame.height
-
-            let initialToViewportScale: CGFloat = fromAnchorFrame.height / toAnchorFrame.height
-            let targetToViewportScale: CGFloat = 1.0
-
-            let fromScale = initialFromViewportScale * (1.0 - progress) + targetFromViewportScale * progress
-            let toScale = initialToViewportScale * (1.0 - progress) + targetToViewportScale * progress
-
-            let fromDeltaOffset = CGPoint(x: toAnchorPoint.x - fromAnchorPoint.x, y: toAnchorPoint.y - fromAnchorPoint.y)
             let toDeltaOffset = CGPoint(x: -fromDeltaOffset.x, y: -fromDeltaOffset.y)
+
+            print("direction: \(fromDeltaOffset.x < 0.0)")
 
             let fromOffset = CGPoint(x: 0.0 * (1.0 - progress) + fromDeltaOffset.x * progress, y: 0.0 * (1.0 - progress) + fromDeltaOffset.y * progress)
             let toOffset = CGPoint(x: toDeltaOffset.x * (1.0 - progress) + 0.0 * progress, y: toDeltaOffset.y * (1.0 - progress) + 0.0 * progress)
@@ -1291,18 +1364,18 @@ public final class SparseItemGrid: ASDisplayNode {
                     if isZoomingIn {
                         if progress > 1.0 {
                             nextZoomLevel = zoomLevels.increment
-                            nextScale = startScale * 1.5
+                            nextScale = startScale * 1.25
                         } else {
                             nextZoomLevel = zoomLevels.decrement
-                            nextScale = startScale * 0.5
+                            nextScale = startScale * 0.75
                         }
                     } else {
                         if progress > 1.0 {
                             nextZoomLevel = zoomLevels.decrement
-                            nextScale = startScale * 0.5
+                            nextScale = startScale * 0.75
                         } else {
                             nextZoomLevel = zoomLevels.increment
-                            nextScale = startScale * 1.5
+                            nextScale = startScale * 1.25
                         }
                     }
 
@@ -1310,7 +1383,7 @@ public final class SparseItemGrid: ASDisplayNode {
 
                     let nextAnchorItemIndex: Int
                     if let anchorItem = boundaryViewport.anchorItem(at: anchorLocation) {
-                        nextAnchorItemIndex = anchorItem.index
+                        nextAnchorItemIndex = anchorItem.0.index
                     } else {
                         nextAnchorItemIndex = currentViewportTransition.anchorItemIndex
                     }
@@ -1335,7 +1408,7 @@ public final class SparseItemGrid: ASDisplayNode {
                         self.currentViewportTransition?.removeFromSupernode()
 
                         let nextInteractiveState = ViewportTransition.InteractiveState(anchorLocation: anchorLocation, initialScale: startScale, targetScale: nextScale)
-                        let currentViewportTransition = ViewportTransition(interactiveState: nextInteractiveState, layout: containerLayout, anchorItemIndex: currentViewportTransition.anchorItemIndex, from: boundaryViewport, to: nextViewport, coveringOffsetUpdated: { [weak self] transition in
+                        let currentViewportTransition = ViewportTransition(interactiveState: nextInteractiveState, layout: containerLayout, anchorItemIndex: currentViewportTransition.anchorItemIndex, transitionAnchorPoint: currentViewportTransition.transitionAnchorPoint, from: boundaryViewport, to: nextViewport, coveringOffsetUpdated: { [weak self] transition in
                             self?.transitionCoveringOffsetUpdated(transition: transition)
                         })
                         currentViewportTransition.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
@@ -1361,14 +1434,14 @@ public final class SparseItemGrid: ASDisplayNode {
                 if let previousViewport = self.currentViewport, let nextZoomLevel = nextZoomLevel {
                     let anchorLocation = recognizer.location(in: self.view)
 
-                    let interactiveState = ViewportTransition.InteractiveState(anchorLocation: anchorLocation, initialScale: 1.0, targetScale: scale > 1.0 ? scale * 1.5 : scale * 0.5)
+                    let interactiveState = ViewportTransition.InteractiveState(anchorLocation: anchorLocation, initialScale: 1.0, targetScale: scale > 1.0 ? scale * 1.25 : scale * 0.75)
 
                     var progress = (scale - interactiveState.initialScale) / (interactiveState.targetScale - interactiveState.initialScale)
                     progress = max(0.0, min(1.0, progress))
 
-                    if let anchorItem = previousViewport.anchorItem(at: anchorLocation), let anchorItemFrame = previousViewport.frameForItem(at: anchorItem.index) {
-                        let restoreScrollPosition: (y: CGFloat, index: Int)? = (anchorItemFrame.minY, anchorItem.index)
-                        let anchorItemIndex = anchorItem.index
+                    if let anchorItem = previousViewport.anchorItem(at: anchorLocation), let anchorItemFrame = previousViewport.frameForItem(at: anchorItem.0.index) {
+                        let restoreScrollPosition: (y: CGFloat, index: Int)? = (anchorItemFrame.minY, anchorItem.0.index)
+                        let anchorItemIndex = anchorItem.0.index
 
                         let nextViewport = Viewport(theme: self.theme, zoomLevel: nextZoomLevel, maybeLoadHoleAnchor: { [weak self] holeAnchor, location in
                             guard let strongSelf = self else {
@@ -1382,7 +1455,7 @@ public final class SparseItemGrid: ASDisplayNode {
                         nextViewport.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
                         nextViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: restoreScrollPosition, synchronous: .semi)
 
-                        let currentViewportTransition = ViewportTransition(interactiveState: interactiveState, layout: containerLayout, anchorItemIndex: anchorItemIndex, from: previousViewport, to: nextViewport, coveringOffsetUpdated: { [weak self] transition in
+                        let currentViewportTransition = ViewportTransition(interactiveState: interactiveState, layout: containerLayout, anchorItemIndex: anchorItemIndex, transitionAnchorPoint: anchorLocation, from: previousViewport, to: nextViewport, coveringOffsetUpdated: { [weak self] transition in
                             self?.transitionCoveringOffsetUpdated(transition: transition)
                         })
                         currentViewportTransition.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
@@ -1531,15 +1604,15 @@ public final class SparseItemGrid: ASDisplayNode {
 
         if let containerLayout = self.containerLayout, let items = self.items {
             let anchorLocation = CGPoint(x: 0.0, y: 10.0)
-            if let anchorItem = previousViewport.anchorItem(at: anchorLocation), let anchorItemFrame = previousViewport.frameForItem(at: anchorItem.index) {
-                let restoreScrollPosition: (y: CGFloat, index: Int)? = (anchorItemFrame.minY, anchorItem.index)
-                let anchorItemIndex = anchorItem.index
+            if let anchorItem = previousViewport.anchorItem(at: anchorLocation), let anchorItemFrame = previousViewport.frameForItem(at: anchorItem.0.index) {
+                let restoreScrollPosition: (y: CGFloat, index: Int)? = (anchorItemFrame.minY, anchorItem.0.index)
+                let anchorItemIndex = anchorItem.0.index
 
                 self.scrollingArea.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
                 currentViewport.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
                 currentViewport.update(containerLayout: containerLayout, items: items, restoreScrollPosition: restoreScrollPosition, synchronous: .semi)
 
-                let currentViewportTransition = ViewportTransition(interactiveState: nil, layout: containerLayout, anchorItemIndex: anchorItemIndex, from: previousViewport, to: currentViewport, coveringOffsetUpdated: { [weak self] transition in
+                let currentViewportTransition = ViewportTransition(interactiveState: nil, layout: containerLayout, anchorItemIndex: anchorItemIndex, transitionAnchorPoint: anchorLocation, from: previousViewport, to: currentViewport, coveringOffsetUpdated: { [weak self] transition in
                     self?.transitionCoveringOffsetUpdated(transition: transition)
                 })
                 currentViewportTransition.frame = CGRect(origin: CGPoint(), size: containerLayout.size)

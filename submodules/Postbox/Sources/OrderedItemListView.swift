@@ -51,6 +51,10 @@ final class MutableOrderedItemListView: MutablePostboxView {
         
         return updated
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return OrderedItemListView(self)

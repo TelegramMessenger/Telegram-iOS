@@ -454,4 +454,8 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     func notifyPlaybackControlsHidden(_ hidden: Bool) {
     }
+
+    func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
+        self.playerNode.setCanPlaybackWithoutHierarchy(canPlaybackWithoutHierarchy)
+    }
 }

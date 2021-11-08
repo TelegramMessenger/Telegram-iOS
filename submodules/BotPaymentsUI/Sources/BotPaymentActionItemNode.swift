@@ -63,20 +63,20 @@ final class BotPaymentActionItemNode: BotPaymentItemNode {
         return 0.0
     }
     
-    override func layoutContents(theme: PresentationTheme, width: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func layoutContents(theme: PresentationTheme, width: CGFloat, sideInset: CGFloat, measuredInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         if self.theme !== theme {
             self.theme = theme
             self.highlightedBackgroundNode.backgroundColor = theme.list.itemHighlightedBackgroundColor
             self.titleNode.attributedText = NSAttributedString(string: self.title, font: titleFont, textColor: theme.list.itemAccentColor)
         }
         
-        self.buttonNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 44.0))
+        self.buttonNode.frame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: width - sideInset * 2.0, height: 44.0))
         transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: 44.0 + UIScreenPixel)))
         
         let leftInset: CGFloat = 16.0
         
-        let titleSize = self.titleNode.measure(CGSize(width: width - leftInset - 32.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleSize))
+        let titleSize = self.titleNode.measure(CGSize(width: width - leftInset - 32.0 - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: 11.0), size: titleSize))
         
         return 44.0
     }

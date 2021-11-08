@@ -491,6 +491,7 @@ private func availablePaymentMethods(form: BotPaymentForm, current: BotCheckoutP
 
 final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthorizationViewControllerDelegate {
     private weak var controller: BotCheckoutController?
+    private let navigationBar: NavigationBar
     private let context: AccountContext
     private let messageId: EngineMessage.Id
     private let present: (ViewController, Any?) -> Void
@@ -528,6 +529,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     
     init(controller: BotCheckoutController?, navigationBar: NavigationBar, context: AccountContext, invoice: TelegramMediaInvoice, messageId: EngineMessage.Id, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, EngineMessage.Id?) -> Void) {
         self.controller = controller
+        self.navigationBar = navigationBar
         self.context = context
         self.messageId = messageId
         self.present = present

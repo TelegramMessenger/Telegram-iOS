@@ -981,15 +981,7 @@ public final class InviteLinkViewController: ViewController {
             
             self.titleNode.attributedText = NSAttributedString(string: titleText, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
             self.subtitleNode.attributedText = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: subtitleColor)
-                        
-            let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: layout.size.width, height: headerHeight))
-            let subtitleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - subtitleSize.width) / 2.0), y: 30.0 - UIScreenPixel), size: subtitleSize)
-            transition.updateFrame(node: self.subtitleNode, frame: subtitleFrame)
-            
-            let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width, height: headerHeight))
-            let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: subtitleSize.height.isZero ? 18.0 : 10.0 + UIScreenPixel), size: titleSize)
-            transition.updateFrame(node: self.titleNode, frame: titleFrame)
-            
+                                                
             let editSize = self.editButton.measure(CGSize(width: layout.size.width, height: headerHeight))
             let editFrame = CGRect(origin: CGPoint(x: 16.0 + layout.safeInsets.left, y: 18.0), size: editSize)
             transition.updateFrame(node: self.editButton, frame: editFrame)
@@ -997,6 +989,14 @@ public final class InviteLinkViewController: ViewController {
             let doneSize = self.doneButton.measure(CGSize(width: layout.size.width, height: headerHeight))
             let doneFrame = CGRect(origin: CGPoint(x: layout.size.width - doneSize.width - 16.0 - layout.safeInsets.right, y: 18.0), size: doneSize)
             transition.updateFrame(node: self.doneButton, frame: doneFrame)
+            
+            let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: layout.size.width - editSize.width - doneSize.width - 20.0, height: headerHeight))
+            let subtitleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - subtitleSize.width) / 2.0), y: 30.0 - UIScreenPixel), size: subtitleSize)
+            transition.updateFrame(node: self.subtitleNode, frame: subtitleFrame)
+            
+            let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - editSize.width - doneSize.width - 20.0, height: headerHeight))
+            let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: subtitleSize.height.isZero ? 18.0 : 10.0 + UIScreenPixel), size: titleSize)
+            transition.updateFrame(node: self.titleNode, frame: titleFrame)
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

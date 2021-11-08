@@ -120,22 +120,51 @@ private final class MediaPreviewView: UIView {
     }
 }
 
-private func dayName(index: Int, strings: PresentationStrings) -> String {
+private func normalizeDayIndex(index: Int) -> Int {
     switch index {
-    case 0:
-        return strings.Calendar_ShortMonday
     case 1:
-        return strings.Calendar_ShortTuesday
+        return 6
     case 2:
-        return strings.Calendar_ShortWednesday
+        return 0
     case 3:
-        return strings.Calendar_ShortThursday
+        return 1
     case 4:
-        return strings.Calendar_ShortFriday
+        return 2
     case 5:
-        return strings.Calendar_ShortSaturday
+        return 3
     case 6:
-        return strings.Calendar_ShortSunday
+        return 4
+    case 7:
+        return 5
+    default:
+        preconditionFailure()
+    }
+}
+
+private func gridDayOffset(firstDayOfWeek: Int, firstWeekdayOfMonth: Int) -> Int {
+    let monthStartsWithDay = normalizeDayIndex(index: firstWeekdayOfMonth)
+    let weekStartsWithDay = normalizeDayIndex(index: firstDayOfWeek)
+
+    return (monthStartsWithDay - weekStartsWithDay + 7) % 7
+}
+
+private func gridDayName(index: Int, firstDayOfWeek: Int, strings: PresentationStrings) -> String {
+    let adjustedIndex = (index + firstDayOfWeek) % 7
+    switch adjustedIndex {
+    case 1:
+        return strings.Calendar_ShortSun
+    case 2:
+        return strings.Calendar_ShortMon
+    case 3:
+        return strings.Calendar_ShortTue
+    case 4:
+        return strings.Calendar_ShortWed
+    case 5:
+        return strings.Calendar_ShortThu
+    case 6:
+        return strings.Calendar_ShortFri
+    case 0:
+        return strings.Calendar_ShortSat
     default:
         return ""
     }
@@ -335,6 +364,7 @@ private final class DayComponent: Component {
     let isEnabled: Bool
     let theme: PresentationTheme
     let context: AccountContext
+    let timestamp: Int32
     let media: DayMedia?
     let selection: DaySelection
     let isSelecting: Bool
@@ -346,6 +376,7 @@ private final class DayComponent: Component {
         isEnabled: Bool,
         theme: PresentationTheme,
         context: AccountContext,
+        timestamp: Int32,
         media: DayMedia?,
         selection: DaySelection,
         isSelecting: Bool,
@@ -356,6 +387,7 @@ private final class DayComponent: Component {
         self.isEnabled = isEnabled
         self.theme = theme
         self.context = context
+        self.timestamp = timestamp
         self.media = media
         self.selection = selection
         self.isSelecting = isSelecting
@@ -381,6 +413,9 @@ private final class DayComponent: Component {
         if lhs.media != rhs.media {
             return false
         }
+        if lhs.timestamp != rhs.timestamp {
+            return false
+        }
         if lhs.selection != rhs.selection {
             return false
         }
@@ -401,6 +436,7 @@ private final class DayComponent: Component {
         private var action: (() -> Void)?
         private var currentMedia: DayMedia?
 
+        private(set) var timestamp: Int32?
         private(set) var index: MessageIndex?
         private var isHighlightingEnabled: Bool = false
 
@@ -444,6 +480,7 @@ private final class DayComponent: Component {
             let isFirstTime = self.action == nil
 
             self.action = component.action
+            self.timestamp = component.timestamp
             self.index = component.media?.message.index
             self.isHighlightingEnabled = component.isEnabled && component.media != nil && !component.isSelecting
 
@@ -670,7 +707,7 @@ private final class MonthComponent: CombinedComponent {
             let updatedWeekdayTitles = (0 ..< 7).map { index in
                 return weekdayTitles[index].update(
                     component: AnyComponent(Text(
-                        text: dayName(index: index, strings: context.component.strings),
+                        text: gridDayName(index: index, firstDayOfWeek: context.component.model.firstWeekday, strings: context.component.strings),
                         font: Font.regular(10.0),
                         color: context.component.foregroundColor
                     )),
@@ -716,6 +753,7 @@ private final class MonthComponent: CombinedComponent {
                         isEnabled: isEnabled,
                         theme: context.component.theme,
                         context: context.component.context,
+                        timestamp: dayTimestamp,
                         media: context.component.model.mediaByDay[index],
                         selection: daySelection,
                         isSelecting: context.component.selectedDays != nil,
@@ -761,7 +799,7 @@ private final class MonthComponent: CombinedComponent {
             var selectionsByLine: [Int: LineSelection] = [:]
 
             for i in 0 ..< updatedDays.count {
-                let gridIndex = (context.component.model.firstDayWeekday - 1) + i
+                let gridIndex = gridDayOffset(firstDayOfWeek: context.component.model.firstWeekday, firstWeekdayOfMonth: context.component.model.firstDayWeekday) + i
                 let rowIndex = gridIndex % 7
                 let lineIndex = gridIndex / 7
 
@@ -828,7 +866,7 @@ private final class MonthComponent: CombinedComponent {
             }
 
             for i in 0 ..< updatedDays.count {
-                let gridIndex = (context.component.model.firstDayWeekday - 1) + i
+                let gridIndex = gridDayOffset(firstDayOfWeek: context.component.model.firstWeekday, firstWeekdayOfMonth: context.component.model.firstDayWeekday) + i
                 let rowIndex = gridIndex % 7
                 let lineIndex = gridIndex / 7
 
@@ -865,6 +903,7 @@ private struct MonthModel: Equatable {
     var numberOfDays: Int
     var firstDay: Date
     var firstDayWeekday: Int
+    var firstWeekday: Int
     var currentYear: Int
     var currentMonth: Int
     var currentDayOfMonth: Int
@@ -876,6 +915,7 @@ private struct MonthModel: Equatable {
         numberOfDays: Int,
         firstDay: Date,
         firstDayWeekday: Int,
+        firstWeekday: Int,
         currentYear: Int,
         currentMonth: Int,
         currentDayOfMonth: Int,
@@ -886,6 +926,7 @@ private struct MonthModel: Equatable {
         self.numberOfDays = numberOfDays
         self.firstDay = firstDay
         self.firstDayWeekday = firstDayWeekday
+        self.firstWeekday = firstWeekday
         self.currentYear = currentYear
         self.currentMonth = currentMonth
         self.currentDayOfMonth = currentDayOfMonth
@@ -901,6 +942,7 @@ private func monthMetadata(calendar: Calendar, for baseDate: Date, currentYear: 
     let year = calendar.component(.year, from: firstDayOfMonth)
     let month = calendar.component(.month, from: firstDayOfMonth)
     let firstDayWeekday = calendar.component(.weekday, from: firstDayOfMonth)
+    let firstWeekday = calendar.firstWeekday
 
     return MonthModel(
         year: year,
@@ -908,6 +950,7 @@ private func monthMetadata(calendar: Calendar, for baseDate: Date, currentYear: 
         numberOfDays: numberOfDaysInMonth,
         firstDay: firstDayOfMonth,
         firstDayWeekday: firstDayWeekday,
+        firstWeekday: firstWeekday,
         currentYear: currentYear,
         currentMonth: currentMonth,
         currentDayOfMonth: currentDayOfMonth,
@@ -925,8 +968,10 @@ public final class CalendarMessageScreen: ViewController {
         private let context: AccountContext
         private let peerId: PeerId
         private let initialTimestamp: Int32
-        private let navigateToOffset: (Int) -> Void
-        private let previewDay: (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void
+        private let enableMessageRangeDeletion: Bool
+        private let canNavigateToEmptyDays: Bool
+        private let navigateToOffset: (Int, Int32) -> Void
+        private let previewDay: (Int32, MessageIndex?, ASDisplayNode, CGRect, ContextGesture) -> Void
 
         private var presentationData: PresentationData
         private var scrollView: Scroller
@@ -954,11 +999,23 @@ public final class CalendarMessageScreen: ViewController {
 
         private var ignoreContentOffset: Bool = false
 
-        init(controller: CalendarMessageScreen, context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToOffset: @escaping (Int) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
+        init(
+            controller: CalendarMessageScreen,
+            context: AccountContext,
+            peerId: PeerId,
+            calendarSource: SparseMessageCalendar,
+            initialTimestamp: Int32,
+            enableMessageRangeDeletion: Bool,
+            canNavigateToEmptyDays: Bool,
+            navigateToOffset: @escaping (Int, Int32) -> Void,
+            previewDay: @escaping (Int32, MessageIndex?, ASDisplayNode, CGRect, ContextGesture) -> Void
+        ) {
             self.controller = controller
             self.context = context
             self.peerId = peerId
             self.initialTimestamp = initialTimestamp
+            self.enableMessageRangeDeletion = enableMessageRangeDeletion
+            self.canNavigateToEmptyDays = canNavigateToEmptyDays
             self.calendarSource = calendarSource
             self.navigateToOffset = navigateToOffset
             self.previewDay = previewDay
@@ -1052,12 +1109,15 @@ public final class CalendarMessageScreen: ViewController {
                 currentGestureDayView.isUserInteractionEnabled = false
                 currentGestureDayView.isUserInteractionEnabled = true
 
-                if let index = currentGestureDayView.index {
-                    strongSelf.previewDay(index, strongSelf, currentGestureDayView.convert(currentGestureDayView.bounds, to: strongSelf.view), gesture)
+                if currentGestureDayView.index == nil && !strongSelf.canNavigateToEmptyDays {
+                    return
+                }
+                if let timestamp = currentGestureDayView.timestamp {
+                    strongSelf.previewDay(timestamp, currentGestureDayView.index, strongSelf, currentGestureDayView.convert(currentGestureDayView.bounds, to: strongSelf.view), gesture)
                 }
             }
 
-            let calendar = Calendar(identifier: .gregorian)
+            let calendar = Calendar.current
 
             let baseDate = Date()
             let currentYear = calendar.component(.year, from: baseDate)
@@ -1138,6 +1198,21 @@ public final class CalendarMessageScreen: ViewController {
             if let (layout, navigationHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.5, curve: .spring))
             }
+        }
+
+        func selectDay(timestamp: Int32) {
+            self.selectionState = SelectionState(dayRange: timestamp ... timestamp)
+
+            self.contextGestureContainerNode.isGestureEnabled = self.selectionState == nil
+
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.5, curve: .spring))
+            }
+        }
+
+        func openClearHistory(timestamp: Int32) {
+            self.selectionState = SelectionState(dayRange: timestamp ... timestamp)
+            self.selectionToolbarActionSelected()
         }
 
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -1258,8 +1333,8 @@ public final class CalendarMessageScreen: ViewController {
                     let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
                     let nextDayTimestamp = dayTimestamp + 24 * 60 * 60
 
-                    let minDayTimestamp = dayTimestamp - 24 * 60 * 60
-                    let maxDayTimestamp = nextDayTimestamp - 24 * 60 * 60
+                    let minDayTimestamp = dayTimestamp
+                    let maxDayTimestamp = nextDayTimestamp
 
                     if dayRange.contains(dayTimestamp) {
                         if let currentMinTimestamp = minTimestamp {
@@ -1367,6 +1442,13 @@ public final class CalendarMessageScreen: ViewController {
                         return
                     }
                     let _ = strongSelf.calendarSource.removeMessagesInRange(minTimestamp: minTimestampValue, maxTimestamp: maxTimestampValue, type: type, completion: {
+                        Queue.mainQueue().async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+
+                            strongSelf.controller?.dismiss(completion: nil)
+                        }
                     })
                 }
 
@@ -1389,18 +1471,6 @@ public final class CalendarMessageScreen: ViewController {
                             actionSheet?.dismissAnimated()
 
                             beginClear(.forEveryone)
-
-                            /*guard let strongSelf = self else {
-                                return
-                            }
-
-                            strongSelf.controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationTitle, text: confirmationText, actions: [
-                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                                }),
-                                TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteForEveryoneConfirmationAction, action: {
-                                    beginClear(.forEveryone)
-                                })
-                            ], parseMarkdown: true), in: .window(.root))*/
                         }))
                     }
                     if let canClearForMyself = info.canClearForMyself {
@@ -1554,7 +1624,7 @@ public final class CalendarMessageScreen: ViewController {
                                     for day in 0 ..< month.numberOfDays {
                                         let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
                                         if dayTimestamp == timestamp {
-                                            if month.mediaByDay[day] != nil {
+                                            if month.mediaByDay[day] != nil || strongSelf.canNavigateToEmptyDays {
                                                 var offset = 0
                                                 for key in calendarState.messagesByDay.keys.sorted(by: { $0 > $1 }) {
                                                     if key == dayTimestamp {
@@ -1563,7 +1633,7 @@ public final class CalendarMessageScreen: ViewController {
                                                         offset += item.count
                                                     }
                                                 }
-                                                strongSelf.navigateToOffset(offset)
+                                                strongSelf.navigateToOffset(offset, dayTimestamp)
                                             }
 
                                             break outer
@@ -1675,16 +1745,29 @@ public final class CalendarMessageScreen: ViewController {
     private let peerId: PeerId
     private let calendarSource: SparseMessageCalendar
     private let initialTimestamp: Int32
-    private let navigateToDay: (CalendarMessageScreen, Int) -> Void
-    private let previewDay: (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void
+    private let enableMessageRangeDeletion: Bool
+    private let canNavigateToEmptyDays: Bool
+    private let navigateToDay: (CalendarMessageScreen, Int, Int32) -> Void
+    private let previewDay: (Int32, MessageIndex?, ASDisplayNode, CGRect, ContextGesture) -> Void
 
     private var presentationData: PresentationData
 
-    public init(context: AccountContext, peerId: PeerId, calendarSource: SparseMessageCalendar, initialTimestamp: Int32, navigateToDay: @escaping (CalendarMessageScreen, Int) -> Void, previewDay: @escaping (MessageIndex, ASDisplayNode, CGRect, ContextGesture) -> Void) {
+    public init(
+        context: AccountContext,
+        peerId: PeerId,
+        calendarSource: SparseMessageCalendar,
+        initialTimestamp: Int32,
+        enableMessageRangeDeletion: Bool,
+        canNavigateToEmptyDays: Bool,
+        navigateToDay: @escaping (CalendarMessageScreen, Int, Int32) -> Void,
+        previewDay: @escaping (Int32, MessageIndex?, ASDisplayNode, CGRect, ContextGesture) -> Void
+    ) {
         self.context = context
         self.peerId = peerId
         self.calendarSource = calendarSource
         self.initialTimestamp = initialTimestamp
+        self.enableMessageRangeDeletion = enableMessageRangeDeletion
+        self.canNavigateToEmptyDays = canNavigateToEmptyDays
         self.navigateToDay = navigateToDay
         self.previewDay = previewDay
 
@@ -1697,9 +1780,11 @@ public final class CalendarMessageScreen: ViewController {
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(dismissPressed)), animated: false)
         self.navigationItem.setTitle(self.presentationData.strings.MessageCalendar_Title, animated: false)
 
-        /*if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
-            self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.toggleSelectPressed)), animated: false)
-        }*/
+        if self.enableMessageRangeDeletion {
+            if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
+                self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.toggleSelectPressed)), animated: false)
+            }
+        }
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -1711,6 +1796,10 @@ public final class CalendarMessageScreen: ViewController {
     }
 
     @objc fileprivate func toggleSelectPressed() {
+        if !self.enableMessageRangeDeletion {
+            return
+        }
+
         self.node.toggleSelectionMode()
 
         if self.node.selectionState != nil {
@@ -1720,13 +1809,35 @@ public final class CalendarMessageScreen: ViewController {
         }
     }
 
+    public func selectDay(timestamp: Int32) {
+        self.node.selectDay(timestamp: timestamp)
+
+        if self.node.selectionState != nil {
+            self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.toggleSelectPressed)), animated: true)
+        }
+    }
+
+    public func openClearHistory(timestamp: Int32) {
+        self.node.openClearHistory(timestamp: timestamp)
+    }
+
     override public func loadDisplayNode() {
-        self.displayNode = Node(controller: self, context: self.context, peerId: self.peerId, calendarSource: self.calendarSource, initialTimestamp: self.initialTimestamp, navigateToOffset: { [weak self] index in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.navigateToDay(strongSelf, index)
-        }, previewDay: self.previewDay)
+        self.displayNode = Node(
+            controller: self,
+            context: self.context,
+            peerId: self.peerId,
+            calendarSource: self.calendarSource,
+            initialTimestamp: self.initialTimestamp,
+            enableMessageRangeDeletion: self.enableMessageRangeDeletion,
+            canNavigateToEmptyDays: self.canNavigateToEmptyDays,
+            navigateToOffset: { [weak self] index, timestamp in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.navigateToDay(strongSelf, index, timestamp)
+            },
+            previewDay: self.previewDay
+        )
 
         self.displayNodeDidLoad()
     }

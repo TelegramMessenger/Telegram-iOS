@@ -29,6 +29,42 @@ final class MutableTopChatMessageView: MutablePostboxView {
         
         return updated
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        /*var messages: [PeerId: Message] = [:]
+
+        for peerId in self.peerIds {
+            if let index = postbox.chatListIndexTable.get(peerId: peerId).topMessageIndex {
+                messages[peerId] = postbox.getMessage(index.id)
+            }
+        }
+
+        var updated = false
+
+        if self.messages.count != messages.count {
+            updated = true
+        } else {
+            for (key, value) in self.messages {
+                if let other = messages[key] {
+                    if other.stableId != value.stableId || other.stableVersion != value.stableVersion {
+                        updated = true
+                        break
+                    }
+                } else {
+                    updated = true
+                    break
+                }
+            }
+        }
+
+        if updated {
+            self.messages = messages
+            return true
+        } else {
+            return false
+        }*/
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return TopChatMessageView(self)

@@ -138,6 +138,15 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, String?) {
     if platform.contains("android") {
         return (UIImage(bundleImageName: "Settings/Devices/Android"), "device_android")
     }
+    if device.contains("iphone") {
+        return (UIImage(bundleImageName: "Settings/Devices/iPhone"), "device_iphone")
+    }
+    if device.contains("ipad") {
+        return (UIImage(bundleImageName: "Settings/Devices/iPad"), "device_ipad")
+    }
+    if (platform.contains("macos") || systemVersion.contains("macos")) && device.contains("mac") {
+        return (UIImage(bundleImageName: "Settings/Devices/Mac"), "device_mac")
+    }
     if platform.contains("ios") || platform.contains("macos") || systemVersion.contains("macos") {
         return (UIImage(bundleImageName: "Settings/Devices/iOS"), nil)
     }
@@ -278,33 +287,33 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
             
             let rightInset: CGFloat = params.rightInset
             
-            titleAttributedString = NSAttributedString(string: "\(item.session.appName) \(item.session.appVersion)", font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            var appVersion = item.session.appVersion
+            appVersion = appVersion.replacingOccurrences(of: "APPSTORE", with: "").replacingOccurrences(of: "BETA", with: "Beta").trimmingTrailingSpaces()
+            if let openingRoundBraceRange = appVersion.range(of: " ("), let closingRoundBraceRange = appVersion.range(of: ")") {
+                appVersion = appVersion.replacingCharacters(in: openingRoundBraceRange.lowerBound ..< closingRoundBraceRange.upperBound, with: "")
+            }
             
             var deviceString = ""
             if !item.session.deviceModel.isEmpty {
                 deviceString = item.session.deviceModel
             }
             
-            if !item.session.platform.isEmpty {
-                if !deviceString.isEmpty {
-                    deviceString += ", "
-                }
-                deviceString += item.session.platform
-            }
-            
-            if !item.session.systemVersion.isEmpty {
-                if !deviceString.isEmpty {
-                    deviceString += ", "
-                }
-                deviceString += item.session.systemVersion
-            }
-            
+//            if !item.session.platform.isEmpty {
+//                if !deviceString.isEmpty {
+//                    deviceString += ", "
+//                }
+//                deviceString += item.session.platform
+//            }
+                        
             var updatedIcon: UIImage?
             if item.session != currentItem?.session {
                 updatedIcon = iconForSession(item.session).0
             }
             
-            appAttributedString = NSAttributedString(string: deviceString, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            let appString = "\(item.session.appName) \(appVersion)"
+            
+            titleAttributedString = NSAttributedString(string: deviceString, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            appAttributedString = NSAttributedString(string: appString, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             
             let label: String
             if item.session.isCurrent {

@@ -450,4 +450,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
     
     func notifyPlaybackControlsHidden(_ hidden: Bool) {
     }
+
+    func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
+    }
 }

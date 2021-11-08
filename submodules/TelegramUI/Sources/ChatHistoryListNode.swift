@@ -470,7 +470,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
-    private let adSeenProcessingManager = ChatMessageThrottledProcessingManager()
+    let adSeenProcessingManager = ChatMessageThrottledProcessingManager()
     private let seenLiveLocationProcessingManager = ChatMessageThrottledProcessingManager()
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
     private let refreshMediaProcessingManager = ChatMessageThrottledProcessingManager()
@@ -563,6 +563,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var contentInsetAnimator: DisplayLinkAnimator?
 
     private let adMessagesContext: AdMessagesHistoryContext?
+    private var preloadAdPeerId: PeerId?
+    private let preloadAdPeerDisposable = MetaDisposable()
     
     private let clientId: Atomic<Int32>
     
@@ -590,7 +592,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.prefetchManager = InChatPrefetchManager(context: context)
 
-        let adMessages: Signal<[Message], NoError>
+        var adMessages: Signal<[Message], NoError>
         if case .bubbles = mode, case let .peer(peerId) = chatLocation, case .none = subject {
             let adMessagesContext = context.engine.messages.adMessages(peerId: peerId)
             self.adMessagesContext = adMessagesContext
@@ -605,6 +607,29 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         nextClientId += 1
         
         super.init()
+
+        adMessages = adMessages
+        |> afterNext { [weak self] messages in
+            Queue.mainQueue().async {
+                guard let strongSelf = self else {
+                    return
+                }
+                var adPeerId: PeerId?
+                adPeerId = messages.first?.author?.id
+
+                if strongSelf.preloadAdPeerId != adPeerId {
+                    strongSelf.preloadAdPeerId = adPeerId
+                    if let adPeerId = adPeerId {
+                        let combinedDisposable = DisposableSet()
+                        strongSelf.preloadAdPeerDisposable.set(combinedDisposable)
+                        combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: adPeerId).start())
+                        combinedDisposable.add(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: adPeerId))
+                    } else {
+                        strongSelf.preloadAdPeerDisposable.set(nil)
+                    }
+                }
+            }
+        }
 
         self.clipsToBounds = false
         
@@ -790,7 +815,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let additionalAnimatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmojiAnimations, forceActualized: false)
         |> map { animatedEmoji -> [String: [Int: StickerPackItem]] in
-            let sequence = "0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣"
+            let sequence = "0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣".strippedEmoji
             var animatedEmojiStickers: [String: [Int: StickerPackItem]] = [:]
             switch animatedEmoji {
                 case let .result(_, items, _):
@@ -799,10 +824,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if indexKeys.count > 1, let first = indexKeys.first, let last = indexKeys.last {
                             let emoji: String?
                             let indexEmoji: String?
-                            if sequence.contains(first) {
+                            if sequence.contains(first.strippedEmoji) {
                                 emoji = last
                                 indexEmoji = first
-                            } else if sequence.contains(last) {
+                            } else if sequence.contains(last.strippedEmoji) {
                                 emoji = first
                                 indexEmoji = last
                             } else {
@@ -810,8 +835,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 indexEmoji = nil
                             }
                             
-                            if let emoji = emoji, let indexEmoji = indexEmoji?.first,  let strIndex = sequence.firstIndex(of: indexEmoji) {
-                                let emoji = emoji.strippedEmoji
+                            if let emoji = emoji?.strippedEmoji, let indexEmoji = indexEmoji?.strippedEmoji.first, let strIndex = sequence.firstIndex(of: indexEmoji) {
                                 let index = sequence.distance(from: sequence.startIndex, to: strIndex)
                                 if animatedEmojiStickers[emoji] != nil {
                                     animatedEmojiStickers[emoji]![index] = item
@@ -955,8 +979,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(anchorIndex), anchorIndex: .message(anchorIndex), count: historyMessageCount, highlight: false), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             }
                         } else {
-                            if let subject = subject, case let .message(messageId, highlight, _) = subject {
-                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: highlight), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
+                            if let subject = subject, case let .message(messageSubject, highlight, _) = subject {
+                                let initialSearchLocation: ChatHistoryInitialSearchLocation
+                                switch messageSubject {
+                                case let .id(id):
+                                    initialSearchLocation = .id(id)
+                                case let .timestamp(timestamp):
+                                    initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: strongSelf.chatLocation.peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                                }
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: 60, highlight: highlight), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: true), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if var chatHistoryLocation = strongSelf.chatHistoryLocationValue {
@@ -1043,6 +1074,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     updatingMedia: updatingMedia,
                     customChannelDiscussionReadState: customChannelDiscussionReadState,
                     customThreadOutgoingReadState: customThreadOutgoingReadState,
+                    cachedData: data.cachedData,
                     adMessages: adMessages
                 )
                 let lastHeaderId = filteredEntries.last.flatMap { listMessageDateHeaderId(timestamp: $0.index.timestamp) } ?? 0
@@ -1211,8 +1243,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         })
         
-        if let subject = subject, case let .message(messageId, highlight, _) = subject {
-            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: highlight), id: 0)
+        if let subject = subject, case let .message(messageSubject, highlight, _) = subject {
+            let initialSearchLocation: ChatHistoryInitialSearchLocation
+            switch messageSubject {
+            case let .id(id):
+                initialSearchLocation = .id(id)
+            case let .timestamp(timestamp):
+                initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: self.chatLocation.peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+            }
+            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: 60, highlight: highlight), id: 0)
         } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
             self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: true), id: 0)
         } else {
@@ -1388,6 +1427,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.interactiveReadActionDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
         self.loadedMessagesFromCachedDataDisposable?.dispose()
+        self.preloadAdPeerDisposable.dispose()
     }
     
     public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {
@@ -1527,7 +1567,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             let toLaterRange = (historyView.filteredEntries.count - 1 - (visible.firstIndex - 1), historyView.filteredEntries.count - 1)
             
             var messageIdsWithViewCount: [MessageId] = []
-            var messageIdsWithAds: [MessageId] = []
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithRefreshMedia: [MessageId] = []
@@ -1553,8 +1592,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.id.namespace == Namespaces.Message.Cloud {
                                     messageIdsWithViewCount.append(message.id)
                                 }
-                            } else if attribute is AdMessageAttribute {
-                                messageIdsWithAds.append(message.id)
                             } else if attribute is ReplyThreadMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
                                     messageIdsWithViewCount.append(message.id)
@@ -1717,9 +1754,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             if !messageIdsWithViewCount.isEmpty {
                 self.messageProcessingManager.add(messageIdsWithViewCount)
-            }
-            if !messageIdsWithAds.isEmpty {
-                self.adSeenProcessingManager.add(messageIdsWithAds)
             }
             if !messageIdsWithLiveLocation.isEmpty {
                 self.seenLiveLocationProcessingManager.add(messageIdsWithLiveLocation)

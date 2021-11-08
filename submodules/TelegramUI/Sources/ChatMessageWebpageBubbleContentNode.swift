@@ -70,7 +70,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     } else {
                         var subject: ChatControllerSubject?
                         if let messageId = adAttribute.messageId {
-                            subject = .message(id: messageId, highlight: true, timecode: nil)
+                            subject = .message(id: .id(messageId), highlight: true, timecode: nil)
                         }
                         navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
                     }

@@ -244,7 +244,7 @@ public final class DirectMediaImageCache {
             let progressiveSizes = representation.progressiveSizes
             if progressiveSizes.count > 0 && width <= 64 {
                 selectedSize = progressiveSizes[0]
-            } else if progressiveSizes.count > 1 && width <= 160 {
+            } else if progressiveSizes.count > 2 && width <= 160 {
                 selectedSize = progressiveSizes[2]
             } else if progressiveSizes.count > 4 && width <= 400 {
                 selectedSize = progressiveSizes[4]

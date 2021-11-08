@@ -99,7 +99,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
         
-        self.backgroundNode = WallpaperBackgroundNode(context: context)
+        self.backgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true)
         self.backgroundNode.isUserInteractionEnabled = false
         
         self.panelBackgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.chat.inputPanel.panelBackgroundColor)
@@ -489,7 +489,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
-        }, navigateToFirstDateMessage: { _ in
+        }, navigateToFirstDateMessage: { _, _ in
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
         }, rateCall: { _, _, _ in
@@ -884,11 +884,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case let .channelMessage(peerId, messageId, timecode):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(id: messageId, highlight: true, timecode: timecode)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))
                         }
                    case let .replyThreadMessage(replyThreadMessage, messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(replyThreadMessage), subject: .message(id: messageId, highlight: true, timecode: nil)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(replyThreadMessage), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
                         }
                     case let .stickerPack(name):
                         let packReference: StickerPackReference = .name(name)

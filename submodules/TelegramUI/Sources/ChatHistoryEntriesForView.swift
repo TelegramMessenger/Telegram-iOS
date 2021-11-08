@@ -24,6 +24,7 @@ func chatHistoryEntriesForView(
     updatingMedia: [MessageId: ChatUpdatingMessageMedia],
     customChannelDiscussionReadState: MessageId?,
     customThreadOutgoingReadState: MessageId?,
+    cachedData: CachedPeerData?,
     adMessages: [Message]
 ) -> [ChatHistoryEntry] {
     if historyAppearsCleared {
@@ -32,6 +33,7 @@ func chatHistoryEntriesForView(
     var entries: [ChatHistoryEntry] = []
     var adminRanks: [PeerId: CachedChannelAdminRank] = [:]
     var stickersEnabled = true
+    var channelPeer: Peer?
     if case let .peer(peerId) = location, peerId.namespace == Namespaces.Peer.CloudChannel {
         for additionalEntry in view.additionalData {
             if case let .cacheEntry(id, data) = additionalEntry {
@@ -39,14 +41,43 @@ func chatHistoryEntriesForView(
                     adminRanks = data.ranks
                 }
             } else if case let .peer(_, peer) = additionalEntry, let channel = peer as? TelegramChannel, !channel.flags.contains(.isGigagroup) {
+                channelPeer = channel
                 if let defaultBannedRights = channel.defaultBannedRights, defaultBannedRights.flags.contains(.banSendStickers) {
                     stickersEnabled = false
                 }
             }
         }
     }
-
+    
+    var joinMessage: Message?
+    if case let .peer(peerId) = location, case let cachedData = cachedData as? CachedChannelData, let invitedOn = cachedData?.invitedOn  {
+        joinMessage = Message(
+            stableId: UInt32.max - 1000,
+            stableVersion: 0,
+            id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: 0),
+            globallyUniqueId: nil,
+            groupingKey: nil,
+            groupInfo: nil,
+            threadId: nil,
+            timestamp: invitedOn,
+            flags: [.Incoming],
+            tags: [],
+            globalTags: [],
+            localTags: [],
+            forwardInfo: nil,
+            author: channelPeer,
+            text: "",
+            attributes: [],
+            media: [TelegramMediaAction(action: .joinedByRequest)],
+            peers: SimpleDictionary<PeerId, Peer>(),
+            associatedMessages: SimpleDictionary<MessageId, Message>(),
+            associatedMessageIds: []
+        )
+    }
+        
+    
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
+    var count = 0
     loop: for entry in view.entries {
         var message = entry.message
         var isRead = entry.isRead
@@ -54,6 +85,14 @@ func chatHistoryEntriesForView(
         if pendingRemovedMessages.contains(message.id) {
             continue
         }
+        
+        if let maybeJoinMessage = joinMessage {
+            if message.timestamp > maybeJoinMessage.timestamp, (!view.holeEarlier || count > 0) {
+                entries.append(.MessageEntry(maybeJoinMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false)))
+                joinMessage = nil
+            }
+        }
+        count += 1
         
         if let customThreadOutgoingReadState = customThreadOutgoingReadState {
             isRead = customThreadOutgoingReadState >= message.id
@@ -94,7 +133,6 @@ func chatHistoryEntriesForView(
         if let author = message.author {
             adminRank = adminRanks[author.id]
         }
-        
         
         if presentationData.largeEmoji, message.media.isEmpty {
             if stickersEnabled && message.text.count == 1, let _ = associatedData.animatedEmojiStickers[message.text.basicEmoji.0] {
@@ -140,6 +178,11 @@ func chatHistoryEntriesForView(
     if !groupBucket.isEmpty {
         assert(groupMessages)
         entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+    }
+    
+    if let maybeJoinMessage = joinMessage, !view.holeLater {
+        entries.append(.MessageEntry(maybeJoinMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false)))
+        joinMessage = nil
     }
     
     if let maxReadIndex = view.maxReadIndex, includeUnreadEntry {

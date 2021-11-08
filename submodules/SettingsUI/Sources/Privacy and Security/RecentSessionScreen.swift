@@ -250,7 +250,9 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         switch subject {
             case let .session(session):
                 self.terminateButton.title = self.presentationData.strings.AuthSessions_View_TerminateSession
-                title = "\(session.appName) \(session.appVersion)"
+                var appVersion = session.appVersion
+                appVersion = appVersion.replacingOccurrences(of: "APPSTORE", with: "").replacingOccurrences(of: "BETA", with: "Beta").trimmingTrailingSpaces()
+                
                 if session.isCurrent {
                     subtitle = presentationData.strings.Presence_online
                     subtitleActive = true
@@ -258,25 +260,26 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                     subtitle = stringForRelativeActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, relativeTimestamp: session.activityDate, relativeTo: timestamp)
                     subtitleActive = false
                 }
-                deviceTitle = presentationData.strings.AuthSessions_View_Device
+                deviceTitle = presentationData.strings.AuthSessions_View_Application
             
                 var deviceString = ""
                 if !session.deviceModel.isEmpty {
                     deviceString = session.deviceModel
                 }
-                if !session.platform.isEmpty {
-                    if !deviceString.isEmpty {
-                        deviceString += ", "
-                    }
-                    deviceString += session.platform
-                }
-                if !session.systemVersion.isEmpty {
-                    if !deviceString.isEmpty {
-                        deviceString += ", "
-                    }
-                    deviceString += session.systemVersion
-                }
-                device = deviceString
+//                if !session.platform.isEmpty {
+//                    if !deviceString.isEmpty {
+//                        deviceString += ", "
+//                    }
+//                    deviceString += session.platform
+//                }
+//                if !session.systemVersion.isEmpty {
+//                    if !deviceString.isEmpty {
+//                        deviceString += ", "
+//                    }
+//                    deviceString += session.systemVersion
+//                }
+                title = deviceString
+                device = "\(session.appName) \(appVersion)"
                 location = session.country
                 ip = session.ip
             

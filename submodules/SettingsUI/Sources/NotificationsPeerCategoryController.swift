@@ -266,12 +266,12 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
     entries.append(.enable(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, notificationSettings.enabled))
         
     if notificationSettings.enabled || !notificationExceptions.isEmpty {
-        entries.append(.optionsHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotifications.uppercased()))
+        entries.append(.optionsHeader(presentationData.theme, presentationData.strings.Notifications_Options.uppercased()))
         entries.append(.previews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, notificationSettings.displayPreviews))
         entries.append(.sound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(notificationSettings.sound)), filteredGlobalSound(notificationSettings.sound)))
     }
     
-    entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotifications.uppercased()))
+    entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsExceptions.uppercased()))
     entries.append(.addException(presentationData.theme, presentationData.strings.Notification_Exceptions_AddException))
     
     
@@ -732,7 +732,16 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
             rightNavigationButton = nil
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Notifications_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let title: String
+        switch category {
+            case .privateChat:
+                title = presentationData.strings.Notifications_PrivateChatsTitle
+            case .group:
+                title = presentationData.strings.Notifications_GroupChatsTitle
+            case .channel:
+                title = presentationData.strings.Notifications_ChannelsTitle
+        }
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, ensureVisibleItemTag: focusOnItemTag, initialScrollToItem: scrollToItem)
         
         return (controllerState, (listState, arguments))

@@ -908,6 +908,7 @@
         
     NSNumber *groupedId;
     NSInteger i = 0;
+    NSInteger num = 0;
     bool grouping = selectionContext.grouping;
     
     bool hasAnyTimers = false;
@@ -938,15 +939,20 @@
             asset = ((TGCameraCapturedVideo *)asset).originalAsset;
         }
         
+        NSString *caption = [editingContext captionForItem:asset];
+        NSArray *entities = [editingContext entitiesForItem:asset];
+        
+        if (editingContext.isForcedCaption && num > 0) {
+            caption = nil;
+            entities = nil;
+        }
+        
         switch (asset.type)
         {
             case TGMediaAssetPhotoType:
             {
                 if (intent == TGMediaAssetsControllerSendFileIntent)
                 {
-                    NSString *caption = [editingContext captionForItem:asset];
-                    NSArray *entities = [editingContext entitiesForItem:asset];
-                    
                     [signals addObject:[[[TGMediaAssetImageSignals imageDataForAsset:asset allowNetworkAccess:false convertToJpeg:convertToJpeg] map:^NSDictionary *(TGMediaAssetImageData *assetData)
                     {
                         NSString *tempFileName = TGTemporaryFileName(nil);
@@ -993,11 +999,10 @@
                     }]];
                     
                     i++;
+                    num++;
                 }
                 else
                 {
-                    NSString *caption = [editingContext captionForItem:asset];
-                    NSArray *entities = [editingContext entitiesForItem:asset];
                     id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
                     NSNumber *timer = [editingContext timerForItem:asset];
                     
@@ -1096,6 +1101,7 @@
                         }]];
                         
                         i++;
+                        num++;
                     }
                     else
                     {
@@ -1181,6 +1187,7 @@
                     }
                     
                     i++;
+                    num++;
                 }
             }
                 break;
@@ -1189,8 +1196,6 @@
             {
                 if (intent == TGMediaAssetsControllerSendFileIntent)
                 {
-                    NSString *caption = [editingContext captionForItem:asset];
-                    NSArray *entities = [editingContext entitiesForItem:asset];
                     id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
                     
                     CGSize dimensions = asset.originalSize;
@@ -1218,12 +1223,11 @@
                     }]];
                     
                     i++;
+                    num++;
                 }
                 else
                 {
                     TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[editingContext adjustmentsForItem:asset];
-                    NSString *caption = [editingContext captionForItem:asset];
-                    NSArray *entities = [editingContext entitiesForItem:asset];
                     NSNumber *timer = [editingContext timerForItem:asset];
                     
                     UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
@@ -1288,6 +1292,7 @@
                     }]];
                     
                     i++;
+                    num++;
                 }
             }
                 break;
@@ -1300,8 +1305,6 @@
                 }
                 
                 TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[editingContext adjustmentsForItem:video];
-                NSString *caption = [editingContext captionForItem:video];
-                NSArray *entities = [editingContext entitiesForItem:video];
                 NSNumber *timer = [editingContext timerForItem:video];
                 
                 UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
@@ -1366,6 +1369,7 @@
                 }]];
                 
                 i++;
+                num++;
             }
                 break;
                 

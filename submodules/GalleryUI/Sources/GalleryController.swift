@@ -394,6 +394,8 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private var screenCaptureEventsDisposable: Disposable?
     
     public var centralItemUpdated: ((MessageId) -> Void)?
+    public var onDidAppear: (() -> Void)?
+    public var useSimpleAnimation: Bool = false
     
     private var initialOrientation: UIInterfaceOrientation?
     
@@ -1046,11 +1048,11 @@ public class GalleryController: ViewController, StandalonePresentableController 
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.galleryNode.beginCustomDismiss = { [weak self] in
+        self.galleryNode.beginCustomDismiss = { [weak self] simpleAnimation in
             if let strongSelf = self {
                 strongSelf._hiddenMedia.set(.single(nil))
                 
-                let animatedOutNode = true
+                let animatedOutNode = !simpleAnimation
                 
                 strongSelf.galleryNode.animateOut(animateContent: animatedOutNode, completion: {
                 })
@@ -1305,13 +1307,15 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 }
                 centralItemNode.activateAsInitial()
             }
+
+            self.onDidAppear?()
         }
         
         if !self.isPresentedInPreviewingContext() {
             self.galleryNode.setControlsHidden(self.landscape, animated: false)
             if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
                 if presentationArguments.animated {
-                    self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+                    self.galleryNode.animateIn(animateContent: !nodeAnimatesItself && !self.useSimpleAnimation, useSimpleAnimation: self.useSimpleAnimation)
                 }
             }
         }
