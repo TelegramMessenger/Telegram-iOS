@@ -2691,6 +2691,20 @@ final class MessageHistoryTable: Table {
         }
         return closestIndex
     }
+
+    func findMessageAtAbsoluteIndex(peerId: PeerId, namespace: MessageId.Namespace, index: Int) -> MessageIndex? {
+        var count = 0
+        var result: MessageIndex?
+        self.valueBox.range(self.table, start: self.upperBound(peerId: peerId, namespace: namespace), end: self.lowerBound(peerId: peerId, namespace: namespace), keys: { key in
+            if count == index {
+                result = extractKey(key)
+                return false
+            }
+            count += 1
+            return true
+        }, limit: 10000)
+        return result
+    }
     
     func findRandomMessage(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, ignoreIds: ([MessageId], Set<MessageId>)) -> MessageIndex? {
         if let index = self.tagsTable.findRandomIndex(peerId: peerId, namespace: namespace, tag: tag, ignoreIds: ignoreIds, isMessage: { index in
@@ -2811,8 +2825,22 @@ final class MessageHistoryTable: Table {
         return indices
     }
     
-    func getMessageCountInRange(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
-        return self.tagsTable.getMessageCountInRange(tag: tag, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
+    func getMessageCountInRange(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags?, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
+        if let tag = tag {
+            return self.tagsTable.getMessageCountInRange(tag: tag, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
+        } else {
+            precondition(lowerBound.id.namespace == namespace)
+            precondition(upperBound.id.namespace == namespace)
+            var lowerBoundKey = self.key(lowerBound)
+            if lowerBound.timestamp > 1 {
+                lowerBoundKey = lowerBoundKey.predecessor
+            }
+            var upperBoundKey = self.key(upperBound)
+            if upperBound.timestamp < Int32.max - 1 {
+                upperBoundKey = upperBoundKey.successor
+            }
+            return Int(self.valueBox.count(self.table, start: lowerBoundKey, end: upperBoundKey))
+        }
     }
     
     func setPendingMessageAction(id: MessageId, type: PendingMessageActionType, action: PendingMessageActionData?, pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32]) {

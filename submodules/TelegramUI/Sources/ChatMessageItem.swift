@@ -12,15 +12,15 @@ import Emoji
 import PersistentStringHash
 
 public enum ChatMessageItemContent: Sequence {
-    case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes)
-    case group(messages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)])
+    case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes, location: MessageHistoryEntryLocation?)
+    case group(messages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)])
     
     func effectivelyIncoming(_ accountPeerId: PeerId, associatedData: ChatMessageItemAssociatedData? = nil) -> Bool {
         if let subject = associatedData?.subject, case .forwardedMessages = subject {
             return false
         }
         switch self {
-            case let .message(message, _, _, _):
+            case let .message(message, _, _, _, _):
                 return message.effectivelyIncoming(accountPeerId)
             case let .group(messages):
                 return messages[0].0.effectivelyIncoming(accountPeerId)
@@ -29,7 +29,7 @@ public enum ChatMessageItemContent: Sequence {
     
     var index: MessageIndex {
         switch self {
-            case let .message(message, _, _, _):
+            case let .message(message, _, _, _, _):
                 return message.index
             case let .group(messages):
                 return messages[0].0.index
@@ -38,7 +38,7 @@ public enum ChatMessageItemContent: Sequence {
     
     var firstMessage: Message {
         switch self {
-            case let .message(message, _, _, _):
+            case let .message(message, _, _, _, _):
                 return message
             case let .group(messages):
                 return messages[0].0
@@ -47,7 +47,7 @@ public enum ChatMessageItemContent: Sequence {
     
     var firstMessageAttributes: ChatMessageEntryAttributes {
         switch self {
-            case let .message(_, _, _, attributes):
+            case let .message(_, _, _, attributes, _):
                 return attributes
             case let .group(messages):
                 return messages[0].3
@@ -58,7 +58,7 @@ public enum ChatMessageItemContent: Sequence {
         var index = 0
         return AnyIterator { () -> (Message, ChatMessageEntryAttributes)? in
             switch self {
-                case let .message(message, _, _, attributes):
+                case let .message(message, _, _, attributes, _):
                     if index == 0 {
                         index += 1
                         return (message, attributes)
@@ -265,7 +265,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     
     var message: Message {
         switch self.content {
-            case let .message(message, _, _, _):
+            case let .message(message, _, _, _, _):
                 return message
             case let .group(messages):
                 return messages[0].0
@@ -274,7 +274,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     
     var read: Bool {
         switch self.content {
-            case let .message(_, read, _, _):
+            case let .message(_, read, _, _, _):
                 return read
             case let .group(messages):
                 return messages[0].1
@@ -433,7 +433,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
         
         if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && self.message.media.isEmpty {
-            if case let .message(_, _, _, attributes) = self.content {
+            if case let .message(_, _, _, attributes, _) = self.content {
                 switch attributes.contentTypeHint {
                     case .largeEmoji:
                         viewClassName = ChatMessageStickerItemNode.self
