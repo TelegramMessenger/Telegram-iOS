@@ -2891,6 +2891,7 @@ Unused sets are archived when you add more.";
 "FastTwoStepSetup.EmailHelp" = "Please add your valid e-mail. It is the only way to recover a forgotten password.";
 
 "Conversation.ViewMessage" = "VIEW MESSAGE";
+"Conversation.ViewPost" = "VIEW POST";
 
 "GroupInfo.GroupHistory" = "History For New Members";
 "GroupInfo.GroupHistoryVisible" = "Visible";

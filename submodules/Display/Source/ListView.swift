@@ -150,6 +150,41 @@ private func cancelContextGestures(view: UIView) {
 }
 
 open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGestureRecognizerDelegate {
+    public struct ScrollingIndicatorState {
+        public struct Item {
+            public var index: Int
+            public var offset: CGFloat
+            public var height: CGFloat
+
+            public init(
+                index: Int,
+                offset: CGFloat,
+                height: CGFloat
+            ) {
+                self.index = index
+                self.offset = offset
+                self.height = height
+            }
+        }
+
+        public var insets: UIEdgeInsets
+        public var topItem: Item
+        public var bottomItem: Item
+        public var itemCount: Int
+
+        public init(
+            insets: UIEdgeInsets,
+            topItem: Item,
+            bottomItem: Item,
+            itemCount: Int
+        ) {
+            self.insets = insets
+            self.topItem = topItem
+            self.bottomItem = bottomItem
+            self.itemCount = itemCount
+        }
+    }
+
     public final let scroller: ListViewScroller
     public private(set) final var visibleSize: CGSize = CGSize()
     public private(set) final var insets = UIEdgeInsets()
@@ -214,14 +249,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     public final var snapToBottomInsetUntilFirstInteraction: Bool = false
     
-    public final var updateFloatingHeaderOffset: ((CGFloat, ContainedViewLayoutTransition) -> Void)? {
-        didSet {
-            
-        }
-    }
-    
+    public final var updateFloatingHeaderOffset: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     public final var didScrollWithOffset: ((CGFloat, ContainedViewLayoutTransition, ListViewItemNode?) -> Void)?
     public final var addContentOffset: ((CGFloat, ListViewItemNode?) -> Void)?
+
+    public final var updateScrollingIndicator: ((ScrollingIndicatorState?, ContainedViewLayoutTransition) -> Void)?
     
     private var topItemOverscrollBackground: ListViewOverscrollBackgroundNode?
     private var bottomItemOverscrollBackground: ASDisplayNode?
@@ -3766,33 +3798,51 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     break
                 }
             }
-            if let topIndexAndBoundary = topIndexAndBoundary, let bottomIndexAndBoundary = bottomIndexAndBoundary {
+
+            var scrollingIndicatorStateValue: ScrollingIndicatorState?
+            if let topIndexAndBoundaryValue = topIndexAndBoundary, let bottomIndexAndBoundaryValue = bottomIndexAndBoundary {
+                let scrollingIndicatorState = ScrollingIndicatorState(
+                    insets: self.insets,
+                    topItem: ScrollingIndicatorState.Item(
+                        index: topIndexAndBoundaryValue.0,
+                        offset: topIndexAndBoundaryValue.1,
+                        height: topIndexAndBoundaryValue.2
+                    ),
+                    bottomItem: ScrollingIndicatorState.Item(
+                        index: bottomIndexAndBoundaryValue.0,
+                        offset: bottomIndexAndBoundaryValue.1,
+                        height: bottomIndexAndBoundaryValue.2
+                    ),
+                    itemCount: self.items.count
+                )
+                scrollingIndicatorStateValue = scrollingIndicatorState
+
                 let averageRangeItemHeight: CGFloat = 44.0
                 
-                var upperItemsHeight = floor(averageRangeItemHeight * CGFloat(topIndexAndBoundary.0))
-                var approximateContentHeight = CGFloat(self.items.count) * averageRangeItemHeight
-                if topIndexAndBoundary.0 >= 0 && self.items[topIndexAndBoundary.0].approximateHeight.isZero {
+                var upperItemsHeight = floor(averageRangeItemHeight * CGFloat(scrollingIndicatorState.topItem.index))
+                var approximateContentHeight = CGFloat(scrollingIndicatorState.itemCount) * averageRangeItemHeight
+                if scrollingIndicatorState.topItem.index >= 0 && self.items[scrollingIndicatorState.topItem.index].approximateHeight.isZero {
                     upperItemsHeight -= averageRangeItemHeight
                     approximateContentHeight -= averageRangeItemHeight
                 }
                 
                 var convertedTopBoundary: CGFloat
-                if topIndexAndBoundary.1 < self.insets.top {
-                    convertedTopBoundary = (topIndexAndBoundary.1 - self.insets.top) * averageRangeItemHeight / topIndexAndBoundary.2
+                if scrollingIndicatorState.topItem.offset < self.insets.top {
+                    convertedTopBoundary = (scrollingIndicatorState.topItem.offset - scrollingIndicatorState.insets.top) * averageRangeItemHeight / scrollingIndicatorState.topItem.height
                 } else {
-                    convertedTopBoundary = topIndexAndBoundary.1 - self.insets.top
+                    convertedTopBoundary = scrollingIndicatorState.topItem.offset - scrollingIndicatorState.insets.top
                 }
                 convertedTopBoundary -= upperItemsHeight
                 
                 let approximateOffset = -convertedTopBoundary
                 
                 var convertedBottomBoundary: CGFloat = 0.0
-                if bottomIndexAndBoundary.1 > self.visibleSize.height - self.insets.bottom {
-                    convertedBottomBoundary = ((self.visibleSize.height - self.insets.bottom) - bottomIndexAndBoundary.1) * averageRangeItemHeight / bottomIndexAndBoundary.2
+                if scrollingIndicatorState.bottomItem.offset > self.visibleSize.height - self.insets.bottom {
+                    convertedBottomBoundary = ((self.visibleSize.height - scrollingIndicatorState.insets.bottom) - scrollingIndicatorState.bottomItem.offset) * averageRangeItemHeight / scrollingIndicatorState.bottomItem.height
                 } else {
-                    convertedBottomBoundary = (self.visibleSize.height - self.insets.bottom) - bottomIndexAndBoundary.1
+                    convertedBottomBoundary = (self.visibleSize.height - scrollingIndicatorState.insets.bottom) - scrollingIndicatorState.bottomItem.offset
                 }
-                convertedBottomBoundary += CGFloat(bottomIndexAndBoundary.0 + 1) * averageRangeItemHeight
+                convertedBottomBoundary += CGFloat(scrollingIndicatorState.bottomItem.index + 1) * averageRangeItemHeight
                 
                 let approximateVisibleHeight = max(0.0, convertedBottomBoundary - approximateOffset)
                 
@@ -3801,8 +3851,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 let indicatorSideInset: CGFloat = 3.0
                 var indicatorTopInset: CGFloat = 3.0
                 if self.verticalScrollIndicatorFollowsOverscroll {
-                    if topIndexAndBoundary.0 == 0 {
-                        indicatorTopInset = max(topIndexAndBoundary.1 + 3.0 - self.insets.top, 3.0)
+                    if scrollingIndicatorState.topItem.index == 0 {
+                        indicatorTopInset = max(scrollingIndicatorState.topItem.offset + 3.0 - self.insets.top, 3.0)
                     }
                 }
                 let indicatorBottomInset: CGFloat = 3.0
@@ -3814,7 +3864,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if approximateContentHeight <= 0 {
                     indicatorHeight = 0.0
                 } else {
-                    indicatorHeight = max(minIndicatorContentHeight, floor(visibleHeightWithoutIndicatorInsets * (self.visibleSize.height - self.insets.top - self.insets.bottom) / approximateContentHeight))
+                    indicatorHeight = max(minIndicatorContentHeight, floor(visibleHeightWithoutIndicatorInsets * (self.visibleSize.height - scrollingIndicatorState.insets.top - scrollingIndicatorState.insets.bottom) / approximateContentHeight))
                 }
                 
                 let upperBound = self.scrollIndicatorInsets.top + indicatorTopInset
@@ -3852,6 +3902,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             } else {
                 verticalScrollIndicator.isHidden = true
             }
+
+            self.updateScrollingIndicator?(scrollingIndicatorStateValue, transition)
         }
     }
     
@@ -4637,8 +4689,4 @@ private func findAccessibilityFocus(_ node: ASDisplayNode) -> Bool {
         return true
     }
     return false
-}
-
-public func randomfqweeqwf() {
-    print("t")
 }

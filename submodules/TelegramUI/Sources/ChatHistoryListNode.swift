@@ -562,6 +562,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let adMessagesContext: AdMessagesHistoryContext?
     private var preloadAdPeerId: PeerId?
     private let preloadAdPeerDisposable = MetaDisposable()
+
+    private let sparseScrollingContext: SparseMessageScrollingContext?
     
     private let clientId: Atomic<Int32>
     
@@ -588,14 +590,31 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.prefetchManager = InChatPrefetchManager(context: context)
 
+        var displayAdPeer: PeerId?
+        var sparseScrollPeerId: PeerId?
+        switch subject {
+        case .none, .message:
+            if case let .peer(peerId) = chatLocation {
+                displayAdPeer = peerId
+                sparseScrollPeerId = peerId
+            }
+        default:
+            break
+        }
         var adMessages: Signal<[Message], NoError>
-        if case .bubbles = mode, case let .peer(peerId) = chatLocation, case .none = subject {
+        if case .bubbles = mode, let peerId = displayAdPeer {
             let adMessagesContext = context.engine.messages.adMessages(peerId: peerId)
             self.adMessagesContext = adMessagesContext
             adMessages = adMessagesContext.state
         } else {
             self.adMessagesContext = nil
             adMessages = .single([])
+        }
+
+        if case .bubbles = mode, let peerId = sparseScrollPeerId {
+            self.sparseScrollingContext = context.engine.messages.sparseMessageScrollingContext(peerId: peerId)
+        } else {
+            self.sparseScrollingContext = nil
         }
         
         let clientId = Atomic<Int32>(value: nextClientId)
