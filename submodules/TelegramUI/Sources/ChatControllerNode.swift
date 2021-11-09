@@ -327,6 +327,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.rotated = true
 
         self.historyScrollingArea = SparseDiscreteScrollingArea()
+        self.historyNode.historyScrollingArea = self.historyScrollingArea
 
         self.historyNodeContainer = ASDisplayNode()
         self.historyNodeContainer.addSubnode(self.historyNode)
@@ -528,23 +529,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         self.textInputPanelNode?.updateActivity = { [weak self] in
             self?.updateTypingActivity(true)
-        }
-
-        self.historyNode.updateScrollingIndicator = { [weak self] scrollingState, transition in
-            guard let strongSelf = self else {
-                return
-            }
-            guard let (_, _) = strongSelf.validLayout else {
-                return
-            }
-            strongSelf.historyScrollingArea.update(
-                containerSize: strongSelf.historyNode.bounds.size,
-                containerInsets: UIEdgeInsets(top: strongSelf.historyNode.scrollIndicatorInsets.bottom, left: 0.0, bottom: strongSelf.historyNode.scrollIndicatorInsets.top, right: 0.0),
-                scrollingState: scrollingState,
-                isScrolling: true,
-                theme: strongSelf.chatPresentationInterfaceState.theme,
-                transition: transition
-            )
         }
     }
     

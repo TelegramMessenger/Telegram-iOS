@@ -1298,10 +1298,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let content: ChatMessageItemContent
         let chatLocation: ChatLocation
         if messages.count > 1 {
-            content = .group(messages: messages.map { ($0, true, .none, ChatMessageEntryAttributes()) })
+            content = .group(messages: messages.map { ($0, true, .none, ChatMessageEntryAttributes(), nil) })
             chatLocation = .peer(messages.first!.id.peerId)
         } else {
-            content = .message(message: messages.first!, read: true, selection: .none, attributes: ChatMessageEntryAttributes())
+            content = .message(message: messages.first!, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil)
             chatLocation = .peer(messages.first!.id.peerId)
         }
         

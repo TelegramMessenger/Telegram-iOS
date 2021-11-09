@@ -245,7 +245,6 @@ public struct MessageHistoryViewOrderStatistics: OptionSet {
     }
     
     public static let combinedLocation = MessageHistoryViewOrderStatistics(rawValue: 1 << 0)
-    public static let locationWithinMonth = MessageHistoryViewOrderStatistics(rawValue: 1 << 1)
 }
 
 public final class MessageHistoryViewExternalInput: Equatable {

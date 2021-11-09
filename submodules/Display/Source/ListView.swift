@@ -284,6 +284,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public private(set) var isTracking = false
     public private(set) var trackingOffset: CGFloat = 0.0
     public private(set) var beganTrackingAtTopOrigin = false
+    public private(set) var isDragging = false
     public private(set) var isDeceleratingAfterTracking = false
     
     private final var transactionQueue: ListViewTransactionQueue
@@ -770,6 +771,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.snapToBottomInsetUntilFirstInteraction = false
         }
         self.scrolledToItem = nil
+
+        self.isDragging = true
         
         self.beganInteractiveDragging(self.touchesPosition)
         
@@ -781,6 +784,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        self.isDragging = false
         if decelerate {
             self.lastContentOffsetTimestamp = CACurrentMediaTime()
             self.isDeceleratingAfterTracking = true

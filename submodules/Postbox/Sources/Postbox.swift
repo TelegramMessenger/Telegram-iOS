@@ -703,6 +703,11 @@ public final class Transaction {
         assert(!self.disposed)
         return self.postbox?.messageHistoryTable.findClosestMessageIndex(peerId: peerId, timestamp: timestamp)?.id
     }
+
+    public func findMessageAtAbsoluteIndex(peerId: PeerId, namespace: MessageId.Namespace, index: Int) -> MessageIndex? {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryTable.findMessageAtAbsoluteIndex(peerId: peerId, namespace: namespace, index: index)
+    }
     
     public func findRandomMessage(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, ignoreIds: ([MessageId], Set<MessageId>)) -> MessageIndex? {
         assert(!self.disposed)

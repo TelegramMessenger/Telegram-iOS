@@ -102,6 +102,10 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
     private var containerSize: CGSize?
     private var indicatorPosition: CGFloat?
     private var scrollIndicatorHeight: CGFloat?
+    private var scrollIndicatorRange: (CGFloat, CGFloat)?
+
+    private var initialDraggingOffset: CGFloat?
+    private var draggingOffset: CGFloat?
 
     private var dragGesture: DragGesture?
     public private(set) var isDragging: Bool = false
@@ -110,10 +114,24 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
 
     public var openCurrentDate: (() -> Void)?
 
+    public var navigateToPosition: ((Float) -> Void)?
+    private var navigatingToPositionOffset: CGFloat?
+
     private var offsetBarTimer: SwiftSignalKit.Timer?
     private let hapticFeedback = HapticFeedback()
 
     private var theme: PresentationTheme?
+
+    private struct State {
+        var containerSize: CGSize
+        var containerInsets: UIEdgeInsets
+        var scrollingState: ListView.ScrollingIndicatorState?
+        var isScrolling: Bool
+        var isDragging: Bool
+        var theme: PresentationTheme
+    }
+
+    private var state: State?
 
     override public init() {
         self.dateIndicator = ComponentHostView<Empty>()
@@ -153,12 +171,19 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
                 offsetBarTimer.start()
 
                 strongSelf.isDragging = true
+                strongSelf.initialDraggingOffset = strongSelf.lineIndicator.frame.minY
+                strongSelf.draggingOffset = 0.0
 
-                /*if let scrollView = strongSelf.beginScrolling?() {
-                    strongSelf.draggingScrollView = scrollView
-                    strongSelf.scrollingInitialOffset = scrollView.contentOffset.y
-                    strongSelf.setContentOffset?(scrollView.contentOffset)
-                }*/
+                if let state = strongSelf.state {
+                    strongSelf.update(
+                        containerSize: state.containerSize,
+                        containerInsets: state.containerInsets,
+                        scrollingState: state.scrollingState,
+                        isScrolling: state.isScrolling,
+                        theme: state.theme,
+                        transition: .animated(duration: 0.2, curve: .easeInOut)
+                    )
+                }
 
                 strongSelf.updateActivityTimer(isScrolling: false)
             },
@@ -177,8 +202,29 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
                 transition.updateSublayerTransformOffset(layer: strongSelf.dateIndicator.layer, offset: CGPoint(x: 0.0, y: 0.0))
 
                 strongSelf.isDragging = false
+                if let _ = strongSelf.initialDraggingOffset, let _ = strongSelf.draggingOffset, let scrollIndicatorRange = strongSelf.scrollIndicatorRange {
+                    strongSelf.navigatingToPositionOffset = strongSelf.lineIndicator.frame.minY
+                    var absoluteOffset = strongSelf.lineIndicator.frame.minY - scrollIndicatorRange.0
+                    absoluteOffset /= (scrollIndicatorRange.1 - scrollIndicatorRange.0)
+                    absoluteOffset = abs(absoluteOffset)
+                    absoluteOffset = 1.0 - absoluteOffset
+                    strongSelf.navigateToPosition?(Float(absoluteOffset))
+                } else {
+                    strongSelf.navigatingToPositionOffset = nil
+                }
+                strongSelf.initialDraggingOffset = nil
+                strongSelf.draggingOffset = nil
 
-                //strongSelf.updateLineIndicator(transition: transition)
+                if let state = strongSelf.state {
+                    strongSelf.update(
+                        containerSize: state.containerSize,
+                        containerInsets: state.containerInsets,
+                        scrollingState: state.scrollingState,
+                        isScrolling: state.isScrolling,
+                        theme: state.theme,
+                        transition: transition
+                    )
+                }
 
                 strongSelf.updateActivityTimer(isScrolling: false)
             },
@@ -187,12 +233,23 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
                     return
                 }
 
-                let _ = relativeOffset
-
                 if strongSelf.offsetBarTimer != nil {
                     strongSelf.offsetBarTimer?.invalidate()
                     strongSelf.offsetBarTimer = nil
                     strongSelf.performOffsetBarTimerEvent()
+                }
+
+                strongSelf.draggingOffset = relativeOffset
+
+                if let state = strongSelf.state {
+                    strongSelf.update(
+                        containerSize: state.containerSize,
+                        containerInsets: state.containerInsets,
+                        scrollingState: state.scrollingState,
+                        isScrolling: state.isScrolling,
+                        theme: state.theme,
+                        transition: .immediate
+                    )
                 }
             }
         )
@@ -214,6 +271,20 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
         self.hapticFeedback.tap()
     }
 
+    public func resetNavigatingToPosition() {
+        self.navigatingToPositionOffset = nil
+        if let state = self.state {
+            self.update(
+                containerSize: state.containerSize,
+                containerInsets: state.containerInsets,
+                scrollingState: state.scrollingState,
+                isScrolling: state.isScrolling,
+                theme: state.theme,
+                transition: .animated(duration: 0.2, curve: .easeInOut)
+            )
+        }
+    }
+
     public func update(
         containerSize: CGSize,
         containerInsets: UIEdgeInsets,
@@ -222,6 +293,17 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
         theme: PresentationTheme,
         transition: ContainedViewLayoutTransition
     ) {
+        let updateLineImage = self.state?.isDragging != self.isDragging || self.state?.theme !== theme
+
+        self.state = State(
+            containerSize: containerSize,
+            containerInsets: containerInsets,
+            scrollingState: scrollingState,
+            isScrolling: isScrolling,
+            isDragging: self.isDragging,
+            theme: theme
+        )
+
         self.containerSize = containerSize
         if self.theme !== theme {
             self.theme = theme
@@ -239,13 +321,24 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
             default:
                 break
             }*/
+
+        }
+
+        if updateLineImage {
             let lineColor: UIColor
             if theme.overallDarkAppearance {
                 lineColor = UIColor(white: 0.0, alpha: 0.3)
             } else {
                 lineColor = UIColor(white: 0.0, alpha: 0.3)
             }
-            self.lineIndicator.image = generateStretchableFilledCircleImage(diameter: 3.0, color: lineColor, strokeColor: nil, strokeWidth: nil, backgroundColor: nil)
+            if let image = generateStretchableFilledCircleImage(diameter: self.isDragging ? 6.0 : 3.0, color: lineColor, strokeColor: nil, strokeWidth: nil, backgroundColor: nil) {
+                if transition.isAnimated, let previousImage = self.lineIndicator.image {
+                    self.lineIndicator.image = image
+                    self.lineIndicator.layer.animate(from: previousImage.cgImage!, to: image.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                } else {
+                    self.lineIndicator.image = image
+                }
+            }
         }
 
         if self.dateIndicator.alpha.isZero {
@@ -253,9 +346,7 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
             transition.updateSublayerTransformOffset(layer: self.dateIndicator.layer, offset: CGPoint())
         }
 
-        if isScrolling {
-            self.updateActivityTimer(isScrolling: true)
-        }
+        self.updateActivityTimer(isScrolling: isScrolling)
 
         let indicatorSize = self.dateIndicator.update(
             transition: .immediate,
@@ -271,7 +362,6 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
         let _ = indicatorSize
 
         self.dateIndicator.isHidden = true
-
 
         if let scrollingIndicatorState = scrollingState {
             let averageRangeItemHeight: CGFloat = 44.0
@@ -317,15 +407,13 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
             if approximateContentHeight <= 0 {
                 indicatorHeight = 0.0
             } else {
-                indicatorHeight = max(minIndicatorContentHeight, floor(visibleHeightWithoutIndicatorInsets * (containerSize.height - scrollingIndicatorState.insets.top - scrollingIndicatorState.insets.bottom) / approximateContentHeight))
+                indicatorHeight = max(minIndicatorContentHeight, 44.0)//max(minIndicatorContentHeight, floor(visibleHeightWithoutIndicatorInsets * (containerSize.height - scrollingIndicatorState.insets.top - scrollingIndicatorState.insets.bottom) / approximateContentHeight))
             }
 
             let upperBound = containerInsets.top + indicatorTopInset
             let lowerBound = containerSize.height - containerInsets.bottom - indicatorTopInset - indicatorBottomInset - indicatorHeight
 
             let indicatorOffset = ceilToScreenPixels(upperBound * (1.0 - approximateScrollingProgress) + lowerBound * approximateScrollingProgress)
-
-            //var indicatorFrame = CGRect(origin: CGPoint(x: self.rotated ? indicatorSideInset : (self.visibleSize.width - 3.0 - indicatorSideInset), y: indicatorOffset), size: CGSize(width: 3.0, height: indicatorHeight))
 
             var indicatorFrame = CGRect(origin: CGPoint(x: containerSize.width - 3.0 - indicatorSideInset, y: indicatorOffset), size: CGSize(width: 3.0, height: indicatorHeight))
 
@@ -344,39 +432,71 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
                indicatorFrame.origin.y = indicatorTopInset
             }
 
-            if indicatorHeight >= visibleHeightWithoutIndicatorInsets {
-                self.lineIndicator.isHidden = true
-                self.lineIndicator.frame = indicatorFrame
-            } else {
-                if self.lineIndicator.isHidden {
-                    self.lineIndicator.isHidden = false
-                    self.lineIndicator.frame = indicatorFrame
-                } else {
-                    self.lineIndicator.frame = indicatorFrame
+            indicatorFrame.origin.y = containerSize.height - indicatorFrame.origin.y - indicatorFrame.height
+
+            if self.isDragging {
+                indicatorFrame.origin.x -= 3.0
+                indicatorFrame.size.width += 3.0
+            }
+
+            var alternativeOffset: CGFloat?
+            if let navigatingToPositionOffset = self.navigatingToPositionOffset {
+                alternativeOffset = navigatingToPositionOffset
+            } else if let initialDraggingOffset = self.initialDraggingOffset, let draggingOffset = self.draggingOffset {
+                alternativeOffset = initialDraggingOffset + draggingOffset
+            }
+
+            if let alternativeOffset = alternativeOffset {
+                indicatorFrame.origin.y = alternativeOffset
+
+                if indicatorFrame.origin.y > containerSize.height - (containerInsets.top + indicatorBottomInset) - indicatorFrame.height {
+                    indicatorFrame.origin.y = containerSize.height - (containerInsets.top + indicatorBottomInset) - indicatorFrame.height
+                }
+                if indicatorFrame.origin.y < containerInsets.bottom + indicatorTopInset {
+                    indicatorFrame.origin.y = containerInsets.bottom + indicatorTopInset
                 }
             }
+
+            transition.updateFrame(view: self.lineIndicator, frame: indicatorFrame)
+
+            if indicatorHeight >= visibleHeightWithoutIndicatorInsets {
+                self.lineIndicator.isHidden = true
+            } else {
+                self.lineIndicator.isHidden = false
+            }
+
+            self.scrollIndicatorRange = (
+                containerInsets.bottom + indicatorTopInset,
+                containerSize.height - (containerInsets.top + indicatorBottomInset) - self.lineIndicator.bounds.height
+            )
         } else {
             self.lineIndicator.isHidden = true
+            self.scrollIndicatorRange = nil
         }
     }
 
     private func updateActivityTimer(isScrolling: Bool) {
-        self.activityTimer?.invalidate()
+        if self.isDragging || isScrolling {
+            self.activityTimer?.invalidate()
+            self.activityTimer = nil
 
-        if self.isDragging {
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
             transition.updateAlpha(layer: self.dateIndicator.layer, alpha: 1.0)
             transition.updateAlpha(layer: self.lineIndicator.layer, alpha: 1.0)
         } else {
-            self.activityTimer = SwiftSignalKit.Timer(timeout: 2.0, repeat: false, completion: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
-                transition.updateAlpha(layer: strongSelf.dateIndicator.layer, alpha: 0.0)
-                transition.updateAlpha(layer: strongSelf.lineIndicator.layer, alpha: 0.0)
-            }, queue: .mainQueue())
-            self.activityTimer?.start()
+            if self.activityTimer == nil {
+                self.activityTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.activityTimer = nil
+
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
+                    transition.updateAlpha(layer: strongSelf.dateIndicator.layer, alpha: 0.0)
+                    transition.updateAlpha(layer: strongSelf.lineIndicator.layer, alpha: 0.0)
+                }, queue: .mainQueue())
+                self.activityTimer?.start()
+            }
         }
     }
 
