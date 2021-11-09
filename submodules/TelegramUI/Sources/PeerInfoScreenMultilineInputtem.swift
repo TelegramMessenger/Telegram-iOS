@@ -50,7 +50,7 @@ private final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode
         self.addSubnode(self.bottomSeparatorNode)
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenMultilineInputItem else {
             return 10.0
         }
@@ -101,7 +101,7 @@ private final class PeerInfoScreenMultilineInputItemNode: PeerInfoScreenItemNode
             separatorInset += 49.0
         }
         
-        let hasCorners = safeInsets.left > 0.0 && (topItem == nil || bottomItem == nil)
+        let hasCorners = hasCorners && (topItem == nil || bottomItem == nil)
         let hasTopCorners = hasCorners && topItem == nil
         let hasBottomCorners = hasCorners && bottomItem == nil
         

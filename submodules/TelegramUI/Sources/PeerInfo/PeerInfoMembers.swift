@@ -92,6 +92,7 @@ enum PeerInfoMembersDataState: Equatable {
 }
 
 struct PeerInfoMembersState: Equatable {
+    var canAddMembers: Bool
     var members: [PeerInfoMember]
     var dataState: PeerInfoMembersDataState
 }
@@ -126,6 +127,7 @@ private final class PeerInfoMembersContextImpl {
     private let context: AccountContext
     private let peerId: PeerId
     
+    private var canAddMembers = false
     private var members: [PeerInfoMember] = []
     private var dataState: PeerInfoMembersDataState = .loading(isInitial: true)
     private var removingMemberIds: [PeerId: Disposable] = [:]
@@ -135,7 +137,7 @@ private final class PeerInfoMembersContextImpl {
         return self.stateValue.get()
     }
     private let disposable = MetaDisposable()
-    
+    private let peerDisposable = MetaDisposable()
     private var channelMembersControl: PeerChannelMemberCategoryControl?
     
     init(queue: Queue, context: AccountContext, peerId: PeerId) {
@@ -170,8 +172,28 @@ private final class PeerInfoMembersContextImpl {
             })
             self.disposable.set(disposable)
             self.channelMembersControl = control
+            
+            self.peerDisposable.set((context.account.postbox.peerView(id: peerId)
+            |> deliverOn(self.queue)).start(next: { [weak self] view in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let channel = peerViewMainPeer(view) as? TelegramChannel {
+                    var canAddMembers = false
+                    switch channel.info {
+                    case .broadcast:
+                        break
+                    case .group:
+                        if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
+                            canAddMembers = true
+                        }
+                    }
+                    strongSelf.canAddMembers = canAddMembers
+                    strongSelf.pushState()
+                }
+            }))
         } else if peerId.namespace == Namespaces.Peer.CloudGroup {
-            disposable.set((context.account.postbox.peerView(id: peerId)
+            self.disposable.set((context.account.postbox.peerView(id: peerId)
             |> deliverOn(self.queue)).start(next: { [weak self] view in
                 guard let strongSelf = self, let cachedData = view.cachedData as? CachedGroupData, let participantsData = cachedData.participants else {
                     return
@@ -195,6 +217,21 @@ private final class PeerInfoMembersContextImpl {
                         unsortedMembers.append(.legacyGroupMember(peer: RenderedPeer(peer: peer), role: role, invitedBy: invitedBy, presence: view.peerPresences[participant.peerId] as? TelegramUserPresence))
                     }
                 }
+                
+                if let group = peerViewMainPeer(view) as? TelegramGroup {
+                    var canAddMembers = false
+                    switch group.role {
+                        case .admin, .creator:
+                            canAddMembers = true
+                        case .member:
+                            break
+                    }
+                    if !group.hasBannedPermission(.banAddMembers) {
+                        canAddMembers = true
+                    }
+                    strongSelf.canAddMembers = canAddMembers
+                }
+                
                 strongSelf.members = membersSortedByPresence(unsortedMembers, accountPeerId: strongSelf.context.account.peerId)
                 strongSelf.dataState = .ready(canLoadMore: false)
                 strongSelf.pushState()
@@ -207,13 +244,14 @@ private final class PeerInfoMembersContextImpl {
     
     deinit {
         self.disposable.dispose()
+        self.peerDisposable.dispose()
     }
     
     private func pushState() {
         if self.removingMemberIds.isEmpty {
-            self.stateValue.set(.single(PeerInfoMembersState(members: self.members, dataState: self.dataState)))
+            self.stateValue.set(.single(PeerInfoMembersState(canAddMembers: self.canAddMembers, members: self.members, dataState: self.dataState)))
         } else {
-            self.stateValue.set(.single(PeerInfoMembersState(members: self.members.filter { member in
+            self.stateValue.set(.single(PeerInfoMembersState(canAddMembers: self.canAddMembers, members: self.members.filter { member in
                 return self.removingMemberIds[member.id] == nil
             }, dataState: self.dataState)))
         }

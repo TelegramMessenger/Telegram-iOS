@@ -9,6 +9,7 @@ import PresentationDataUtils
 
 public enum ItemListPeerActionItemHeight {
     case generic
+    case compactPeerList
     case peerList
 }
 
@@ -173,6 +174,10 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                     verticalInset = 14.0
                     verticalOffset = 0.0
                     leftInset = 65.0 + params.leftInset
+                case .compactPeerList:
+                    verticalInset = 14.0
+                    verticalOffset = 0.0
+                    leftInset = 59.0 + params.leftInset
             }
             
             let editingOffset: CGFloat = (item.editing ? 38.0 : 0.0)

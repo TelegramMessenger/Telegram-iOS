@@ -54,6 +54,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
 
 private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     private let selectionNode: PeerInfoScreenSelectableBackgroundNode
+    private let maskNode: ASImageNode
     private let labelNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let bottomSeparatorNode: ASDisplayNode
@@ -74,6 +75,9 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         var bringToFrontForHighlightImpl: (() -> Void)?
         self.selectionNode = PeerInfoScreenSelectableBackgroundNode(bringToFrontForHighlight: { bringToFrontForHighlightImpl?() })
         self.selectionNode.isUserInteractionEnabled = false
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.labelNode = ImmediateTextNode()
         self.labelNode.displaysAsynchronously = false
@@ -102,6 +106,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         
         self.addSubnode(self.bottomSeparatorNode)
         self.addSubnode(self.selectionNode)
+        self.addSubnode(self.maskNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.textNode)
         
@@ -184,7 +189,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         }
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenLabeledValueItem else {
             return 10.0
         }
@@ -267,6 +272,13 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: sideInset, y: height - UIScreenPixel), size: CGSize(width: width - sideInset, height: UIScreenPixel)))
         transition.updateAlpha(node: self.bottomSeparatorNode, alpha: bottomItem == nil ? 0.0 : 1.0)
         
+        let hasCorners = hasCorners && (topItem == nil || bottomItem == nil)
+        let hasTopCorners = hasCorners && topItem == nil
+        let hasBottomCorners = hasCorners && bottomItem == nil
+        
+        self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
+        self.bottomSeparatorNode.isHidden = hasBottomCorners
         
         self.activateArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: height))
         self.activateArea.accessibilityLabel = item.label
