@@ -90,8 +90,10 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         
         let sideInset: CGFloat = 16.0 + safeInsets.left
         var leftInset = (item.icon == nil ? sideInset : sideInset + 29.0 + 16.0)
+        var iconInset = sideInset
         if case .peerList = item.alignment {
             leftInset += 5.0
+            iconInset += 5.0
         }
         let rightInset = sideInset
         let separatorInset = item.icon == nil ? sideInset : leftInset - 1.0
@@ -122,7 +124,7 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
                 self.addSubnode(self.iconNode)
             }
             self.iconNode.image = generateTintedImage(image: icon, color: textColorValue)
-            let iconFrame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((height - icon.size.height) / 2.0)), size: icon.size)
+            let iconFrame = CGRect(origin: CGPoint(x: iconInset, y: floorToScreenPixels((height - icon.size.height) / 2.0)), size: icon.size)
             transition.updateFrame(node: self.iconNode, frame: iconFrame)
         } else if self.iconNode.supernode != nil {
             self.iconNode.image = nil

@@ -163,21 +163,25 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                 updatedTheme = item.presentationData.theme
             }
             let leftInset: CGFloat
+            let iconOffset: CGFloat
             let verticalInset: CGFloat
             let verticalOffset: CGFloat
             switch item.height {
                 case .generic:
+                    iconOffset = 1.0
                     verticalInset = 11.0
                     verticalOffset = 0.0
                     leftInset = (item.icon == nil ? 16.0 : 59.0) + params.leftInset
                 case .peerList:
+                    iconOffset = 3.0
                     verticalInset = 14.0
                     verticalOffset = 0.0
                     leftInset = 65.0 + params.leftInset
                 case .compactPeerList:
-                    verticalInset = 14.0
+                    iconOffset = 3.0
+                    verticalInset = 11.0
                     verticalOffset = 0.0
-                    leftInset = 59.0 + params.leftInset
+                    leftInset = 65.0 + params.leftInset
             }
             
             let editingOffset: CGFloat = (item.editing ? 38.0 : 0.0)
@@ -227,7 +231,7 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                     
                     strongSelf.iconNode.image = item.icon
                     if let image = item.icon {
-                        transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + editingOffset + floor((leftInset - params.leftInset - image.size.width) / 2.0) + 3.0, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size))
+                        transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + editingOffset + floor((leftInset - params.leftInset - image.size.width) / 2.0) + iconOffset, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size))
                     }
                     
                     if strongSelf.backgroundNode.supernode == nil {
