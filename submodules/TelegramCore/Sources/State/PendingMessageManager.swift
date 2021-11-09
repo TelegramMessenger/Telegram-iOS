@@ -433,13 +433,13 @@ public final class PendingMessageManager {
                 }
                 
                 Logger.shared.log("PendingMessageManager", "beginSendingMessages messagesToForward.count: \(messagesToForward.count)")
-
+                
                 
                 for (_, messages) in messagesToForward {
                     for (context, _, _) in messages {
                         context.state = .sending(groupId: nil)
                     }
-                    let sendMessage: Signal<PendingMessageResult, NoError> = strongSelf.sendGroupMessagesContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, group: messages.map { data in
+                    let sendMessage: Signal<PendingMessageResult, NoError> = strongSelf.sendGroupMessagesContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, accountPeerId: strongSelf.accountPeerId, group: messages.map { data in
                         let (_, message, forwardInfo) = data
                         return (message.id, PendingMessageUploadedContentAndReuploadInfo(content: .forward(forwardInfo), reuploadInfo: nil))
                     })
@@ -508,7 +508,7 @@ public final class PendingMessageManager {
         for (context, _, _) in messages {
             context.state = .sending(groupId: groupId)
         }
-        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendGroupMessagesContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, group: messages.map { ($0.1, $0.2) })
+        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendGroupMessagesContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, accountPeerId: self.accountPeerId, group: messages.map { ($0.1, $0.2) })
         |> map { next -> PendingMessageResult in
             return .progress(1.0)
         }
@@ -518,7 +518,7 @@ public final class PendingMessageManager {
     
     private func commitSendingSingleMessage(messageContext: PendingMessageContext, messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo) {
         messageContext.state = .sending(groupId: nil)
-        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendMessageContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, messageId: messageId, content: content)
+        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendMessageContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, accountPeerId: self.accountPeerId, messageId: messageId, content: content)
         |> map { next -> PendingMessageResult in
             return .progress(1.0)
         }
@@ -669,7 +669,7 @@ public final class PendingMessageManager {
         }
     }
     
-    private func sendGroupMessagesContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, group: [(messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo)]) -> Signal<Void, NoError> {
+    private func sendGroupMessagesContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, accountPeerId: PeerId, group: [(messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo)]) -> Signal<Void, NoError> {
         let queue = self.queue
         return postbox.transaction { [weak self] transaction -> Signal<Void, NoError> in
             if group.isEmpty {
@@ -738,7 +738,7 @@ public final class PendingMessageManager {
                     }
                     
                     var sendAsInputPeer: Api.InputPeer?
-                    if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeer(sendAsPeer) {
+                    if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: accountPeerId) {
                         sendAsInputPeer = inputPeer
                         flags |= (1 << 13)
                     }
@@ -784,7 +784,7 @@ public final class PendingMessageManager {
                     }
                     
                     var sendAsInputPeer: Api.InputPeer?
-                    if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeer(sendAsPeer) {
+                    if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: accountPeerId) {
                         sendAsInputPeer = inputPeer
                         flags |= (1 << 13)
                     }
@@ -976,7 +976,7 @@ public final class PendingMessageManager {
         }
     }
     
-    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo) -> Signal<Void, NoError> {
+    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, accountPeerId: PeerId, messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo) -> Signal<Void, NoError> {
         let queue = self.queue
         return postbox.transaction { [weak self] transaction -> Signal<Void, NoError> in
             guard let message = transaction.getMessage(messageId) else {
@@ -1034,7 +1034,7 @@ public final class PendingMessageManager {
                 }
                 
                 var sendAsInputPeer: Api.InputPeer?
-                if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeer(sendAsPeer) {
+                if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: accountPeerId) {
                     sendAsInputPeer = inputPeer
                     flags |= (1 << 13)
                 }

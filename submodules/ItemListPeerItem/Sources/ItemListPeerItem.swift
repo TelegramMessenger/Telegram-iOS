@@ -1012,6 +1012,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     case .sameSection(false):
                         bottomStripeInset = leftInset + editingOffset
                         bottomStripeOffset = -separatorHeight
+                        strongSelf.bottomStripeNode.isHidden = !item.displayDecorations
                     default:
                         bottomStripeInset = 0.0
                         bottomStripeOffset = 0.0

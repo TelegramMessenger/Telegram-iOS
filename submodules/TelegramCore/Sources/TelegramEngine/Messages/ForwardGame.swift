@@ -9,7 +9,7 @@ func _internal_forwardGameWithScore(account: Account, messageId: MessageId, to p
             var flags: Int32 = 1 << 8
             
             var sendAsInputPeer: Api.InputPeer?
-            if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeer(sendAsPeer) {
+            if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: account.peerId) {
                 sendAsInputPeer = inputPeer
                 flags |= (1 << 13)
             }

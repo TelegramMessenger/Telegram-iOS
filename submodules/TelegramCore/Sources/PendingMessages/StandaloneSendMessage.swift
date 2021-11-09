@@ -112,7 +112,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             }
             
             var sendAsInputPeer: Api.InputPeer?
-            if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeer(sendAsPeer) {
+            if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: account.peerId) {
                 sendAsInputPeer = inputPeer
                 flags |= (1 << 13)
             }

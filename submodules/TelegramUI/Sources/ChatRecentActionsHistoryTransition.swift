@@ -290,7 +290,14 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         var text: String = ""
                         var entities: [MessageTextEntity] = []
 
-                        appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessagePinned(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
+                        let textFormat: (String) -> PresentationStrings.FormattedString
+                        if let message = message, message.tags.contains(.pinned) {
+                            textFormat = self.presentationData.strings.Channel_AdminLog_MessagePinned
+                        } else {
+                            textFormat = self.presentationData.strings.Channel_AdminLog_MessageUnpinnedExtended
+                        }
+                        
+                        appendAttributedText(text: textFormat(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
                             if index == 0, let author = author {
                                 return [.TextMention(peerId: author.id)]
                             }
@@ -764,31 +771,48 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 }
                             }
                             
-                            for (flag, string) in order {
-                                if prevFlags.contains(flag) != newFlags.contains(flag) {
-                                    if !appendedRightsHeader {
-                                        appendedRightsHeader = true
-                                        appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessagePromotedName(EnginePeer(new.peer).displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)) : self.presentationData.strings.Channel_AdminLog_MessagePromotedNameUsername(EnginePeer(new.peer).displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!), generateEntities: { index in
-                                            var result: [MessageTextEntityType] = []
-                                            if index == 0 {
-                                                result.append(.TextMention(peerId: new.peer.id))
-                                            } else if index == 1 {
-                                                result.append(.Mention)
-                                            } else if index == 2 {
-                                                result.append(.Bold)
-                                            }
-                                            return result
-                                        }, to: &text, entities: &entities)
+                            if !prevFlags.isEmpty && newFlags.isEmpty {
+                                if !appendedRightsHeader {
+                                    appendedRightsHeader = true
+                                    appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRemovedAdminName(EnginePeer(new.peer).displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)) : self.presentationData.strings.Channel_AdminLog_MessageRemovedAdminNameUsername(EnginePeer(new.peer).displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!), generateEntities: { index in
+                                        var result: [MessageTextEntityType] = []
+                                        if index == 0 {
+                                            result.append(.TextMention(peerId: new.peer.id))
+                                        } else if index == 1 {
+                                            result.append(.Mention)
+                                        } else if index == 2 {
+                                            result.append(.Bold)
+                                        }
+                                        return result
+                                    }, to: &text, entities: &entities)
+                                }
+                            } else {
+                                for (flag, string) in order {
+                                    if prevFlags.contains(flag) != newFlags.contains(flag) {
+                                        if !appendedRightsHeader {
+                                            appendedRightsHeader = true
+                                            appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessagePromotedName(EnginePeer(new.peer).displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)) : self.presentationData.strings.Channel_AdminLog_MessagePromotedNameUsername(EnginePeer(new.peer).displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!), generateEntities: { index in
+                                                var result: [MessageTextEntityType] = []
+                                                if index == 0 {
+                                                    result.append(.TextMention(peerId: new.peer.id))
+                                                } else if index == 1 {
+                                                    result.append(.Mention)
+                                                } else if index == 2 {
+                                                    result.append(.Bold)
+                                                }
+                                                return result
+                                            }, to: &text, entities: &entities)
+                                            text += "\n"
+                                        }
+                                        
                                         text += "\n"
+                                        if !prevFlags.contains(flag) {
+                                            text += "+"
+                                        } else {
+                                            text += "-"
+                                        }
+                                        appendAttributedText(text: string, withEntities: [.Italic], to: &text, entities: &entities)
                                     }
-                                    
-                                    text += "\n"
-                                    if !prevFlags.contains(flag) {
-                                        text += "+"
-                                    } else {
-                                        text += "-"
-                                    }
-                                    appendAttributedText(text: string, withEntities: [.Italic], to: &text, entities: &entities)
                                 }
                             }
                             

@@ -281,9 +281,7 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
         return []
     }
     for attribute in message.attributes {
-        if attribute is AutoremoveTimeoutMessageAttribute {
-            return []
-        } else if attribute is AutoclearTimeoutMessageAttribute {
+        if attribute is AutoclearTimeoutMessageAttribute {
             return []
         }
     }
@@ -1014,7 +1012,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             break
                         }
                     }
-                    if let file = media as? TelegramMediaFile {
+                    if let file = media as? TelegramMediaFile, !message.isCopyProtected() {
                         if file.isVideo {
                             if file.isAnimated {
                                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_LinkDialogSave, icon: { theme in

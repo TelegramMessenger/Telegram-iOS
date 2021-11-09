@@ -3922,7 +3922,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var presentationData = presentationData
                 var useDarkAppearance = presentationData.theme.overallDarkAppearance
                 
-                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoticon == themeEmoticon }) {
+                if let themeEmoticon = themeEmoticon, let theme = chatThemes.first(where: { $0.emoticon?.strippedEmoji == themeEmoticon.strippedEmoji }) {
                     if let darkAppearancePreview = darkAppearancePreview {
                         useDarkAppearance = darkAppearancePreview
                     }
@@ -4565,14 +4565,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return [FoundPeer(peer: peer, subscribers: nil)]
         }
         
-        let _ = (combineLatest(queue: Queue.mainQueue(), currentAccountPeer, self.context.engine.peers.sendAsAvailablePeers(peerId: self.chatLocation.peerId)))
-        .start(next: { [weak self] currentAccountPeer, peers in
+        let _ = (combineLatest(queue: Queue.mainQueue(), currentAccountPeer, self.context.account.postbox.peerView(id: self.chatLocation.peerId), self.context.engine.peers.sendAsAvailablePeers(peerId: self.chatLocation.peerId)))
+        .start(next: { [weak self] currentAccountPeer, peerView, peers in
             guard let strongSelf = self else {
                 return
             }
             var allPeers: [FoundPeer]?
             if !peers.isEmpty {
-                allPeers = currentAccountPeer
+                if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
+                    allPeers = []
+                } else {
+                    allPeers = currentAccountPeer
+                }
                 allPeers?.append(contentsOf: peers)
             }
             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
@@ -5733,6 +5737,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     messagesCount = .single(1)
                 }
                 
+                let accountPeerId = strongSelf.context.account.peerId
                 let items = combineLatest(forwardOptions, strongSelf.context.account.postbox.messagesAtIds(messageIds), messagesCount)
                 |> map { forwardOptions, messages, messagesCount -> [ContextMenuItem] in
                     var items: [ContextMenuItem] = []
@@ -5741,9 +5746,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var uniquePeerIds = Set<PeerId>()
                     
                     var hasOther = false
+                    var hasNotOwnMessages = false
                     for message in messages {
-                        if let author = message.effectiveAuthor, !uniquePeerIds.contains(author.id) {
-                            uniquePeerIds.insert(author.id)
+                        if let author = message.effectiveAuthor {
+                            if !uniquePeerIds.contains(author.id) {
+                                uniquePeerIds.insert(author.id)
+                            }
+                            
+                            if message.id.peerId == accountPeerId && author.id == accountPeerId {
+
+                            } else {
+                                hasNotOwnMessages = true
+                            }
                         }
                         
                         var isDice = false
@@ -5766,7 +5780,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    let canHideNames = hasOther
+                    let canHideNames = hasNotOwnMessages && hasOther
                     
                     let hideNames = forwardOptions.hideNames
                     let hideCaptions = forwardOptions.hideCaptions
@@ -7397,8 +7411,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let node = node as? ContextReferenceContentNode, let peers = strongSelf.presentationInterfaceState.sendAsPeers else {
                 return
             }
-    
-            let myPeerId = strongSelf.presentationInterfaceState.currentSendAsPeerId ?? strongSelf.context.account.peerId
+            
+            let defaultMyPeerId: PeerId
+            if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
+                defaultMyPeerId = channel.id
+            } else {
+                defaultMyPeerId = strongSelf.context.account.peerId
+            }
+            let myPeerId = strongSelf.presentationInterfaceState.currentSendAsPeerId ?? defaultMyPeerId
             
             let avatarSize = CGSize(width: 28.0, height: 28.0)
             var items: [ContextMenuItem] = []
@@ -7410,8 +7430,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
                     subtitle = strongSelf.presentationData.strings.VoiceChat_PersonalAccount
                 } else if let subscribers = peer.subscribers {
-                    if let peer = peer.peer as? TelegramChannel, case .broadcast = peer.info {
-                        subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                    if let peer = peer.peer as? TelegramChannel {
+                        if case .broadcast = peer.info {
+                            subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
+                        } else {
+                            subtitle = strongSelf.presentationData.strings.VoiceChat_DiscussionGroup
+                        }
                     } else {
                         subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(subscribers)
                     }
@@ -12001,11 +12025,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             controller.peerSelected = { [weak self, weak controller] peer in
-                let peerId = peer.id
-                
                 guard let strongSelf = self, let strongController = controller else {
                     return
                 }
+                let peerId = peer.id
+                let accountPeerId = strongSelf.context.account.peerId
                 
                 if resetCurrent {
                     strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil) }) })
@@ -12016,8 +12040,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     isPinnedMessages = true
                 }
                 
+                var hasNotOwnMessages = false
+                for message in messages {
+                    if let author = message.effectiveAuthor {
+                        if message.id.peerId == accountPeerId && author.id == accountPeerId {
+                        } else {
+                            hasNotOwnMessages = true
+                        }
+                    }
+                }
+                
                 if case .peer(peerId) = strongSelf.chatLocation, strongSelf.parentController == nil, !isPinnedMessages {
-                    strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(messages.map { $0.id }).withoutSelectionState() }).updatedSearch(nil) })
+                    strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(messages.map { $0.id }).withUpdatedForwardOptionsState(ChatInterfaceForwardOptionsState(hideNames: !hasNotOwnMessages, hideCaptions: false, unhideNamesOnCaptionChange: false)).withoutSelectionState() }).updatedSearch(nil) })
                     strongSelf.updateItemNodesSearchTextHighlightStates()
                     strongSelf.searchResultsController = nil
                     strongController.dismiss()
@@ -12080,7 +12114,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
 
                     let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: nil, { currentState in
-                        return currentState.withUpdatedForwardMessageIds(messages.map { $0.id })
+                        return currentState.withUpdatedForwardMessageIds(messages.map { $0.id }).withUpdatedForwardOptionsState(ChatInterfaceForwardOptionsState(hideNames: !hasNotOwnMessages, hideCaptions: false, unhideNamesOnCaptionChange: false))
                     })
                     |> deliverOnMainQueue).start(completed: {
                         if let strongSelf = self {

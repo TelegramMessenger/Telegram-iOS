@@ -582,7 +582,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private let screencastJoinDisposable = MetaDisposable()
     private let requestDisposable = MetaDisposable()
     private let startDisposable = MetaDisposable()
-    private let subscribeDisposable = MetaDisposable()
     private var groupCallParticipantUpdatesDisposable: Disposable?
     
     private let networkStateDisposable = MetaDisposable()
@@ -937,7 +936,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.screencastJoinDisposable.dispose()
         self.requestDisposable.dispose()
         self.startDisposable.dispose()
-        self.subscribeDisposable.dispose()
         self.groupCallParticipantUpdatesDisposable?.dispose()
         self.leaveDisposable.dispose()
         self.isMutedDisposable.dispose()
@@ -1311,6 +1309,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             strongSelf.stateValue.title = state.title
             strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canManageCall || !state.defaultParticipantsAreMuted.isMuted, mutedByYou: false)
         
+            strongSelf.stateValue.subscribedToScheduled = state.subscribedToScheduled
             strongSelf.stateValue.scheduleTimestamp = strongSelf.isScheduledStarted ? nil : state.scheduleTimestamp
             if state.scheduleTimestamp == nil && !strongSelf.isScheduledStarted {
                 strongSelf.updateSessionState(internalState: .active(GroupCallInfo(id: callInfo.id, accessHash: callInfo.accessHash, participantCount: state.totalCount, streamDcId: callInfo.streamDcId, title: state.title, scheduleTimestamp: nil, subscribedToScheduled: false, recordingStartTimestamp: nil, sortAscending: true, defaultParticipantsAreMuted: callInfo.defaultParticipantsAreMuted ?? state.defaultParticipantsAreMuted, isVideoEnabled: callInfo.isVideoEnabled, unmutedVideoLimit: callInfo.unmutedVideoLimit)), audioSessionControl: strongSelf.audioSessionControl)
@@ -2383,11 +2382,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         guard case let .active(callInfo) = self.internalState, callInfo.scheduleTimestamp != nil else {
             return
         }
-        
-        self.stateValue.subscribedToScheduled = subscribe
-        
-        self.subscribeDisposable.set((self.accountContext.engine.calls.toggleScheduledGroupCallSubscription(peerId: self.peerId, callId: callInfo.id, accessHash: callInfo.accessHash, subscribe: subscribe)
-        |> deliverOnMainQueue).start())
+        self.participantsContext?.toggleScheduledSubscription(subscribe)
     }
     
     public func schedule(timestamp: Int32) {

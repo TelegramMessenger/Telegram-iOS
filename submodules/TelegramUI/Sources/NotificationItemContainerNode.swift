@@ -89,8 +89,13 @@ final class NotificationItemContainerNode: ASDisplayNode {
             let inset: CGFloat = 8.0
             
             var contentInsets = UIEdgeInsets(top: inset, left: inset + layout.safeInsets.left, bottom: inset, right: inset + layout.safeInsets.right)
-            if let statusBarHeight = layout.statusBarHeight, CGFloat(44.0).isLessThanOrEqualTo(statusBarHeight) {
-                contentInsets.top += 34.0
+            
+            if let statusBarHeight = layout.statusBarHeight, statusBarHeight >= 39.0 {
+                if statusBarHeight >= 44.0 {
+                    contentInsets.top += 34.0
+                } else {
+                    contentInsets.top += 29.0
+                }
             }
             
             let containerWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)

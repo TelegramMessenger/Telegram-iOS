@@ -278,10 +278,17 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         return true
                     })
                     
+                    var hideNames = options.hideNames
+                    if let author = message.effectiveAuthor {
+                        if message.id.peerId == accountPeer.id && author.id == accountPeer.id {
+                            hideNames = true
+                        }
+                    }
+                    
                     var messageText = message.text
                     var messageMedia = message.media
                     var hasDice = false
-                    if options.hideNames {
+                    if hideNames {
                         for media in message.media {
                             if options.hideCaptions {
                                 if media is TelegramMediaImage || media is TelegramMediaFile {
@@ -304,7 +311,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     if forwardInfo == nil {
                         forwardInfo = MessageForwardInfo(author: message.author, source: nil, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
                     }
-                    if options.hideNames && !hasDice {
+                    if hideNames && !hasDice {
                         forwardInfo = nil
                     }
                     
