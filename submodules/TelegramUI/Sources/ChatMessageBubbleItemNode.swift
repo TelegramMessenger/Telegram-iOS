@@ -1166,7 +1166,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var authorRank: CachedChannelAdminRank?
         var authorIsChannel: Bool = false
         switch content {
-            case let .message(message, _, _, attributes):
+            case let .message(message, _, _, attributes, _):
                 if let peer = message.peers[message.id.peerId] as? TelegramChannel {
                     if case .broadcast = peer.info {
                     } else {
@@ -1241,7 +1241,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var isItemEdited = false
         
         switch item.content {
-            case let .message(message, value, _, _):
+            case let .message(message, value, _, _, _):
                 read = value
                 isItemPinned = message.tags.contains(.pinned)
             case let .group(messages):
@@ -1322,7 +1322,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 case .message:
                     break
                 case let .group(messages):
-                    for (m, _, selection, _) in messages {
+                    for (m, _, selection, _, _) in messages {
                         if m.id == message.id {
                             switch selection {
                                 case .none:
@@ -3312,7 +3312,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         var canHaveSelection = true
         switch item.content {
-            case let .message(message, _, _, _):
+            case let .message(message, _, _, _, _):
                 for media in message.media {
                     if let action = media as? TelegramMediaAction {
                         if case .phoneCall = action.action { } else {
@@ -3336,11 +3336,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
             
             switch item.content {
-                case let .message(message, _, _, _):
+                case let .message(message, _, _, _, _):
                     selected = selectionState.selectedIds.contains(message.id)
                 case let .group(messages: messages):
                     var allSelected = !messages.isEmpty
-                    for (message, _, _, _) in messages {
+                    for (message, _, _, _, _) in messages {
                         if !selectionState.selectedIds.contains(message.id) {
                             allSelected = false
                             break
@@ -3361,7 +3361,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 let selectionNode = ChatMessageSelectionNode(wallpaper: item.presentationData.theme.wallpaper, theme: item.presentationData.theme.theme, toggle: { [weak self] value in
                     if let strongSelf = self, let item = strongSelf.item {
                         switch item.content {
-                            case let .message(message, _, _, _):
+                            case let .message(message, _, _, _, _):
                             item.controllerInteraction.toggleMessagesSelection([message.id], value)
                             case let .group(messages):
                                 item.controllerInteraction.toggleMessagesSelection(messages.map { $0.0.id }, value)

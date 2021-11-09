@@ -251,6 +251,10 @@ public extension TelegramEngine {
             return SparseMessageCalendar(account: self.account, peerId: peerId, messageTag: tag)
         }
 
+        public func sparseMessageScrollingContext(peerId: EnginePeer.Id) -> SparseMessageScrollingContext {
+            return SparseMessageScrollingContext(account: self.account, peerId: peerId)
+        }
+
         public func refreshMessageTagStats(peerId: EnginePeer.Id, tags: [EngineMessage.Tags]) -> Signal<Never, NoError> {
             let account = self.account
             return self.account.postbox.transaction { transaction -> Api.InputPeer? in

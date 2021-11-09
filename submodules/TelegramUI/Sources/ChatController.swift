@@ -11435,7 +11435,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var selectDay: ((Int32) -> Void)?
         var openClearHistory: ((Int32) -> Void)?
 
-        let enableMessageRangeDeletion: Bool = false
+        let enableMessageRangeDeletion: Bool = peerId.namespace == Namespaces.Peer.CloudUser
 
         let calendarScreen = CalendarMessageScreen(
             context: self.context,
