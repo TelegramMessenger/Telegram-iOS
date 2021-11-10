@@ -504,7 +504,7 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
         if self.lineIndicator.alpha <= 0.01 {
             return nil
         }
-        if self.lineIndicator.frame.insetBy(dx: -4.0, dy: -2.0).contains(point) {
+        if self.lineIndicator.frame.insetBy(dx: -8.0, dy: -4.0).contains(point) {
             return super.hitTest(point, with: event)
         }
 
