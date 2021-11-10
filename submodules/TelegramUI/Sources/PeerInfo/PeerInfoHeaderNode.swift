@@ -2187,7 +2187,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let titleNodeLayout = self.titleNode.updateLayout(states: [
             TitleNodeStateRegular: MultiScaleTextState(attributedText: titleString, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributedText: smallTitleString, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height))
+            TitleNodeStateExpanded: MultiScaleTextState(attributedText: smallTitleString, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
         self.titleNode.accessibilityLabel = titleString.string
         
@@ -2522,7 +2522,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         }
         
-        let buttonSpacing: CGFloat = 12.0
+        let buttonSpacing: CGFloat = 8.0
         var buttonRightOrigin = CGPoint(x: width - containerInset, y: maxY + 25.0 - navigationHeight - UIScreenPixel)
         let buttonWidth = (width - containerInset * 2.0 + buttonSpacing) / CGFloat(buttonKeys.count) - buttonSpacing
         

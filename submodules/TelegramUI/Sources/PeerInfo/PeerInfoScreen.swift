@@ -1055,7 +1055,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
         
         if canAddMembers {
-            items[.peerMembers]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.PeerInfo_ButtonAddMember, color: .accent, icon: UIImage(bundleImageName: "Contact List/AddMemberIcon"), alignment: .peerList, action: {
+            items[.peerMembers]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.GroupInfo_AddParticipant, color: .accent, icon: UIImage(bundleImageName: "Contact List/AddMemberIcon"), alignment: .peerList, action: {
                 interaction.openAddMember()
             }))
         }

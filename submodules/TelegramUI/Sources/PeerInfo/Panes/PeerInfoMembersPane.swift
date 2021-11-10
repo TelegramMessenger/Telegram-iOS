@@ -263,7 +263,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private func updateState(enclosingPeer: Peer, state: PeerInfoMembersState, presentationData: PresentationData) {
         var entries: [PeerMembersListEntry] = []
         if state.canAddMembers {
-            entries.append(.addMember(presentationData.theme, presentationData.strings.PeerInfo_ButtonAddMember))
+            entries.append(.addMember(presentationData.theme, presentationData.strings.GroupInfo_AddParticipant))
         }
         for member in state.members {
             entries.append(.member(presentationData.theme, entries.count, member))
