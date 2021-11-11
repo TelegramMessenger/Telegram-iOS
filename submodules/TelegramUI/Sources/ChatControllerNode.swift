@@ -281,10 +281,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     })
                     
                     var hideNames = options.hideNames
-                    if let author = message.effectiveAuthor {
-                        if message.id.peerId == accountPeer.id && author.id == accountPeer.id {
-                            hideNames = true
-                        }
+                    if message.id.peerId == accountPeer.id && message.forwardInfo == nil {
+                        hideNames = true
                     }
                     
                     var messageText = message.text
@@ -309,8 +307,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     }
                     
-                    var forwardInfo = message.forwardInfo
-                    if forwardInfo == nil {
+                    var forwardInfo: MessageForwardInfo?
+                    if let existingForwardInfo = message.forwardInfo {
+                        forwardInfo = MessageForwardInfo(author: existingForwardInfo.author, source: existingForwardInfo.source, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
+                    }
+                    else {
                         forwardInfo = MessageForwardInfo(author: message.author, source: nil, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
                     }
                     if hideNames && !hasDice {

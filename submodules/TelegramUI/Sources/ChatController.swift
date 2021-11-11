@@ -5753,8 +5753,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 uniquePeerIds.insert(author.id)
                             }
                             
-                            if message.id.peerId == accountPeerId && author.id == accountPeerId {
-
+                            if message.id.peerId == accountPeerId && message.forwardInfo == nil {
                             } else {
                                 hasNotOwnMessages = true
                             }
@@ -12042,11 +12041,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 var hasNotOwnMessages = false
                 for message in messages {
-                    if let author = message.effectiveAuthor {
-                        if message.id.peerId == accountPeerId && author.id == accountPeerId {
-                        } else {
-                            hasNotOwnMessages = true
-                        }
+                    if message.id.peerId == accountPeerId && message.forwardInfo == nil {
+                    } else {
+                        hasNotOwnMessages = true
                     }
                 }
                 
