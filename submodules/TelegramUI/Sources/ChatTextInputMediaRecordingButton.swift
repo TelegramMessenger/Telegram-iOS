@@ -243,17 +243,23 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
     }
     
-    private lazy var micDecoration: (UIView & TGModernConversationInputMicButtonDecoration) = {
-        let blobView = VoiceBlobView(
-            frame: CGRect(origin: CGPoint(), size: CGSize(width: 220.0, height: 220.0)),
-            maxLevel: 4,
-            smallBlobRange: (0.45, 0.55),
-            mediumBlobRange: (0.52, 0.87),
-            bigBlobRange: (0.57, 1.00)
-        )
-        blobView.setColor(self.theme.chat.inputPanel.actionControlFillColor)
-        return blobView
-    }()
+    private var micDecorationValue: VoiceBlobView?
+    private var micDecoration: (UIView & TGModernConversationInputMicButtonDecoration) {
+        if let micDecorationValue = self.micDecorationValue {
+            return micDecorationValue
+        } else {
+            let blobView = VoiceBlobView(
+                frame: CGRect(origin: CGPoint(), size: CGSize(width: 220.0, height: 220.0)),
+                maxLevel: 4,
+                smallBlobRange: (0.45, 0.55),
+                mediumBlobRange: (0.52, 0.87),
+                bigBlobRange: (0.57, 1.00)
+            )
+            blobView.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+            self.micDecorationValue = blobView
+            return blobView
+        }
+    }
     
     private lazy var micLock: (UIView & TGModernConversationInputMicButtonLock) = {
         let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, strings: self.strings)
@@ -341,7 +347,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
         
         self.pallete = legacyInputMicPalette(from: theme)
-        self.micDecoration.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+        self.micDecorationValue?.setColor(self.theme.chat.inputPanel.actionControlFillColor)
         (self.micLock as? LockView)?.updateTheme(theme)
     }
     
