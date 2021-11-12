@@ -711,7 +711,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         
         entries.append(.forwardingHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased() : presentationData.strings.Group_Setup_ForwardingChannelTitle.uppercased()))
         entries.append(.forwardingEnabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingEnabled, forwardingEnabled))
-        entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingEnabled, !forwardingEnabled))
+        entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
         entries.append(.forwardingInfo(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingChannelInfo))
         
     } else if let _ = view.peers[view.peerId] as? TelegramGroup {
@@ -954,6 +954,9 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     
     let revokeLinkDisposable = MetaDisposable()
     actionsDisposable.add(revokeLinkDisposable)
+    
+    let toggleCopyProtectionDisposable = MetaDisposable()
+    actionsDisposable.add(toggleCopyProtectionDisposable)
     
     let arguments = ChannelVisibilityControllerArguments(context: context, updateCurrentType: { type in
         updateState { state in
@@ -1224,6 +1227,10 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                     return state
                 }
                 
+                if let updatedCopyProtection = state.forwardingEnabled {
+                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: updatedCopyProtection).start())
+                }
+                
                 if let updatedAddressNameValue = updatedAddressNameValue {
                     let invokeAction: () -> Void = {
                         updateState { state in
@@ -1298,6 +1305,10 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 updateState { state in
                     updatedAddressNameValue = updatedAddressName(mode: mode, state: state, peer: peer, cachedData: nil)
                     return state
+                }
+                
+                if let updatedCopyProtection = state.forwardingEnabled {
+                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: updatedCopyProtection).start())
                 }
                 
                 if let updatedAddressNameValue = updatedAddressNameValue {
