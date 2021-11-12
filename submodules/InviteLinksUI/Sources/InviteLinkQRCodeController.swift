@@ -162,7 +162,6 @@ public final class InviteLinkQRCodeController: ViewController {
         private let backgroundNode: ASDisplayNode
         private let contentBackgroundNode: ASDisplayNode
         private let titleNode: ASTextNode
-        private let subtitleNode: ASTextNode
         private let cancelButton: HighlightableButtonNode
         
         private let textNode: ImmediateTextNode
@@ -209,9 +208,6 @@ public final class InviteLinkQRCodeController: ViewController {
             self.titleNode = ASTextNode()
             self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_QRCode_Title, font: Font.bold(17.0), textColor: textColor)
             
-            self.subtitleNode = ASTextNode()
-            self.subtitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_QRCode_Title, font: Font.regular(13.0), textColor: secondaryTextColor)
-            
             self.cancelButton = HighlightableButtonNode()
             self.cancelButton.setTitle(self.presentationData.strings.Common_Done, with: Font.bold(17.0), with: accentColor, for: .normal)
             
@@ -254,10 +250,8 @@ public final class InviteLinkQRCodeController: ViewController {
             self.contentContainerNode.addSubnode(self.qrImageNode)
             self.contentContainerNode.addSubnode(self.qrIconNode)
             self.contentContainerNode.addSubnode(self.qrButtonNode)
-            
-            let textFont = Font.regular(13.0)
-            
-            self.textNode.attributedText = NSAttributedString(string: isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel, font: textFont, textColor: secondaryTextColor)
+                        
+            self.textNode.attributedText = NSAttributedString(string: isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel, font: Font.regular(13.0), textColor: secondaryTextColor)
             self.buttonNode.title = self.presentationData.strings.InviteLink_QRCode_Share
             
             self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
@@ -304,6 +298,7 @@ public final class InviteLinkQRCodeController: ViewController {
             
             self.contentBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
             self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
             
             if previousTheme !== presentationData.theme, let (layout, navigationBarHeight) = self.containerLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)

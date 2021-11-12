@@ -36,8 +36,8 @@ public struct ChatMessageEntryAttributes: Equatable {
 }
 
 enum ChatHistoryEntry: Identifiable, Comparable {
-    case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection, ChatMessageEntryAttributes)
-    case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)], ChatPresentationData)
+    case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryLocation?, ChatHistoryMessageSelection, ChatMessageEntryAttributes)
+    case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
     case ReplyCountEntry(MessageIndex, Bool, Int, ChatPresentationData)
     case ChatInfoEntry(String, String, ChatPresentationData)
@@ -130,8 +130,8 @@ enum ChatHistoryEntry: Identifiable, Comparable {
             case let .MessageGroupEntry(lhsGroupInfo, lhsMessages, lhsPresentationData):
                 if case let .MessageGroupEntry(rhsGroupInfo, rhsMessages, rhsPresentationData) = rhs, lhsGroupInfo == rhsGroupInfo, lhsPresentationData === rhsPresentationData, lhsMessages.count == rhsMessages.count {
                     for i in 0 ..< lhsMessages.count {
-                        let (lhsMessage, lhsRead, lhsSelection, lhsAttributes) = lhsMessages[i]
-                        let (rhsMessage, rhsRead, rhsSelection, rhsAttributes) = rhsMessages[i]
+                        let (lhsMessage, lhsRead, lhsSelection, lhsAttributes, lhsLocation) = lhsMessages[i]
+                        let (rhsMessage, rhsRead, rhsSelection, rhsAttributes, rhsLocation) = rhsMessages[i]
                         
                         if lhsMessage.id != rhsMessage.id {
                             return false
@@ -175,6 +175,9 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                             }
                         }
                         if lhsAttributes != rhsAttributes {
+                            return false
+                        }
+                        if lhsLocation != rhsLocation {
                             return false
                         }
                     }

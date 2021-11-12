@@ -24,7 +24,7 @@ private func attributedServiceMessageString(theme: ChatPresentationThemeData, st
 
 class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     let labelNode: TextNode
-    var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    var backgroundNode: WallpaperBubbleBackgroundNode?
     var backgroundColorNode: ASDisplayNode
     let backgroundMaskNode: ASImageNode
     var linkHighlightingNode: LinkHighlightingNode?
@@ -327,7 +327,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             var backgroundFrame = backgroundNode.frame
             backgroundFrame.origin.x += rect.minX
             backgroundFrame.origin.y += rect.minY
-            backgroundNode.update(rect: backgroundFrame, within: containerSize)
+            backgroundNode.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
         }
     }
 

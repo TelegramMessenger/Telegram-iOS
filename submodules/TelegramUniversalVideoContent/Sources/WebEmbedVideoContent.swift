@@ -188,4 +188,7 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     func notifyPlaybackControlsHidden(_ hidden: Bool) {
         self.playerNode.notifyPlaybackControlsHidden(hidden)
     }
+
+    func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
+    }
 }

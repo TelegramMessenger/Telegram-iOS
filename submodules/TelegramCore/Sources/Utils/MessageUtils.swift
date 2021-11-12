@@ -224,6 +224,8 @@ public extension Message {
             return true
         } else if let channel = self.peers[self.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
             return true
+        } else if self.id.peerId.namespace == Namespaces.Peer.CloudChannel, self.author?.id != accountPeerId {
+            return true
         } else {
             return false
         }
@@ -234,6 +236,16 @@ public extension Message {
             return true
         } else if self.id.namespace == Namespaces.Message.ScheduledCloud && self.timestamp != scheduleWhenOnlineTimestamp {
             return timestamp > self.timestamp + 60
+        } else {
+            return false
+        }
+    }
+    
+    func isCopyProtected() -> Bool {
+        if let group = self.peers[self.id.peerId] as? TelegramGroup, group.flags.contains(.copyProtectionEnabled) {
+            return true
+        } else if let channel = self.peers[self.id.peerId] as? TelegramChannel, channel.flags.contains(.copyProtectionEnabled) {
+            return true
         } else {
             return false
         }

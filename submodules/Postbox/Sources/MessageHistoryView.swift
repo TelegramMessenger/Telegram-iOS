@@ -245,7 +245,6 @@ public struct MessageHistoryViewOrderStatistics: OptionSet {
     }
     
     public static let combinedLocation = MessageHistoryViewOrderStatistics(rawValue: 1 << 0)
-    public static let locationWithinMonth = MessageHistoryViewOrderStatistics(rawValue: 1 << 1)
 }
 
 public final class MessageHistoryViewExternalInput: Equatable {
@@ -739,7 +738,7 @@ final class MutableMessageHistoryView {
                 }
             case let .peerChatState(peerId, _):
                 if transaction.currentUpdatedPeerChatStates.contains(peerId) {
-                    updated[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId) as? PeerChatState)
+                    updated[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId)?.getLegacy() as? PeerChatState)
                     hasChanges = true
                 }
             case .totalUnreadState:

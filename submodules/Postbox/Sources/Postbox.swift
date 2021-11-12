@@ -272,7 +272,7 @@ public final class Transaction {
     
     public func getPeerChatState(_ id: PeerId) -> PeerChatState? {
         assert(!self.disposed)
-        return self.postbox?.peerChatStateTable.get(id) as? PeerChatState
+        return self.postbox?.peerChatStateTable.get(id)?.getLegacy() as? PeerChatState
     }
     
     public func setPeerChatState(_ id: PeerId, state: PeerChatState) {
@@ -702,6 +702,11 @@ public final class Transaction {
     public func findClosestMessageIdByTimestamp(peerId: PeerId, timestamp: Int32) -> MessageId? {
         assert(!self.disposed)
         return self.postbox?.messageHistoryTable.findClosestMessageIndex(peerId: peerId, timestamp: timestamp)?.id
+    }
+
+    public func findMessageAtAbsoluteIndex(peerId: PeerId, namespace: MessageId.Namespace, index: Int) -> MessageIndex? {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryTable.findMessageAtAbsoluteIndex(peerId: peerId, namespace: namespace, index: index)
     }
     
     public func findRandomMessage(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, ignoreIds: ([MessageId], Set<MessageId>)) -> MessageIndex? {
@@ -2212,7 +2217,7 @@ final class PostboxImpl {
     }
     
     fileprivate func setPeerChatState(_ id: PeerId, state: PeerChatState) {
-        self.peerChatStateTable.set(id, state: state)
+        self.peerChatStateTable.set(id, state: CodableEntry(legacyValue: state))
         self.currentUpdatedPeerChatStates.insert(id)
     }
     
@@ -2715,7 +2720,7 @@ final class PostboxImpl {
                     let messages = self.getMessageGroup(at: id)
                     additionalDataEntries.append(.message(id, messages ?? []))
                 case let .peerChatState(peerId):
-                    additionalDataEntries.append(.peerChatState(peerId, self.peerChatStateTable.get(peerId) as? PeerChatState))
+                    additionalDataEntries.append(.peerChatState(peerId, self.peerChatStateTable.get(peerId)?.getLegacy() as? PeerChatState))
                 case .totalUnreadState:
                     additionalDataEntries.append(.totalUnreadState(self.messageHistoryMetadataTable.getTotalUnreadState(groupId: .root)))
                 case let .peerNotificationSettings(peerId):

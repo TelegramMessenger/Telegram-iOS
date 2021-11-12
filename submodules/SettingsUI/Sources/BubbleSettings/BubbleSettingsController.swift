@@ -62,7 +62,7 @@ private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDel
         
         self.scrollNode = ASScrollNode()
     
-        self.chatBackgroundNode = WallpaperBackgroundNode(context: context)
+        self.chatBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         self.chatBackgroundNode.displaysAsynchronously = false
         
         self.messagesContainerNode = ASDisplayNode()

@@ -90,12 +90,14 @@ final class MutableItemCollectionInfosView: MutablePostboxView {
         }
         return updated
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return ItemCollectionInfosView(self)
     }
-    
-   
 }
 
 public final class ItemCollectionInfosView: PostboxView {

@@ -1037,87 +1037,91 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
         
-        var needShareButton = false
+        var needsShareButton = false
         if case .pinnedMessages = item.associatedData.subject {
-            needShareButton = true
+            needsShareButton = true
             for media in item.message.media {
                 if let _ = media as? TelegramMediaExpiredContent {
-                    needShareButton = false
+                    needsShareButton = false
                     break
                 }
             }
         } else if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
-            needShareButton = false
+            needsShareButton = false
             allowFullWidth = true
         } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
-            needShareButton = false
+            needsShareButton = false
         } else if item.message.id.peerId == item.context.account.peerId {
             if let _ = sourceReference {
-                needShareButton = true
+                needsShareButton = true
             }
         } else if item.message.id.peerId.isReplies {
-            needShareButton = false
+            needsShareButton = false
         } else if item.message.effectivelyIncoming(item.context.account.peerId) {
             if let _ = sourceReference {
-                needShareButton = true
+                needsShareButton = true
             }
             
             if let peer = item.message.peers[item.message.id.peerId] {
                 if let channel = peer as? TelegramChannel {
                     if case .broadcast = channel.info {
-                        needShareButton = true
+                        needsShareButton = true
                     }
                 }
             }
             
             if let info = item.message.forwardInfo {
                 if let author = info.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty && !(item.message.media.first is TelegramMediaAction) {
-                    needShareButton = true
+                    needsShareButton = true
                 } else if let author = info.author as? TelegramChannel, case .broadcast = author.info {
-                    needShareButton = true
+                    needsShareButton = true
                 }
             }
             
-            if !needShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty && !(item.message.media.first is TelegramMediaAction) {
-                needShareButton = true
+            if !needsShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty && !(item.message.media.first is TelegramMediaAction) {
+                needsShareButton = true
             }
-            if !needShareButton {
+            if !needsShareButton {
                 loop: for media in item.message.media {
                     if media is TelegramMediaGame || media is TelegramMediaInvoice {
-                        needShareButton = true
+                        needsShareButton = true
                         break loop
                     } else if let media = media as? TelegramMediaWebpage, case .Loaded = media.content {
-                        needShareButton = true
+                        needsShareButton = true
                         break loop
                     }
                 }
             } else {
                 loop: for media in item.message.media {
                     if media is TelegramMediaAction {
-                        needShareButton = false
+                        needsShareButton = false
                         break loop
                     }
                 }
             }
+            
+            if item.message.isCopyProtected() {
+                needsShareButton = false
+            }
         }
         
         if isPreview {
-            needShareButton = false
+            needsShareButton = false
         }
         let isAd = item.content.firstMessage.adAttribute != nil
         if isAd {
-            needShareButton = false
+            needsShareButton = false
         }
         
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth
-            if needShareButton || isAd {
+            if needsShareButton || isAd {
                 tmpWidth -= 38.0
             }
         } else {
             tmpWidth = layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)
-            if (needShareButton || isAd) && tmpWidth + 32.0 > baseWidth {
+            if (needsShareButton || isAd) && tmpWidth + 32.0 > baseWidth {
                 tmpWidth = baseWidth - 32.0
             }
         }
@@ -1162,7 +1166,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var authorRank: CachedChannelAdminRank?
         var authorIsChannel: Bool = false
         switch content {
-            case let .message(message, _, _, attributes):
+            case let .message(message, _, _, attributes, _):
                 if let peer = message.peers[message.id.peerId] as? TelegramChannel {
                     if case .broadcast = peer.info {
                     } else {
@@ -1237,7 +1241,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var isItemEdited = false
         
         switch item.content {
-            case let .message(message, value, _, _):
+            case let .message(message, value, _, _, _):
                 read = value
                 isItemPinned = message.tags.contains(.pinned)
             case let .group(messages):
@@ -1318,7 +1322,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 case .message:
                     break
                 case let .group(messages):
-                    for (m, _, selection, _) in messages {
+                    for (m, _, selection, _, _) in messages {
                         if m.id == message.id {
                             switch selection {
                                 case .none:
@@ -2031,7 +2035,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 contentContainerNodeFrames: contentContainerNodeFrames,
                 mosaicStatusOrigin: mosaicStatusOrigin,
                 mosaicStatusSizeAndApply: mosaicStatusSizeAndApply,
-                needsShareButton: needShareButton
+                needsShareButton: needsShareButton
             )
         })
     }
@@ -3308,7 +3312,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         var canHaveSelection = true
         switch item.content {
-            case let .message(message, _, _, _):
+            case let .message(message, _, _, _, _):
                 for media in message.media {
                     if let action = media as? TelegramMediaAction {
                         if case .phoneCall = action.action { } else {
@@ -3316,6 +3320,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             break
                         }
                     }
+                }
+                if message.adAttribute != nil {
+                    canHaveSelection = false
                 }
             default:
                 break
@@ -3329,11 +3336,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
             
             switch item.content {
-                case let .message(message, _, _, _):
+                case let .message(message, _, _, _, _):
                     selected = selectionState.selectedIds.contains(message.id)
                 case let .group(messages: messages):
                     var allSelected = !messages.isEmpty
-                    for (message, _, _, _) in messages {
+                    for (message, _, _, _, _) in messages {
                         if !selectionState.selectedIds.contains(message.id) {
                             allSelected = false
                             break
@@ -3354,7 +3361,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 let selectionNode = ChatMessageSelectionNode(wallpaper: item.presentationData.theme.wallpaper, theme: item.presentationData.theme.theme, toggle: { [weak self] value in
                     if let strongSelf = self, let item = strongSelf.item {
                         switch item.content {
-                            case let .message(message, _, _, _):
+                            case let .message(message, _, _, _, _):
                             item.controllerInteraction.toggleMessagesSelection([message.id], value)
                             case let .group(messages):
                                 item.controllerInteraction.toggleMessagesSelection(messages.map { $0.0.id }, value)

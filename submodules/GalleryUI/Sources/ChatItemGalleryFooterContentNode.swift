@@ -576,7 +576,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.currentMessage = message
         
         let canDelete: Bool
-        var canShare = !message.containsSecretMedia
+        var canShare = !message.containsSecretMedia && !message.isCopyProtected()
 
         var canFullscreen = false
         

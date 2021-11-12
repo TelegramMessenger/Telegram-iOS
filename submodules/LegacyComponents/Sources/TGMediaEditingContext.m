@@ -424,6 +424,10 @@
     _captionPipe.sink([TGMediaCaptionUpdate captionUpdateWithItem:item caption:caption entities:entities]);
 }
 
+- (bool)isForcedCaption {
+    return _forcedCaption.length > 0;
+}
+
 - (void)setForcedCaption:(NSString *)caption entities:(NSArray *)entities
 {
     _forcedCaption = caption;

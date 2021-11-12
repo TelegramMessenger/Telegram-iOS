@@ -26,6 +26,41 @@ final class MutablePeerPresencesView: MutablePostboxView {
         
         return updated
     }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        /*var presences: [PeerId: PeerPresence] = [:]
+
+        for id in self.ids {
+            if let presence = postbox.peerPresenceTable.get(id) {
+                presences[id] = presence
+            }
+        }
+
+        var updated = false
+        if self.presences.count != presences.count {
+            updated = true
+        } else {
+            for (key, value) in self.presences {
+                if let other = presences[key] {
+                    if !other.isEqual(to: value) {
+                        updated = true
+                        break
+                    }
+                } else {
+                    updated = true
+                    break
+                }
+            }
+        }
+
+        if updated {
+            self.presences = presences
+            return true
+        } else {
+            return false
+        }*/
+        return false
+    }
     
     func immutableView() -> PostboxView {
         return PeerPresencesView(self)

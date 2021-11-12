@@ -107,7 +107,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.messagesContainerNode.clipsToBounds = true
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         
-        self.instantChatBackgroundNode = WallpaperBackgroundNode(context: context)
+        self.instantChatBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         self.instantChatBackgroundNode.displaysAsynchronously = false
 
         self.ready.set(.single(true))
@@ -121,7 +121,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.blurredNode = BlurredImageNode()
         self.blurredNode.blurView.contentMode = .scaleAspectFill
 
-        self.wallpaperNode = WallpaperBackgroundNode(context: context)
+        self.wallpaperNode = createWallpaperBackgroundNode(context: context, forChatDisplay: false)
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings, doneButtonType: .set)
         

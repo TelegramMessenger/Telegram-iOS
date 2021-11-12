@@ -180,6 +180,7 @@
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_any" = "{author} sent %d files";
 "PUSH_CHAT_MESSAGE_THEME" = "%1$@|set theme to %3$@ in the group %2$@";
 "PUSH_CHAT_MESSAGE_NOTHEME" = "%1$@|disabled theme in the group %2$@";
+"PUSH_CHAT_REQ_JOINED" = "%1$@ was accepted into the group %2$@";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -218,6 +219,8 @@
 
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
+
+"PUSH_CHAT_REQ_JOINED" = "%2$@|%1$@ was accepted into the group";
 
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
@@ -2654,6 +2657,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CaptionEdited" = "%@ edited caption:";
 "Channel.AdminLog.MessageDeleted" = "%@ deleted message:";
 "Channel.AdminLog.MessagePinned" = "%@ pinned message:";
+"Channel.AdminLog.MessageUnpinnedExtended" = "%@ unpinned message:";
 
 "Channel.AdminLog.MessageInvitedName" = "invited %1$@";
 "Channel.AdminLog.MessageInvitedNameUsername" = "invited %1$@ (%2$@)";
@@ -2888,6 +2892,7 @@ Unused sets are archived when you add more.";
 "FastTwoStepSetup.EmailHelp" = "Please add your valid e-mail. It is the only way to recover a forgotten password.";
 
 "Conversation.ViewMessage" = "VIEW MESSAGE";
+"Conversation.ViewPost" = "VIEW POST";
 
 "GroupInfo.GroupHistory" = "History For New Members";
 "GroupInfo.GroupHistoryVisible" = "Visible";
@@ -4845,6 +4850,7 @@ Sorry for the inconvenience.";
 "ChatList.Context.Mute" = "Mute";
 "ChatList.Context.Unmute" = "Unmute";
 "ChatList.Context.JoinChannel" = "Join Channel";
+"ChatList.Context.JoinChat" = "Join Chat";
 "ChatList.Context.Delete" = "Delete";
 
 "ContactList.Context.SendMessage" = "Send Message";
@@ -6888,6 +6894,7 @@ Sorry for the inconvenience.";
 "MemberRequests.DescriptionGroup" = "Some [additional links]() are set up to accept requests to join the group.";
 "MemberRequests.DescriptionChannel" = "Some [additional links]() are set up to accept requests to join the channel.";
 
+"MemberRequests.SearchPlaceholder" = "Search Join Requests";
 "MemberRequests.PeopleRequested_1" = "%@ requested to join";
 "MemberRequests.PeopleRequested_2" = "%@ requested to join";
 "MemberRequests.PeopleRequested_3_10" = "%@ requested to join";
@@ -6927,7 +6934,7 @@ Sorry for the inconvenience.";
 "MemberRequests.RequestToJoinSentDescriptionGroup" = "You will be added to the group once it admins approve your request.";
 "MemberRequests.RequestToJoinSentDescriptionChannel" = "You will be added to the channel once it admins approve your request.";
 
-"Notification.JoinedChatByRequestYou" = "Your request to join the channel was approved";
+"Notification.JoinedChannelByRequestYou" = "Your request to join the channel was approved";
 "Notification.JoinedGroupByRequestYou" = "Your request to join the group was approved";
 "Notification.JoinedGroupByRequest" = "%@ was accepted to the group chat";
 
@@ -6989,6 +6996,8 @@ Sorry for the inconvenience.";
 
 "Notifications.DeleteAllExceptions" = "Delete All Exceptions";
 
+"Notifications.Options" = "Options";
+
 "Notifications.On" = "On";
 "Notifications.Off" = "Off";
 
@@ -7040,3 +7049,10 @@ Sorry for the inconvenience.";
 "Themes.CreateNewTheme" = "Create a New Theme";
 
 "Chat.JumpToDate" = "Jump to Date";
+
+"Channel.AdminLog.MessageToggleNoForwardsOn" = "%@ enabled no-forwards";
+"Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ disabled no-forwards";
+
+"VoiceChat.DiscussionGroup" = "discussion group";
+
+"Group.Edit.PrivatePublicLinkAlert" = "Please note that if you choose a public link for your group, anyone will be able to find it in search and join.\n\nDo not create this link if you want your group to stay private.";

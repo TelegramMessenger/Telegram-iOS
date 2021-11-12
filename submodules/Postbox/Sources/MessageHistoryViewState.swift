@@ -80,7 +80,7 @@ private extension MessageHistoryInput {
             if let automatic = automatic {
                 return postbox.messageHistoryTagsTable.getMessageCountInRange(tag: automatic.tag, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
             } else {
-                return 0
+                return postbox.messageHistoryTable.getMessageCountInRange(peerId: peerId, namespace: namespace, tag: nil, lowerBound: lowerBound, upperBound: upperBound)
             }
         case .external:
             return 0
@@ -981,7 +981,7 @@ final class HistoryViewLoadedState {
         
         var entries = OrderedHistoryViewEntries(lowerOrAtAnchor: lowerOrAtAnchorMessages, higherThanAnchor: higherThanAnchorMessages)
         
-        if case let .automatic(automaticValue) = self.input, let _ = automaticValue, self.statistics.contains(.combinedLocation), let first = entries.first {
+        if case .automatic = self.input, self.statistics.contains(.combinedLocation), let first = entries.first {
             let messageIndex = first.index
             let previousCount = self.input.getMessageCountInRange(postbox: postbox, peerId: space.peerId, namespace: space.namespace, lowerBound: MessageIndex.lowerBound(peerId: space.peerId, namespace: space.namespace), upperBound: messageIndex)
             let nextCount = self.input.getMessageCountInRange(postbox: postbox, peerId: space.peerId, namespace: space.namespace, lowerBound: messageIndex, upperBound: MessageIndex.upperBound(peerId: space.peerId, namespace: space.namespace))
@@ -999,30 +999,7 @@ final class HistoryViewLoadedState {
                 }
             }
         }
-        
-        if case let .automatic(tagValue) = self.input, let _ = tagValue, self.statistics.contains(.locationWithinMonth), let first = entries.first {
-            let messageIndex = first.index
-            let monthIndex = MessageMonthIndex(timestamp: messageIndex.timestamp)
-            let count = self.input.getMessageCountInRange(postbox: postbox, peerId: space.peerId, namespace: space.namespace, lowerBound: messageIndex, upperBound: monthUpperBoundIndex(peerId: space.peerId, namespace: space.namespace, index: monthIndex))
-            
-            var nextLocation: (MessageMonthIndex, Int) = (monthIndex, count - 1)
-            
-            let _ = entries.mutableScan { entry in
-                let messageMonthIndex = MessageMonthIndex(timestamp: entry.index.timestamp)
-                if messageMonthIndex != nextLocation.0 {
-                    nextLocation = (messageMonthIndex, 0)
-                }
-                
-                let currentIndexInMonth = nextLocation.1
-                nextLocation.1 = max(0, nextLocation.1 - 1)
-                switch entry {
-                    case let .IntermediateMessageEntry(message, location, _):
-                        return .IntermediateMessageEntry(message, location, MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)))
-                    case let .MessageEntry(entry, reloadAssociatedMessages, reloadPeers):
-                        return .MessageEntry(MessageHistoryMessageEntry(message: entry.message, location: entry.location, monthLocation: MessageHistoryEntryMonthLocation(indexInMonth: Int32(currentIndexInMonth)), attributes: entry.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
-                }
-            }
-        }
+
         
         if canContainHoles(space, input: self.input, seedConfiguration: self.seedConfiguration) {
             entries.fixMonotony()

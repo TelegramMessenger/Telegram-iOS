@@ -19,7 +19,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     public var scrollView: UIScrollView
     public var pager: GalleryPagerNode
     
-    public var beginCustomDismiss: () -> Void = { }
+    public var beginCustomDismiss: (Bool) -> Void = { _ in }
     public var completeCustomDismiss: () -> Void = { }
     public var baseNavigationController: () -> NavigationController? = { return nil }
     public var galleryController: () -> ViewController? = { return nil }
@@ -106,9 +106,9 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             }
         }
                 
-        self.pager.beginCustomDismiss = { [weak self] in
+        self.pager.beginCustomDismiss = { [weak self] simpleAnimation in
             if let strongSelf = self {
-                strongSelf.beginCustomDismiss()
+                strongSelf.beginCustomDismiss(simpleAnimation)
             }
         }
         
@@ -327,14 +327,16 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         }
     }
     
-    open func animateIn(animateContent: Bool) {
+    open func animateIn(animateContent: Bool, useSimpleAnimation: Bool) {
+        let duration: Double = animateContent ? 0.2 : 0.3
+
         self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(0.0)
         self.statusBar?.alpha = 0.0
         self.navigationBar?.alpha = 0.0
         self.footerNode.alpha = 0.0
         self.currentThumbnailContainerNode?.alpha = 0.0
         
-        UIView.animate(withDuration: 0.2, animations: {
+        UIView.animate(withDuration: duration, animations: {
             self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(1.0)
             if !self.areControlsHidden {
                 self.statusBar?.alpha = 1.0
@@ -346,6 +348,8 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         
         if animateContent {
             self.scrollView.layer.animateBounds(from: self.scrollView.layer.bounds.offsetBy(dx: 0.0, dy: -self.scrollView.layer.bounds.size.height), to: self.scrollView.layer.bounds, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+        } else if useSimpleAnimation {
+            self.scrollView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
     }
     
@@ -381,6 +385,11 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         if animateContent {
             contentAnimationCompleted = false
             self.scrollView.layer.animateBounds(from: self.scrollView.layer.bounds, to: self.scrollView.layer.bounds.offsetBy(dx: 0.0, dy: -self.scrollView.layer.bounds.size.height), duration: 0.25, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { _ in
+                contentAnimationCompleted = true
+                intermediateCompletion()
+            })
+        } else {
+            self.scrollView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                 contentAnimationCompleted = true
                 intermediateCompletion()
             })

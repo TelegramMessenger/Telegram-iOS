@@ -184,6 +184,7 @@ private var declaredEncodables: Void = {
     declareEncodable(EmojiSearchQueryMessageAttribute.self, f: { EmojiSearchQueryMessageAttribute(decoder: $0) })
     declareEncodable(WallpaperDataResource.self, f: { WallpaperDataResource(decoder: $0) })
     declareEncodable(ForwardOptionsMessageAttribute.self, f: { ForwardOptionsMessageAttribute(decoder: $0) })
+    declareEncodable(SendAsMessageAttribute.self, f: { SendAsMessageAttribute(decoder: $0) })
     
     return
 }()

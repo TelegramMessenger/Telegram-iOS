@@ -1174,17 +1174,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.pushRegistry = pushRegistry
         pushRegistry.delegate = self
         
-        self.badgeDisposable.set((self.context.get()
-        |> mapToSignal { context -> Signal<Int32, NoError> in
-            if let context = context {
-                return context.applicationBadge
-            } else {
-                return .single(0)
-            }
-        }
-        |> deliverOnMainQueue).start(next: { count in
-            UIApplication.shared.applicationIconBadgeNumber = Int(count)
-        }))
+        self.resetBadge()
         
         if #available(iOS 9.1, *) {
             self.quickActionsDisposable.set((self.context.get()
@@ -1281,6 +1271,20 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         return true
     }
 
+    private func resetBadge() {
+        self.badgeDisposable.set((self.context.get()
+        |> mapToSignal { context -> Signal<Int32, NoError> in
+            if let context = context {
+                return context.applicationBadge
+            } else {
+                return .single(0)
+            }
+        }
+        |> deliverOnMainQueue).start(next: { count in
+            UIApplication.shared.applicationIconBadgeNumber = Int(count)
+        }))
+    }
+
     func applicationWillResignActive(_ application: UIApplication) {
         self.isActiveValue = false
         self.isActivePromise.set(false)
@@ -1361,6 +1365,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
         self.isActivePromise.set(true)
+
+        self.resetBadge()
         
         self.maybeCheckForUpdates()
     }

@@ -10,6 +10,7 @@ enum PeerInfoScreenActionColor {
 enum PeerInfoScreenActionAligmnent {
     case natural
     case center
+    case peerList
 }
 
 final class PeerInfoScreenActionItem: PeerInfoScreenItem {
@@ -78,7 +79,7 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.activateArea)
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenActionItem else {
             return 10.0
         }
@@ -88,7 +89,12 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         self.selectionNode.pressed = item.action
         
         let sideInset: CGFloat = 16.0 + safeInsets.left
-        let leftInset = (item.icon == nil ? sideInset : sideInset + 29.0 + 16.0)
+        var leftInset = (item.icon == nil ? sideInset : sideInset + 29.0 + 16.0)
+        var iconInset = sideInset
+        if case .peerList = item.alignment {
+            leftInset += 5.0
+            iconInset += 5.0
+        }
         let rightInset = sideInset
         let separatorInset = item.icon == nil ? sideInset : leftInset - 1.0
         let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
@@ -118,7 +124,7 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
                 self.addSubnode(self.iconNode)
             }
             self.iconNode.image = generateTintedImage(image: icon, color: textColorValue)
-            let iconFrame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((height - icon.size.height) / 2.0)), size: icon.size)
+            let iconFrame = CGRect(origin: CGPoint(x: iconInset, y: floorToScreenPixels((height - icon.size.height) / 2.0)), size: icon.size)
             transition.updateFrame(node: self.iconNode, frame: iconFrame)
         } else if self.iconNode.supernode != nil {
             self.iconNode.image = nil
@@ -131,7 +137,7 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
             transition.updateFrame(node: self.textNode, frame: textFrame)
         }
         
-        let hasCorners = safeInsets.left > 0.0 && (topItem == nil || bottomItem == nil)
+        let hasCorners = hasCorners && (topItem == nil || bottomItem == nil)
         let hasTopCorners = hasCorners && topItem == nil
         let hasBottomCorners = hasCorners && bottomItem == nil
         

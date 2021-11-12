@@ -1232,10 +1232,17 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
 
                     var originalContentFrame = CGRect(origin: CGPoint(x: originalContentX, y: originalContentY), size: originalProjectedContentViewFrame.1.size)
                     let topEdge = max(contentTopInset, self.contentAreaInScreenSpace?.minY ?? 0.0)
+                    let bottomEdge = max(layout.intrinsicInsets.bottom, self.contentAreaInScreenSpace?.maxY ?? layout.size.height)
+                    
                     if originalContentFrame.minY < topEdge {
                         let requiredOffset = topEdge - originalContentFrame.minY
                         let availableOffset = max(0.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - originalActionsFrame.maxY)
                         let offset = min(requiredOffset, availableOffset)
+                        originalActionsFrame = originalActionsFrame.offsetBy(dx: 0.0, dy: offset)
+                        originalContentFrame = originalContentFrame.offsetBy(dx: 0.0, dy: offset)
+                    } else if originalContentFrame.maxY > bottomEdge {
+                        let requiredOffset = bottomEdge - originalContentFrame.maxY
+                        let offset = requiredOffset
                         originalActionsFrame = originalActionsFrame.offsetBy(dx: 0.0, dy: offset)
                         originalContentFrame = originalContentFrame.offsetBy(dx: 0.0, dy: offset)
                     }

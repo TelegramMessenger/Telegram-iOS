@@ -733,6 +733,17 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
+            case let .inviteRequestSent(title, text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_inviterequest", colors: [:], scale: 0.066)
+                self.animatedStickerNode = nil
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+                self.textNode.maximumNumberOfLines = 2
+                displayUndo = false
+                self.originalRemainingSeconds = 5
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -761,7 +772,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
             case .removedChat:
                 self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved, .paymentSent:
+        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved, .paymentSent, .inviteRequestSent:
                 break
             case .dice:
                 self.panelWrapperNode.clipsToBounds = true

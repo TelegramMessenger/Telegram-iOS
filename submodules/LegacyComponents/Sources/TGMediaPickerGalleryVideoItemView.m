@@ -1107,7 +1107,11 @@
     }
     else if (self.item.avAsset != nil) {
         itemSignal = [self.item.avAsset mapToSignal:^SSignal *(AVAsset *avAsset) {
-            return [SSignal single:[AVPlayerItem playerItemWithAsset:avAsset]];
+            if ([avAsset isKindOfClass:[AVAsset class]]) {
+                return [SSignal single:[AVPlayerItem playerItemWithAsset:avAsset]];
+            } else {
+                return [SSignal never];
+            }
         }];
     }
     

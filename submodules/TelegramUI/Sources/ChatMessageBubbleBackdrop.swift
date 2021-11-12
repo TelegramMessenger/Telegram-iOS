@@ -55,7 +55,7 @@ func bubbleMaskForType(_ type: ChatMessageBackgroundType, graphics: PrincipalThe
 }
 
 final class ChatMessageBubbleBackdrop: ASDisplayNode {
-    private var backgroundContent: WallpaperBackgroundNode.BubbleBackgroundNode?
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
     
     private var currentType: ChatMessageBackgroundType?
     private var currentMaskMode: Bool?
@@ -86,7 +86,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
                     var backgroundFrame = backgroundContent.frame
                     backgroundFrame.origin.x += rect.minX
                     backgroundFrame.origin.y += rect.minY
-                    backgroundContent.update(rect: backgroundFrame, within: containerSize)
+                    backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
                 }
             }
         }
@@ -142,7 +142,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
                     var backgroundFrame = backgroundContent.frame
                     backgroundFrame.origin.x += rect.minX
                     backgroundFrame.origin.y += rect.minY
-                    backgroundContent.update(rect: backgroundFrame, within: containerSize)
+                    backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
                 }
             }
 
@@ -162,7 +162,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
                             var backgroundFrame = backgroundContent.frame
                             backgroundFrame.origin.x += rect.minX
                             backgroundFrame.origin.y += rect.minY
-                            backgroundContent.update(rect: backgroundFrame, within: containerSize)
+                            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
                         }
                         self.backgroundContent = backgroundContent
                         self.insertSubnode(backgroundContent, at: 0)
@@ -174,7 +174,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
                             var backgroundFrame = backgroundContent.frame
                             backgroundFrame.origin.x += rect.minX
                             backgroundFrame.origin.y += rect.minY
-                            backgroundContent.update(rect: backgroundFrame, within: containerSize)
+                            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
                         }
                         self.backgroundContent = backgroundContent
                         self.insertSubnode(backgroundContent, at: 0)

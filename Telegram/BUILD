@@ -380,6 +380,7 @@ official_apple_pay_merchants = [
     "merchant.smartglocal.prod.telegramios",
     "merchant.smartglocal.test.telegramios",
     "merchant.yoomoney.test.telegramios",
+    #"merchant.org.telegram.Best2pay.test",
 ]
 
 official_bundle_ids = [

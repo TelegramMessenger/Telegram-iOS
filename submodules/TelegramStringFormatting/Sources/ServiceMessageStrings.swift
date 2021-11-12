@@ -262,7 +262,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByLink(authorName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 }
             case .joinedByRequest:
-                if message.author?.id == accountPeerId {
+                if message.author?.id.namespace == Namespaces.Peer.CloudChannel {
+                    attributedString = NSAttributedString(string: strings.Notification_JoinedChannelByRequestYou, font: titleFont, textColor: primaryTextColor)
+                } else if message.author?.id == accountPeerId {
                     attributedString = NSAttributedString(string: strings.Notification_JoinedGroupByRequestYou, font: titleFont, textColor: primaryTextColor)
                 } else if let peerId = message.author?.id {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByRequest(authorName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, peerId)]))

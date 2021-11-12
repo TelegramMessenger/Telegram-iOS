@@ -30,10 +30,21 @@ private final class GalleryHiddenMediaTargetHolder {
 }
 
 final class GalleryHiddenMediaManagerImpl: GalleryHiddenMediaManager {
+    private final class SourceContext {
+        let disposable: Disposable
+        var state: (GalleryHiddenMediaId, Int32)? = nil
+
+        init(disposable: Disposable) {
+            self.disposable = disposable
+        }
+    }
+
+    private var sources = Bag<Void>()
+    private var sourceContexts: [Int: SourceContext] = [:]
+
     private var nextId: Int32 = 0
     private var contexts: [GalleryHiddenMediaId: GalleryHiddenMediaContext] = [:]
-    
-    private var sourcesDisposables = Bag<Disposable>()
+
     private var subscribers = Bag<(Set<GalleryHiddenMediaId>) -> Void>()
     
     private var targets: [GalleryHiddenMediaTargetHolder] = []
@@ -86,8 +97,29 @@ final class GalleryHiddenMediaManagerImpl: GalleryHiddenMediaManager {
     }
     
     func addSource(_ signal: Signal<GalleryHiddenMediaId?, NoError>) -> Int {
-        var state: (GalleryHiddenMediaId, Int32)?
-        let index = self.sourcesDisposables.add((signal |> deliverOnMainQueue).start(next: { [weak self] id in
+        let index = self.sources.add(Void())
+        let disposable = MetaDisposable()
+        let context = SourceContext(disposable: disposable)
+        self.sourceContexts[index] = context
+
+        disposable.set((signal |> deliverOnMainQueue).start(next: { [weak self, weak context] id in
+            guard let strongSelf = self, let context = context else {
+                return
+            }
+            if id != context.state?.0 {
+                if let (previousId, previousIndex) = context.state {
+                    strongSelf.removeHiddenMedia(id: previousId, index: previousIndex)
+                    context.state = nil
+                }
+                if let id = id {
+                    context.state = (id, strongSelf.addHiddenMedia(id: id))
+                }
+            }
+        }))
+
+        return index
+
+        /*let index = self.sourcesDisposables.add((signal |> deliverOnMainQueue).start(next: { [weak self] id in
             if let strongSelf = self {
                 if id != state?.0 {
                     if let (previousId, previousIndex) = state {
@@ -100,13 +132,17 @@ final class GalleryHiddenMediaManagerImpl: GalleryHiddenMediaManager {
                 }
             }
         }))
-        return index
+        return index*/
     }
     
     func removeSource(_ index: Int) {
-        if let disposable = self.sourcesDisposables.get(index) {
-            self.sourcesDisposables.remove(index)
-            disposable.dispose()
+        self.sources.remove(index)
+
+        if let context = self.sourceContexts.removeValue(forKey: index) {
+            context.disposable.dispose()
+            if let (previousId, previousIndex) = context.state {
+                self.removeHiddenMedia(id: previousId, index: previousIndex)
+            }
         }
     }
     
