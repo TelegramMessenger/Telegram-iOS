@@ -3,8 +3,7 @@ import LottieMeshSwift
 import Postbox
 import SwiftSignalKit
 import GZip
-
-#error("Exclude")
+import AppBundle
 
 public final class MeshAnimationCache {
     private final class Item {
@@ -16,14 +15,14 @@ public final class MeshAnimationCache {
 
     private let mediaBox: MediaBox
 
-    private var items: [MediaResourceId: Item] = [:]
+    private var items: [String: Item] = [:]
 
     public init(mediaBox: MediaBox) {
         self.mediaBox = mediaBox
     }
 
     public func get(resource: MediaResource) -> MeshAnimation? {
-        if let item = self.items[resource.id] {
+        if let item = self.items[resource.id.stringRepresentation] {
             if let animation = item.animation {
                 return animation
             } else if let readyPath = item.readyPath, let data = try? Data(contentsOf: URL(fileURLWithPath: readyPath)) {
@@ -36,7 +35,7 @@ public final class MeshAnimationCache {
             }
         } else {
             let item = Item()
-            self.items[resource.id] = item
+            self.items[resource.id.stringRepresentation] = item
 
             let path = self.mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "mesh-animation", keepDuration: .general)
             if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
@@ -46,6 +45,35 @@ public final class MeshAnimationCache {
                 return animation
             } else {
                 self.cache(item: item, resource: resource)
+                return nil
+            }
+        }
+    }
+    
+    public func get(bundleName: String) -> MeshAnimation? {
+        if let item = self.items[bundleName] {
+            if let animation = item.animation {
+                return animation
+            } else if let readyPath = item.readyPath, let data = try? Data(contentsOf: URL(fileURLWithPath: readyPath)) {
+                let buffer = MeshReadBuffer(data: data)
+                let animation = MeshAnimation.read(buffer: buffer)
+                item.animation = animation
+                return animation
+            } else {
+                return nil
+            }
+        } else {
+            let item = Item()
+            self.items[bundleName] = item
+
+            let path = self.mediaBox.cachedRepresentationPathForId(bundleName, representationId: "mesh-animation", keepDuration: .general)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                let animation = MeshAnimation.read(buffer: MeshReadBuffer(data: data))
+                item.readyPath = path
+                item.animation = animation
+                return animation
+            } else {
+                self.cache(item: item, bundleName: bundleName)
                 return nil
             }
         }
@@ -89,7 +117,53 @@ public final class MeshAnimationCache {
                 return
             }
             if let animationAndPath = animationAndPath {
-                if let item = strongSelf.items[resource.id] {
+                if let item = strongSelf.items[resource.id.stringRepresentation] {
+                    item.isPending = false
+                    item.animation = animationAndPath.0
+                    item.readyPath = animationAndPath.1
+                }
+            }
+        }))
+    }
+    
+    private func cache(item: Item, bundleName: String) {
+        let mediaBox = self.mediaBox
+        item.isPending = true
+        item.disposable.set((Signal<(MeshAnimation, String)?, NoError> { subscriber in
+            guard let path = getAppBundle().path(forResource: bundleName, ofType: "tgs") else {
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            
+            guard let zippedData = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            let jsonData = TGGUnzipData(zippedData, 1 * 1024 * 1024) ?? zippedData
+            if let animation = generateMeshAnimation(data: jsonData) {
+                let buffer = MeshWriteBuffer()
+                animation.write(buffer: buffer)
+                mediaBox.storeCachedResourceRepresentation(bundleName, representationId: "mesh-animation", keepDuration: .general, data: buffer.makeData(), completion: { path in
+                    subscriber.putNext((animation, path))
+                    subscriber.putCompletion()
+                })
+            } else {
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+
+            return EmptyDisposable
+        }
+        |> runOn(Queue.concurrentDefaultQueue())
+        |> deliverOnMainQueue).start(next: { [weak self] animationAndPath in
+            guard let strongSelf = self else {
+                return
+            }
+            if let animationAndPath = animationAndPath {
+                if let item = strongSelf.items[bundleName] {
                     item.isPending = false
                     item.animation = animationAndPath.0
                     item.readyPath = animationAndPath.1

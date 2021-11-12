@@ -120,6 +120,7 @@ cc_library(
     ]),
     copts = [
         "-Isubmodules/LottieMeshSwift/LottieMesh/boost",
+        "-Isubmodules/LottieMeshSwift/libtess2/Include",
     ] + optimization_flags,
     hdrs = glob([
         "LottieMesh/PublicHeaders/**/*.h",
@@ -128,6 +129,27 @@ cc_library(
     includes = [
         "LottieMesh/PublicHeaders",
     ],
+    deps = [
+        ":libtess2",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)
+
+cc_library(
+    name = "libtess2",
+    srcs = glob([
+        "libtess2/Sources/**/*.c",
+        "libtess2/Sources/**/*.h",
+        "libtess2/Include/**/*.h",
+    ]),
+    copts = [
+        "-Isubmodules/LottieMeshSwift/libtess2/Include",
+    ] + optimization_flags,
+    hdrs = glob([
+        "libtess2/Include/**/*.h",
+    ]),
     deps = [
     ],
     visibility = [

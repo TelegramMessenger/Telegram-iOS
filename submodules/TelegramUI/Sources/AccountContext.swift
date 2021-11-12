@@ -16,7 +16,7 @@ import TelegramCallsUI
 import TelegramBaseController
 import AsyncDisplayKit
 import PresentationDataUtils
-//import MeshAnimationCache
+import MeshAnimationCache
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -156,7 +156,7 @@ public final class AccountContextImpl: AccountContext {
     private var experimentalUISettingsDisposable: Disposable?
     
     public let cachedGroupCallContexts: AccountGroupCallContextCache
-    //public let meshAnimationCache: MeshAnimationCache
+    public let meshAnimationCache: MeshAnimationCache
     
     public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
     {
@@ -189,7 +189,7 @@ public final class AccountContextImpl: AccountContext {
         }
         
         self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
-        //self.meshAnimationCache = MeshAnimationCache(mediaBox: account.postbox.mediaBox)
+        self.meshAnimationCache = MeshAnimationCache(mediaBox: account.postbox.mediaBox)
         
         let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])
         |> map { preferences -> LimitsConfiguration in

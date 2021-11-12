@@ -32,6 +32,7 @@ import MapResourceToAvatarSizes
 import SolidRoundedButtonNode
 import AudioBlob
 import DeviceAccess
+import LottieMeshSwift
 
 let panelBackgroundColor = UIColor(rgb: 0x1c1c1e)
 let secondaryPanelBackgroundColor = UIColor(rgb: 0x2c2c2e)
@@ -39,8 +40,8 @@ let fullscreenBackgroundColor = UIColor(rgb: 0x000000)
 private let smallButtonSize = CGSize(width: 36.0, height: 36.0)
 private let sideButtonSize = CGSize(width: 56.0, height: 56.0)
 private let topPanelHeight: CGFloat = 63.0
-let bottomAreaHeight: CGFloat = 206.0
-private let fullscreenBottomAreaHeight: CGFloat = 80.0
+let bottomAreaHeight: CGFloat = 206.0 + 32.0
+private let fullscreenBottomAreaHeight: CGFloat = 80.0 + 32.0
 private let bottomGradientHeight: CGFloat = 70.0
 
 func decorationCornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
@@ -780,11 +781,14 @@ public final class VoiceChatController: ViewController {
         fileprivate let switchCameraButton: CallControllerButtonItemNode
         fileprivate let leaveButton: CallControllerButtonItemNode
         fileprivate let actionButton: VoiceChatActionButton
+        fileprivate let reactionStrip: ReactionStrip
         private let leftBorderNode: ASDisplayNode
         private let rightBorderNode: ASDisplayNode
         private let mainStageContainerNode: ASDisplayNode
         private let mainStageBackgroundNode: ASDisplayNode
         private let mainStageNode: VoiceChatMainStageNode
+        
+        private var meshAnimationView: UIView?
        
         private let transitionMaskView: UIView
         private let transitionMaskTopFillLayer: CALayer
@@ -1056,6 +1060,7 @@ public final class VoiceChatController: ViewController {
             self.switchCameraButton.isUserInteractionEnabled = false
             self.leaveButton = CallControllerButtonItemNode()
             self.actionButton = VoiceChatActionButton()
+            self.reactionStrip = ReactionStrip()
             
             if self.isScheduling {
                 self.cameraButton.alpha = 0.0
@@ -1136,7 +1141,37 @@ public final class VoiceChatController: ViewController {
             
             self.participantsNode = VoiceChatTimerNode(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
             
+            if #available(iOS 13.0, *) {
+                self.meshAnimationView = MeshRenderer()
+                self.meshAnimationView?.isUserInteractionEnabled = false
+            }
+            
             super.init()
+            
+            self.reactionStrip.selected = { [weak self] value in
+                guard let strongSelf = self else {
+                    return
+                }
+                let mapping: [String: String] = [
+                    "🧡": "Hearts",
+                    "🎆": "Fireworks",
+                    "🎈": "Balloon",
+                    "🎉": "Party",
+                    "👍": "SuperThumbsUp1",
+                    "👎": "SuperThumbsDown",
+                    "💩": "Poo",
+                    "💸": "Money",
+                    "😂": "Joy"
+                ]
+                
+                if let name = mapping[value] {
+                    if #available(iOS 13.0, *) {
+                        if let animation = call.accountContext.meshAnimationCache.get(bundleName: name), let meshAnimationView = strongSelf.meshAnimationView as? MeshRenderer {
+                            meshAnimationView.add(mesh: animation, offset: CGPoint())
+                        }
+                    }
+                }
+            }
             
             let context = self.context
             let currentAccountPeer = self.context.account.postbox.loadedPeerWithId(context.account.peerId)
@@ -1840,6 +1875,11 @@ public final class VoiceChatController: ViewController {
             
             self.addSubnode(self.dimNode)
             self.addSubnode(self.contentContainer)
+            
+            if let meshAnimationView = self.meshAnimationView {
+                self.view.addSubview(meshAnimationView)
+            }
+            
             self.contentContainer.addSubnode(self.backgroundNode)
             
             self.contentContainer.addSubnode(self.listContainer)
@@ -1856,6 +1896,7 @@ public final class VoiceChatController: ViewController {
             self.contentContainer.addSubnode(self.mainStageContainerNode)
             self.contentContainer.addSubnode(self.transitionContainerNode)
             self.contentContainer.addSubnode(self.bottomPanelNode)
+            self.contentContainer.addSubnode(self.reactionStrip)
             self.contentContainer.addSubnode(self.timerNode)
             self.contentContainer.addSubnode(self.scheduleTextNode)
             self.contentContainer.addSubnode(self.fullscreenListContainer)
@@ -4277,6 +4318,12 @@ public final class VoiceChatController: ViewController {
             let previousLayout = self.validLayout?.0
             self.validLayout = (layout, navigationHeight)
             
+            if #available(iOS 13.0, *) {
+                if let meshAnimationView = self.meshAnimationView as? MeshRenderer {
+                    meshAnimationView.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - layout.size.width), size: CGSize(width: layout.size.width, height: layout.size.width))
+                }
+            }
+            
             let size = layout.size
             let contentWidth: CGFloat
             let headerWidth: CGFloat
@@ -4733,6 +4780,9 @@ public final class VoiceChatController: ViewController {
                     self?.animatingExpansion = false
                 } : nil)
             }
+            
+            transition.updateFrame(node: self.reactionStrip, frame: CGRect(origin: CGPoint(x: 12.0, y: size.height - 44.0 - 10.0), size: CGSize(width: size.width - 12.0 * 2.0, height: 44.0)))
+            self.reactionStrip.update(size: self.reactionStrip.bounds.size)
             
             self.cameraButton.isUserInteractionEnabled = hasCameraButton
             

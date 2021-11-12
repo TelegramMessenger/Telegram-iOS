@@ -90,6 +90,11 @@ public func instantPageGalleryMedia(webpageId: MediaId, page: InstantPage, galle
 }
 
 public func chatMessageGalleryControllerData(context: AccountContext, chatLocation: ChatLocation?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode, source: GalleryControllerItemSource?, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
+    var standalone = standalone
+    if message.id.peerId.namespace == Namespaces.Peer.CloudUser && message.id.namespace != Namespaces.Message.Cloud {
+        standalone = true
+    }
+    
     var galleryMedia: Media?
     var otherMedia: Media?
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
