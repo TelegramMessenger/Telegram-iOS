@@ -1228,7 +1228,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 }
                 
                 if let updatedCopyProtection = state.forwardingEnabled {
-                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: updatedCopyProtection).start())
+                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
                 }
                 
                 if let updatedAddressNameValue = updatedAddressNameValue {
@@ -1308,7 +1308,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 }
                 
                 if let updatedCopyProtection = state.forwardingEnabled {
-                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: updatedCopyProtection).start())
+                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
                 }
                 
                 if let updatedAddressNameValue = updatedAddressNameValue {
