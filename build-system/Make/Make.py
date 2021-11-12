@@ -377,6 +377,7 @@ def generate_project(arguments):
     disable_extensions = False
     disable_provisioning_profiles = False
     generate_dsym = False
+    target_name = "Telegram"
 
     if arguments.disableExtensions is not None:
         disable_extensions = arguments.disableExtensions
@@ -384,6 +385,8 @@ def generate_project(arguments):
         disable_provisioning_profiles = arguments.disableProvisioningProfiles
     if arguments.generateDsym is not None:
         generate_dsym = arguments.generateDsym
+    if arguments.target is not None:
+        target_name = arguments.target
     
     call_executable(['killall', 'Xcode'], check_result=False)
 
@@ -394,6 +397,7 @@ def generate_project(arguments):
         generate_dsym=generate_dsym,
         configuration_path=bazel_command_line.configuration_path,
         bazel_app_arguments=bazel_command_line.get_project_generation_arguments(),
+        target_name=target_name
     )
 
 
@@ -557,6 +561,13 @@ if __name__ == '__main__':
         help='''
             This improves profiling experinence by generating DSYM files. Keep disabled for better build performance.
             '''
+    )
+
+    generateProjectParser.add_argument(
+        '--target',
+        type=str,
+        help='A custom bazel target name to build.',
+        metavar='target_name'
     )
 
     buildParser = subparsers.add_parser('build', help='Build the app')
