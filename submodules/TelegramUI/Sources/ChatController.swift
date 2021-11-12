@@ -280,7 +280,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var clearCacheDisposable: MetaDisposable?
     private var bankCardDisposable: MetaDisposable?
     private var hasActiveGroupCallDisposable: Disposable?
-
+    private var sendAsPeersDisposable: Disposable?
+    
     private let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     private let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let unblockingPeer = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -943,11 +944,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var tip: ContextController.Tip?
 
                     if tip == nil {
-                        let numberOfComponents = message.text.components(separatedBy: CharacterSet.whitespacesAndNewlines).count
-                        let displayTextSelectionTip = numberOfComponents >= 3 && !message.text.isEmpty && chatTextSelectionTips < 3 && !message.isCopyProtected()
-                        if displayTextSelectionTip {
-                            let _ = ApplicationSpecificNotice.incrementChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
-                            tip = .textSelection
+                        if message.isCopyProtected() {
+                            var isChannel = false
+                            if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
+                                isChannel = true
+                            }
+                            tip = .messageCopyProtection(isChannel: isChannel)
+                        } else {
+                            let numberOfComponents = message.text.components(separatedBy: CharacterSet.whitespacesAndNewlines).count
+                            let displayTextSelectionTip = numberOfComponents >= 3 && !message.text.isEmpty && chatTextSelectionTips < 3
+                            if displayTextSelectionTip {
+                                let _ = ApplicationSpecificNotice.incrementChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                                tip = .textSelection
+                            }
                         }
                     }
 
@@ -1145,7 +1154,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             } else {
-                strongSelf.sendMessages(messages)
+                let transformedMessages = strongSelf.transformEnqueueMessages(messages)
+                strongSelf.sendMessages(transformedMessages)
             }
             return true
         }, sendGif: { [weak self] fileReference, sourceNode, sourceRect, silentPosting, schedule in
@@ -1180,6 +1190,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
                 } else {
+                    messages = strongSelf.transformEnqueueMessages(messages)
                     strongSelf.sendMessages(messages)
                 }
             }
@@ -4176,6 +4187,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.importStateDisposable?.dispose()
         self.nextChannelToReadDisposable?.dispose()
         self.inviteRequestsDisposable.dispose()
+        self.sendAsPeersDisposable?.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -4565,7 +4577,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return [FoundPeer(peer: peer, subscribers: nil)]
         }
         
-        let _ = (combineLatest(queue: Queue.mainQueue(), currentAccountPeer, self.context.account.postbox.peerView(id: self.chatLocation.peerId), self.context.engine.peers.sendAsAvailablePeers(peerId: self.chatLocation.peerId)))
+        self.sendAsPeersDisposable = (combineLatest(queue: Queue.mainQueue(), currentAccountPeer, self.context.account.postbox.peerView(id: self.chatLocation.peerId), self.context.engine.peers.sendAsAvailablePeers(peerId: self.chatLocation.peerId)))
         .start(next: { [weak self] currentAccountPeer, peerView, peers in
             guard let strongSelf = self else {
                 return

@@ -7056,3 +7056,6 @@ Sorry for the inconvenience.";
 "VoiceChat.DiscussionGroup" = "discussion group";
 
 "Group.Edit.PrivatePublicLinkAlert" = "Please note that if you choose a public link for your group, anyone will be able to find it in search and join.\n\nDo not create this link if you want your group to stay private.";
+
+"Conversation.CopyProtectionInfoGroup" = "Admins restricted members to copy or forward content from this group.";
+"Conversation.CopyProtectionInfoChannel" = "Admins restricted members to copy or forward content from this channel.";
