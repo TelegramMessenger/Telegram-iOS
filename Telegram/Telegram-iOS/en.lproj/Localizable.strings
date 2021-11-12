@@ -7050,12 +7050,19 @@ Sorry for the inconvenience.";
 
 "Chat.JumpToDate" = "Jump to Date";
 
-"Channel.AdminLog.MessageToggleNoForwardsOn" = "%@ enabled no-forwards";
-"Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ disabled no-forwards";
-
 "VoiceChat.DiscussionGroup" = "discussion group";
 
 "Group.Edit.PrivatePublicLinkAlert" = "Please note that if you choose a public link for your group, anyone will be able to find it in search and join.\n\nDo not create this link if you want your group to stay private.";
 
 "Conversation.CopyProtectionInfoGroup" = "Admins restricted members to copy or forward content from this group.";
 "Conversation.CopyProtectionInfoChannel" = "Admins restricted members to copy or forward content from this channel.";
+
+"Channel.AdminLog.MessageToggleNoForwardsOn" = "%@ restricted message forwarding";
+"Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ allowed message forwarding";
+
+"Group.Setup.ForwardingGroupTitle" = "Forwarding From This Group";
+"Group.Setup.ForwardingChannelTitle" = "Forwarding From This Channel";
+"Group.Setup.ForwardingEnabled" = "Allow Forwarding";
+"Group.Setup.ForwardingDisabled" = "Restrict Forwarding";
+"Group.Setup.ForwardingGroupInfo" = "Participants can forward messages from this group and save media files.";
+"Group.Setup.ForwardingChannelInfo" = "Participants can forward messages from this channel and save media files.";
