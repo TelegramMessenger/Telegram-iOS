@@ -94,7 +94,7 @@ float approximateBezierQubicLength(MeshGenerator::Point const &p0, MeshGenerator
 
 + (LottieMeshData * _Nullable)generateWithPath:(UIBezierPath * _Nonnull)path fill: (LottieMeshFill * _Nullable)fill stroke:(LottieMeshStroke * _Nullable)stroke {
     float scale = 1.0f;
-    float flatness = 0.5;
+    float flatness = 1.0;
     __block MeshGenerator::Point startingPoint(0.0f, 0.0f);
     __block bool hasStartingPoint = false;
     __block std::vector<MeshGenerator::Path> paths;

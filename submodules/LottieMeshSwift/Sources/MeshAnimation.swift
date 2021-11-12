@@ -126,13 +126,13 @@ public final class MeshAnimation {
 
             static func read(buffer: MeshReadBuffer) -> Segment {
                 let vertCount = Int(buffer.readInt32())
-                var vertices = Data(count: 4 * vertCount * 2)
+                var vertices = Data(count: vertCount)
                 vertices.withUnsafeMutableBytes { bytes in
                     buffer.read(bytes.baseAddress!, length: bytes.count)
                 }
 
                 let triCount = Int(buffer.readInt32())
-                var triangles = Data(count: 3 * triCount * 4)
+                var triangles = Data(count: triCount)
                 triangles.withUnsafeMutableBytes { bytes in
                     buffer.read(bytes.baseAddress!, length: bytes.count)
                 }
@@ -207,6 +207,7 @@ public final class MeshRenderer: MTKView {
     private final class RenderingMesh {
         let mesh: MeshAnimation
         let offset: CGPoint
+        let loop: Bool
         var currentFrame: Int = 0
         let vertexBuffer: MTLBuffer
         let indexBuffer: MTLBuffer
@@ -214,9 +215,10 @@ public final class MeshRenderer: MTKView {
         let maxVertices: Int
         let maxTriangles: Int
 
-        init(device: MTLDevice, mesh: MeshAnimation, offset: CGPoint) {
+        init(device: MTLDevice, mesh: MeshAnimation, offset: CGPoint, loop: Bool) {
             self.mesh = mesh
             self.offset = offset
+            self.loop = loop
 
             var maxTriangles = 0
             var maxVertices = 0
@@ -254,6 +256,7 @@ public final class MeshRenderer: MTKView {
         }
     }
 
+    private let wireframe: Bool
     private let commandQueue: MTLCommandQueue
     private let drawPassthroughPipelineState: MTLRenderPipelineState
     private let drawRadialGradientPipelineStates: [Int: MTLRenderPipelineState]
@@ -272,6 +275,8 @@ public final class MeshRenderer: MTKView {
     public var allAnimationsCompleted: (() -> Void)?
 
     public init?(wireframe: Bool = false) {
+        self.wireframe = wireframe
+        
         let mainBundle = Bundle(for: MeshRenderer.self)
 
         guard let path = mainBundle.path(forResource: "LottieMeshSwiftBundle", ofType: "bundle") else {
@@ -357,6 +362,7 @@ public final class MeshRenderer: MTKView {
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         if #available(iOS 15.0, *) {
             self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 60.0, preferred: 60.0)
+            //self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 10.0, maximum: 60.0, preferred: 10.0)
         }
         self.displayLink?.add(to: .main, forMode: .common)
         self.displayLink?.isPaused = false
@@ -372,8 +378,8 @@ public final class MeshRenderer: MTKView {
         self.displayLink?.invalidate()
     }
 
-    public func add(mesh: MeshAnimation, offset: CGPoint) {
-        self.meshes.append(RenderingMesh(device: self.device!, mesh: mesh, offset: offset))
+    public func add(mesh: MeshAnimation, offset: CGPoint, loop: Bool = false) {
+        self.meshes.append(RenderingMesh(device: self.device!, mesh: mesh, offset: offset, loop: loop))
     }
 
     @objc private func displayLinkEvent() {
@@ -400,9 +406,9 @@ public final class MeshRenderer: MTKView {
         }
 
         renderEncoder.setCullMode(.none)
-        /*if displayDebug {
+        if self.wireframe {
             renderEncoder.setTriangleFillMode(.lines)
-        }*/
+        }
 
         func addTriangle(vertexData: UnsafeMutablePointer<Float>, maxVertices: Int, nextVertexIndex: inout Int, vertices: Data, triangles: Data, triangleIndex: Int) {
             assert(nextVertexIndex + 3 <= maxVertices)
@@ -534,7 +540,11 @@ public final class MeshRenderer: MTKView {
 
             let nextFrame = mesh.currentFrame + 1
             if nextFrame >= mesh.mesh.frames.count {
-                removeMeshes.append(i)
+                if mesh.loop {
+                    mesh.currentFrame = 0
+                } else {
+                    removeMeshes.append(i)
+                }
             } else {
                 mesh.currentFrame = nextFrame
             }

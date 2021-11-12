@@ -14,6 +14,7 @@ swift_library(
         "//submodules/Postbox:Postbox",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/GZip:GZip",
+        "//submodules/AppBundle:AppBundle",
     ],
     visibility = [
         "//visibility:public",

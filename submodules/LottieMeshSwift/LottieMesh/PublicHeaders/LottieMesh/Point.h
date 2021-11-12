@@ -10,8 +10,11 @@ struct Point {
     float x = 0.0f;
     float y = 0.0f;
 
-    explicit Point(float x_, float y_) :
+    Point(float x_, float y_) :
     x(x_), y(y_) {
+    }
+    
+    Point() : Point(0.0f, 0.0f) {
     }
 
     bool isEqual(Point const &other, float epsilon = 0.0001f) const {
