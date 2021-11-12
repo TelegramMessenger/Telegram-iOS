@@ -351,6 +351,7 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         self.presentationData = presentationData
         self.textNode = TextNode()
 
+        var icon: UIImage?
         switch tip {
         case .textSelection:
             var rawText = self.presentationData.strings.ChatContextMenu_TextSelectionTip
@@ -362,15 +363,21 @@ private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
                 self.text = rawText
                 self.targetSelectionIndex = 1
             }
+            icon = UIImage(bundleImageName: "Chat/Context Menu/Tip")
         case .messageViewsPrivacy:
             self.text = self.presentationData.strings.ChatContextMenu_MessageViewsPrivacyTip
             self.targetSelectionIndex = nil
+            icon = UIImage(bundleImageName: "Chat/Context Menu/Tip")
+        case let .messageCopyProtection(isChannel):
+            self.text = isChannel ? self.presentationData.strings.Conversation_CopyProtectionInfoChannel : self.presentationData.strings.Conversation_CopyProtectionInfoGroup
+            self.targetSelectionIndex = nil
+            icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
         }
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Tip"), color: presentationData.theme.contextMenu.primaryColor)
+        self.iconNode.image = generateTintedImage(image: icon, color: presentationData.theme.contextMenu.primaryColor)
         
         super.init()
         

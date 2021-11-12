@@ -1828,6 +1828,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public enum Tip {
         case textSelection
         case messageViewsPrivacy
+        case messageCopyProtection(isChannel: Bool)
     }
 
     public final class ActionsHeight {

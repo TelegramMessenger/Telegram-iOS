@@ -216,6 +216,11 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
     }
     
+    public func sizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        let titleSize = self.titleNode.updateLayout(constrainedSize)
+        return CGSize(width: titleSize.width + 20.0, height: self.buttonHeight)
+    }
+    
     public func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         return self.updateLayout(width: width, previousSubtitle: self.subtitle, transition: transition)
     }
