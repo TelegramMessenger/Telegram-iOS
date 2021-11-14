@@ -1432,8 +1432,20 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
     }
     
+    public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
+        self.pushRegistryImpl(registry, didReceiveIncomingPushWith: payload, for: type, completion: completion)
+    }
+    
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
+        self.pushRegistryImpl(registry, didReceiveIncomingPushWith: payload, for: type, completion: {})
+    }
+    
+    private func pushRegistryImpl(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
+        Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry didReceiveIncomingPushWith")
+        
         guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "encryptedPayload is nil")
+            completion()
             return
         }
         encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
@@ -1442,13 +1454,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             encryptedPayload.append("=")
         }
         guard let payloadData = Data(base64Encoded: encryptedPayload) else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode encryptedPayload")
+            completion()
             return
         }
         guard let keyId = notificationPayloadKeyId(data: payloadData) else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't parse payload key id")
+            completion()
             return
         }
-
         guard let accountManagerState = self.accountManagerState else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "accountManagerState is nil")
+            completion()
             return
         }
 
@@ -1464,15 +1481,23 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
 
         guard let accountId = maybeAccountId, let notificationKey = maybeNotificationKey else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "accountId or notificationKey is nil")
+            completion()
             return
         }
         guard let decryptedPayload = decryptedNotificationPayload(key: notificationKey, data: payloadData) else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decrypt payload")
+            completion()
             return
         }
         guard let payloadJson = try? JSONSerialization.jsonObject(with: decryptedPayload, options: []) as? [String: Any] else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode payload json")
+            completion()
             return
         }
         guard var updateString = payloadJson["updates"] as? String else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "updates is nil")
+            completion()
             return
         }
 
@@ -1482,12 +1507,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             updateString.append("=")
         }
         guard let updateData = Data(base64Encoded: updateString) else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode updateData")
+            completion()
             return
         }
         guard let callUpdate = AccountStateManager.extractIncomingCallUpdate(data: updateData) else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't extract call update")
+            completion()
             return
         }
         guard let callKitIntegration = CallKitIntegration.shared else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is not available")
+            completion()
             return
         }
 
@@ -1514,64 +1545,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         )
 
         let _ = accountId
-
-        /*let semaphore = DispatchSemaphore(value: 0)
-        var accountAndDecryptedPayload: (Account, Data)?
-
-        var sharedApplicationContextValue: SharedApplicationContext?
-
-        let accountsAndKeys = self.sharedContextPromise.get()
-        |> take(1)
-        |> mapToSignal { sharedApplicationContext -> Signal<[(Account, MasterNotificationKey)], NoError> in
-            sharedApplicationContextValue = sharedApplicationContext
-
-            return sharedApplicationContext.sharedContext.activeAccounts
-            |> take(1)
-            |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
-                return combineLatest(activeAccounts.accounts.map { account -> Signal<(Account, MasterNotificationKey), NoError> in
-                    return masterNotificationsKey(account: account.1, ignoreDisabled: true)
-                    |> map { key -> (Account, MasterNotificationKey) in
-                        return (account.1, key)
-                    }
-                })
-            }
-        }
-
-        let _ = accountsAndKeys.start(next: { accountsAndKeys in
-            for (account, key) in accountsAndKeys {
-                if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
-                    accountAndDecryptedPayload = (account, decryptedData)
-                    break
-                }
-            }
-            semaphore.signal()
-        })
-        semaphore.wait()
-
-        if let sharedApplicationContextValue = sharedApplicationContextValue, let (account, decryptedData) = accountAndDecryptedPayload {
-            if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
-                if var updateString = decryptedDict["updates"] as? String {
-                    updateString = updateString.replacingOccurrences(of: "-", with: "+")
-                    updateString = updateString.replacingOccurrences(of: "_", with: "/")
-                    while updateString.count % 4 != 0 {
-                        updateString.append("=")
-                    }
-                    if let updateData = Data(base64Encoded: updateString) {
-                        var result: (CallSessionRingingState, CallSession)?
-                        let semaphore = DispatchSemaphore(value: 0)
-                        account.stateManager.processIncomingCallUpdate(data: updateData, completion: { ringingState in
-                            result = ringingState
-                            semaphore.signal()
-                        })
-                        semaphore.wait()
-
-                        if let (ringingState, callSession) = result {
-                            (sharedApplicationContextValue.sharedContext.callManager as? PresentationCallManagerImpl)?.injectRingingStateSynchronously(account: account, ringingState: ringingState, callSession: callSession)
-                        }
-                    }
-                }
-            }
-        }*/
         
         let _ = (self.sharedContextPromise.get()
         |> take(1)
@@ -1623,10 +1596,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
 
             if case PKPushType.voIP = type {
-                Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry payload: \(payload.dictionaryPayload)")
                 sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
             }
         })
+        
+        Logger.shared.log("App \(self.episodeId) PushRegistry", "Invoking completion handler")
+        
+        completion()
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
