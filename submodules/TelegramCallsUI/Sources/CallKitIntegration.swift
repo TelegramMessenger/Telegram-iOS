@@ -9,7 +9,13 @@ import SwiftSignalKit
 import AppBundle
 import AccountContext
 
-private var sharedProviderDelegate: AnyObject?
+private let sharedProviderDelegate: AnyObject? = {
+    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+        return CallKitProviderDelegate()
+    } else {
+        return nil
+    }
+}()
 
 public final class CallKitIntegration {
     public static var isAvailable: Bool {
@@ -42,9 +48,6 @@ public final class CallKitIntegration {
         audioSessionActivationChanged: @escaping (Bool) -> Void
     ) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            if sharedProviderDelegate == nil {
-                sharedProviderDelegate = CallKitProviderDelegate()
-            }
             (sharedProviderDelegate as? CallKitProviderDelegate)?.setup(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged)
         }
     }

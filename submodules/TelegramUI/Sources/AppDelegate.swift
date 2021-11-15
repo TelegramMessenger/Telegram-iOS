@@ -710,6 +710,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
 
         telegramUIDeclareEncodables()
         initializeAccountManagement()
+        
+        let pushRegistry = PKPushRegistry(queue: .main)
+        if #available(iOS 9.0, *) {
+            pushRegistry.desiredPushTypes = Set([.voIP])
+        }
+        self.pushRegistry = pushRegistry
+        pushRegistry.delegate = self
 
         self.accountManagerState = extractAccountManagerState(records: accountManager._internalAccountRecordsSync())
         let _ = (accountManager.accountRecords()
@@ -1167,13 +1174,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         })
         
-        let pushRegistry = PKPushRegistry(queue: .main)
-        if #available(iOS 9.0, *) {
-            pushRegistry.desiredPushTypes = Set([.voIP])
-        }
-        self.pushRegistry = pushRegistry
-        pushRegistry.delegate = self
-        
         self.resetBadge()
         
         if #available(iOS 9.1, *) {
@@ -1433,68 +1433,87 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
+        Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry didReceiveIncomingPushWith \(payload.dictionaryPayload)")
+        
         self.pushRegistryImpl(registry, didReceiveIncomingPushWith: payload, for: type, completion: completion)
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
+        Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry didReceiveIncomingPushWith \(payload.dictionaryPayload)")
+        
         self.pushRegistryImpl(registry, didReceiveIncomingPushWith: payload, for: type, completion: {})
     }
     
     private func pushRegistryImpl(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
-        Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry didReceiveIncomingPushWith")
+        Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry processing push notification")
         
-        guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
-            Logger.shared.log("App \(self.episodeId) PushRegistry", "encryptedPayload is nil")
-            completion()
-            return
-        }
-        encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
-        encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
-        while encryptedPayload.count % 4 != 0 {
-            encryptedPayload.append("=")
-        }
-        guard let payloadData = Data(base64Encoded: encryptedPayload) else {
-            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode encryptedPayload")
-            completion()
-            return
-        }
-        guard let keyId = notificationPayloadKeyId(data: payloadData) else {
-            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't parse payload key id")
-            completion()
-            return
-        }
-        guard let accountManagerState = self.accountManagerState else {
-            Logger.shared.log("App \(self.episodeId) PushRegistry", "accountManagerState is nil")
-            completion()
-            return
-        }
-
-        var maybeAccountId: AccountRecordId?
-        var maybeNotificationKey: MasterNotificationKey?
-
-        for key in accountManagerState.notificationKeys {
-            if key.id == keyId {
-                maybeAccountId = key.accountId
-                maybeNotificationKey = MasterNotificationKey(id: key.id, data: key.key)
-                break
+        let decryptedPayloadAndAccountId: ([AnyHashable: Any], AccountRecordId)?
+        
+        if let accountIdString = payload.dictionaryPayload["accountId"] as? String, let accountId = Int64(accountIdString) {
+            decryptedPayloadAndAccountId = (payload.dictionaryPayload, AccountRecordId(rawValue: accountId))
+        } else {
+            guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "encryptedPayload is nil")
+                completion()
+                return
             }
-        }
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+            while encryptedPayload.count % 4 != 0 {
+                encryptedPayload.append("=")
+            }
+            guard let payloadData = Data(base64Encoded: encryptedPayload) else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode encryptedPayload")
+                completion()
+                return
+            }
+            guard let keyId = notificationPayloadKeyId(data: payloadData) else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't parse payload key id")
+                completion()
+                return
+            }
+            guard let accountManagerState = self.accountManagerState else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "accountManagerState is nil")
+                completion()
+                return
+            }
 
-        guard let accountId = maybeAccountId, let notificationKey = maybeNotificationKey else {
-            Logger.shared.log("App \(self.episodeId) PushRegistry", "accountId or notificationKey is nil")
+            var maybeAccountId: AccountRecordId?
+            var maybeNotificationKey: MasterNotificationKey?
+
+            for key in accountManagerState.notificationKeys {
+                if key.id == keyId {
+                    maybeAccountId = key.accountId
+                    maybeNotificationKey = MasterNotificationKey(id: key.id, data: key.key)
+                    break
+                }
+            }
+
+            guard let accountId = maybeAccountId, let notificationKey = maybeNotificationKey else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "accountId or notificationKey is nil")
+                completion()
+                return
+            }
+            guard let decryptedPayload = decryptedNotificationPayload(key: notificationKey, data: payloadData) else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decrypt payload")
+                completion()
+                return
+            }
+            guard let payloadJson = try? JSONSerialization.jsonObject(with: decryptedPayload, options: []) as? [AnyHashable: Any] else {
+                Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode payload json")
+                completion()
+                return
+            }
+            
+            decryptedPayloadAndAccountId = (payloadJson, accountId)
+        }
+        
+        guard let (payloadJson, accountId) = decryptedPayloadAndAccountId else {
+            Logger.shared.log("App \(self.episodeId) PushRegistry", "decryptedPayloadAndAccountId is nil")
             completion()
             return
         }
-        guard let decryptedPayload = decryptedNotificationPayload(key: notificationKey, data: payloadData) else {
-            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decrypt payload")
-            completion()
-            return
-        }
-        guard let payloadJson = try? JSONSerialization.jsonObject(with: decryptedPayload, options: []) as? [String: Any] else {
-            Logger.shared.log("App \(self.episodeId) PushRegistry", "Couldn't decode payload json")
-            completion()
-            return
-        }
+        
         guard var updateString = payloadJson["updates"] as? String else {
             Logger.shared.log("App \(self.episodeId) PushRegistry", "updates is nil")
             completion()
@@ -1543,56 +1562,23 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 }
             }
         )
-
-        let _ = accountId
         
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            if var encryptedPayload = payload.dictionaryPayload["p"] as? String {
-                encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
-                encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
-                while encryptedPayload.count % 4 != 0 {
-                    encryptedPayload.append("=")
-                }
-                if let data = Data(base64Encoded: encryptedPayload) {
-                    let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
-                    |> take(1)
-                    |> mapToSignal { activeAccounts -> Signal<[(Account, MasterNotificationKey)], NoError> in
-                        return combineLatest(activeAccounts.accounts.map { context -> Signal<(Account, MasterNotificationKey), NoError> in
-                            return masterNotificationsKey(account: context.1.account, ignoreDisabled: true)
-                            |> map { key -> (Account, MasterNotificationKey) in
-                                return (context.1.account, key)
-                            }
+            let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { activeAccounts in
+                for (_, context, _) in activeAccounts.accounts {
+                    if context.account.id == accountId {
+                        context.account.stateManager.processIncomingCallUpdate(data: updateData, completion: { _ in
                         })
+                        
+                        break
                     }
-                    |> deliverOnMainQueue).start(next: { accountsAndKeys in
-                        var accountAndDecryptedPayload: (Account, Data)?
-                        for (account, key) in accountsAndKeys {
-                            if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
-                                accountAndDecryptedPayload = (account, decryptedData)
-                                break
-                            }
-                        }
-
-                        if let (account, decryptedData) = accountAndDecryptedPayload {
-                            if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
-                                if var updateString = decryptedDict["updates"] as? String {
-                                    updateString = updateString.replacingOccurrences(of: "-", with: "+")
-                                    updateString = updateString.replacingOccurrences(of: "_", with: "/")
-                                    while updateString.count % 4 != 0 {
-                                        updateString.append("=")
-                                    }
-                                    if let updateData = Data(base64Encoded: updateString) {
-                                        account.stateManager.processIncomingCallUpdate(data: updateData, completion: { _ in
-                                        })
-                                    }
-                                }
-                            }
-                        }
-                    })
                 }
-            }
+            })
+            
             sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
 
             if case PKPushType.voIP = type {

@@ -729,6 +729,7 @@ private final class NotificationServiceHandler {
                         var accessHash: Int64
                         var fromId: PeerId
                         var updates: String
+                        var accountId: Int64
                     }
 
                     var callData: CallData?
@@ -761,7 +762,8 @@ private final class NotificationServiceHandler {
                                 id: callId,
                                 accessHash: callAccessHash,
                                 fromId: peerId,
-                                updates: updates
+                                updates: updates,
+                                accountId: recordId.int64
                             )
                         }
                     }
@@ -908,7 +910,8 @@ private final class NotificationServiceHandler {
                                 "call_id": "\(callData.id)",
                                 "call_ah": "\(callData.accessHash)",
                                 "from_id": "\(callData.fromId.id._internalGetInt64Value())",
-                                "updates": callData.updates
+                                "updates": callData.updates,
+                                "accountId": "\(callData.accountId)"
                             ]
                             Logger.shared.log("NotificationService \(episode)", "Will report voip notification")
                             let content = NotificationContent()
