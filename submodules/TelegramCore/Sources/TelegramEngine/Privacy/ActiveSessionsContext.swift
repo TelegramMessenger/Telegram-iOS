@@ -144,7 +144,7 @@ private final class ActiveSessionsContextImpl {
         }
     }
     
-    public func updateAuthorizationTTL(days: Int32) -> Signal<Never, UpadteAuthorizationTTLError> {
+    func updateAuthorizationTTL(days: Int32) -> Signal<Never, UpadteAuthorizationTTLError> {
         self._state = ActiveSessionsContextState(isLoadingMore: self._state.isLoadingMore, sessions: self._state.sessions, ttlDays: days)
         
         return setAuthorizationTTL(account: self.account, ttl: days)
@@ -219,7 +219,7 @@ public final class ActiveSessionsContext {
         }
     }
     
-    func updateSessionAcceptsSecretChats(_ session: RecentAccountSession, accepts: Bool) -> Signal<Never, UpdateSessionError> {
+    public func updateSessionAcceptsSecretChats(_ session: RecentAccountSession, accepts: Bool) -> Signal<Never, UpdateSessionError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in

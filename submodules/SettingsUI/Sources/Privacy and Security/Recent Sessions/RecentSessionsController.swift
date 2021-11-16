@@ -616,6 +616,9 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     let updateAuthorizationTTLDisposable = MetaDisposable()
     actionsDisposable.add(updateAuthorizationTTLDisposable)
     
+    let updateSessionDisposable = MetaDisposable()
+    actionsDisposable.add(updateSessionDisposable)
+    
     let arguments = RecentSessionsControllerArguments(context: context, setSessionIdWithRevealedOptions: { sessionId, fromSessionId in
         updateState { state in
             if (sessionId == nil && fromSessionId == state.sessionIdWithRevealedOptions) || (sessionId != nil && fromSessionId == nil) {
@@ -658,14 +661,16 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openSession: { session in
-        let controller = RecentSessionScreen(context: context, subject: .session(session), remove: { completion in
+        let controller = RecentSessionScreen(context: context, subject: .session(session), updateAcceptSecretChats: { value in
+            updateSessionDisposable.set(activeSessionsContext.updateSessionAcceptsSecretChats(session, accepts: value).start())
+        }, remove: { completion in
             removeSessionImpl(session.hash, {
                 completion()
             })
         })
         presentControllerImpl?(controller, nil)
     }, openWebSession: { session, peer in
-        let controller = RecentSessionScreen(context: context, subject: .website(session, peer), remove: { completion in
+        let controller = RecentSessionScreen(context: context, subject: .website(session, peer), updateAcceptSecretChats: { _ in }, remove: { completion in
             removeWebSessionImpl(session.hash)
             completion()
         })

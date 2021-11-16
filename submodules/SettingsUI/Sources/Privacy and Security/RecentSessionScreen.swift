@@ -55,6 +55,7 @@ final class RecentSessionScreen: ViewController {
     private let context: AccountContext
     private let subject: RecentSessionScreen.Subject
     private let remove: (@escaping () -> Void) -> Void
+    private let updateAcceptSecretChats: (Bool) -> Void
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -69,11 +70,12 @@ final class RecentSessionScreen: ViewController {
         }
     }
     
-    init(context: AccountContext, subject: RecentSessionScreen.Subject, remove: @escaping (@escaping () -> Void) -> Void) {
+    init(context: AccountContext, subject: RecentSessionScreen.Subject, updateAcceptSecretChats: @escaping (Bool) -> Void, remove: @escaping (@escaping () -> Void) -> Void) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.subject = subject
         self.remove = remove
+        self.updateAcceptSecretChats = updateAcceptSecretChats
         
         super.init(navigationBarPresentationData: nil)
         
@@ -113,6 +115,9 @@ final class RecentSessionScreen: ViewController {
             self?.remove({
                 self?.controllerNode.animateOut()
             })
+        }
+        self.controllerNode.updateAcceptSecretChats = { [weak self] value in
+            self?.updateAcceptSecretChats(value)
         }
     }
     
@@ -165,11 +170,18 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
     private let deviceTitleNode: ImmediateTextNode
     private let deviceValueNode: ImmediateTextNode
     private let firstSeparatorNode: ASDisplayNode
-    private let locationTitleNode: ImmediateTextNode
-    private let locationValueNode: ImmediateTextNode
-    private let secondSeparatorNode: ASDisplayNode
     private let ipTitleNode: ImmediateTextNode
     private let ipValueNode: ImmediateTextNode
+    private let secondSeparatorNode: ASDisplayNode
+    private let locationTitleNode: ImmediateTextNode
+    private let locationValueNode: ImmediateTextNode
+    private let locationInfoNode: ImmediateTextNode
+    
+    private let secretChatsBackgroundNode: ASDisplayNode
+    private let secretChatsHeaderNode: ImmediateTextNode
+    private let secretChatsTitleNode: ImmediateTextNode
+    private let secretChatsSwitchNode: SwitchNode
+    private let secretChatsInfoNode: ImmediateTextNode
     
     private let cancelButton: HighlightableButtonNode
     private let terminateButton: SolidRoundedButtonNode
@@ -179,6 +191,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
     var present: ((ViewController) -> Void)?
     var remove: (() -> Void)?
     var dismiss: (() -> Void)?
+    var updateAcceptSecretChats: ((Bool) -> Void)?
     
     init(context: AccountContext, presentationData: PresentationData, controller: RecentSessionScreen, subject: RecentSessionScreen.Subject) {
         self.context = context
@@ -224,15 +237,21 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.fieldBackgroundNode.clipsToBounds = true
         self.fieldBackgroundNode.cornerRadius = 11
         self.fieldBackgroundNode.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
-        
+                
         self.deviceTitleNode = ImmediateTextNode()
         self.deviceValueNode = ImmediateTextNode()
+                
+        self.ipTitleNode = ImmediateTextNode()
+        self.ipValueNode = ImmediateTextNode()
         
         self.locationTitleNode = ImmediateTextNode()
         self.locationValueNode = ImmediateTextNode()
+        self.locationInfoNode = ImmediateTextNode()
         
-        self.ipTitleNode = ImmediateTextNode()
-        self.ipValueNode = ImmediateTextNode()
+        self.secretChatsHeaderNode = ImmediateTextNode()
+        self.secretChatsTitleNode = ImmediateTextNode()
+        self.secretChatsSwitchNode = SwitchNode()
+        self.secretChatsInfoNode = ImmediateTextNode()
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
@@ -293,6 +312,8 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                     iconNode.image = icon
                     self.iconNode = iconNode
                 }
+            
+                self.secretChatsSwitchNode.isOn = session.flags.contains(.acceptsSecretChats)
             case let .website(website, peer):
                 self.terminateButton.title = self.presentationData.strings.AuthSessions_View_Logout
             
@@ -339,15 +360,27 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.firstSeparatorNode = ASDisplayNode()
         self.firstSeparatorNode.backgroundColor = self.presentationData.theme.list.itemBlocksSeparatorColor
         
-        self.locationTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_Location, font: Font.regular(17.0), textColor: textColor)
-        self.locationValueNode.attributedText = NSAttributedString(string: location, font: Font.regular(17.0), textColor: secondaryTextColor)
-      
+        self.ipTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_IP, font: Font.regular(17.0), textColor: textColor)
+        self.ipValueNode.attributedText = NSAttributedString(string: ip, font: Font.regular(17.0), textColor: secondaryTextColor)
+        
         self.secondSeparatorNode = ASDisplayNode()
         self.secondSeparatorNode.backgroundColor = self.presentationData.theme.list.itemBlocksSeparatorColor
         
-        self.ipTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_IP, font: Font.regular(17.0), textColor: textColor)
-        self.ipValueNode.attributedText = NSAttributedString(string: ip, font: Font.regular(17.0), textColor: secondaryTextColor)
-                
+        self.locationTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_Location, font: Font.regular(17.0), textColor: textColor)
+        self.locationValueNode.attributedText = NSAttributedString(string: location, font: Font.regular(17.0), textColor: secondaryTextColor)
+        self.locationInfoNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_LocationInfo, font: Font.regular(13.0), textColor: secondaryTextColor)
+        self.locationInfoNode.maximumNumberOfLines = 3
+        
+        self.secretChatsBackgroundNode = ASDisplayNode()
+        self.secretChatsBackgroundNode.clipsToBounds = true
+        self.secretChatsBackgroundNode.cornerRadius = 11
+        self.secretChatsBackgroundNode.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
+        
+        self.secretChatsHeaderNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_AcceptSecretChatsTitle.uppercased(), font: Font.regular(17.0), textColor: textColor)
+        self.secretChatsTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_AcceptSecretChats, font: Font.regular(17.0), textColor: textColor)
+        self.secretChatsInfoNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_AcceptSecretChatsInfo, font: Font.regular(17.0), textColor: secondaryTextColor)
+        self.secretChatsInfoNode.maximumNumberOfLines = 3
+        
         super.init()
         
         self.backgroundColor = nil
@@ -371,11 +404,12 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.contentContainerNode.addSubnode(self.deviceTitleNode)
         self.contentContainerNode.addSubnode(self.deviceValueNode)
         
-        self.contentContainerNode.addSubnode(self.locationTitleNode)
-        self.contentContainerNode.addSubnode(self.locationValueNode)
-        
         self.contentContainerNode.addSubnode(self.ipTitleNode)
         self.contentContainerNode.addSubnode(self.ipValueNode)
+        
+        self.contentContainerNode.addSubnode(self.locationTitleNode)
+        self.contentContainerNode.addSubnode(self.locationValueNode)
+        self.contentContainerNode.addSubnode(self.locationInfoNode)
         
         self.contentContainerNode.addSubnode(self.firstSeparatorNode)
         self.contentContainerNode.addSubnode(self.secondSeparatorNode)
@@ -386,6 +420,20 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.iconNode.flatMap { self.contentContainerNode.addSubnode($0) }
         self.animationNode.flatMap { self.contentContainerNode.addSubnode($0) }
         self.avatarNode.flatMap { self.contentContainerNode.addSubnode($0) }
+        
+        if case .session = subject {
+            self.contentContainerNode.addSubnode(self.secretChatsBackgroundNode)
+            self.contentContainerNode.addSubnode(self.secretChatsHeaderNode)
+            self.contentContainerNode.addSubnode(self.secretChatsTitleNode)
+            self.contentContainerNode.addSubnode(self.secretChatsSwitchNode)
+            self.contentContainerNode.addSubnode(self.secretChatsInfoNode)
+            
+            self.secretChatsSwitchNode.valueUpdated = { [weak self] value in
+                if let strongSelf = self {
+                    strongSelf.updateAcceptSecretChats?(value)
+                }
+            }
+        }
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         self.terminateButton.pressed = { [weak self] in
@@ -491,6 +539,12 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.deviceValueNode.attributedText = NSAttributedString(string: self.deviceValueNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
         self.locationValueNode.attributedText = NSAttributedString(string: self.locationValueNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
         self.ipValueNode.attributedText = NSAttributedString(string: self.ipValueNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
+        self.locationInfoNode.attributedText = NSAttributedString(string: self.locationInfoNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
+        
+        self.secretChatsHeaderNode.attributedText = NSAttributedString(string: self.secretChatsHeaderNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
+        self.secretChatsTitleNode.attributedText = NSAttributedString(string: self.secretChatsTitleNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+        self.secretChatsInfoNode.attributedText = NSAttributedString(string: self.secretChatsInfoNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor)
+        self.secretChatsBackgroundNode.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
         
         if previousTheme !== presentationData.theme, let (layout, navigationBarHeight) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -631,25 +685,58 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         
         transition.updateFrame(node: self.firstSeparatorNode, frame: CGRect(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight, width: fieldFrame.width - inset, height: UIScreenPixel))
         
-        let locationTitleTextSize = self.locationTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
-        let locationTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationTitleTextSize.height) / 2.0)), size: locationTitleTextSize)
-        transition.updateFrame(node: self.locationTitleNode, frame: locationTitleTextFrame)
-        
-        let locationValueTextSize = self.locationValueNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0 - locationTitleTextSize.width - 10.0, height: fieldItemHeight))
-        let locationValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - locationValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationValueTextSize.height) / 2.0)), size: locationValueTextSize)
-        transition.updateFrame(node: self.locationValueNode, frame: locationValueTextFrame)
-        
-        transition.updateFrame(node: self.secondSeparatorNode, frame: CGRect(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight, width: fieldFrame.width - inset, height: UIScreenPixel))
-        
         let ipTitleTextSize = self.ipTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
-        let ipTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - ipTitleTextSize.height) / 2.0)), size: ipTitleTextSize)
+        let ipTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight  + floorToScreenPixels((fieldItemHeight - ipTitleTextSize.height) / 2.0)), size: ipTitleTextSize)
         transition.updateFrame(node: self.ipTitleNode, frame: ipTitleTextFrame)
         
         let ipValueTextSize = self.ipValueNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0 - ipTitleTextSize.width - 10.0, height: fieldItemHeight))
-        let ipValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - ipValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - ipValueTextSize.height) / 2.0)), size: ipValueTextSize)
+        let ipValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - ipValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + floorToScreenPixels((fieldItemHeight - ipValueTextSize.height) / 2.0)), size: ipValueTextSize)
         transition.updateFrame(node: self.ipValueNode, frame: ipValueTextFrame)
         
-        var contentHeight = fieldFrame.maxY + bottomInset + 64.0
+        transition.updateFrame(node: self.secondSeparatorNode, frame: CGRect(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight, width: fieldFrame.width - inset, height: UIScreenPixel))
+                
+        let locationTitleTextSize = self.locationTitleNode.updateLayout(CGSize(width: maxFieldTitleWidth, height: fieldItemHeight))
+        let locationTitleTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationTitleTextSize.height) / 2.0)), size: locationTitleTextSize)
+        transition.updateFrame(node: self.locationTitleNode, frame: locationTitleTextFrame)
+        
+        let locationValueTextSize = self.locationValueNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0 - locationTitleTextSize.width - 10.0, height: fieldItemHeight))
+        let locationValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - locationValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationValueTextSize.height) / 2.0)), size: locationValueTextSize)
+        transition.updateFrame(node: self.locationValueNode, frame: locationValueTextFrame)
+        
+        let locationInfoTextSize = self.locationInfoNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0, height: fieldItemHeight))
+        let locationInfoTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.maxY + 6.0), size: locationInfoTextSize)
+        transition.updateFrame(node: self.locationInfoNode, frame: locationInfoTextFrame)
+        
+        var contentHeight = locationInfoTextFrame.maxY + bottomInset + 64.0
+        
+        if case .session = self.subject {
+            let secretFrame = CGRect(x: inset, y: locationInfoTextFrame.maxY + 59.0, width: width - inset * 2.0, height: fieldItemHeight)
+            transition.updateFrame(node: self.secretChatsBackgroundNode, frame: secretFrame)
+            
+            let secretChatsHeaderTextSize = self.secretChatsHeaderNode.updateLayout(CGSize(width: secretFrame.width - inset * 2.0 - locationTitleTextSize.width - 10.0, height: fieldItemHeight))
+            let secretChatsHeaderTextFrame = CGRect(origin: CGPoint(x: secretFrame.minX + inset, y: secretFrame.minY - secretChatsHeaderTextSize.height - 6.0), size: secretChatsHeaderTextSize)
+            transition.updateFrame(node: self.secretChatsHeaderNode, frame: secretChatsHeaderTextFrame)
+            
+            let secretChatsTitleTextSize = self.secretChatsTitleNode.updateLayout(CGSize(width: width - inset * 4.0 - 80.0, height: fieldItemHeight))
+            let secretChatsTitleTextFrame = CGRect(origin: CGPoint(x: secretFrame.minX + inset, y: secretFrame.minY + floorToScreenPixels((fieldItemHeight - secretChatsTitleTextSize.height) / 2.0)), size: secretChatsTitleTextSize)
+            transition.updateFrame(node: self.secretChatsTitleNode, frame: secretChatsTitleTextFrame)
+                        
+            let secretChatsInfoTextSize = self.secretChatsInfoNode.updateLayout(CGSize(width: secretFrame.width - inset * 2.0, height: fieldItemHeight))
+            let secretChatsInfoTextFrame = CGRect(origin: CGPoint(x: secretFrame.minX + inset, y: secretFrame.maxY + 6.0), size: secretChatsInfoTextSize)
+            transition.updateFrame(node: self.secretChatsInfoNode, frame: secretChatsInfoTextFrame)
+            
+            if let switchView = self.secretChatsSwitchNode.view as? UISwitch {
+                if self.secretChatsSwitchNode.bounds.size.width.isZero {
+                    switchView.sizeToFit()
+                }
+                let switchSize = switchView.bounds.size
+                
+                self.secretChatsSwitchNode.frame = CGRect(origin: CGPoint(x:  fieldFrame.maxX - switchSize.width - inset, y: secretFrame.minY + floorToScreenPixels((fieldItemHeight - switchSize.height) / 2.0)), size: switchSize)
+            }
+            
+            contentHeight += secretChatsInfoTextFrame.maxY - locationInfoTextFrame.maxY
+        }
+        
         let isCurrent: Bool
         if case let .session(session) = self.subject, session.isCurrent {
             isCurrent = true

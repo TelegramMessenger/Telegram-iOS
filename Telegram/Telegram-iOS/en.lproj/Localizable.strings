@@ -7069,3 +7069,9 @@ Sorry for the inconvenience.";
 
 "AuthSessions.TerminateIfAwayTitle" = "Automatically Terminate Old Sessions";
 "AuthSessions.TerminateIfAwayFor" = "If Inactive For";
+
+"AuthSessions.View.LocationInfo" = "This location estimate is based on the IP address and may not always be accurate.";
+
+"AuthSessions.View.AcceptSecretChatsTitle" = "Incoming Secret Chats";
+"AuthSessions.View.AcceptSecretChats" = "Accept on This Device";
+"AuthSessions.View.AcceptSecretChatsInfo" = "You can disable the acception of incoming secret chats on this device.";
