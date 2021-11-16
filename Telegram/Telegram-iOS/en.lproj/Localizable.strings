@@ -7066,3 +7066,12 @@ Sorry for the inconvenience.";
 "Group.Setup.ForwardingDisabled" = "Restrict Forwarding";
 "Group.Setup.ForwardingGroupInfo" = "Participants can forward messages from this group and save media files.";
 "Group.Setup.ForwardingChannelInfo" = "Participants can forward messages from this channel and save media files.";
+
+"AuthSessions.TerminateIfAwayTitle" = "Automatically Terminate Old Sessions";
+"AuthSessions.TerminateIfAwayFor" = "If Inactive For";
+
+"AuthSessions.View.LocationInfo" = "This location estimate is based on the IP address and may not always be accurate.";
+
+"AuthSessions.View.AcceptSecretChatsTitle" = "Incoming Secret Chats";
+"AuthSessions.View.AcceptSecretChats" = "Accept on This Device";
+"AuthSessions.View.AcceptSecretChatsInfo" = "You can disable the acception of incoming secret chats on this device.";

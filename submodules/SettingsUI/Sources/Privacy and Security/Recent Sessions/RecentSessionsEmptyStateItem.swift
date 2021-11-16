@@ -78,7 +78,7 @@ final class RecentSessionsEmptyStateItemNode: ItemListControllerEmptyStateItemNo
     override func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         var insets = layout.insets(options: [])
-        insets.top += navigationBarHeight + 200.0
+        insets.top += navigationBarHeight + 270.0
         
         let imageSpacing: CGFloat = 8.0
         let textSpacing: CGFloat = 8.0

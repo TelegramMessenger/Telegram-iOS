@@ -64,7 +64,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-        case .contactsHeader, .deleteContacts, .syncContacts, .syncContactsInfo:
+            case .contactsHeader, .deleteContacts, .syncContacts, .syncContactsInfo:
                 return PrivacyAndSecuritySection.contacts.rawValue
             case .frequentContacts, .frequentContactsInfo:
                 return PrivacyAndSecuritySection.frequentContacts.rawValue
@@ -72,9 +72,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return PrivacyAndSecuritySection.chats.rawValue
             case .paymentHeader, .clearPaymentInfo, .paymentInfo:
                 return PrivacyAndSecuritySection.payments.rawValue
-        case .secretChatLinkPreviewsHeader, .secretChatLinkPreviews, .secretChatLinkPreviewsInfo:
+            case .secretChatLinkPreviewsHeader, .secretChatLinkPreviews, .secretChatLinkPreviewsInfo:
                 return PrivacyAndSecuritySection.secretChats.rawValue
-        
         }
     }
     

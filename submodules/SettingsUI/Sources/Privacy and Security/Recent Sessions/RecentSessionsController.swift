@@ -28,8 +28,9 @@ private final class RecentSessionsControllerArguments {
     let addDevice: () -> Void
     
     let openOtherAppsUrl: () -> Void
+    let setupAuthorizationTTL: () -> Void
     
-    init(context: AccountContext, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, openSession: @escaping (RecentAccountSession) -> Void, openWebSession: @escaping (WebAuthorization, Peer?) -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void, openOtherAppsUrl: @escaping () -> Void) {
+    init(context: AccountContext, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, openSession: @escaping (RecentAccountSession) -> Void, openWebSession: @escaping (WebAuthorization, Peer?) -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void, openOtherAppsUrl: @escaping () -> Void, setupAuthorizationTTL: @escaping () -> Void) {
         self.context = context
         self.setSessionIdWithRevealedOptions = setSessionIdWithRevealedOptions
         self.removeSession = removeSession
@@ -44,6 +45,8 @@ private final class RecentSessionsControllerArguments {
         self.addDevice = addDevice
         
         self.openOtherAppsUrl = openOtherAppsUrl
+        
+        self.setupAuthorizationTTL = setupAuthorizationTTL
     }
 }
 
@@ -56,12 +59,14 @@ private enum RecentSessionsSection: Int32 {
     case currentSession
     case pendingSessions
     case otherSessions
+    case ttl
 }
 
 private enum RecentSessionsEntryStableId: Hashable {
     case session(Int64)
     case index(Int32)
     case devicesInfo
+    case ttl(Int32)
 }
 
 private struct SortIndex: Comparable {
@@ -91,6 +96,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     case session(index: Int32, sortIndex: SortIndex, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
     case website(index: Int32, sortIndex: SortIndex, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool)
     case devicesInfo(SortIndex, String)
+    case ttlHeader(SortIndex, String)
+    case ttlTimeout(SortIndex, String, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -100,6 +107,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                 return RecentSessionsSection.pendingSessions.rawValue
             case .otherSessionsHeader, .addDevice, .session, .website, .devicesInfo:
                 return RecentSessionsSection.otherSessions.rawValue
+            case .ttlHeader, .ttlTimeout:
+                return RecentSessionsSection.ttl.rawValue
         }
     }
     
@@ -133,6 +142,10 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             return .session(website.hash)
         case .devicesInfo:
             return .devicesInfo
+        case .ttlHeader:
+            return .index(10)
+        case .ttlTimeout:
+            return .index(11)
         }
     }
 
@@ -165,6 +178,10 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
         case let .website(_, index, _, _, _, _, _, _, _, _):
             return index
         case let .devicesInfo(index, _):
+            return index
+        case let .ttlHeader(index, _):
+            return index
+        case let .ttlTimeout(index, _, _):
             return index
         }
     }
@@ -255,6 +272,18 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             } else {
                 return false
             }
+        case let .ttlHeader(lhsSortIndex, lhsText):
+            if case let .ttlHeader(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .ttlTimeout(lhsSortIndex, lhsText, lhsValue):
+            if case let .ttlTimeout(rhsSortIndex, rhsText, rhsValue) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -333,6 +362,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                     arguments.openOtherAppsUrl()
                 }
             })
+        case let .ttlHeader(_, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .ttlTimeout(_, text, value):
+            return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                arguments.setupAuthorizationTTL()
+            }, tag: PrivacyAndSecurityEntryTag.accountTimeout)
         }
     }
 }
@@ -448,6 +483,9 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
                 entries.append(.devicesInfo(SortIndex(section: 5, item: 0), presentationData.strings.AuthSessions_OtherDevices))
             }
         }
+        
+        entries.append(.ttlHeader(SortIndex(section: 6, item: 0), presentationData.strings.AuthSessions_TerminateIfAwayTitle.uppercased()))
+        entries.append(.ttlTimeout(SortIndex(section: 6, item: 1), presentationData.strings.AuthSessions_TerminateIfAwayFor, timeIntervalString(strings: presentationData.strings, value: sessionsState.ttlDays * 24 * 60 * 60)))
     }
     
     return entries
@@ -575,6 +613,12 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         }))
     }
     
+    let updateAuthorizationTTLDisposable = MetaDisposable()
+    actionsDisposable.add(updateAuthorizationTTLDisposable)
+    
+    let updateSessionDisposable = MetaDisposable()
+    actionsDisposable.add(updateSessionDisposable)
+    
     let arguments = RecentSessionsControllerArguments(context: context, setSessionIdWithRevealedOptions: { sessionId, fromSessionId in
         updateState { state in
             if (sessionId == nil && fromSessionId == state.sessionIdWithRevealedOptions) || (sessionId != nil && fromSessionId == nil) {
@@ -617,14 +661,16 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openSession: { session in
-        let controller = RecentSessionScreen(context: context, subject: .session(session), remove: { completion in
+        let controller = RecentSessionScreen(context: context, subject: .session(session), updateAcceptSecretChats: { value in
+            updateSessionDisposable.set(activeSessionsContext.updateSessionAcceptsSecretChats(session, accepts: value).start())
+        }, remove: { completion in
             removeSessionImpl(session.hash, {
                 completion()
             })
         })
         presentControllerImpl?(controller, nil)
     }, openWebSession: { session, peer in
-        let controller = RecentSessionScreen(context: context, subject: .website(session, peer), remove: { completion in
+        let controller = RecentSessionScreen(context: context, subject: .website(session, peer), updateAcceptSecretChats: { _ in }, remove: { completion in
             removeWebSessionImpl(session.hash)
             completion()
         })
@@ -663,6 +709,32 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
     }, openOtherAppsUrl: {
         context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://desktop.telegram.org", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+    }, setupAuthorizationTTL: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationData: presentationData)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
+        }
+        let ttlAction: (Int32) -> Void = { ttl in
+            updateAuthorizationTTLDisposable.set(activeSessionsContext.updateAuthorizationTTL(days: ttl).start())
+        }
+        let timeoutValues: [Int32] = [
+            7,
+            30,
+            90,
+            180
+        ]
+        let timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
+            return ActionSheetButtonItem(title: timeIntervalString(strings: presentationData.strings, value: value * 24 * 60 * 60), action: {
+                dismissAction()
+                ttlAction(value)
+            })
+        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: timeoutItems),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+        ])
+        presentControllerImpl?(controller, nil)
     })
     
     let previousMode = Atomic<RecentSessionsMode>(value: .sessions)
