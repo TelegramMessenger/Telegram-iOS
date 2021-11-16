@@ -545,6 +545,10 @@ extension StoreMessage {
                 if (flags & (1 << 17)) != 0 {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
+            
+                /*if let reactions = reactions {
+                    attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
+                }*/
                 
                 if let replies = replies {
                     let recentRepliersPeerIds: [PeerId]?

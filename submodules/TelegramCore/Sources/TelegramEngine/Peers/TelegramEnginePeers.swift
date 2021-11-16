@@ -517,7 +517,7 @@ public extension TelegramEngine {
                         }
                     }
 
-                    var results: [(EnginePeer, Int32)] = []
+                    var results: [(EnginePeer, PeerGroupId, ChatListIndex)] = []
 
                     for listId in peerIds {
                         guard let peer = transaction.getPeer(listId) else {
@@ -532,14 +532,14 @@ public extension TelegramEngine {
                         guard let readState = transaction.getCombinedPeerReadState(channel.id), readState.count != 0 else {
                             continue
                         }
-                        guard let topMessageIndex = transaction.getTopPeerMessageIndex(peerId: channel.id) else {
+                        guard let (groupId, index) = transaction.getPeerChatListIndex(channel.id) else {
                             continue
                         }
 
-                        results.append((EnginePeer(channel), topMessageIndex.timestamp))
+                        results.append((EnginePeer(channel), groupId, index))
                     }
 
-                    results.sort(by: { $0.1 > $1.1 })
+                    results.sort(by: { $0.2 > $1.2 })
 
                     if let peer = results.first?.0 {
                         let unreadCount: Int32 = transaction.getCombinedPeerReadState(peer.id)?.count ?? 0

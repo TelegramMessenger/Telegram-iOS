@@ -909,7 +909,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
-        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, Int, Bool, Bool) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
+        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, [MessageReaction], Int, Bool, Bool) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
         currentForwardInfo: (Peer?, String?)?,
@@ -1470,6 +1470,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                let dateReactions: [MessageReaction] = []
                 for attribute in message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -1508,7 +1509,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     isReplyThread = true
                 }
                 
-                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReplies, message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, message.isSelfExpiring)
+                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, message.isSelfExpiring)
             }
         }
         
@@ -2682,6 +2683,46 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         strongSelf.updateSearchTextHighlightState()
+        
+        if let (_, f) = strongSelf.awaitingAppliedReaction {
+            /*var bounds = strongSelf.bounds
+            let offset = bounds.origin.x
+            bounds.origin.x = 0.0
+            strongSelf.bounds = bounds
+            var shadowBounds = strongSelf.shadowNode.bounds
+            let shadowOffset = shadowBounds.origin.x
+            shadowBounds.origin.x = 0.0
+            strongSelf.shadowNode.bounds = shadowBounds
+            if !offset.isZero {
+                strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+            if !shadowOffset.isZero {
+                strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: shadowOffset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+            if let swipeToReplyNode = strongSelf.swipeToReplyNode {
+                strongSelf.swipeToReplyNode = nil
+                swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in
+                    swipeToReplyNode?.removeFromSupernode()
+                })
+                swipeToReplyNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            }
+            */
+            strongSelf.awaitingAppliedReaction = nil
+            /*var targetNode: ASDisplayNode?
+            var hideTarget = false
+            if let awaitingAppliedReaction = awaitingAppliedReaction {
+                for contentNode in strongSelf.contentNodes {
+                    if let (reactionNode, count) = contentNode.reactionTargetNode(value: awaitingAppliedReaction) {
+                        targetNode = reactionNode
+                        hideTarget = count == 1
+                        break
+                    }
+                }
+            }
+            strongSelf.reactionRecognizer?.complete(into: targetNode, hideTarget: hideTarget)*/
+            f()
+        }
+
     }
     
     override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
@@ -3611,6 +3652,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let hasWallpaper = self.item?.presentationData.theme.wallpaper.hasWallpaper ?? false
         let isPreview = self.item?.presentationData.isPreview ?? false
         return self.mainContextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
+    }
+    
+    override func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        for contentNode in self.contentNodes {
+            if let (emptyNode, filledNode) = contentNode.reactionTargetNode(value: value) {
+                return (emptyNode, filledNode)
+            }
+        }
+        return nil
     }
     
     func animateQuizInvalidOptionSelected() {

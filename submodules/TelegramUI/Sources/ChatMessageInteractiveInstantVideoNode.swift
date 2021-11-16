@@ -262,6 +262,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             let sentViaBot = false
             var viewCount: Int? = nil
             var dateReplies = 0
+            let dateReactions: [MessageReaction] = []
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                    edited = !attribute.isHidden
@@ -288,7 +289,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 isReplyThread = true
             }
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
             
             var displayVideoFrame = videoFrame
             displayVideoFrame.size.width *= imageScale

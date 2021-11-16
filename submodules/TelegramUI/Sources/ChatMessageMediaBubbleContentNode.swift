@@ -152,6 +152,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             }
             var viewCount: Int?
             var dateReplies = 0
+            let dateReactions: [MessageReaction] = []
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                     if case .mosaic = preparePosition {
@@ -199,6 +200,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     type: statusType,
                     edited: edited,
                     viewCount: viewCount,
+                    dateReactions: dateReactions,
                     dateReplies: dateReplies,
                     isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     dateText: dateText

@@ -305,6 +305,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     var viewCount: Int?
                     var dateReplies = 0
+                    let dateReactions: [MessageReaction] = []
                     for attribute in message.attributes {
                         if let attribute = attribute as? EditedMessageAttribute {
                             edited = !attribute.isHidden
@@ -322,7 +323,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
                     
-                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReplies, isPinned && !associatedData.isInPinnedListMode, message.isSelfExpiring)
+                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies, isPinned && !associatedData.isInPinnedListMode, message.isSelfExpiring)
                     statusSize = size
                     statusApply = apply
                 }

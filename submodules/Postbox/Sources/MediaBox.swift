@@ -805,6 +805,14 @@ public final class MediaBox {
         }
     }
     
+    public func storeCachedResourceRepresentation(_ resourceId: String, representationId: String, keepDuration: CachedMediaRepresentationKeepDuration, tempFile: TempBoxFile, completion: @escaping (String) -> Void = { _ in }) {
+        self.dataQueue.async {
+            let path = self.cachedRepresentationPathsForId(resourceId, representationId: representationId, keepDuration: keepDuration).complete
+            let _ = try? FileManager.default.moveItem(atPath: tempFile.path, toPath: path)
+            completion(path)
+        }
+    }
+    
     public func cachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, pathExtension: String? = nil, complete: Bool, fetch: Bool = true, attemptSynchronously: Bool = false) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()

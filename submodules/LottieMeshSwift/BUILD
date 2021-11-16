@@ -56,7 +56,7 @@ optimization_flags = select({
 
 swift_optimization_flags = select({
     ":debug_build": [
-        "-O",
+        #"-O",
     ],
     "//conditions:default": [],
 })
@@ -75,6 +75,7 @@ swift_library(
     ],
     deps = [
         ":LottieMeshBinding",
+        "//submodules/Postbox:Postbox",
     ],
     visibility = [
         "//visibility:public",

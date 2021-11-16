@@ -865,6 +865,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var edited = false
             var viewCount: Int? = nil
             var dateReplies = 0
+            let dateReactions: [MessageReaction] = []
             for attribute in item.message.attributes {
                 if let _ = attribute as? EditedMessageAttribute, isEmoji {
                     edited = true
@@ -884,7 +885,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 isReplyThread = true
             }
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
