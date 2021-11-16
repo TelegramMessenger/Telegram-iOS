@@ -160,4 +160,11 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.interactiveFileNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
+    
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        if !self.interactiveFileNode.dateAndStatusNode.isHidden {
+            return self.interactiveFileNode.dateAndStatusNode.reactionNode(value: value)
+        }
+        return nil
+    }
 }
