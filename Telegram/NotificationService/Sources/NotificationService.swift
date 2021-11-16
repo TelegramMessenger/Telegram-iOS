@@ -13,6 +13,8 @@ import UIKit
 import Intents
 import PersistentStringHash
 import CallKit
+import AppLockState
+import NotificationsPresentationData
 
 private let queue = Queue()
 
@@ -438,6 +440,12 @@ private struct NotificationContent: CustomStringConvertible {
 
     var senderPerson: INPerson?
     var senderImage: INImage?
+    
+    var isLockedMessage: String?
+    
+    init(isLockedMessage: String?) {
+        self.isLockedMessage = isLockedMessage
+    }
 
     var description: String {
         var string = "{"
@@ -450,6 +458,7 @@ private struct NotificationContent: CustomStringConvertible {
         string += " category: \(String(describing: self.category)),\n"
         string += " userInfo: \(String(describing: self.userInfo)),\n"
         string += " senderImage: \(self.senderImage != nil ? "non-empty" : "empty"),\n"
+        string += " isLockedMessage: \(String(describing: self.isLockedMessage)),\n"
         string += "}"
         return string
     }
@@ -479,14 +488,18 @@ private struct NotificationContent: CustomStringConvertible {
     func generate() -> UNNotificationContent {
         var content = UNMutableNotificationContent()
 
-        if let title = self.title {
-            content.title = title
-        }
-        if let subtitle = self.subtitle {
-            content.subtitle = subtitle
-        }
-        if let body = self.body {
-            content.body = body
+        if let isLockedMessage = self.isLockedMessage {
+            content.body = isLockedMessage
+        } else {
+            if let title = self.title {
+                content.title = title
+            }
+            if let subtitle = self.subtitle {
+                content.subtitle = subtitle
+            }
+            if let body = self.body {
+                content.body = body
+            }
         }
         if let threadId = self.threadId {
             content.threadIdentifier = threadId
@@ -508,7 +521,7 @@ private struct NotificationContent: CustomStringConvertible {
         }
 
         if #available(iOS 15.0, *) {
-            if let senderPerson = self.senderPerson, let customIdentifier = senderPerson.customIdentifier {
+            if self.isLockedMessage == nil, let senderPerson = self.senderPerson, let customIdentifier = senderPerson.customIdentifier {
                 let mePerson = INPerson(
                     personHandle: INPersonHandle(value: "0", type: .unknown),
                     nameComponents: nil,
@@ -603,6 +616,17 @@ private final class NotificationServiceHandler {
         self.encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
 
         let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil)
+        
+        let isLockedMessage: String?
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            if let notificationsPresentationData = try? Data(contentsOf: URL(fileURLWithPath: notificationsPresentationDataPath(rootPath: rootPath))), let notificationsPresentationDataValue = try? JSONDecoder().decode(NotificationsPresentationData.self, from: notificationsPresentationData) {
+                isLockedMessage = notificationsPresentationDataValue.applicationLockedMessageString
+            } else {
+                isLockedMessage = "You have a new message"
+            }
+        } else {
+            isLockedMessage = nil
+        }
 
         Logger.shared.log("NotificationService \(episode)", "Begin processing payload \(payload)")
 
@@ -650,7 +674,7 @@ private final class NotificationServiceHandler {
             guard let strongSelf = self, let recordId = recordId else {
                 Logger.shared.log("NotificationService \(episode)", "Couldn't find a matching decryption key")
 
-                let content = NotificationContent()
+                let content = NotificationContent(isLockedMessage: isLockedMessage)
                 updateCurrentContent(content)
                 completed()
 
@@ -672,7 +696,7 @@ private final class NotificationServiceHandler {
                 guard let stateManager = stateManager else {
                     Logger.shared.log("NotificationService \(episode)", "Didn't receive stateManager")
 
-                    let content = NotificationContent()
+                    let content = NotificationContent(isLockedMessage: isLockedMessage)
                     updateCurrentContent(content)
                     completed()
                     return
@@ -682,7 +706,7 @@ private final class NotificationServiceHandler {
                 strongSelf.notificationKeyDisposable.set((existingMasterNotificationsKey(postbox: stateManager.postbox)
                 |> deliverOn(strongSelf.queue)).start(next: { notificationsKey in
                     guard let strongSelf = self else {
-                        let content = NotificationContent()
+                        let content = NotificationContent(isLockedMessage: isLockedMessage)
                         updateCurrentContent(content)
                         completed()
 
@@ -691,7 +715,7 @@ private final class NotificationServiceHandler {
                     guard let notificationsKey = notificationsKey else {
                         Logger.shared.log("NotificationService \(episode)", "Didn't receive decryption key")
 
-                        let content = NotificationContent()
+                        let content = NotificationContent(isLockedMessage: isLockedMessage)
                         updateCurrentContent(content)
                         completed()
 
@@ -700,7 +724,7 @@ private final class NotificationServiceHandler {
                     guard let decryptedPayload = decryptedNotificationPayload(key: notificationsKey, data: payloadData) else {
                         Logger.shared.log("NotificationService \(episode)", "Couldn't decrypt payload")
 
-                        let content = NotificationContent()
+                        let content = NotificationContent(isLockedMessage: isLockedMessage)
                         updateCurrentContent(content)
                         completed()
 
@@ -709,7 +733,7 @@ private final class NotificationServiceHandler {
                     guard let payloadJson = try? JSONSerialization.jsonObject(with: decryptedPayload, options: []) as? [String: Any] else {
                         Logger.shared.log("NotificationService \(episode)", "Couldn't process payload as JSON")
 
-                        let content = NotificationContent()
+                        let content = NotificationContent(isLockedMessage: isLockedMessage)
                         updateCurrentContent(content)
                         completed()
 
@@ -729,6 +753,7 @@ private final class NotificationServiceHandler {
                         var accessHash: Int64
                         var fromId: PeerId
                         var updates: String
+                        var accountId: Int64
                     }
 
                     var callData: CallData?
@@ -761,7 +786,8 @@ private final class NotificationServiceHandler {
                                 id: callId,
                                 accessHash: callAccessHash,
                                 fromId: peerId,
-                                updates: updates
+                                updates: updates,
+                                accountId: recordId.int64
                             )
                         }
                     }
@@ -784,7 +810,7 @@ private final class NotificationServiceHandler {
                             action = .logout
                         case "MESSAGE_MUTED":
                             if let peerId = peerId {
-                                action = .poll(peerId: peerId, content: NotificationContent())
+                                action = .poll(peerId: peerId, content: NotificationContent(isLockedMessage: isLockedMessage))
                             }
                         case "MESSAGE_DELETED":
                             if let peerId = peerId {
@@ -813,7 +839,7 @@ private final class NotificationServiceHandler {
                         }
                     } else {
                         if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
-                            var content: NotificationContent = NotificationContent()
+                            var content: NotificationContent = NotificationContent(isLockedMessage: isLockedMessage)
                             if let alert = aps["alert"] as? [String: Any] {
                                 content.title = alert["title"] as? String
                                 content.subtitle = alert["subtitle"] as? String
@@ -908,10 +934,11 @@ private final class NotificationServiceHandler {
                                 "call_id": "\(callData.id)",
                                 "call_ah": "\(callData.accessHash)",
                                 "from_id": "\(callData.fromId.id._internalGetInt64Value())",
-                                "updates": callData.updates
+                                "updates": callData.updates,
+                                "accountId": "\(callData.accountId)"
                             ]
                             Logger.shared.log("NotificationService \(episode)", "Will report voip notification")
-                            let content = NotificationContent()
+                            let content = NotificationContent(isLockedMessage: isLockedMessage)
                             updateCurrentContent(content)
 
                             if #available(iOS 14.5, *) {
@@ -926,7 +953,7 @@ private final class NotificationServiceHandler {
                         case .logout:
                             Logger.shared.log("NotificationService \(episode)", "Will logout")
 
-                            let content = NotificationContent()
+                            let content = NotificationContent(isLockedMessage: isLockedMessage)
                             updateCurrentContent(content)
                             completed()
                         case let .poll(peerId, initialContent):
@@ -938,7 +965,7 @@ private final class NotificationServiceHandler {
                                     queue.async {
                                         guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
                                             
-                                            let content = NotificationContent()
+                                            let content = NotificationContent(isLockedMessage: isLockedMessage)
                                             updateCurrentContent(content)
                                             completed()
                                             return
@@ -1182,7 +1209,7 @@ private final class NotificationServiceHandler {
                                             postbox: stateManager.postbox
                                         )
                                         |> deliverOn(strongSelf.queue)).start(next: { value in
-                                            var content = NotificationContent()
+                                            var content = NotificationContent(isLockedMessage: isLockedMessage)
                                             if isCurrentAccount {
                                                 content.badge = Int(value.0)
                                             }
@@ -1231,7 +1258,7 @@ private final class NotificationServiceHandler {
                                             postbox: stateManager.postbox
                                         )
                                         |> deliverOn(strongSelf.queue)).start(next: { value in
-                                            var content = NotificationContent()
+                                            var content = NotificationContent(isLockedMessage: isLockedMessage)
                                             if isCurrentAccount {
                                                 content.badge = Int(value.0)
                                             }
@@ -1258,7 +1285,7 @@ private final class NotificationServiceHandler {
                             })
                         }
                     } else {
-                        let content = NotificationContent()
+                        let content = NotificationContent(isLockedMessage: isLockedMessage)
                         updateCurrentContent(content)
 
                         completed()

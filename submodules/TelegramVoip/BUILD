@@ -5,6 +5,8 @@ swift_library(
     module_name = "TelegramVoip",
     srcs = glob([
         "Sources/**/*.swift",
+    ], exclude = [
+        "Sources/macOS/**/*",
     ]),
     copts = [
         "-warnings-as-errors",

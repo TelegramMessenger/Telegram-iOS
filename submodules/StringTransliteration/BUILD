@@ -4,7 +4,7 @@ objc_library(
     enable_modules = True,
     module_name = "StringTransliteration",
     srcs = glob([
-        "Source/*.m",
+        "Sources/*.m",
     ]),
     hdrs = glob([
         "PublicHeaders/**/*.h",

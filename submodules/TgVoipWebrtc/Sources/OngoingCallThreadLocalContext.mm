@@ -1,8 +1,5 @@
-#ifndef WEBRTC_IOS
-#import "OngoingCallThreadLocalContext.h"
-#else
 #import <TgVoipWebrtc/OngoingCallThreadLocalContext.h>
-#endif
+
 
 #import "Instance.h"
 #import "InstanceImpl.h"
