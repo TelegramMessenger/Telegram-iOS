@@ -1273,14 +1273,15 @@ public struct account {
     
     }
     public enum Authorizations: TypeConstructorDescription {
-        case authorizations(authorizations: [Api.Authorization])
+        case authorizations(authorizationTtlDays: Int32, authorizations: [Api.Authorization])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .authorizations(let authorizations):
+                case .authorizations(let authorizationTtlDays, let authorizations):
                     if boxed {
-                        buffer.appendInt32(307276766)
+                        buffer.appendInt32(1275039392)
                     }
+                    serializeInt32(authorizationTtlDays, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(authorizations.count))
                     for item in authorizations {
@@ -1292,19 +1293,22 @@ public struct account {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .authorizations(let authorizations):
-                return ("authorizations", [("authorizations", authorizations)])
+                case .authorizations(let authorizationTtlDays, let authorizations):
+                return ("authorizations", [("authorizationTtlDays", authorizationTtlDays), ("authorizations", authorizations)])
     }
     }
     
         public static func parse_authorizations(_ reader: BufferReader) -> Authorizations? {
-            var _1: [Api.Authorization]?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.Authorization]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Authorization.self)
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Authorization.self)
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.account.Authorizations.authorizations(authorizations: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.account.Authorizations.authorizations(authorizationTtlDays: _1!, authorizations: _2!)
             }
             else {
                 return nil
@@ -7813,6 +7817,35 @@ public extension Api {
                     buffer.appendInt32(1284770294)
                     
                     return (FunctionDescription(name: "account.declinePasswordReset", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setAuthorizationTTL(authorizationTtlDays: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1081501024)
+                    serializeInt32(authorizationTtlDays, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.setAuthorizationTTL", parameters: [("authorizationTtlDays", authorizationTtlDays)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func changeAuthorizationSettings(hash: Int64, encryptedRequestsDisabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1126764757)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    encryptedRequestsDisabled.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.changeAuthorizationSettings", parameters: [("hash", hash), ("encryptedRequestsDisabled", encryptedRequestsDisabled)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
