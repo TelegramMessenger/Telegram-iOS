@@ -19,7 +19,7 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
     private let forwardMessages: () -> Void
     
     private let separatorNode: ASDisplayNode
-    private let backgroundNode: ASDisplayNode
+    private let backgroundNode: NavigationBackgroundNode
     private let deleteButton: HighlightableButtonNode
     private let forwardButton: HighlightableButtonNode
     private let shareButton: HighlightableButtonNode
@@ -72,11 +72,9 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = presentationData.theme.chat.inputPanel.panelSeparatorColor
         
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = presentationData.theme.chat.inputPanel.panelBackgroundColor
+        self.backgroundNode = NavigationBackgroundNode(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor)
         
         self.deleteButton = HighlightableButtonNode(pointerStyle: .default)
-        self.deleteButton.isEnabled = false
         self.deleteButton.isAccessibilityElement = true
         self.deleteButton.accessibilityLabel = presentationData.strings.VoiceOver_MessageContextDelete
         
@@ -85,7 +83,6 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
         self.forwardButton.accessibilityLabel = presentationData.strings.VoiceOver_MessageContextForward
         
         self.shareButton = HighlightableButtonNode(pointerStyle: .default)
-        self.shareButton.isEnabled = false
         self.shareButton.isAccessibilityElement = true
         self.shareButton.accessibilityLabel = presentationData.strings.VoiceOver_MessageContextShare
         
@@ -104,7 +101,9 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
         self.addSubnode(self.shareButton)
         self.addSubnode(self.separatorNode)
         
+        self.deleteButton.isEnabled = false
         self.forwardButton.isEnabled = false
+        self.shareButton.isEnabled = false
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), forControlEvents: .touchUpInside)
         self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), forControlEvents: .touchUpInside)
@@ -120,7 +119,7 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
         if presentationData.theme !== self.theme {
             self.theme = presentationData.theme
             
-            self.backgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor
+            self.backgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
             self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
             
             self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: presentationData.theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
@@ -150,11 +149,8 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
             
             self.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
             self.shareButton.isEnabled = !actions.options.intersection([.forward]).isEmpty
-            
-            self.deleteButton.isHidden = !self.deleteButton.isEnabled
         } else {
             self.deleteButton.isEnabled = false
-            self.deleteButton.isHidden = true
             self.forwardButton.isEnabled = false
             self.shareButton.isEnabled = false
         }
@@ -166,6 +162,7 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
         let panelHeightWithInset = panelHeight + layout.intrinsicInsets.bottom
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeightWithInset)))
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, transition: transition)
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
     
         return panelHeightWithInset
