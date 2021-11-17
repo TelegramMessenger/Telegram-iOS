@@ -273,7 +273,7 @@ private extension CGSize {
 
 private func convertLottieImage(data: Data) -> UIImage? {
     let decompressedData = TGGUnzipData(data, 512 * 1024) ?? data
-    guard let animation = LottieInstance(data: decompressedData, cacheKey: "") else {
+    guard let animation = LottieInstance(data: decompressedData, fitzModifier: .none, cacheKey: "") else {
         return nil
     }
     let size = animation.dimensions.fitted(CGSize(width: 200.0, height: 200.0))
