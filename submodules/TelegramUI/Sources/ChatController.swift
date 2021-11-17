@@ -946,7 +946,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var tip: ContextController.Tip?
 
                     if tip == nil {
-                        if message.isCopyProtected() {
+                        if strongSelf.presentationInterfaceState.copyProtectionEnabled {
                             var isChannel = false
                             if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
                                 isChannel = true
@@ -3410,7 +3410,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var hasBotCommands: Bool = false
                         var currentSendAsPeerId: PeerId?
                         var autoremoveTimeout: Int32?
+                        var copyProtectionEnabled: Bool = false
                         if let peer = peerView.peers[peerView.peerId] {
+                            copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedGroupData = peerView.cachedData as? CachedGroupData {
                                 if !cachedGroupData.botInfos.isEmpty {
                                     hasBots = true
@@ -3458,7 +3460,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else if peerView.peerId == context.account.peerId {
                             explicitelyCanPinMessages = true
                         }
-                        
+                                                
                         var animated = false
                         if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat, let updated = renderedPeer?.peer as? TelegramSecretChat, peer.embeddedState != updated.embeddedState {
                             animated = true
@@ -3525,6 +3527,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedHasBotCommands(hasBotCommands).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(hasScheduledMessages)
                                 .updatedAutoremoveTimeout(autoremoveTimeout)
                                 .updatedCurrentSendAsPeerId(currentSendAsPeerId)
+                                .updatedCopyProtectionEnabled(copyProtectionEnabled)
                         })
 
                         if case .standard(previewing: false) = mode, let channel = renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {

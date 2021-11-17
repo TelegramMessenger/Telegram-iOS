@@ -1100,7 +1100,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             }
             
-            if item.message.isCopyProtected() {
+            if item.associatedData.isCopyProtectionEnabled {
                 needsShareButton = false
             }
         }

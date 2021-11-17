@@ -776,7 +776,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         itemBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.0),
         itemHighlightedBackgroundColor: UIColor(rgb: 0x3c3c43, alpha: 0.2),
         primaryColor: UIColor(rgb: 0x000000),
-        secondaryColor: UIColor(rgb: 0x000000, alpha: 0.8),
+        secondaryColor: UIColor(rgb: 0x000000, alpha: 0.5),
         destructiveColor: UIColor(rgb: 0xff3b30),
         badgeFillColor: defaultDayAccentColor,
         badgeForegroundColor: UIColor(rgb: 0xffffff),
