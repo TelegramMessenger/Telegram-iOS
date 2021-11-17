@@ -2475,17 +2475,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let backgroundView = UIImageView(image: backgroundImage)
         backgroundView.frame = self.textInputBackgroundNode.frame
 
-        func updateIsCaretHidden(view: UIView, isHidden: Bool) {
-        }
-
-        updateIsCaretHidden(view: textInputNode.view, isHidden: true)
+        let caretColor = textInputNode.textView.tintColor
+        textInputNode.textView.tintColor = .clear
 
         guard let contentView = textInputNode.view.snapshotView(afterScreenUpdates: true) else {
-            updateIsCaretHidden(view: textInputNode.view, isHidden: false)
+            textInputNode.textView.tintColor = caretColor
             return nil
         }
 
-        updateIsCaretHidden(view: textInputNode.view, isHidden: false)
+        textInputNode.textView.tintColor = caretColor
 
         contentView.frame = textInputNode.frame
 
