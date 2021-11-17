@@ -50,7 +50,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
 
     private var durationBackgroundNode: NavigationBackgroundNode?
     private var durationNode: ChatInstantVideoMessageDurationNode?
-    private let dateAndStatusNode: ChatMessageDateAndStatusNode
+    let dateAndStatusNode: ChatMessageDateAndStatusNode
     
     private let infoBackgroundNode: ASImageNode
     private let muteIconNode: ASImageNode
@@ -262,6 +262,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             let sentViaBot = false
             var viewCount: Int? = nil
             var dateReplies = 0
+            var dateReactions: [MessageReaction] = []
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                    edited = !attribute.isHidden
@@ -270,6 +271,10 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
                     if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
                         dateReplies = Int(attribute.count)
+                    }
+                } else if let attribute = attribute as? PendingReactionsMessageAttribute {
+                    if let value = attribute.value {
+                        dateReactions = [MessageReaction(value: value, count: 1, isSelected: true)]
                     }
                 }
             }
@@ -288,7 +293,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 isReplyThread = true
             }
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
             
             var displayVideoFrame = videoFrame
             displayVideoFrame.size.width *= imageScale

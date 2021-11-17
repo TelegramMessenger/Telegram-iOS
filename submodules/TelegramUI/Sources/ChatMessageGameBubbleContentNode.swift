@@ -139,4 +139,11 @@ final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
         }
         return self.contentNode.transitionNode(media: media)
     }
+    
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        if !self.contentNode.statusNode.isHidden {
+            return self.contentNode.statusNode.reactionNode(value: value)
+        }
+        return nil
+    }
 }

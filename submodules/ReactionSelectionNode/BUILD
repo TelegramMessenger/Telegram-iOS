@@ -1,25 +1,25 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ContextUI",
-    module_name = "ContextUI",
+    name = "ReactionSelectionNode",
+    module_name = "ReactionSelectionNode",
     srcs = glob([
-        "Sources/**/*.swift",
+		"Sources/**/*.swift",
     ]),
     copts = [
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
-        "//submodules/TextSelectionNode:TextSelectionNode",
-        "//submodules/AppBundle:AppBundle",
-        "//submodules/AccountContext:AccountContext",
-        "//submodules/ReactionSelectionNode:ReactionSelectionNode",
     ],
     visibility = [
         "//visibility:public",
     ],
 )
+

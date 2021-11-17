@@ -25,7 +25,7 @@ public final class MeshAnimationCache {
         if let item = self.items[resource.id.stringRepresentation] {
             if let animation = item.animation {
                 return animation
-            } else if let readyPath = item.readyPath, let data = try? Data(contentsOf: URL(fileURLWithPath: readyPath)) {
+            } else if let readyPath = item.readyPath, let data = try? Data(contentsOf: URL(fileURLWithPath: readyPath), options: [.alwaysMapped]) {
                 let buffer = MeshReadBuffer(data: data)
                 let animation = MeshAnimation.read(buffer: buffer)
                 item.animation = animation
@@ -38,7 +38,7 @@ public final class MeshAnimationCache {
             self.items[resource.id.stringRepresentation] = item
 
             let path = self.mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "mesh-animation", keepDuration: .general)
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.alwaysMapped]) {
                 let animation = MeshAnimation.read(buffer: MeshReadBuffer(data: data))
                 item.readyPath = path
                 item.animation = animation
@@ -54,7 +54,7 @@ public final class MeshAnimationCache {
         if let item = self.items[bundleName] {
             if let animation = item.animation {
                 return animation
-            } else if let readyPath = item.readyPath, let data = try? Data(contentsOf: URL(fileURLWithPath: readyPath)) {
+            } else if let readyPath = item.readyPath, let data = try? Data(contentsOf: URL(fileURLWithPath: readyPath), options: [.alwaysMapped]) {
                 let buffer = MeshReadBuffer(data: data)
                 let animation = MeshAnimation.read(buffer: buffer)
                 item.animation = animation
@@ -67,7 +67,7 @@ public final class MeshAnimationCache {
             self.items[bundleName] = item
 
             let path = self.mediaBox.cachedRepresentationPathForId(bundleName, representationId: "mesh-animation", keepDuration: .general)
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.alwaysMapped]) {
                 let animation = MeshAnimation.read(buffer: MeshReadBuffer(data: data))
                 item.readyPath = path
                 item.animation = animation
@@ -89,18 +89,22 @@ public final class MeshAnimationCache {
         |> take(1)
         |> mapToSignal { data -> Signal<(MeshAnimation, String)?, NoError> in
             return Signal { subscriber in
-                guard let zippedData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
+                guard let zippedData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.alwaysMapped]) else {
                     subscriber.putNext(nil)
                     subscriber.putCompletion()
                     return EmptyDisposable
                 }
                 let jsonData = TGGUnzipData(zippedData, 1 * 1024 * 1024) ?? zippedData
-                if let animation = generateMeshAnimation(data: jsonData) {
-                    let buffer = MeshWriteBuffer()
-                    animation.write(buffer: buffer)
-                    mediaBox.storeCachedResourceRepresentation(resource, representationId: "mesh-animation", keepDuration: .general, data: buffer.makeData(), completion: { path in
-                        subscriber.putNext((animation, path))
-                        subscriber.putCompletion()
+                if let tempFile = generateMeshAnimation(data: jsonData) {
+                    mediaBox.storeCachedResourceRepresentation(resource.id.stringRepresentation, representationId: "mesh-animation", keepDuration: .general, tempFile: tempFile, completion: { path in
+                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.alwaysMapped]) {
+                            let animation = MeshAnimation.read(buffer: MeshReadBuffer(data: data))
+                            subscriber.putNext((animation, path))
+                            subscriber.putCompletion()
+                        } else {
+                            subscriber.putNext(nil)
+                            subscriber.putCompletion()
+                        }
                     })
                 } else {
                     subscriber.putNext(nil)
@@ -136,18 +140,22 @@ public final class MeshAnimationCache {
                 return EmptyDisposable
             }
             
-            guard let zippedData = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            guard let zippedData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.alwaysMapped]) else {
                 subscriber.putNext(nil)
                 subscriber.putCompletion()
                 return EmptyDisposable
             }
             let jsonData = TGGUnzipData(zippedData, 1 * 1024 * 1024) ?? zippedData
-            if let animation = generateMeshAnimation(data: jsonData) {
-                let buffer = MeshWriteBuffer()
-                animation.write(buffer: buffer)
-                mediaBox.storeCachedResourceRepresentation(bundleName, representationId: "mesh-animation", keepDuration: .general, data: buffer.makeData(), completion: { path in
-                    subscriber.putNext((animation, path))
-                    subscriber.putCompletion()
+            if let tempFile = generateMeshAnimation(data: jsonData) {
+                mediaBox.storeCachedResourceRepresentation(bundleName, representationId: "mesh-animation", keepDuration: .general, tempFile: tempFile, completion: { path in
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.alwaysMapped]) {
+                        let animation = MeshAnimation.read(buffer: MeshReadBuffer(data: data))
+                        subscriber.putNext((animation, path))
+                        subscriber.putCompletion()
+                    } else {
+                        subscriber.putNext(nil)
+                        subscriber.putCompletion()
+                    }
                 })
             } else {
                 subscriber.putNext(nil)

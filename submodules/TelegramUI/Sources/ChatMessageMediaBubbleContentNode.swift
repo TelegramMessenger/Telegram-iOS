@@ -152,6 +152,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             }
             var viewCount: Int?
             var dateReplies = 0
+            var dateReactions: [MessageReaction] = []
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                     if case .mosaic = preparePosition {
@@ -163,6 +164,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
                     if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
                         dateReplies = Int(attribute.count)
+                    }
+                } else if let attribute = attribute as? PendingReactionsMessageAttribute {
+                    if let value = attribute.value {
+                        dateReactions = [MessageReaction(value: value, count: 1, isSelected: true)]
                     }
                 }
             }
@@ -199,6 +204,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     type: statusType,
                     edited: edited,
                     viewCount: viewCount,
+                    dateReactions: dateReactions,
                     dateReplies: dateReplies,
                     isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     dateText: dateText
@@ -384,5 +390,12 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         return false
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        if !self.interactiveImageNode.dateAndStatusNode.isHidden {
+            return self.interactiveImageNode.dateAndStatusNode.reactionNode(value: value)
+        }
+        return nil
     }
 }

@@ -34,7 +34,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let waveformNode: AudioWaveformNode
     private let waveformForegroundNode: AudioWaveformNode
     private var waveformScrubbingNode: MediaPlayerScrubbingNode?
-    private let dateAndStatusNode: ChatMessageDateAndStatusNode
+    let dateAndStatusNode: ChatMessageDateAndStatusNode
     private let consumableContentNode: ASImageNode
     
     private var iconNode: TransformImageNode?
@@ -305,6 +305,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     var viewCount: Int?
                     var dateReplies = 0
+                    var dateReactions: [MessageReaction] = []
                     for attribute in message.attributes {
                         if let attribute = attribute as? EditedMessageAttribute {
                             edited = !attribute.isHidden
@@ -314,6 +315,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
                                 dateReplies = Int(attribute.count)
                             }
+                        } else if let attribute = attribute as? PendingReactionsMessageAttribute {
+                            if let value = attribute.value {
+                                dateReactions = [MessageReaction(value: value, count: 1, isSelected: true)]
+                            }
                         }
                     }
                     if forcedIsEdited {
@@ -322,7 +327,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
                     
-                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReplies, isPinned && !associatedData.isInPinnedListMode, message.isSelfExpiring)
+                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies, isPinned && !associatedData.isInPinnedListMode, message.isSelfExpiring)
                     statusSize = size
                     statusApply = apply
                 }

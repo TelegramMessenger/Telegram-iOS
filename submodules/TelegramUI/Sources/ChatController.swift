@@ -64,6 +64,8 @@ import UniversalMediaPlayer
 import WallpaperBackgroundNode
 import ChatListUI
 import CalendarMessageScreen
+import ReactionSelectionNode
+import LottieMeshSwift
 
 #if DEBUG
 import os.signpost
@@ -964,8 +966,102 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         actions.tip = tip
                     }
                     
+                    actions.context = strongSelf.context
+                    
+                    var hasLike = false
+                    let hearts: [String] = ["❤", "❤️"]
+                    for attribute in messages[0].attributes {
+                        if let attribute = attribute as? ReactionsMessageAttribute {
+                            for reaction in attribute.reactions {
+                                if hearts.contains(reaction.value) {
+                                    if reaction.isSelected {
+                                        hasLike = true
+                                    }
+                                }
+                            }
+                        } else if let attribute = attribute as? PendingReactionsMessageAttribute {
+                            if let value = attribute.value, hearts.contains(value) {
+                                hasLike = true
+                            }
+                        }
+                    }
+                    
+                    actions.reactionItems = [ReactionContextItem(reaction: hasLike ? .unlike : .like)]
+                    
                     let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, postbox: strongSelf.context.account.postbox, message: message, selectAll: selectAll)), items: .single(actions), recognizer: recognizer, gesture: gesture)
                     strongSelf.currentContextController = controller
+                    
+                    let _ = strongSelf.context.meshAnimationCache.get(bundleName: "Hearts")
+                    
+                    controller.reactionSelected = { [weak controller] value in
+                        guard let strongSelf = self, let message = updatedMessages.first else {
+                            return
+                        }
+                        let hearts: [String] = ["❤", "❤️"]
+                        strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                            if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                                if item.message.id == message.id {
+                                    switch value {
+                                    case .like:
+                                        itemNode.awaitingAppliedReaction = (hearts[0], { [weak itemNode] in
+                                            guard let controller = controller else {
+                                                return
+                                            }
+                                            if let itemNode = itemNode, let (targetEmptyNode, targetFilledNode) = itemNode.targetReactionNode(value: hearts[0]) {
+                                                controller.dismissWithReaction(value: hearts[0], targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: true, completion: { [weak itemNode, weak targetFilledNode] in
+                                                    guard let strongSelf = self, let itemNode = itemNode, let targetFilledNode = targetFilledNode else {
+                                                        return
+                                                    }
+                                                    
+                                                    let targetFrame = targetFilledNode.view.convert(targetFilledNode.bounds, to: itemNode.view).offsetBy(dx: 0.0, dy: itemNode.insets.top)
+                                                    
+                                                    if #available(iOS 13.0, *), let meshAnimation = strongSelf.context.meshAnimationCache.get(bundleName: "Hearts") {
+                                                        if let animationView = MeshRenderer() {
+                                                            let animationFrame = CGRect(origin: CGPoint(x: targetFrame.midX - 200.0 / 2.0, y: targetFrame.midY - 200.0 / 2.0), size: CGSize(width: 200.0, height: 200.0)).offsetBy(dx: -50.0, dy: 0.0)
+                                                            animationView.frame = animationFrame
+                                                            
+                                                            var removeNode: (() -> Void)?
+
+                                                            animationView.allAnimationsCompleted = {
+                                                                removeNode?()
+                                                            }
+
+                                                            let overlayMeshAnimationNode = strongSelf.chatDisplayNode.messageTransitionNode.add(decorationView: animationView, itemNode: itemNode)
+                                                            
+                                                            removeNode = { [weak overlayMeshAnimationNode] in
+                                                                guard let strongSelf = self, let overlayMeshAnimationNode = overlayMeshAnimationNode else {
+                                                                    return
+                                                                }
+                                                                strongSelf.chatDisplayNode.messageTransitionNode.remove(decorationNode: overlayMeshAnimationNode)
+                                                            }
+                                                            
+                                                            animationView.add(mesh: meshAnimation, offset: CGPoint())
+                                                        }
+                                                    }
+                                                })
+                                            } else {
+                                                controller.dismiss()
+                                            }
+                                        })
+                                    case .unlike:
+                                        itemNode.awaitingAppliedReaction = (nil, {
+                                            guard let controller = controller else {
+                                                return
+                                            }
+                                            controller.dismiss()
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                        switch value {
+                        case .like:
+                            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: hearts[0]).start()
+                        case .unlike:
+                            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: nil).start()
+                        }
+                    }
+
 
                     strongSelf.forEachController({ controller in
                         if let controller = controller as? TooltipScreen {

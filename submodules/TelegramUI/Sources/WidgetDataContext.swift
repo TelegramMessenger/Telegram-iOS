@@ -297,7 +297,15 @@ final class WidgetDataContext {
         
         self.notificationPresentationDataDisposable = (presentationData
         |> map { presentationData -> NotificationsPresentationData in
-            return NotificationsPresentationData(applicationLockedMessageString: presentationData.strings.PUSH_LOCKED_MESSAGE("").string)
+            var incomingCallString = presentationData.strings.PUSH_PHONE_CALL_REQUEST("").string
+            if let range = incomingCallString.range(of: "|") {
+                incomingCallString = String(incomingCallString[range.upperBound...])
+            }
+            
+            return NotificationsPresentationData(
+                applicationLockedMessageString: presentationData.strings.PUSH_LOCKED_MESSAGE("").string,
+                incomingCallString: incomingCallString
+            )
         }
         |> distinctUntilChanged).start(next: { value in
             let path = notificationsPresentationDataPath(rootPath: basePath)
