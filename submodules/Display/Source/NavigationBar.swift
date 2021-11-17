@@ -9,6 +9,9 @@ public final class SparseNode: ASDisplayNode {
         if self.alpha.isZero {
             return nil
         }
+        if !self.bounds.contains(point) {
+            return nil
+        }
         for view in self.view.subviews {
             if let result = view.hitTest(self.view.convert(point, to: view), with: event), result.isUserInteractionEnabled {
                 return result
