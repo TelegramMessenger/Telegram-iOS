@@ -79,7 +79,7 @@
             };
         }
         
-        _interfaceView = [[TGMediaPickerGalleryInterfaceView alloc] initWithContext:_context focusItem:focusItem selectionContext:selectionContext editingContext:editingContext hasSelectionPanel:hasSelectionPanel hasCameraButton:false recipientName:recipientName];
+        _interfaceView = [[TGMediaPickerGalleryInterfaceView alloc] initWithContext:_context focusItem:focusItem selectionContext:selectionContext editingContext:editingContext stickersContext:stickersContext hasSelectionPanel:hasSelectionPanel hasCameraButton:false recipientName:recipientName];
         _interfaceView.hasCaptions = hasCaptions;
         _interfaceView.hasTimer = hasTimer;
         [_interfaceView setEditorTabPressed:^(TGPhotoEditorTab tab)
@@ -100,7 +100,7 @@
             
             [strongSelf setCurrentItemWithIndex:index];
         };
-        _interfaceView.captionSet = ^(id<TGModernGalleryItem> item, NSString *caption, NSArray *entities)
+        _interfaceView.captionSet = ^(id<TGModernGalleryItem> item, NSAttributedString *caption)
         {
             __strong TGClipboardGalleryModel *strongSelf = weakSelf;
             if (strongSelf == nil || strongSelf.saveItemCaption == nil)
@@ -108,7 +108,7 @@
             
             __strong TGModernGalleryController *controller = strongSelf.controller;
             if ([controller.currentItem conformsToProtocol:@protocol(TGModernGalleryEditableItem)])
-                strongSelf.saveItemCaption(((id<TGModernGalleryEditableItem>)item).editableMediaItem, caption, entities);
+                strongSelf.saveItemCaption(((id<TGModernGalleryEditableItem>)item).editableMediaItem, caption);
         };
         _interfaceView.timerRequested = ^
         {
@@ -370,14 +370,14 @@
             strongSelf.didFinishRenderingFullSizeImage(item.editableMediaItem, image);
     };
     
-    controller.captionSet = ^(NSString *caption, NSArray *entities)
+    controller.captionSet = ^(NSAttributedString *caption)
     {
         __strong TGClipboardGalleryModel *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
         if (strongSelf.saveItemCaption != nil)
-            strongSelf.saveItemCaption(item.editableMediaItem, caption, entities);
+            strongSelf.saveItemCaption(item.editableMediaItem, caption);
     };
     
     controller.requestToolbarsHidden = ^(bool hidden, bool animated)

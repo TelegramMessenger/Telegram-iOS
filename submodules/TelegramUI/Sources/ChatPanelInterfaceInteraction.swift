@@ -314,4 +314,99 @@ final class ChatPanelInterfaceInteraction {
         self.openSendAsPeer = openSendAsPeer
         self.statuses = statuses
     }
+    
+    convenience init(
+        updateTextInputStateAndMode: @escaping ((ChatTextInputState, ChatInputMode) -> (ChatTextInputState, ChatInputMode)) -> Void,
+        updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void,
+        openLinkEditing: @escaping () -> Void
+    ) {
+        self.init(setupReplyMessage: { _, _ in
+        }, setupEditMessage: { _, _ in
+        }, beginMessageSelection: { _, _ in
+        }, deleteSelectedMessages: {
+        }, reportSelectedMessages: {
+        }, reportMessages: { _, _ in
+        }, blockMessageAuthor: { _, _ in
+        }, deleteMessages: { _, _, f in
+            f(.default)
+        }, forwardSelectedMessages: {
+        }, forwardCurrentForwardMessages: {
+        }, forwardMessages: { _ in
+        }, updateForwardOptionsState: { _ in
+        }, presentForwardOptions: { _ in
+        }, shareSelectedMessages: {
+        }, updateTextInputStateAndMode: updateTextInputStateAndMode, updateInputModeAndDismissedButtonKeyboardMessageId: updateInputModeAndDismissedButtonKeyboardMessageId, openStickers: {
+        }, editMessage: {
+        }, beginMessageSearch: { _, _ in
+        }, dismissMessageSearch: {
+        }, updateMessageSearch: { _ in
+        }, openSearchResults: {
+        }, navigateMessageSearch: { _ in
+        }, openCalendarSearch: {
+        }, toggleMembersSearch: { _ in
+        }, navigateToMessage: { _, _, _, _ in
+        }, navigateToChat: { _ in
+        }, navigateToProfile: { _ in
+        }, openPeerInfo: {
+        }, togglePeerNotifications: {
+        }, sendContextResult: { _, _, _, _ in
+            return false
+        }, sendBotCommand: { _, _ in
+        }, sendBotStart: { _ in
+        }, botSwitchChatWithPayload: { _, _ in
+        }, beginMediaRecording: { _ in
+        }, finishMediaRecording: { _ in
+        }, stopMediaRecording: {
+        }, lockMediaRecording: {
+        }, deleteRecordedMedia: {
+        }, sendRecordedMedia: { _ in
+        }, displayRestrictedInfo: { _, _ in
+        }, displayVideoUnmuteTip: { _ in
+        }, switchMediaRecordingMode: {
+        }, setupMessageAutoremoveTimeout: {
+        }, sendSticker: { _, _, _, _ in
+            return false
+        }, unblockPeer: {
+        }, pinMessage: { _, _ in
+        }, unpinMessage: { _, _, _ in
+        }, unpinAllMessages: {
+        }, openPinnedList: { _ in
+        }, shareAccountContact: {
+        }, reportPeer: {
+        }, presentPeerContact: {
+        }, dismissReportPeer: {
+        }, deleteChat: {
+        }, beginCall: { _ in
+        }, toggleMessageStickerStarred: { _ in
+        }, presentController: { _, _ in
+        }, getNavigationController: {
+            return nil
+        }, presentGlobalOverlayController: { _, _ in
+        }, navigateFeed: {
+        }, openGrouping: {
+        }, toggleSilentPost: {
+        }, requestUnvoteInMessage: { _ in
+        }, requestStopPollInMessage: { _ in
+        }, updateInputLanguage: { _ in
+        }, unarchiveChat: {
+        }, openLinkEditing: openLinkEditing, reportPeerIrrelevantGeoLocation: {
+        }, displaySlowmodeTooltip: { _, _ in
+        }, displaySendMessageOptions: { _, _ in
+        }, openScheduledMessages: {
+        }, openPeersNearby: {
+        }, displaySearchResultsTooltip: { _, _ in
+        }, unarchivePeer: {
+        }, scrollToTop: {
+        }, viewReplies: { _, _ in
+        }, activatePinnedListPreview: { _, _ in
+        }, joinGroupCall: { _ in
+        }, presentInviteMembers: {
+        }, presentGigagroupHelp: {
+        }, editMessageMedia: { _, _ in
+        }, updateShowCommands: { _ in
+        }, updateShowSendAsPeers: { _ in
+        }, openInviteRequests: {
+        }, openSendAsPeer:  { _, _ in
+        }, statuses: nil)
+    }
 }
