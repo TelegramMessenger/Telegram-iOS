@@ -8,15 +8,14 @@
 import Foundation
 import QuartzCore
 
-final class TrimPathProperties: NodePropertyMap, KeypathSearchable {
+final class TrimPathProperties: NodePropertyMap {
   
   init(trim: Trim) {
-    self.keypathName = trim.name
     self.start = NodeProperty(provider: KeyframeInterpolator(keyframes: trim.start.keyframes))
     self.end = NodeProperty(provider: KeyframeInterpolator(keyframes: trim.end.keyframes))
     self.offset = NodeProperty(provider: KeyframeInterpolator(keyframes: trim.offset.keyframes))
     self.type = trim.trimType
-    self.keypathProperties = [
+    let keypathProperties: [String : AnyNodeProperty] = [
       "Start" : start,
       "End" : end,
       "Offset" : offset
@@ -24,9 +23,7 @@ final class TrimPathProperties: NodePropertyMap, KeypathSearchable {
     self.properties = Array(keypathProperties.values)
   }
   
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
-  let keypathName: String
   
   let start: NodeProperty<Vector1D>
   let end: NodeProperty<Vector1D>
@@ -48,7 +45,7 @@ final class TrimPathNode: AnimatorNode {
   }
   
   // MARK: Animator Node
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return properties
   }
   

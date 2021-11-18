@@ -9,11 +9,7 @@ import Foundation
 import QuartzCore
 import CoreGraphics
 
-final class GroupNodeProperties: NodePropertyMap, KeypathSearchable {
-  
-  var keypathName: String = "Transform"
-  
-  var childKeypaths: [KeypathSearchable] = []
+final class GroupNodeProperties: NodePropertyMap {
   
   init(transform: ShapeTransform?) {
     if let transform = transform {
@@ -34,7 +30,7 @@ final class GroupNodeProperties: NodePropertyMap, KeypathSearchable {
       self.skew = NodeProperty(provider: SingleValueProvider(Vector1D(0)))
       self.skewAxis = NodeProperty(provider: SingleValueProvider(Vector1D(0)))
     }
-    self.keypathProperties = [
+    let keypathProperties: [String : AnyNodeProperty] = [
       "Anchor Point" : anchor,
       "Position" : position,
       "Scale" : scale,
@@ -46,7 +42,6 @@ final class GroupNodeProperties: NodePropertyMap, KeypathSearchable {
     self.properties = Array(keypathProperties.values)
   }
   
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
   
   let anchor: NodeProperty<Vector3D>
@@ -81,32 +76,18 @@ final class GroupNode: AnimatorNode {
   // MARK: Initializer
   init(name: String, parentNode: AnimatorNode?, tree: NodeTree) {
     self.parentNode = parentNode
-    self.keypathName = name
     self.rootNode = tree.rootNode
     self.properties = GroupNodeProperties(transform: tree.transform)
     self.groupOutput = GroupOutputNode(parent: parentNode?.outputNode, rootNode: rootNode?.outputNode)
-    var childKeypaths: [KeypathSearchable] = tree.childrenNodes
-    childKeypaths.append(properties)
-    self.childKeypaths = childKeypaths
     
     for childContainer in tree.renderContainers {
       container.insertRenderLayer(childContainer)
     }
   }
   
-  // MARK: Keypath Searchable
-  
-  let keypathName: String
-  
-  let childKeypaths: [KeypathSearchable]
-  
-  var keypathLayer: CALayer? {
-    return container
-  }
-  
   // MARK: Animator Node Protocol
   
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return properties
   }
   

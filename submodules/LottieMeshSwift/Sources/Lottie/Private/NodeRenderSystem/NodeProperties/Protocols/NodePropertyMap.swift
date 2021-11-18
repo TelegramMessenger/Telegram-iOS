@@ -13,15 +13,6 @@ protocol NodePropertyMap {
 }
 
 extension NodePropertyMap {
-  
-  var childKeypaths: [KeypathSearchable] {
-    return []
-  }
-  
-  var keypathLayer: CALayer? {
-    return nil
-  }
-  
   /// Checks if the node's local contents need to be rebuilt.
   func needsLocalUpdate(frame: CGFloat) -> Bool {
     for property in properties {
