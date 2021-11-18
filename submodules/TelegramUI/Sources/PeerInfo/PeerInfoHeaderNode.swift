@@ -2106,7 +2106,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 var subtitle = formattedPhone
                 
                 if let addressName = user.addressName, !addressName.isEmpty {
-                    subtitle = "\(subtitle) • @\(addressName)"
+                    if !subtitle.isEmpty {
+                        subtitle = "\(subtitle) • @\(addressName)"
+                    } else {
+                        subtitle = "@\(addressName)"
+                    }
                 }
                 smallSubtitleString = NSAttributedString(string: subtitle, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
                 subtitleString = NSAttributedString(string: subtitle, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
