@@ -569,7 +569,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         itemBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.0),
         itemHighlightedBackgroundColor: UIColor(rgb: 0xffffff, alpha: 0.15),
         primaryColor: UIColor(rgb: 0xffffff, alpha: 1.0),
-        secondaryColor: UIColor(rgb: 0xffffff, alpha: 0.48),
+        secondaryColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         destructiveColor: UIColor(rgb: 0xeb5545),
         badgeFillColor: UIColor(rgb: 0xffffff),
         badgeForegroundColor: UIColor(rgb: 0x000000),

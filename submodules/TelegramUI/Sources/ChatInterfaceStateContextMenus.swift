@@ -374,7 +374,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
 
         actions.append(.separator)
 
-        if message.isCopyProtected() {
+        if chatPresentationInterfaceState.copyProtectionEnabled {
             
         } else {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
@@ -684,7 +684,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             resourceAvailable = false
         }
         
-        if (!messages[0].text.isEmpty || resourceAvailable || diceEmoji != nil) && !messages[0].isCopyProtected() {
+        if (!messages[0].text.isEmpty || resourceAvailable || diceEmoji != nil) && !chatPresentationInterfaceState.copyProtectionEnabled {
             let message = messages[0]
             var isExpired = false
             for media in message.media {
@@ -1012,7 +1012,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             break
                         }
                     }
-                    if let file = media as? TelegramMediaFile, !message.isCopyProtected() {
+                    if let file = media as? TelegramMediaFile, !chatPresentationInterfaceState.copyProtectionEnabled {
                         if file.isVideo {
                             if file.isAnimated {
                                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_LinkDialogSave, icon: { theme in
@@ -1039,7 +1039,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
                 
         if data.messageActions.options.contains(.forward) {
-            if message.isCopyProtected() {
+            if chatPresentationInterfaceState.copyProtectionEnabled {
                 
             } else {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, icon: { theme in

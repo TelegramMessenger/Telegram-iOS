@@ -358,9 +358,9 @@ func presentLegacyWebSearchGallery(context: AccountContext, peer: EnginePeer?, c
     model.didFinishEditingItem = { item, adjustments, result, thumbnail in
         editingContext.setImage(result, thumbnailImage: thumbnail, for: item, synchronous: true)
     }
-    model.saveItemCaption = { item, caption, entities in
-        editingContext.setCaption(caption, entities: entities, for: item)
-        if let selectionContext = selectionContext, let caption = caption, caption.count > 0, let item = item as? TGMediaSelectableItem {
+    model.saveItemCaption = { item, caption in
+        editingContext.setCaption(caption, for: item)
+        if let selectionContext = selectionContext, let caption = caption, caption.length > 0, let item = item as? TGMediaSelectableItem {
             selectionContext.setItem(item, selected: true)
         }
     }
@@ -465,7 +465,7 @@ public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionCon
                                 }
                             }
                             
-                            return legacyAssetPickerItemGenerator()(dict, nil, nil, nil, nil) as Any
+                            return legacyAssetPickerItemGenerator()(dict, nil, nil, nil) as Any
                         } else {
                             return SSignal.complete()
                         }

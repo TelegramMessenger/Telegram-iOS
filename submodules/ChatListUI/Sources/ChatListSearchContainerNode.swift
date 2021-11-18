@@ -763,13 +763,17 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             })
                         })))
                         
-                        items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
-                            c.dismiss(completion: {
-                                if let strongSelf = self {
-                                    strongSelf.forwardMessages(messageIds: [message.id])
-                                }
-                            })
-                        })))
+                        if let peer = message.peers[message.id.peerId], peer.isCopyProtectionEnabled {
+                            
+                        } else {
+                            items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuForward, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+                                c.dismiss(completion: {
+                                    if let strongSelf = self {
+                                        strongSelf.forwardMessages(messageIds: [message.id])
+                                    }
+                                })
+                            })))
+                        }
                         
                         items.append(.separator)
                         items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuSelect, icon: { theme in

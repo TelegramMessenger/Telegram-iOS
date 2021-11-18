@@ -584,7 +584,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
-            if self.textSelectionNode == nil, let item = self.item, !item.message.isCopyProtected(), let rootNode = item.controllerInteraction.chatControllerNode() {
+            if self.textSelectionNode == nil, let item = self.item, !item.associatedData.isCopyProtectionEnabled, let rootNode = item.controllerInteraction.chatControllerNode() {
                 let selectionColor: UIColor
                 let knobColor: UIColor
                 if item.message.effectivelyIncoming(item.context.account.peerId) {

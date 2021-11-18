@@ -95,9 +95,9 @@
             [editingContext setFullSizeImage:resultImage forItem:editableItem];
         };
         
-        model.saveItemCaption = ^(id<TGMediaEditableItem> editableItem, NSString *caption, NSArray *entities)
+        model.saveItemCaption = ^(id<TGMediaEditableItem> editableItem, NSAttributedString *caption)
         {
-            [editingContext setCaption:caption entities:entities forItem:editableItem];
+            [editingContext setCaption:caption forItem:editableItem];
             
             if (selectionContext != nil && caption.length > 0 && [editableItem conformsToProtocol:@protocol(TGMediaSelectableItem)])
                 [selectionContext setItem:(id<TGMediaSelectableItem>)editableItem selected:true];
