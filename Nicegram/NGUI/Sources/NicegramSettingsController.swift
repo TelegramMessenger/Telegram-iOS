@@ -498,7 +498,7 @@ public func nicegramSettingsController(context: AccountContext, modal: Bool = fa
 
     let signal = combineLatest(context.sharedContext.presentationData, sharedDataSignal, showCallsTab) |> map { presentationData, sharedData, showCalls -> (ItemListControllerState, (ItemListNodeState, Any)) in
 
-        let experimentalSettings: ExperimentalUISettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
+        let experimentalSettings: ExperimentalUISettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
 
         var leftNavigationButton: ItemListNavigationButton?
         if modal {
