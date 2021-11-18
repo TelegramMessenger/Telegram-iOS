@@ -1648,7 +1648,7 @@ private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenu
         transition.updateFrameAdditive(node: self.statusNode, frame: CGRect(origin: CGPoint(x: self.statusNode.frame.minX, y: self.statusNode.frame.minY), size: statusSize))
     }
     
-    func updateLayout(constrainedWidth: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
+    func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
         let sideInset: CGFloat = 16.0
         let iconSideInset: CGFloat = 12.0
         let verticalInset: CGFloat = 12.0
@@ -1716,6 +1716,10 @@ private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenu
         } else {
             self.highlightedBackgroundNode.alpha = 0.0
         }
+    }
+    
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
+        return self
     }
 }
 
@@ -1878,11 +1882,11 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
         self.currentStats = stats
 
-        let (_, apply) = self.updateLayout(constrainedWidth: calculatedWidth)
+        let (_, apply) = self.updateLayout(constrainedWidth: calculatedWidth, constrainedHeight: size.height)
         apply(size, transition)
     }
 
-    func updateLayout(constrainedWidth: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
+    func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
         let sideInset: CGFloat = 14.0
         let verticalInset: CGFloat = 12.0
 
@@ -2038,6 +2042,10 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         } else {
             self.highlightedBackgroundNode.alpha = 0.0
         }
+    }
+    
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
+        return self
     }
 }
 

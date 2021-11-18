@@ -258,6 +258,8 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 
         self.terminateButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: self.presentationData.theme.list.itemDestructiveColor), font: .regular, height: 44.0, cornerRadius: 11.0, gloss: false)
         
+        var hasSecretChats = false
+        
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         let title: String
         let subtitle: String
@@ -314,6 +316,10 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 }
             
                 self.secretChatsSwitchNode.isOn = session.flags.contains(.acceptsSecretChats)
+            
+                if !session.flags.contains(.passwordPending) && ![2040, 2496].contains(session.apiId) {
+                    hasSecretChats = true
+                }
             case let .website(website, peer):
                 self.terminateButton.title = self.presentationData.strings.AuthSessions_View_Logout
             
@@ -421,7 +427,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.animationNode.flatMap { self.contentContainerNode.addSubnode($0) }
         self.avatarNode.flatMap { self.contentContainerNode.addSubnode($0) }
         
-        if case .session = subject {
+        if hasSecretChats {
             self.contentContainerNode.addSubnode(self.secretChatsBackgroundNode)
             self.contentContainerNode.addSubnode(self.secretChatsHeaderNode)
             self.contentContainerNode.addSubnode(self.secretChatsTitleNode)
