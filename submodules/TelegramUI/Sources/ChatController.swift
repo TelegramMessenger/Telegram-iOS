@@ -426,6 +426,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private weak var currentPinchController: PinchController?
     private weak var currentPinchSourceItemNode: ListViewItemNode?
     
+    private weak var currentReactionContextController: ContextController?
+    private weak var currentReactionContextItemNode: ListViewItemNode?
+    
     private var screenCaptureManager: ScreenCaptureDetectionManager?
     private let chatAdditionalDataDisposable = MetaDisposable()
     
@@ -937,8 +940,47 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                 }
-                let _ = combineLatest(queue: .mainQueue(), contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction), strongSelf.context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false), ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
-                ).start(next: { actions, animatedEmojiStickers, chatTextSelectionTips in
+                
+                let additionalAnimatedEmojiStickers = strongSelf.context.engine.stickers.loadedStickerPack(reference: .animatedEmojiAnimations, forceActualized: false)
+                |> map { animatedEmoji -> [String: [Int: StickerPackItem]] in
+                    let sequence = "0️⃣1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣8️⃣9️⃣".strippedEmoji
+                    var animatedEmojiStickers: [String: [Int: StickerPackItem]] = [:]
+                    switch animatedEmoji {
+                        case let .result(_, items, _):
+                            for item in items {
+                                let indexKeys = item.getStringRepresentationsOfIndexKeys()
+                                if indexKeys.count > 1, let first = indexKeys.first, let last = indexKeys.last {
+                                    let emoji: String?
+                                    let indexEmoji: String?
+                                    if sequence.contains(first.strippedEmoji) {
+                                        emoji = last
+                                        indexEmoji = first
+                                    } else if sequence.contains(last.strippedEmoji) {
+                                        emoji = first
+                                        indexEmoji = last
+                                    } else {
+                                        emoji = nil
+                                        indexEmoji = nil
+                                    }
+                                    
+                                    if let emoji = emoji?.strippedEmoji, let indexEmoji = indexEmoji?.strippedEmoji.first, let strIndex = sequence.firstIndex(of: indexEmoji) {
+                                        let index = sequence.distance(from: sequence.startIndex, to: strIndex)
+                                        if animatedEmojiStickers[emoji] != nil {
+                                            animatedEmojiStickers[emoji]![index] = item
+                                        } else {
+                                            animatedEmojiStickers[emoji] = [index: item]
+                                        }
+                                    }
+                                }
+                            }
+                        default:
+                            break
+                    }
+                    return animatedEmojiStickers
+                }
+                
+                let _ = combineLatest(queue: .mainQueue(), contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction), strongSelf.context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false), additionalAnimatedEmojiStickers, ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
+                ).start(next: { actions, animatedEmojiStickers, additionalAnimatedEmojiStickers, chatTextSelectionTips in
                     var actions = actions
 
                     guard let strongSelf = self, !actions.items.isEmpty else {
@@ -970,52 +1012,81 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     actions.context = strongSelf.context
                     
-                    var hasLike = false
-                    let hearts: [String] = ["❤", "❤️"]
-                    for attribute in messages[0].attributes {
-                        if let attribute = attribute as? ReactionsMessageAttribute {
-                            for reaction in attribute.reactions {
-                                if hearts.contains(reaction.value) {
-                                    if reaction.isSelected {
-                                        hasLike = true
+                    if canAddMessageReactions(message: message) {
+                        if case let .result(_, stickers, _) = animatedEmojiStickers {
+                            for fullSticker in additionalAnimatedEmojiStickers {
+                                guard let fullStickerItem = fullSticker.value.first?.value else {
+                                    continue
+                                }
+                                inner: for sticker in stickers {
+                                    for attribute in sticker.file.attributes {
+                                        if case let .Sticker(displayText, _, _) = attribute {
+                                            if displayText == fullSticker.key {
+                                                actions.reactionItems.append(ReactionContextItem(
+                                                    reaction: ReactionContextItem.Reaction(rawValue: displayText),
+                                                    listAnimation: sticker.file,
+                                                    applicationAnimation: fullStickerItem.file
+                                                ))
+                                                break inner
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        } else if let attribute = attribute as? PendingReactionsMessageAttribute {
-                            if let value = attribute.value, hearts.contains(value) {
-                                hasLike = true
-                            }
                         }
+                        
+                        actions.reactionItems.sort(by: { lhs, rhs in
+                            return lhs.reaction.rawValue < rhs.reaction.rawValue
+                        })
                     }
-                    
-                    actions.reactionItems = [ReactionContextItem(reaction: hasLike ? .unlike : .like)]
                     
                     let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, postbox: strongSelf.context.account.postbox, message: message, selectAll: selectAll)), items: .single(actions), recognizer: recognizer, gesture: gesture)
                     strongSelf.currentContextController = controller
-                    
-                    let _ = strongSelf.context.meshAnimationCache.get(bundleName: "Hearts")
                     
                     controller.reactionSelected = { [weak controller] value in
                         guard let strongSelf = self, let message = updatedMessages.first else {
                             return
                         }
-                        let hearts: [String] = ["❤", "❤️"]
+                        
+                        var updatedReaction: String? = value.reaction.rawValue
+                        for attribute in messages[0].attributes {
+                            if let attribute = attribute as? ReactionsMessageAttribute {
+                                for reaction in attribute.reactions {
+                                    if reaction.value == value.reaction.rawValue {
+                                        if reaction.isSelected {
+                                            updatedReaction = nil
+                                        }
+                                    }
+                                }
+                            } else if let attribute = attribute as? PendingReactionsMessageAttribute {
+                                if let current = attribute.value, current == value.reaction.rawValue {
+                                    updatedReaction = nil
+                                }
+                            }
+                        }
+                        
                         strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                                 if item.message.id == message.id {
-                                    switch value {
-                                    case .like:
-                                        itemNode.awaitingAppliedReaction = (hearts[0], { [weak itemNode] in
+                                    if let updatedReaction = updatedReaction {
+                                        itemNode.awaitingAppliedReaction = (updatedReaction, { [weak itemNode] in
                                             guard let controller = controller else {
                                                 return
                                             }
-                                            if let itemNode = itemNode, let (targetEmptyNode, targetFilledNode) = itemNode.targetReactionNode(value: hearts[0]) {
-                                                controller.dismissWithReaction(value: hearts[0], targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: true, completion: { [weak itemNode, weak targetFilledNode] in
+                                            if let itemNode = itemNode, let (targetEmptyNode, targetFilledNode) = itemNode.targetReactionNode(value: updatedReaction) {
+                                                strongSelf.currentReactionContextController = controller
+                                                strongSelf.currentReactionContextItemNode = itemNode
+                                                
+                                                controller.dismissWithReaction(value: updatedReaction, targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: true, completion: { [weak itemNode, weak targetFilledNode] in
                                                     guard let strongSelf = self, let itemNode = itemNode, let targetFilledNode = targetFilledNode else {
                                                         return
                                                     }
                                                     
-                                                    let targetFrame = targetFilledNode.view.convert(targetFilledNode.bounds, to: itemNode.view).offsetBy(dx: 0.0, dy: itemNode.insets.top)
+                                                    let _ = strongSelf
+                                                    let _ = itemNode
+                                                    let _ = targetFilledNode
+                                                    
+                                                    /*let targetFrame = targetFilledNode.view.convert(targetFilledNode.bounds, to: itemNode.view).offsetBy(dx: 0.0, dy: itemNode.insets.top)
                                                     
                                                     if #available(iOS 13.0, *), let meshAnimation = strongSelf.context.meshAnimationCache.get(bundleName: "Hearts") {
                                                         if let animationView = MeshRenderer() {
@@ -1039,31 +1110,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                             
                                                             animationView.add(mesh: meshAnimation, offset: CGPoint())
                                                         }
-                                                    }
+                                                    }*/
                                                 })
-                                            } else {
-                                                controller.dismiss()
                                             }
                                         })
-                                    case .unlike:
+                                    } else if updatedReaction == nil {
                                         itemNode.awaitingAppliedReaction = (nil, {
-                                            guard let controller = controller else {
-                                                return
-                                            }
-                                            controller.dismiss()
                                         })
+                                        controller?.dismiss()
                                     }
                                 }
                             }
                         }
-                        switch value {
-                        case .like:
-                            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: hearts[0]).start()
-                        case .unlike:
-                            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: nil).start()
-                        }
+                        let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: updatedReaction).start()
                     }
-
 
                     strongSelf.forEachController({ controller in
                         if let controller = controller as? TooltipScreen {
@@ -1074,6 +1134,52 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             }
+        }, updateMessageReaction: { [weak self] message in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if !canAddMessageReactions(message: message) {
+                return
+            }
+            
+            var updatedReaction: String? = "❤"
+            for attribute in message.attributes {
+                if let attribute = attribute as? ReactionsMessageAttribute {
+                    for reaction in attribute.reactions {
+                        if reaction.value == updatedReaction {
+                            if reaction.isSelected {
+                                updatedReaction = nil
+                            }
+                        }
+                    }
+                } else if let attribute = attribute as? PendingReactionsMessageAttribute {
+                    if let current = attribute.value, current == updatedReaction {
+                        updatedReaction = nil
+                    }
+                }
+            }
+            
+            strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                    if item.message.id == message.id {
+                        itemNode.awaitingAppliedReaction = (updatedReaction, { [weak itemNode] in
+                            if let updatedReaction = updatedReaction, let itemNode = itemNode, let (_, targetFilledNode) = itemNode.targetReactionNode(value: updatedReaction) {
+                                targetFilledNode.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, damping: 90.0)
+                                
+                                if let strongSelf = self {
+                                    if strongSelf.selectPollOptionFeedback == nil {
+                                        strongSelf.selectPollOptionFeedback = HapticFeedback()
+                                    }
+                                    strongSelf.selectPollOptionFeedback?.tap()
+                                }
+                            }
+                        })
+                    }
+                }
+            }
+            
+            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: updatedReaction).start()
         }, activateMessagePinch: { [weak self] sourceNode in
             guard let strongSelf = self else {
                 return
@@ -4655,6 +4761,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 } else {
                     strongSelf.currentPinchController?.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
+                }
+            }
+            
+            if let reactionItemNode = strongSelf.currentReactionContextItemNode, let currentReactionContextController = strongSelf.currentReactionContextController {
+                if let itemNode = itemNode {
+                    if itemNode === reactionItemNode {
+                        currentReactionContextController.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
+                    }
+                } else {
+                    currentReactionContextController.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
                 }
             }
 
@@ -14099,4 +14215,26 @@ extension Peer {
         
         return false
     }
+}
+
+func canAddMessageReactions(message: Message) -> Bool {
+    if let peer = message.peers[message.id.peerId] {
+        if let channel = peer as? TelegramChannel {
+            if case .group = channel.info {
+            } else {
+                return false
+            }
+        } else if let _ = peer as? TelegramGroup {
+        } else {
+            return false
+        }
+    } else {
+        return false
+    }
+    for media in message.media {
+        if let _ = media as? TelegramMediaAction {
+            return false
+        }
+    }
+    return true
 }

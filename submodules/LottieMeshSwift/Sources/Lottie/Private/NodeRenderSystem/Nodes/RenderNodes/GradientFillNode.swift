@@ -8,17 +8,16 @@
 import Foundation
 import QuartzCore
 
-final class GradientFillProperties: NodePropertyMap, KeypathSearchable {
+final class GradientFillProperties: NodePropertyMap {
   
   init(gradientfill: GradientFill) {
-    self.keypathName = gradientfill.name
     self.opacity = NodeProperty(provider: KeyframeInterpolator(keyframes: gradientfill.opacity.keyframes))
     self.startPoint = NodeProperty(provider: KeyframeInterpolator(keyframes: gradientfill.startPoint.keyframes))
     self.endPoint = NodeProperty(provider: KeyframeInterpolator(keyframes: gradientfill.endPoint.keyframes))
     self.colors = NodeProperty(provider: KeyframeInterpolator(keyframes: gradientfill.colors.keyframes))
     self.gradientType = gradientfill.gradientType
     self.numberOfColors = gradientfill.numberOfColors
-    self.keypathProperties = [
+    let keypathProperties: [String : AnyNodeProperty] = [
       "Opacity" : opacity,
       "Start Point" : startPoint,
       "End Point" : endPoint,
@@ -26,8 +25,6 @@ final class GradientFillProperties: NodePropertyMap, KeypathSearchable {
     ]
     self.properties = Array(keypathProperties.values)
   }
-  
-  var keypathName: String
   
   let opacity: NodeProperty<Vector1D>
   let startPoint: NodeProperty<Vector3D>
@@ -37,8 +34,6 @@ final class GradientFillProperties: NodePropertyMap, KeypathSearchable {
   let gradientType: GradientType
   let numberOfColors: Int
   
-  
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
   
 }
@@ -61,7 +56,7 @@ final class GradientFillNode: AnimatorNode, RenderNode {
   
   // MARK: Animator Node Protocol
   
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return fillProperties
   }
   

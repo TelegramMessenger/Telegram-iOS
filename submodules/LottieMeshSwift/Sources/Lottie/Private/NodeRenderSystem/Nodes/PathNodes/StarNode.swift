@@ -8,12 +8,9 @@
 import Foundation
 import QuartzCore
 
-final class StarNodeProperties: NodePropertyMap, KeypathSearchable {
-  
-  var keypathName: String
+final class StarNodeProperties: NodePropertyMap {
   
   init(star: Star) {
-    self.keypathName = star.name
     self.direction = star.direction
     self.position = NodeProperty(provider: KeyframeInterpolator(keyframes: star.position.keyframes))
     self.outerRadius = NodeProperty(provider: KeyframeInterpolator(keyframes: star.outerRadius.keyframes))
@@ -30,7 +27,7 @@ final class StarNodeProperties: NodePropertyMap, KeypathSearchable {
     }
     self.rotation = NodeProperty(provider: KeyframeInterpolator(keyframes: star.rotation.keyframes))
     self.points = NodeProperty(provider: KeyframeInterpolator(keyframes: star.points.keyframes))
-    self.keypathProperties = [
+    let keypathProperties: [String : AnyNodeProperty] = [
       "Position" : position,
       "Outer Radius" : outerRadius,
       "Outer Roundedness" : outerRoundedness,
@@ -42,7 +39,6 @@ final class StarNodeProperties: NodePropertyMap, KeypathSearchable {
     self.properties = Array(keypathProperties.values)
   }
   
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
   
   let direction: PathDirection
@@ -68,7 +64,7 @@ final class StarNode: AnimatorNode, PathNode {
   }
   
   // MARK: Animator Node
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return properties
   }
   

@@ -115,12 +115,8 @@ cc_library(
         "LottieMesh/Sources/**/*.cpp",
         "LottieMesh/Sources/**/*.h",
         "LottieMesh/Sources/**/*.hpp",
-        "LottieMesh/boost/**/*.hpp",
-        "LottieMesh/boost/**/*.h",
-        "LottieMesh/boost/**/*.cpp",
     ]),
     copts = [
-        "-Isubmodules/LottieMeshSwift/LottieMesh/boost",
         "-Isubmodules/LottieMeshSwift/libtess2/Include",
     ] + optimization_flags,
     hdrs = glob([

@@ -10,12 +10,9 @@ import CoreGraphics
 
 // MARK: - Properties
 
-final class GradientStrokeProperties: NodePropertyMap, KeypathSearchable {
-  
-  var keypathName: String
+final class GradientStrokeProperties: NodePropertyMap {
   
   init(gradientStroke: GradientStroke) {
-    self.keypathName = gradientStroke.name
     self.opacity = NodeProperty(provider: KeyframeInterpolator(keyframes: gradientStroke.opacity.keyframes))
     self.startPoint = NodeProperty(provider: KeyframeInterpolator(keyframes: gradientStroke.startPoint.keyframes))
     self.endPoint = NodeProperty(provider: KeyframeInterpolator(keyframes: gradientStroke.endPoint.keyframes))
@@ -43,7 +40,7 @@ final class GradientStrokeProperties: NodePropertyMap, KeypathSearchable {
       self.dashPattern = NodeProperty(provider: SingleValueProvider([Vector1D]()))
       self.dashPhase = NodeProperty(provider: SingleValueProvider(Vector1D(0)))
     }
-    self.keypathProperties = [
+    let keypathProperties: [String : AnyNodeProperty] = [
       "Opacity" : opacity,
       "Start Point" : startPoint,
       "End Point" : endPoint,
@@ -71,7 +68,6 @@ final class GradientStrokeProperties: NodePropertyMap, KeypathSearchable {
   let numberOfColors: Int
   
   
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
   
 }
@@ -96,7 +92,7 @@ final class GradientStrokeNode: AnimatorNode, RenderNode {
   
   // MARK: Animator Node Protocol
   
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return strokeProperties
   }
   

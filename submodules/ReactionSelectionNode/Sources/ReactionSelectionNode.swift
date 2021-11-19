@@ -7,6 +7,9 @@ import TelegramPresentationData
 import AppBundle
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import SwiftSignalKit
+import StickerResources
+import AccountContext
 
 private func generateBubbleImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
@@ -33,124 +36,124 @@ private func generateBubbleShadowImage(shadow: UIColor, diameter: CGFloat, shado
 private let font = Font.medium(13.0)
 
 final class ReactionNode: ASDisplayNode {
-    let reaction: ReactionGestureItem
-    private let textBackgroundNode: ASImageNode
-    private let textNode: ImmediateTextNode
-    private let animationNode: AnimatedStickerNode
-    private let imageNode: ASImageNode
-    private let additionalImageNode: ASImageNode
-    var isMaximized: Bool?
-    private let intrinsicSize: CGSize
-    private let intrinsicOffset: CGPoint
+    let context: AccountContext
+    let item: ReactionContextItem
+    private let staticImageNode: TransformImageNode
+    private var animationNode: AnimatedStickerNode?
     
-    init(account: Account, theme: PresentationTheme, reaction: ReactionGestureItem, maximizedReactionSize: CGFloat, loadFirstFrame: Bool) {
-        self.reaction = reaction
+    private var fetchStickerDisposable: Disposable?
+    private var fetchFullAnimationDisposable: Disposable?
+    
+    private var validSize: CGSize?
+    
+    var isExtracted: Bool = false
+    
+    init(context: AccountContext, theme: PresentationTheme, item: ReactionContextItem) {
+        self.context = context
+        self.item = item
         
-        self.textBackgroundNode = ASImageNode()
-        self.textBackgroundNode.displaysAsynchronously = false
-        self.textBackgroundNode.displayWithoutProcessing = true
-        self.textBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 20.0, color: theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillFloating.withAlphaComponent(0.8))
-        self.textBackgroundNode.alpha = 0.0
-        
-        self.textNode = ImmediateTextNode()
-        self.textNode.displaysAsynchronously = false
-        self.textNode.isUserInteractionEnabled = false
-        
-        let reactionText: String = ""
-        
-        self.textNode.attributedText = NSAttributedString(string: reactionText, font: font, textColor: theme.chat.serviceMessage.dateTextColor.withWallpaper)
-        let textSize = self.textNode.updateLayout(CGSize(width: 200.0, height: 100.0))
-        let textBackgroundSize = CGSize(width: textSize.width + 12.0, height: 20.0)
-        let textBackgroundFrame = CGRect(origin: CGPoint(), size: textBackgroundSize)
-        let textFrame = CGRect(origin: CGPoint(x: floor((textBackgroundFrame.width - textSize.width) / 2.0), y: floor((textBackgroundFrame.height - textSize.height) / 2.0)), size: textSize)
-        self.textBackgroundNode.frame = textBackgroundFrame
-        self.textNode.frame = textFrame
-        self.textNode.alpha = 0.0
-        
-        self.animationNode = AnimatedStickerNode()
-        self.animationNode.automaticallyLoadFirstFrame = loadFirstFrame
-        self.animationNode.playToCompletionOnStop = true
-        
-        var intrinsicSize = CGSize(width: maximizedReactionSize + 14.0, height: maximizedReactionSize + 14.0)
-        
-        self.imageNode = ASImageNode()
-        self.additionalImageNode = ASImageNode()
-        switch reaction {
-        case .like:
-            self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
-            self.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/ContextHeartFilled"), color: UIColor(rgb: 0xfe1512))
-        case .unlike:
-            self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
-            self.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/ContextHeartBrokenL"), color: UIColor(rgb: 0xfe1512))
-            self.additionalImageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Reactions/ContextHeartBrokenR"), color: UIColor(rgb: 0xfe1512))
-        }
-        
-        if let image = self.imageNode.image {
-            intrinsicSize = image.size
-        }
-        
-        self.intrinsicSize = intrinsicSize
+        self.staticImageNode = TransformImageNode()
         
         super.init()
         
-        //self.backgroundColor = .gray
+        //self.backgroundColor = UIColor(white: 0.0, alpha: 0.1)
         
-        //self.textBackgroundNode.addSubnode(self.textNode)
-        //self.addSubnode(self.textBackgroundNode)
+        self.addSubnode(self.staticImageNode)
         
-        //self.addSubnode(self.animationNode)
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.additionalImageNode)
+        /*self.addSubnode(self.animationNode)
+        
         self.animationNode.updateLayout(size: self.intrinsicSize)
-        self.animationNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)
+        self.animationNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)*/
         
-        switch reaction {
-        case .like:
-            self.imageNode.frame = CGRect(origin: CGPoint(x: -5.0, y: -5.0), size: self.intrinsicSize)
-        case .unlike:
-            self.imageNode.frame = CGRect(origin: CGPoint(x: -6.0, y: -5.0), size: self.intrinsicSize)
-            self.additionalImageNode.frame = CGRect(origin: CGPoint(x: -3.0, y: -5.0), size: self.intrinsicSize)
+        self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.listAnimation.resource)).start()
+        self.fetchFullAnimationDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.applicationAnimation.resource)).start()
+        //let _ = context.meshAnimationCache.get(resource: item.applicationAnimation.resource)
+    }
+    
+    deinit {
+        self.fetchStickerDisposable?.dispose()
+        self.fetchFullAnimationDisposable?.dispose()
+    }
+    
+    func updateLayout(size: CGSize, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+        let intrinsicSize = size
+        
+        let animationSize = self.item.listAnimation.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+        var animationDisplaySize = animationSize.aspectFitted(intrinsicSize)
+        
+        var scalingFactor: CGFloat = 1.0
+        var offsetFactor: CGFloat = 0.0
+        switch self.item.reaction.rawValue {
+        case "💸":
+            scalingFactor = 1.25
+            offsetFactor = -0.04
+        case "👍":
+            scalingFactor = 1.4
+            offsetFactor = 0.02
+        case "👎":
+            scalingFactor = 1.4
+            offsetFactor = -0.01
+        case "😂":
+            scalingFactor = 1.2
+        case "🍆":
+            scalingFactor = 1.1
+            offsetFactor = -0.01
+        case "👻":
+            scalingFactor = 1.2
+        case "🎃":
+            scalingFactor = 1.15
+            offsetFactor = -0.08
+        case "🎈":
+            offsetFactor = 0.03
+        case "🎉":
+            offsetFactor = -0.01
+        default:
+            break
         }
-    }
-    
-    func updateLayout(size: CGSize, scale: CGFloat, transition: ContainedViewLayoutTransition, displayText: Bool) {
-        /*transition.updatePosition(node: self.animationNode, position: CGPoint(x: size.width / 2.0 + self.intrinsicOffset.x * scale, y: size.height / 2.0 + self.intrinsicOffset.y * scale), beginWithCurrentState: true)
-        transition.updateTransformScale(node: self.animationNode, scale: scale, beginWithCurrentState: true)
-        transition.updatePosition(node: self.imageNode, position: CGPoint(x: size.width / 2.0 + self.intrinsicOffset.x * scale, y: size.height / 2.0 + self.intrinsicOffset.y * scale), beginWithCurrentState: true)
-        transition.updateTransformScale(node: self.imageNode, scale: scale, beginWithCurrentState: true)
         
-        transition.updatePosition(node: self.textBackgroundNode, position: CGPoint(x: size.width / 2.0, y: displayText ? -24.0 : (size.height / 2.0)), beginWithCurrentState: true)
-        transition.updateTransformScale(node: self.textBackgroundNode, scale: displayText ? 1.0 : 0.1, beginWithCurrentState: true)
+        animationDisplaySize.width = floor(animationDisplaySize.width * scalingFactor)
+        animationDisplaySize.height = floor(animationDisplaySize.height * scalingFactor)
         
-        transition.updateAlpha(node: self.textBackgroundNode, alpha: displayText ? 1.0 : 0.0, beginWithCurrentState: true)
-        transition.updateAlpha(node: self.textNode, alpha: displayText ? 1.0 : 0.0, beginWithCurrentState: true)*/
-    }
-    
-    func updateIsAnimating(_ isAnimating: Bool, animated: Bool) {
-        if isAnimating {
-            self.animationNode.visibility = true
-        } else {
-            self.animationNode.visibility = false
+        var animationFrame = CGRect(origin: CGPoint(x: floor((intrinsicSize.width - animationDisplaySize.width) / 2.0), y: floor((intrinsicSize.height - animationDisplaySize.height) / 2.0)), size: animationDisplaySize)
+        animationFrame.origin.y = floor(animationFrame.origin.y + animationFrame.height * offsetFactor)
+        
+        if isExpanded, self.animationNode == nil {
+            let animationNode = AnimatedStickerNode()
+            self.animationNode = animationNode
+            self.addSubnode(animationNode)
+            
+            animationNode.started = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.staticImageNode.isHidden = true
+            }
+            
+            animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.listAnimation.resource), width: Int(size.width * 2.0), height: Int(size.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            animationNode.frame = animationFrame
+            animationNode.updateLayout(size: animationFrame.size)
+            if transition.isAnimated, !self.staticImageNode.frame.isEmpty {
+                transition.animateTransformScale(node: animationNode, from: self.staticImageNode.bounds.width / animationFrame.width)
+                transition.animatePositionAdditive(node: animationNode, offset: CGPoint(x: self.staticImageNode.frame.midX - animationFrame.midX, y: self.staticImageNode.frame.midY - animationFrame.midY))
+            }
+            animationNode.visibility = true
+        }
+        
+        if self.validSize != size {
+            self.validSize = size
+            
+            self.staticImageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, file: item.listAnimation, small: false, size: CGSize(width: animationDisplaySize.width * UIScreenScale, height: animationDisplaySize.height * UIScreenScale), fitzModifier: nil, fetched: false, onlyFullSize: false, thumbnail: false, synchronousLoad: false))
+            let imageApply = self.staticImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: animationDisplaySize, boundingSize: animationDisplaySize, intrinsicInsets: UIEdgeInsets()))
+            imageApply()
+            transition.updateFrame(node: self.staticImageNode, frame: animationFrame)
         }
     }
     
     func didAppear() {
-        switch self.reaction {
-        case .like:
-            self.imageNode.layer.animateScale(from: 1.0, to: 1.08, duration: 0.12, delay: 0.22, removeOnCompletion: false, completion: { [weak self] _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.imageNode.layer.animateScale(from: 1.08, to: 1.0, duration: 0.12)
-            })
-        case .unlike:
-            self.imageNode.layer.animatePosition(from: CGPoint(x: -2.5, y: 0.0), to: CGPoint(), duration: 0.2, delay: 0.15, additive: true)
-            self.additionalImageNode.layer.animatePosition(from: CGPoint(x: 2.5, y: 0.0), to: CGPoint(), duration: 0.2, delay: 0.15, additive: true)
-        }
     }
 }
 
-final class ReactionSelectionNode: ASDisplayNode {
+/*final class ReactionSelectionNode: ASDisplayNode {
     private let account: Account
     private let theme: PresentationTheme
     private let reactions: [ReactionGestureItem]
@@ -485,4 +488,4 @@ final class ReactionSelectionNode: ASDisplayNode {
     }
 }
 
-
+*/

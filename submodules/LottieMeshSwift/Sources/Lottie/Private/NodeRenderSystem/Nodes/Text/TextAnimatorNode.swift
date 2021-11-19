@@ -9,12 +9,9 @@ import Foundation
 import CoreGraphics
 import QuartzCore
 
-final class TextAnimatorNodeProperties: NodePropertyMap, KeypathSearchable {
-  
-  let keypathName: String
+final class TextAnimatorNodeProperties: NodePropertyMap {
   
   init(textAnimator: TextAnimator) {
-    self.keypathName = textAnimator.name
     var properties = [String : AnyNodeProperty]()
     
     if let keyframeGroup = textAnimator.anchor {
@@ -94,9 +91,7 @@ final class TextAnimatorNodeProperties: NodePropertyMap, KeypathSearchable {
       self.tracking = nil
     }
     
-    self.keypathProperties = properties
-    
-    self.properties = Array(keypathProperties.values)
+    self.properties = Array(properties.values)
   }
   
   let anchor: NodeProperty<Vector3D>?
@@ -111,7 +106,6 @@ final class TextAnimatorNodeProperties: NodePropertyMap, KeypathSearchable {
   let strokeWidth: NodeProperty<Vector1D>?
   let tracking: NodeProperty<Vector1D>?
   
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
   
   var caTransform: CATransform3D {
@@ -226,7 +220,7 @@ class TextAnimatorNode: AnimatorNode {
   
   // MARK: Animator Node Protocol
   
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return textAnimatorProperties
   }
   

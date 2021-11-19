@@ -9,7 +9,7 @@ import Foundation
 import CoreGraphics
 import QuartzCore
 
-final class LayerTransformProperties: NodePropertyMap, KeypathSearchable {
+final class LayerTransformProperties: NodePropertyMap {
   
   init(transform: Transform) {
     
@@ -46,15 +46,7 @@ final class LayerTransformProperties: NodePropertyMap, KeypathSearchable {
       self.positionX = nil
     }
     
-    self.keypathProperties = propertyMap
     self.properties = Array(propertyMap.values)
-  }
-  
-  let keypathProperties: [String : AnyNodeProperty]
-  var keypathName: String = "Transform"
-  
-  var childKeypaths: [KeypathSearchable] {
-    return []
   }
   
   let properties: [AnyNodeProperty]
@@ -80,7 +72,7 @@ class LayerTransformNode: AnimatorNode {
   
   // MARK: Animator Node Protocol
   
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return transformProperties
   }
   
