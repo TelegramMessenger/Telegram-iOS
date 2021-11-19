@@ -51,7 +51,7 @@ func _internal_requestStickerSet(postbox: Postbox, network: Network, reference: 
         }
     }
     
-    let remoteSignal = network.request(Api.functions.messages.getStickerSet(stickerset: input))
+    let remoteSignal = network.request(Api.functions.messages.getStickerSet(stickerset: input, hash: 0))
         |> mapError { _ -> RequestStickerSetError in
             return .invalid
         }

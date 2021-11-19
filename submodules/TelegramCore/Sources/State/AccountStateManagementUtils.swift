@@ -3303,6 +3303,8 @@ func replayFinalState(
                         var items: [ItemCollectionItem] = []
                         let info: StickerPackCollectionInfo
                         switch apiSet {
+                            case .stickerSetNotModified:
+                                preconditionFailure()
                             case let .stickerSet(set, packs, documents):
                                 var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
                                 for pack in packs {

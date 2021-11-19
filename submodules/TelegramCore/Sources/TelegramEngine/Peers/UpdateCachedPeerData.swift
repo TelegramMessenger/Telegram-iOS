@@ -171,7 +171,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                 |> mapToSignal { result -> Signal<Bool, NoError> in
                     return postbox.transaction { transaction -> Bool in
                         switch result {
-                        case let .userFull(_, userFullUser, _, _, _, userFullNotifySettings, _, _, _, _, _, _):
+                        case let .userFull(_, userFullUser, _, _, _, userFullNotifySettings, _, _, _, _, _, _, _):
                             if let telegramUser = TelegramUser.merge(transaction.getPeer(userFullUser.peerId) as? TelegramUser, rhs: userFullUser) {
                                 updatePeers(transaction: transaction, peers: [telegramUser], update: { _, updated -> Peer in
                                     return updated
