@@ -110,7 +110,7 @@ final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
     }
 }
 
-func iconForSession(_ session: RecentAccountSession) -> (UIImage?, UIColor?, String?, [String: UIColor]?) {
+func iconForSession(_ session: RecentAccountSession) -> (UIImage?, UIColor?, String?, [String]?) {
     let platform = session.platform.lowercased()
     let device = session.deviceModel.lowercased()
     let systemVersion = session.systemVersion.lowercased()
@@ -118,7 +118,7 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, UIColor?, Str
         return (UIImage(bundleImageName: "Settings/Devices/Xbox"), UIColor(rgb: 0x35c759), nil, nil)
     }
     if device.contains("chrome") && !device.contains("chromebook") {
-        return (UIImage(bundleImageName: "Settings/Devices/Chrome"), UIColor(rgb: 0x35c759), "device_chrome", nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Chrome"), UIColor(rgb: 0x35c759), "device_chrome", ["Vector 20.Vector 20.Обводка 1", "Ellipse 18.Ellipse 18.Обводка 1"])
     }
     if device.contains("brave") {
         return (UIImage(bundleImageName: "Settings/Devices/Brave"), UIColor(rgb: 0xff9500), nil, nil)
@@ -127,7 +127,7 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, UIColor?, Str
         return (UIImage(bundleImageName: "Settings/Devices/Vivaldi"), UIColor(rgb: 0xff3c30), nil, nil)
     }
     if device.contains("safari") {
-        return (UIImage(bundleImageName: "Settings/Devices/Safari"), UIColor(rgb: 0x0079ff), "device_safari", nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Safari"), UIColor(rgb: 0x0079ff), "device_safari", ["Com 2.Com 2.Заливка 1"])
     }
     if device.contains("firefox") {
         return (UIImage(bundleImageName: "Settings/Devices/Firefox"), UIColor(rgb: 0xff9500), "device_firefox", nil)
@@ -139,7 +139,7 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, UIColor?, Str
         return (UIImage(bundleImageName: "Settings/Devices/Android"), UIColor(rgb: 0x35c759), "device_android", nil)
     }
     if device.contains("iphone") {
-        return (UIImage(bundleImageName: "Settings/Devices/iPhone"), UIColor(rgb: 0x0079ff), "device_iphone", nil)
+        return (UIImage(bundleImageName: "Settings/Devices/iPhone"), UIColor(rgb: 0x0079ff), "device_iphone", ["apple.apple.Заливка 1"])
     }
     if device.contains("ipad") {
         return (UIImage(bundleImageName: "Settings/Devices/iPad"), UIColor(rgb: 0x0079ff), "device_ipad", nil)
@@ -490,6 +490,7 @@ class ItemListRecentSessionItemNode: ItemListRevealOptionsItemNode {
                         case .sameSection(false):
                             bottomStripeInset = leftInset + editingOffset
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0

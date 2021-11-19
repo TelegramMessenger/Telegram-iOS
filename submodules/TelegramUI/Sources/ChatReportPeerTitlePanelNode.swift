@@ -311,6 +311,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var inviteInfoNode: ChatInfoTitlePanelInviteInfoNode?
     private var peerNearbyInfoNode: ChatInfoTitlePanelPeerNearbyInfoNode?
     
+    private var tapGestureRecognizer: UITapGestureRecognizer?
+    
     override init() {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -320,6 +322,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.closeButton.displaysAsynchronously = false
         
         self.textNode = ImmediateTextNode()
+        self.textNode.maximumNumberOfLines = 2
+        self.textNode.textAlignment = .center
         
         super.init()
 
@@ -328,6 +332,19 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
         self.addSubnode(self.closeButton)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapped))
+        tapGestureRecognizer.isEnabled = false
+        self.view.addGestureRecognizer(tapGestureRecognizer)
+        self.tapGestureRecognizer = tapGestureRecognizer
+    }
+    
+    @objc func tapped() {
+        self.interfaceInteraction?.presentChatRequestAdminInfo()
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> LayoutResult {
@@ -341,9 +358,6 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         var panelHeight: CGFloat = 40.0
         
         let contentRightInset: CGFloat = 14.0 + rightInset
-        
-        let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize))
         
         let updatedButtons: [ChatReportPeerTitleButton]
         if let _ = interfaceState.renderedPeer?.peer {
@@ -434,8 +448,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         if let requestChatPeer = interfaceState.contactStatus?.requestChatPeer, let renderedPeer = interfaceState.renderedPeer, let peer = renderedPeer.chatMainPeer {
             let text: NSAttributedString
-            let regular = MarkdownAttributeSet(font: Font.regular(14.0), textColor: interfaceState.theme.rootController.navigationBar.primaryTextColor)
-            let bold = MarkdownAttributeSet(font: Font.bold(14.0), textColor: interfaceState.theme.rootController.navigationBar.primaryTextColor)
+            let regular = MarkdownAttributeSet(font: Font.regular(15.0), textColor: interfaceState.theme.rootController.navigationBar.primaryTextColor)
+            let bold = MarkdownAttributeSet(font: Font.bold(15.0), textColor: interfaceState.theme.rootController.navigationBar.primaryTextColor)
             if let requestChatPeer = requestChatPeer as? TelegramChannel, case .broadcast = requestChatPeer.info {
                 text = addAttributesToStringWithRanges(interfaceState.strings.Conversation_InviteRequestAdminChannel(EnginePeer(peer).compactDisplayTitle, EnginePeer(requestChatPeer).displayTitle(strings: interfaceState.strings, displayOrder: interfaceState.nameDisplayOrder))._tuple, body: regular, argumentAttributes: [0: bold, 1: bold])
             } else {
@@ -445,19 +459,29 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             
             transition.updateAlpha(node: self.textNode, alpha: 1.0)
             
-            let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset - 40.0, height: 40.0))
-            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - textSize.width) / 2.0), y: 4.0), size: textSize)
+            let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset - 80.0, height: 40.0))
+            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - textSize.width) / 2.0), y: 10.0), size: textSize)
             
             for (_, view) in self.buttons {
                 transition.updateAlpha(layer: view.layer, alpha: 0.0)
             }
+            
+            self.tapGestureRecognizer?.isEnabled = true
+            
+            panelHeight += 15.0
         } else {
             transition.updateAlpha(node: self.textNode, alpha: 0.0)
             
             for (_, view) in self.buttons {
                 transition.updateAlpha(layer: view.layer, alpha: 1.0)
             }
+            
+            self.tapGestureRecognizer?.isEnabled = false
         }
+        
+        
+        let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
+        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize))
 
         let initialPanelHeight = panelHeight
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))

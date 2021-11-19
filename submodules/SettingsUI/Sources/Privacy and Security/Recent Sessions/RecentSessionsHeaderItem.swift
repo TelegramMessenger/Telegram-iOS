@@ -11,6 +11,7 @@ import TelegramAnimatedStickerNode
 import AccountContext
 import Markdown
 import TextFormat
+import SolidRoundedButtonNode
 
 class RecentSessionsHeaderItem: ListViewItem, ItemListItem {
     let context: AccountContext
@@ -18,14 +19,16 @@ class RecentSessionsHeaderItem: ListViewItem, ItemListItem {
     let text: String
     let animationName: String
     let sectionId: ItemListSectionId
+    let buttonAction: () -> Void
     let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, text: String, animationName: String, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
+    init(context: AccountContext, theme: PresentationTheme, text: String, animationName: String, sectionId: ItemListSectionId, buttonAction: @escaping () -> Void, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil) {
         self.context = context
         self.theme = theme
         self.text = text
         self.animationName = animationName
         self.sectionId = sectionId
+        self.buttonAction = buttonAction
         self.linkAction = linkAction
     }
     
@@ -71,21 +74,25 @@ private let titleFont = Font.regular(13.0)
 class RecentSessionsHeaderItemNode: ListViewItemNode {
     private let titleNode: TextNode
     private var animationNode: AnimatedStickerNode
+    private let buttonNode: SolidRoundedButtonNode
     
     private var item: RecentSessionsHeaderItem?
     
     init() {
         self.titleNode = TextNode()
-        self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.isUserInteractionEnabled = true
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.animationNode = AnimatedStickerNode()
         
+        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), fontSize: 16.0, height: 50.0, cornerRadius: 11.0)
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.animationNode)
+        self.addSubnode(self.buttonNode)
     }
     
     override public func didLoad() {
@@ -95,15 +102,28 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
         recognizer.tapActionAtPoint = { _ in
             return .waitForSingleTap
         }
-        self.view.addGestureRecognizer(recognizer)
+        self.titleNode.view.addGestureRecognizer(recognizer)
+        
+        self.buttonNode.pressed = { [weak self] in
+            if let strongSelf = self, let item = strongSelf.item {
+                item.buttonAction()
+            }
+        }
     }
     
     func asyncLayout() -> (_ item: RecentSessionsHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let currentItem = self.item
         
         return { item, params, neighbors in
+            var updatedTheme: PresentationTheme?
+            
             let leftInset: CGFloat = 32.0 + params.leftInset
             let topInset: CGFloat = 92.0
+            
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
             
             let attributedText = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.itemAccentColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
@@ -111,7 +131,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                 
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height)
+            let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height + 85.0)
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -123,6 +143,18 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                         strongSelf.animationNode.visibility = true
                     }
                     strongSelf.item = item
+                    
+                    strongSelf.buttonNode.title = item.context.sharedContext.currentPresentationData.with { $0 }.strings.AuthSessions_LinkDesktopDevice
+                    if let _ = updatedTheme {
+                        strongSelf.buttonNode.icon = generateTintedImage(image: UIImage(bundleImageName: "Settings/QrButtonIcon"), color: .white)
+                        strongSelf.buttonNode.updateTheme(SolidRoundedButtonTheme(theme: item.theme))
+                    }
+                    
+                    let buttonWidth = contentSize.width - 32.0
+                    let buttonHeight = strongSelf.buttonNode.updateLayout(width: buttonWidth, transition: .immediate)
+                    let buttonFrame = CGRect(x: 16.0, y: contentSize.height - buttonHeight - 12.0, width: buttonWidth, height: buttonHeight)
+                    strongSelf.buttonNode.frame = buttonFrame
+                    
                     strongSelf.accessibilityLabel = attributedText.string
                                         
                     let iconSize = CGSize(width: 96.0, height: 96.0)
@@ -150,9 +182,8 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
-                            let titleFrame = self.titleNode.frame
-                            if let item = self.item, titleFrame.contains(location) {
-                                if let (_, attributes) = self.titleNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
+                            if let item = self.item {
+                                if let (_, attributes) = self.titleNode.attributesAtPoint(location) {
                                     if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                                         item.linkAction?(.tap(url))
                                     }

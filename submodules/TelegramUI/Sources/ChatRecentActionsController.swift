@@ -148,7 +148,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, updateShowSendAsPeers: { _ in
         }, openInviteRequests: {
         }, openSendAsPeer: { _, _ in
-        }, statuses: nil)
+        }, presentChatRequestAdminInfo: {}, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
         

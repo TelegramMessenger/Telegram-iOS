@@ -337,7 +337,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, updateShowSendAsPeers: { _ in
         }, openInviteRequests: {
         }, openSendAsPeer: { _, _ in
-        }, statuses: nil)
+        }, presentChatRequestAdminInfo: {}, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction
         

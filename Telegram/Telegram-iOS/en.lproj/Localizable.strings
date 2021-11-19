@@ -7081,3 +7081,7 @@ Sorry for the inconvenience.";
 "Conversation.InviteRequestAdminChannel" = "%1$@ is an admin of %2$@, a channel you requested to join.";
 "Conversation.InviteRequestInfo" = "You received this message because you requested to join %1$@ on %2$@.";
 "Conversation.InviteRequestInfoConfirm" = "I understand";
+
+"AuthSessions.HeaderInfo" = "Link [Telegram Desktop](desktop) or [Telegram Web](web) by scanning a QR code.";
+"AuthSessions.LinkDesktopDevice" = "Link Desktop Device";
+"AuthSessions.AddDevice.ScanInstallInfo" = "Go to [getdesktop.telegram.org](desktop) or [web.telegram.org](web) to get the QR code";
