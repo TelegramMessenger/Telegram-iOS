@@ -2833,8 +2833,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         f()
                     case let .optionalAction(f):
                         f()
-                    case let .openContextMenu(tapMessage, selectAll, subFrame):
-                        self.item?.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
+                    case let .openContextMenu(tapMessage, _, _):
+                        self.item?.controllerInteraction.updateMessageReaction(tapMessage)
+                        //self.item?.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
                     }
                 } else if case .tap = gesture {
                     self.item?.controllerInteraction.clickThroughMessage()

@@ -576,10 +576,11 @@ private final class DayComponent: Component {
             self.titleView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: floor((availableSize.height - titleSize.height) / 2.0)), size: titleSize)
 
             if let mediaPreviewView = self.mediaPreviewView {
-                mediaPreviewView.frame = contentFrame
+                mediaPreviewView.bounds = CGRect(origin: CGPoint(), size: contentFrame.size)
+                mediaPreviewView.position = CGPoint(x: contentFrame.midX, y: contentFrame.midY)
                 mediaPreviewView.updateLayout(size: contentFrame.size, synchronousLoads: false)
 
-                mediaPreviewView.sublayerTransform = CATransform3DMakeScale(contentScale, contentScale, 1.0)
+                mediaPreviewView.transform = CATransform3DMakeScale(contentScale, contentScale, 1.0)
 
                 if animateMediaIn {
                     mediaPreviewView.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
