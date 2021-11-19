@@ -1012,7 +1012,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     actions.context = strongSelf.context
                     
-                    if message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                    if canAddMessageReactions(message: message) {
                         if case let .result(_, stickers, _) = animatedEmojiStickers {
                             for fullSticker in additionalAnimatedEmojiStickers {
                                 guard let fullStickerItem = fullSticker.value.first?.value else {
@@ -1139,7 +1139,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+            if !canAddMessageReactions(message: message) {
                 return
             }
             
@@ -14212,4 +14212,26 @@ extension Peer {
         
         return false
     }
+}
+
+func canAddMessageReactions(message: Message) -> Bool {
+    if let peer = message.peers[message.id.peerId] {
+        if let channel = peer as? TelegramChannel {
+            if case .group = channel.info {
+            } else {
+                return false
+            }
+        } else if let _ = peer as? TelegramGroup {
+        } else {
+            return false
+        }
+    } else {
+        return false
+    }
+    for media in message.media {
+        if let _ = media as? TelegramMediaAction {
+            return false
+        }
+    }
+    return true
 }
