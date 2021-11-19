@@ -2924,13 +2924,13 @@ public extension Api {
     
     }
     public enum UserFull: TypeConstructorDescription {
-        case userFull(flags: Int32, id: Int64, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?)
+        case userFull(flags: Int32, id: Int64, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?, privateForwardName: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .userFull(let flags, let id, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon):
+                case .userFull(let flags, let id, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName):
                     if boxed {
-                        buffer.appendInt32(-123513441)
+                        buffer.appendInt32(-818518751)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -2944,14 +2944,15 @@ public extension Api {
                     if Int(flags) & Int(1 << 11) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 14) != 0 {serializeInt32(ttlPeriod!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 15) != 0 {serializeString(themeEmoticon!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 16) != 0 {serializeString(privateForwardName!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .userFull(let flags, let id, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon):
-                return ("userFull", [("flags", flags), ("id", id), ("about", about), ("settings", settings), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("commonChatsCount", commonChatsCount), ("folderId", folderId), ("ttlPeriod", ttlPeriod), ("themeEmoticon", themeEmoticon)])
+                case .userFull(let flags, let id, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName):
+                return ("userFull", [("flags", flags), ("id", id), ("about", about), ("settings", settings), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("commonChatsCount", commonChatsCount), ("folderId", folderId), ("ttlPeriod", ttlPeriod), ("themeEmoticon", themeEmoticon), ("privateForwardName", privateForwardName)])
     }
     }
     
@@ -2988,6 +2989,8 @@ public extension Api {
             if Int(_1!) & Int(1 << 14) != 0 {_11 = reader.readInt32() }
             var _12: String?
             if Int(_1!) & Int(1 << 15) != 0 {_12 = parseString(reader) }
+            var _13: String?
+            if Int(_1!) & Int(1 << 16) != 0 {_13 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
@@ -3000,8 +3003,9 @@ public extension Api {
             let _c10 = (Int(_1!) & Int(1 << 11) == 0) || _10 != nil
             let _c11 = (Int(_1!) & Int(1 << 14) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 15) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.UserFull.userFull(flags: _1!, id: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10, ttlPeriod: _11, themeEmoticon: _12)
+            let _c13 = (Int(_1!) & Int(1 << 16) == 0) || _13 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 {
+                return Api.UserFull.userFull(flags: _1!, id: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10, ttlPeriod: _11, themeEmoticon: _12, privateForwardName: _13)
             }
             else {
                 return nil
