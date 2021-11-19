@@ -7673,6 +7673,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.updateChatPresentationInterfaceState(interactive: true, {
                 return $0.updatedShowSendAsPeers(true)
             })
+        }, presentChatRequestAdminInfo: { [weak self] in
+            self?.presentChatRequestAdminInfo()
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         do {
@@ -13987,26 +13989,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func presentChatRequestAdminInfo() {
-        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        
-        let controller = ActionSheetController(presentationData: presentationData)
-        var items: [ActionSheetItem] = []
-        
-        let text = ""
-        
-        items.append(ActionSheetTextItem(title: text))
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_InviteRequestInfoConfirm, color: .accent, action: { [weak self, weak controller] in
-            controller?.dismissAnimated()
-            self?.interfaceInteraction?.dismissReportPeer()
-        }))
-        controller.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak controller] in
+        if let requestChatPeer = self.presentationInterfaceState.contactStatus?.requestChatPeer, let requestDate = self.presentationInterfaceState.contactStatus?.peerStatusSettings?.requestChatDate {
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            
+            let controller = ActionSheetController(presentationData: presentationData)
+            var items: [ActionSheetItem] = []
+            
+            let text = presentationData.strings.Conversation_InviteRequestInfo(EnginePeer(requestChatPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), stringForDate(timestamp: requestDate, strings: presentationData.strings))
+            
+            items.append(ActionSheetTextItem(title: text.string))
+            items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_InviteRequestInfoConfirm, color: .accent, action: { [weak self, weak controller] in
                 controller?.dismissAnimated()
-            })
-        ])])
-        controller.setItemGroups([])
-        self.chatDisplayNode.dismissInput()
-        self.push(controller)
+                self?.interfaceInteraction?.dismissReportPeer()
+            }))
+            controller.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak controller] in
+                    controller?.dismissAnimated()
+                })
+            ])])
+            self.chatDisplayNode.dismissInput()
+            self.present(controller, in: .window(.root))
+        }
     }
     
     private var crossfading = false

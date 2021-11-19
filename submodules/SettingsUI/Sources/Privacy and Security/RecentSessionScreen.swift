@@ -305,9 +305,15 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 location = session.country
                 ip = session.ip
             
-                let (icon, backgroundColor, animationName, colors) = iconForSession(session)
+                let (icon, backgroundColor, animationName, colorsArray) = iconForSession(session)
                 if let animationName = animationName {
-                    let animationNode = AnimationNode(animation: animationName, colors: colors ?? ["apple.apple.Заливка 1": backgroundColor ?? .black], scale: 1.0)
+                    var colors: [String: UIColor] = [:]
+                    if let colorsArray = colorsArray {
+                        for color in colorsArray {
+                            colors[color] = backgroundColor
+                        }
+                    }
+                    let animationNode = AnimationNode(animation: animationName, colors: colors, scale: 1.0)
                     self.animationNode = animationNode
                     
                     animationNode.animationView()?.logHierarchyKeypaths()

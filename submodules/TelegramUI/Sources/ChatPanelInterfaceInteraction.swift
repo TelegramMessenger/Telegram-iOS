@@ -135,6 +135,7 @@ final class ChatPanelInterfaceInteraction {
     let updateShowSendAsPeers: ((Bool) -> Bool) -> Void
     let openInviteRequests: () -> Void
     let openSendAsPeer: (ASDisplayNode, ContextGesture?) -> Void
+    let presentChatRequestAdminInfo: () -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -224,6 +225,7 @@ final class ChatPanelInterfaceInteraction {
         updateShowSendAsPeers: @escaping ((Bool) -> Bool) -> Void,
         openInviteRequests: @escaping () -> Void,
         openSendAsPeer: @escaping (ASDisplayNode, ContextGesture?) -> Void,
+        presentChatRequestAdminInfo: @escaping () -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
@@ -312,6 +314,7 @@ final class ChatPanelInterfaceInteraction {
         self.updateShowSendAsPeers = updateShowSendAsPeers
         self.openInviteRequests = openInviteRequests
         self.openSendAsPeer = openSendAsPeer
+        self.presentChatRequestAdminInfo = presentChatRequestAdminInfo
         self.statuses = statuses
     }
     
@@ -407,6 +410,7 @@ final class ChatPanelInterfaceInteraction {
         }, updateShowSendAsPeers: { _ in
         }, openInviteRequests: {
         }, openSendAsPeer:  { _, _ in
+        }, presentChatRequestAdminInfo: {
         }, statuses: nil)
     }
 }

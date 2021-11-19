@@ -1761,7 +1761,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var backgroundAlpha: CGFloat = 1.0
     var updateHeaderAlpha: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
-    init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isSettings: Bool) {
+    init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool) {
         self.context = context
         self.isAvatarExpanded = avatarInitiallyExpanded
         self.isOpenedFromChat = isOpenedFromChat
@@ -1840,7 +1840,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self?.requestUpdateLayout?()
         }
         
-        self.addSubnode(self.buttonsContainerNode)
+        
+        if !isMediaOnly {
+            self.addSubnode(self.buttonsContainerNode)
+        }
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.expandedBackgroundNode)
         self.titleNodeContainer.addSubnode(self.titleNode)

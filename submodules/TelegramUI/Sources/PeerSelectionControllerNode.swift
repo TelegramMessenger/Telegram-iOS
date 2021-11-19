@@ -304,7 +304,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, updateShowSendAsPeers: { _ in
         }, openInviteRequests: {
         }, openSendAsPeer: { _, _ in
-        }, statuses: nil)
+        }, presentChatRequestAdminInfo: {}, statuses: nil)
         
         self.readyValue.set(self.chatListNode.ready)
     }
