@@ -787,7 +787,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             }
                         }
                         node.frame = CGRect(origin: CGPoint(x: reactionOffset + 1.0, y: backgroundInsets.top + 1.0 + offset), size: layout.size)
-                        reactionOffset += 1.0 + layout.size.width
+                        reactionOffset += 1.0 + layout.size.width + 4.0
                     } else if let reactionCountNode = strongSelf.reactionCountNode {
                         strongSelf.reactionCountNode = nil
                         if animated {

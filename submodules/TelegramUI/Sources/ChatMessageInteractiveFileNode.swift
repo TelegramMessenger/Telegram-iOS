@@ -305,7 +305,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     var viewCount: Int?
                     var dateReplies = 0
-                    var dateReactions: [MessageReaction] = []
+                    let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
                     for attribute in message.attributes {
                         if let attribute = attribute as? EditedMessageAttribute {
                             edited = !attribute.isHidden
@@ -314,10 +314,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = chatLocation {
                             if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
                                 dateReplies = Int(attribute.count)
-                            }
-                        } else if let attribute = attribute as? PendingReactionsMessageAttribute {
-                            if let value = attribute.value {
-                                dateReactions = [MessageReaction(value: value, count: 1, isSelected: true)]
                             }
                         }
                     }
