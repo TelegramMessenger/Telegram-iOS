@@ -297,7 +297,7 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         let boldFont = Font.bold(17.0)
         
         var text = presentationData.strings.AuthSessions_AddDevice_ScanInstallInfo
-        text = text.replacingOccurrences(of: " [", with: "   [").replacingOccurrences(of: "]() ", with: "]()   ")
+        text = text.replacingOccurrences(of: " [", with: "   [").replacingOccurrences(of: ") ", with: ")   ")
         
         let attributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: .white), bold: MarkdownAttributeSet(font: boldFont, textColor: .white), link: MarkdownAttributeSet(font: boldFont, textColor: .white), linkAttribute: { contents in
             return (TelegramTextAttributes.URL, contents)
