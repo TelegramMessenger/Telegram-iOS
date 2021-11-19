@@ -189,7 +189,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         gesture.isEnabled = self.panSelectionGestureEnabled
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, minimalWidth: CGFloat?, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, minimalWidth: CGFloat?, transition: ContainedViewLayoutTransition) -> CGSize {
         var minActionsWidth: CGFloat = 250.0
         if let minimalWidth = minimalWidth, minimalWidth > minActionsWidth {
             minActionsWidth = minimalWidth
@@ -250,7 +250,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                 heightsAndCompletions.append((minSize.height, complete))
                 contentHeight += minSize.height
             case let .custom(itemNode):
-                let (minSize, complete) = itemNode.updateLayout(constrainedWidth: constrainedWidth)
+                let (minSize, complete) = itemNode.updateLayout(constrainedWidth: constrainedWidth, constrainedHeight: constrainedHeight)
                 maxWidth = max(maxWidth, minSize.width)
                 heightsAndCompletions.append((minSize.height, complete))
                 contentHeight += minSize.height
@@ -327,7 +327,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                 }
             case let .custom(node):
                 if let node = node as? ContextActionNodeProtocol, node.frame.contains(point) {
-                    return node
+                    return node.actionNode(at: self.convert(point, to: node))
                 }
             default:
                 break
@@ -550,17 +550,17 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.addSubnode(self.scrollNode)
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         var widthClass = widthClass
         if !self.blurBackground {
             widthClass = .regular
         }
         
         var contentSize = CGSize()
-        let actionsSize = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, minimalWidth: nil, transition: transition)
+        let actionsSize = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, constrainedHeight: constrainedHeight, minimalWidth: nil, transition: transition)
             
         if let additionalActionsNode = self.additionalActionsNode, let additionalShadowNode = self.additionalShadowNode {
-            let additionalActionsSize = additionalActionsNode.updateLayout(widthClass: widthClass, constrainedWidth: actionsSize.width, minimalWidth: actionsSize.width, transition: transition)
+            let additionalActionsSize = additionalActionsNode.updateLayout(widthClass: widthClass, constrainedWidth: actionsSize.width, constrainedHeight: constrainedHeight, minimalWidth: actionsSize.width, transition: transition)
             contentSize = additionalActionsSize
             
             let bounds = CGRect(origin: CGPoint(), size: additionalActionsSize)

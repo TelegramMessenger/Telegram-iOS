@@ -54,7 +54,7 @@ private final class ChatSendAsPeerTitleContextItemNode: ASDisplayNode, ContextMe
         self.addSubnode(self.textNode)
     }
 
-    func updateLayout(constrainedWidth: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
+    func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
         let sideInset: CGFloat = 16.0
 
         let textSize = self.textNode.updateLayout(CGSize(width: constrainedWidth - sideInset - sideInset, height: .greatestFiniteMagnitude))

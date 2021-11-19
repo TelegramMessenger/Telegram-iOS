@@ -144,7 +144,7 @@ public final class ContextMenuActionItem {
 }
 
 public protocol ContextMenuCustomNode: ASDisplayNode {
-    func updateLayout(constrainedWidth: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void)
+    func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void)
     func updateTheme(presentationData: PresentationData)
 }
 
@@ -1307,7 +1307,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
-                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: actionsContainerTransition)
+                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
                     let adjustedActionsSize = realActionsSize
 
                     self.actionsContainerNode.updateSize(containerSize: realActionsSize, contentSize: realActionsSize)
@@ -1394,7 +1394,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
-                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: actionsContainerTransition)
+                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
                     let adjustedActionsSize = realActionsSize
 
                     self.actionsContainerNode.updateSize(containerSize: realActionsSize, contentSize: realActionsSize)
@@ -1559,7 +1559,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         constrainedWidth = floor(layout.size.width / 2.0)
                     }
                     
-                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: constrainedWidth - actionsSideInset * 2.0, transition: actionsContainerTransition)
+                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: constrainedWidth - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
                     let contentScale = (constrainedWidth - actionsSideInset * 2.0) / constrainedWidth
                     var contentUnscaledSize: CGSize
                     if case .compact = layout.metrics.widthClass {

@@ -7075,3 +7075,5 @@ Sorry for the inconvenience.";
 "AuthSessions.View.AcceptSecretChatsTitle" = "Incoming Secret Chats";
 "AuthSessions.View.AcceptSecretChats" = "Accept on This Device";
 "AuthSessions.View.AcceptSecretChatsInfo" = "You can disable the acception of incoming secret chats on this device.";
+
+"Conversation.SendMesageAs" = "Send Message As...";

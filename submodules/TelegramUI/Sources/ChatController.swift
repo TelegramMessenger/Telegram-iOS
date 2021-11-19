@@ -7650,62 +7650,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             let myPeerId = strongSelf.presentationInterfaceState.currentSendAsPeerId ?? defaultMyPeerId
             
-            let avatarSize = CGSize(width: 28.0, height: 28.0)
             var items: [ContextMenuItem] = []
-                            
-            items.append(.custom(ChatSendAsPeerTitleContextItem(text: "SEND MESSAGE AS..."), false))
-
-            for peer in peers {
-                var subtitle: String?
-                if peer.peer.id.namespace == Namespaces.Peer.CloudUser {
-                    subtitle = strongSelf.presentationData.strings.VoiceChat_PersonalAccount
-                } else if let subscribers = peer.subscribers {
-                    if let peer = peer.peer as? TelegramChannel {
-                        if case .broadcast = peer.info {
-                            subtitle = strongSelf.presentationData.strings.Conversation_StatusSubscribers(subscribers)
-                        } else {
-                            subtitle = strongSelf.presentationData.strings.VoiceChat_DiscussionGroup
-                        }
-                    } else {
-                        subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(subscribers)
-                    }
-                }
-
-                let isSelected = peer.peer.id == myPeerId
-                let extendedAvatarSize = CGSize(width: 35.0, height: 35.0)
-                let avatarSignal = peerAvatarCompleteImage(account: strongSelf.context.account, peer: EnginePeer(peer.peer), size: avatarSize)
-                |> map { image -> UIImage? in
-                    if isSelected, let image = image {
-                        return generateImage(extendedAvatarSize, rotatedContext: { size, context in
-                            let bounds = CGRect(origin: CGPoint(), size: size)
-                            context.clear(bounds)
-                            context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-                            context.scaleBy(x: 1.0, y: -1.0)
-                            context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-                            context.draw(image.cgImage!, in: CGRect(x: (extendedAvatarSize.width - avatarSize.width) / 2.0, y: (extendedAvatarSize.height - avatarSize.height) / 2.0, width: avatarSize.width, height: avatarSize.height))
-
-                            let lineWidth = 1.0 + UIScreenPixel
-                            context.setLineWidth(lineWidth)
-                            context.setStrokeColor(strongSelf.presentationData.theme.actionSheet.controlAccentColor.cgColor)
-                            context.strokeEllipse(in: bounds.insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0))
-                        })
-                    } else {
-                        return image
-                    }
-                }
-
-                items.append(.action(ContextMenuActionItem(text: EnginePeer(peer.peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: isSelected ? extendedAvatarSize : avatarSize, signal: avatarSignal), action: { _, f in
-                    f(.default)
-
-                    guard let strongSelf = self else {
-                        return
-                    }
-
-                    if peer.peer.id != myPeerId {
-                        let _ = strongSelf.context.engine.peers.updatePeerSendAsPeer(peerId: peerId, sendAs: peer.peer.id).start()
-                    }
-                })))
-            }
+            items.append(.custom(ChatSendAsPeerTitleContextItem(text: strongSelf.presentationInterfaceState.strings.Conversation_SendMesageAs.uppercased()), false))
+            items.append(.custom(ChatSendAsPeerListContextItem(context: strongSelf.context, chatPeerId: peerId, peers: peers, selectedPeerId: myPeerId), false))
             
             let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
             contextController.dismissed = { [weak self] in
