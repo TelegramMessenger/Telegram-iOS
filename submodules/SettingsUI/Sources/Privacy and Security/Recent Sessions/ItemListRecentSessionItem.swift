@@ -110,56 +110,56 @@ final class ItemListRecentSessionItem: ListViewItem, ItemListItem {
     }
 }
 
-func iconForSession(_ session: RecentAccountSession) -> (UIImage?, String?) {
+func iconForSession(_ session: RecentAccountSession) -> (UIImage?, UIColor?, String?, [String: UIColor]?) {
     let platform = session.platform.lowercased()
     let device = session.deviceModel.lowercased()
     let systemVersion = session.systemVersion.lowercased()
     if device.contains("xbox") {
-        return (UIImage(bundleImageName: "Settings/Devices/Xbox"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Xbox"), UIColor(rgb: 0x35c759), nil, nil)
     }
     if device.contains("chrome") && !device.contains("chromebook") {
-        return (UIImage(bundleImageName: "Settings/Devices/Chrome"), "device_chrome")
+        return (UIImage(bundleImageName: "Settings/Devices/Chrome"), UIColor(rgb: 0x35c759), "device_chrome", nil)
     }
     if device.contains("brave") {
-        return (UIImage(bundleImageName: "Settings/Devices/Brave"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Brave"), UIColor(rgb: 0xff9500), nil, nil)
     }
     if device.contains("vivaldi") {
-        return (UIImage(bundleImageName: "Settings/Devices/Vivaldi"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Vivaldi"), UIColor(rgb: 0xff3c30), nil, nil)
     }
     if device.contains("safari") {
-        return (UIImage(bundleImageName: "Settings/Devices/Safari"), "device_safari")
+        return (UIImage(bundleImageName: "Settings/Devices/Safari"), UIColor(rgb: 0x0079ff), "device_safari", nil)
     }
     if device.contains("firefox") {
-        return (UIImage(bundleImageName: "Settings/Devices/Firefox"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Firefox"), UIColor(rgb: 0xff9500), "device_firefox", nil)
     }
     if device.contains("opera") {
-        return (UIImage(bundleImageName: "Settings/Devices/Opera"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Opera"), UIColor(rgb: 0xff3c30), nil, nil)
     }
     if platform.contains("android") {
-        return (UIImage(bundleImageName: "Settings/Devices/Android"), "device_android")
+        return (UIImage(bundleImageName: "Settings/Devices/Android"), UIColor(rgb: 0x35c759), "device_android", nil)
     }
     if device.contains("iphone") {
-        return (UIImage(bundleImageName: "Settings/Devices/iPhone"), "device_iphone")
+        return (UIImage(bundleImageName: "Settings/Devices/iPhone"), UIColor(rgb: 0x0079ff), "device_iphone", nil)
     }
     if device.contains("ipad") {
-        return (UIImage(bundleImageName: "Settings/Devices/iPad"), "device_ipad")
+        return (UIImage(bundleImageName: "Settings/Devices/iPad"), UIColor(rgb: 0x0079ff), "device_ipad", nil)
     }
     if (platform.contains("macos") || systemVersion.contains("macos")) && device.contains("mac") {
-        return (UIImage(bundleImageName: "Settings/Devices/Mac"), "device_mac")
+        return (UIImage(bundleImageName: "Settings/Devices/Mac"), UIColor(rgb: 0x0079ff), "device_mac", nil)
     }
     if platform.contains("ios") || platform.contains("macos") || systemVersion.contains("macos") {
-        return (UIImage(bundleImageName: "Settings/Devices/iOS"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/iOS"), UIColor(rgb: 0x0079ff), nil, nil)
     }
     if platform.contains("ubuntu") || systemVersion.contains("ubuntu") {
-        return (UIImage(bundleImageName: "Settings/Devices/Ubuntu"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Ubuntu"), UIColor(rgb: 0xff9500), "device_ubuntu", nil)
     }
     if platform.contains("linux") || systemVersion.contains("linux") {
-        return (UIImage(bundleImageName: "Settings/Devices/Linux"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Linux"), UIColor(rgb: 0x8e8e93), "device_linux", nil)
     }
     if platform.contains("windows") || systemVersion.contains("windows") {
-        return (UIImage(bundleImageName: "Settings/Devices/Windows"), nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Windows"), UIColor(rgb: 0x0079ff), "device_windows", nil)
     }
-    return (nil, nil)
+    return (nil, nil, nil, nil)
 }
 
 private func trimmedLocationName(_ session: RecentAccountSession) -> String {

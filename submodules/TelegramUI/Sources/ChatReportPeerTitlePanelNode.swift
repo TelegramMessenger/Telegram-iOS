@@ -7,6 +7,8 @@ import TelegramCore
 import TelegramPresentationData
 import LocalizedPeerData
 import TelegramStringFormatting
+import TextFormat
+import Markdown
 
 private enum ChatReportPeerTitleButton: Equatable {
     case block
@@ -302,6 +304,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     
     private let closeButton: HighlightableButtonNode
     private var buttons: [(ChatReportPeerTitleButton, UIButton)] = []
+    private let textNode: ImmediateTextNode
     
     private var theme: PresentationTheme?
     
@@ -316,9 +319,12 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
+        self.textNode = ImmediateTextNode()
+        
         super.init()
 
         self.addSubnode(self.separatorNode)
+        self.addSubnode(self.textNode)
         
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
         self.addSubnode(self.closeButton)
@@ -423,6 +429,33 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 for i in 0 ..< self.buttons.count {
                     self.buttons[i].1.frame = buttonFrames[i]
                 }
+            }
+        }
+        
+        if let requestChatPeer = interfaceState.contactStatus?.requestChatPeer, let renderedPeer = interfaceState.renderedPeer, let peer = renderedPeer.chatMainPeer {
+            let text: NSAttributedString
+            let regular = MarkdownAttributeSet(font: Font.regular(14.0), textColor: interfaceState.theme.rootController.navigationBar.primaryTextColor)
+            let bold = MarkdownAttributeSet(font: Font.bold(14.0), textColor: interfaceState.theme.rootController.navigationBar.primaryTextColor)
+            if let requestChatPeer = requestChatPeer as? TelegramChannel, case .broadcast = requestChatPeer.info {
+                text = addAttributesToStringWithRanges(interfaceState.strings.Conversation_InviteRequestAdminChannel(EnginePeer(peer).compactDisplayTitle, EnginePeer(requestChatPeer).displayTitle(strings: interfaceState.strings, displayOrder: interfaceState.nameDisplayOrder))._tuple, body: regular, argumentAttributes: [0: bold, 1: bold])
+            } else {
+                text = addAttributesToStringWithRanges(interfaceState.strings.Conversation_InviteRequestAdminGroup(EnginePeer(peer).compactDisplayTitle, EnginePeer(requestChatPeer).displayTitle(strings: interfaceState.strings, displayOrder: interfaceState.nameDisplayOrder))._tuple, body: regular, argumentAttributes: [0: bold, 1: bold])
+            }
+            self.textNode.attributedText = text
+            
+            transition.updateAlpha(node: self.textNode, alpha: 1.0)
+            
+            let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset - 40.0, height: 40.0))
+            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - textSize.width) / 2.0), y: 4.0), size: textSize)
+            
+            for (_, view) in self.buttons {
+                transition.updateAlpha(layer: view.layer, alpha: 0.0)
+            }
+        } else {
+            transition.updateAlpha(node: self.textNode, alpha: 0.0)
+            
+            for (_, view) in self.buttons {
+                transition.updateAlpha(layer: view.layer, alpha: 1.0)
             }
         }
 

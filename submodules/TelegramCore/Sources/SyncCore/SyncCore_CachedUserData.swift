@@ -64,7 +64,7 @@ public final class CachedUserData: CachedPeerData {
     public let autoremoveTimeout: CachedPeerAutoremoveTimeout
     public let themeEmoticon: String?
     
-    public let peerIds = Set<PeerId>()
+    public let peerIds: Set<PeerId>
     public let messageIds: Set<MessageId>
     public let associatedHistoryMessageId: MessageId? = nil
     
@@ -82,6 +82,7 @@ public final class CachedUserData: CachedPeerData {
         self.hasScheduledMessages = false
         self.autoremoveTimeout = .unknown
         self.themeEmoticon = nil
+        self.peerIds = Set()
         self.messageIds = Set()
     }
     
@@ -99,6 +100,12 @@ public final class CachedUserData: CachedPeerData {
         self.hasScheduledMessages = hasScheduledMessages
         self.autoremoveTimeout = autoremoveTimeout
         self.themeEmoticon = themeEmoticon
+        
+        var peerIds = Set<PeerId>()
+        if let requestChatPeerId = peerStatusSettings?.requestChatPeerId {
+            peerIds.insert(requestChatPeerId)
+        }
+        self.peerIds = peerIds
         
         var messageIds = Set<MessageId>()
         if let pinnedMessageId = self.pinnedMessageId {
@@ -131,6 +138,12 @@ public final class CachedUserData: CachedPeerData {
         self.hasScheduledMessages = decoder.decodeBoolForKey("hsm", orElse: false)
         self.autoremoveTimeout = decoder.decodeObjectForKey("artv", decoder: CachedPeerAutoremoveTimeout.init(decoder:)) as? CachedPeerAutoremoveTimeout ?? .unknown
         self.themeEmoticon = decoder.decodeOptionalStringForKey("te")
+        
+        var peerIds = Set<PeerId>()
+        if let requestChatPeerId = self.peerStatusSettings?.requestChatPeerId {
+            peerIds.insert(requestChatPeerId)
+        }
+        self.peerIds = peerIds
         
         var messageIds = Set<MessageId>()
         if let pinnedMessageId = self.pinnedMessageId {

@@ -2924,16 +2924,16 @@ public extension Api {
     
     }
     public enum UserFull: TypeConstructorDescription {
-        case userFull(flags: Int32, user: Api.User, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?)
+        case userFull(flags: Int32, id: Int64, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon):
+                case .userFull(let flags, let id, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon):
                     if boxed {
-                        buffer.appendInt32(-694681851)
+                        buffer.appendInt32(-123513441)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    user.serialize(buffer, true)
+                    serializeInt64(id, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(about!, buffer: buffer, boxed: false)}
                     settings.serialize(buffer, true)
                     if Int(flags) & Int(1 << 2) != 0 {profilePhoto!.serialize(buffer, true)}
@@ -2950,18 +2950,16 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon):
-                return ("userFull", [("flags", flags), ("user", user), ("about", about), ("settings", settings), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("commonChatsCount", commonChatsCount), ("folderId", folderId), ("ttlPeriod", ttlPeriod), ("themeEmoticon", themeEmoticon)])
+                case .userFull(let flags, let id, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon):
+                return ("userFull", [("flags", flags), ("id", id), ("about", about), ("settings", settings), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("commonChatsCount", commonChatsCount), ("folderId", folderId), ("ttlPeriod", ttlPeriod), ("themeEmoticon", themeEmoticon)])
     }
     }
     
         public static func parse_userFull(_ reader: BufferReader) -> UserFull? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Api.User?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.User
-            }
+            var _2: Int64?
+            _2 = reader.readInt64()
             var _3: String?
             if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
             var _4: Api.PeerSettings?
@@ -3003,7 +3001,7 @@ public extension Api {
             let _c11 = (Int(_1!) & Int(1 << 14) == 0) || _11 != nil
             let _c12 = (Int(_1!) & Int(1 << 15) == 0) || _12 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.UserFull.userFull(flags: _1!, user: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10, ttlPeriod: _11, themeEmoticon: _12)
+                return Api.UserFull.userFull(flags: _1!, id: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10, ttlPeriod: _11, themeEmoticon: _12)
             }
             else {
                 return nil
@@ -15758,24 +15756,26 @@ public extension Api {
     
     }
     public enum PeerSettings: TypeConstructorDescription {
-        case peerSettings(flags: Int32, geoDistance: Int32?)
+        case peerSettings(flags: Int32, geoDistance: Int32?, requestChat: Api.Peer?, requestChatDate: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .peerSettings(let flags, let geoDistance):
+                case .peerSettings(let flags, let geoDistance, let requestChat, let requestChatDate):
                     if boxed {
-                        buffer.appendInt32(1933519201)
+                        buffer.appendInt32(-1474130642)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 6) != 0 {serializeInt32(geoDistance!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 9) != 0 {requestChat!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 9) != 0 {serializeInt32(requestChatDate!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .peerSettings(let flags, let geoDistance):
-                return ("peerSettings", [("flags", flags), ("geoDistance", geoDistance)])
+                case .peerSettings(let flags, let geoDistance, let requestChat, let requestChatDate):
+                return ("peerSettings", [("flags", flags), ("geoDistance", geoDistance), ("requestChat", requestChat), ("requestChatDate", requestChatDate)])
     }
     }
     
@@ -15784,10 +15784,18 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             if Int(_1!) & Int(1 << 6) != 0 {_2 = reader.readInt32() }
+            var _3: Api.Peer?
+            if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 9) != 0 {_4 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 6) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2)
+            let _c3 = (Int(_1!) & Int(1 << 9) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 9) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChat: _3, requestChatDate: _4)
             }
             else {
                 return nil

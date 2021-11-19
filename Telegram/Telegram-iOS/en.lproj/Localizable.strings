@@ -7077,3 +7077,7 @@ Sorry for the inconvenience.";
 "AuthSessions.View.AcceptSecretChatsInfo" = "You can disable the acception of incoming secret chats on this device.";
 
 "Conversation.SendMesageAs" = "Send Message As...";
+"Conversation.InviteRequestAdminGroup" = "%1$@ is an admin of %2$@, a group you requested to join.";
+"Conversation.InviteRequestAdminChannel" = "%1$@ is an admin of %2$@, a channel you requested to join.";
+"Conversation.InviteRequestInfo" = "You received this message because you requested to join %1$@ on %2$@.";
+"Conversation.InviteRequestInfoConfirm" = "I understand";

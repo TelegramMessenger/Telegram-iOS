@@ -2245,15 +2245,15 @@ public extension Api {
                     })
                 }
             
-                public static func getPeerSettings(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.PeerSettings>) {
+                public static func getPeerSettings(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.PeerSettings>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(913498268)
+                    buffer.appendInt32(-270948702)
                     peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.getPeerSettings", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.PeerSettings? in
+                    return (FunctionDescription(name: "messages.getPeerSettings", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.PeerSettings? in
                         let reader = BufferReader(buffer)
-                        var result: Api.PeerSettings?
+                        var result: Api.messages.PeerSettings?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.PeerSettings
+                            result = Api.parse(reader, signature: signature) as? Api.messages.PeerSettings
                         }
                         return result
                     })
@@ -2659,11 +2659,12 @@ public extension Api {
                     })
                 }
             
-                public static func getStickerSet(stickerset: Api.InputStickerSet) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
+                public static func getStickerSet(stickerset: Api.InputStickerSet, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.StickerSet>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(639215886)
+                    buffer.appendInt32(-928977804)
                     stickerset.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.getStickerSet", parameters: [("stickerset", stickerset)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getStickerSet", parameters: [("stickerset", stickerset), ("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.StickerSet? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.StickerSet?
                         if let signature = reader.readInt32() {
@@ -5732,15 +5733,15 @@ public extension Api {
                     })
                 }
             
-                public static func getFullUser(id: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UserFull>) {
+                public static func getFullUser(id: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.users.UserFull>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-902781519)
+                    buffer.appendInt32(-1240508136)
                     id.serialize(buffer, true)
-                    return (FunctionDescription(name: "users.getFullUser", parameters: [("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UserFull? in
+                    return (FunctionDescription(name: "users.getFullUser", parameters: [("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.users.UserFull? in
                         let reader = BufferReader(buffer)
-                        var result: Api.UserFull?
+                        var result: Api.users.UserFull?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.UserFull
+                            result = Api.parse(reader, signature: signature) as? Api.users.UserFull
                         }
                         return result
                     })
