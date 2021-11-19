@@ -476,7 +476,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func animateFromItemNodeToReaction(itemNode: ReactionNode, targetFilledNode: ASDisplayNode, targetSnapshotView: UIView, hideNode: Bool, completion: @escaping () -> Void) {
-        targetSnapshotView.frame = self.view.convert(targetFilledNode.bounds, from: targetFilledNode.view)
+        let itemFrame: CGRect = itemNode.frame
+        let _ = itemFrame
+        
+        let targetFrame = self.view.convert(targetFilledNode.view.convert(targetFilledNode.bounds, to: nil), from: nil)
+        
+        targetSnapshotView.frame = targetFrame
         self.view.insertSubview(targetSnapshotView, belowSubview: itemNode.view)
         
         var completedTarget = false
@@ -487,12 +492,19 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        let targetPosition = self.view.convert(targetFilledNode.bounds.center, from: targetFilledNode.view)
+        let targetPosition = targetFrame.center
+        let _ = targetPosition
         let duration: Double = 0.16
         
         itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.9, removeOnCompletion: false)
         targetSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.8)
-        targetSnapshotView.layer.animateScale(from: itemNode.bounds.width / targetSnapshotView.bounds.width, to: 0.5, duration: duration, removeOnCompletion: false, completion: { [weak targetSnapshotView] _ in
+        targetSnapshotView.layer.animateScale(from: itemNode.bounds.width / targetSnapshotView.bounds.width, to: 0.5, duration: duration, removeOnCompletion: false, completion: { [weak self, weak targetSnapshotView] _ in
+            if let strongSelf = self {
+                strongSelf.hapticFeedback.tap()
+            }
+            completedTarget = true
+            intermediateCompletion()
+            
             if hideNode {
                 targetFilledNode.isHidden = false
                 targetFilledNode.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, initialVelocity: 0.0, damping: 90.0, completion: { _ in
@@ -507,16 +519,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             }
         })
         
-        let keyframes = self.generateParabollicMotionKeyframes(from: itemNode.frame.center, to: targetPosition, elevation: 30.0)
+        //let keyframes = self.generateParabollicMotionKeyframes(from: targetPosition, to: targetPosition, elevation: 30.0)
         
-        itemNode.layer.animateKeyframes(values: keyframes, duration: duration, keyPath: "position", removeOnCompletion: false, completion: { [weak self] _ in
-            if let strongSelf = self {
-                strongSelf.hapticFeedback.tap()
-            }
-            completedTarget = true
-            intermediateCompletion()
+        /*itemNode.layer.animateKeyframes(values: keyframes, duration: duration, keyPath: "position", removeOnCompletion: false, completion: { _ in
         })
-        targetSnapshotView.layer.animateKeyframes(values: keyframes, duration: duration, keyPath: "position", removeOnCompletion: false)
+        targetSnapshotView.layer.animateKeyframes(values: keyframes, duration: duration, keyPath: "position", removeOnCompletion: false)*/
         
         itemNode.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 0.5) / itemNode.bounds.width, duration: duration, removeOnCompletion: false)
     }
@@ -535,7 +542,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 let selfSourceRect = itemNode.view.convert(itemNode.view.bounds, to: self.view)
                 let selfTargetRect = self.view.convert(targetFilledNode.bounds, from: targetFilledNode.view)
                 
-                let expandedScale: CGFloat = 4.0
+                let expandedScale: CGFloat = 3.0
                 let expandedSize = CGSize(width: floor(selfSourceRect.width * expandedScale), height: floor(selfSourceRect.height * expandedScale))
                 
                 let expandedFrame = CGRect(origin: CGPoint(x: floor(selfTargetRect.midX - expandedSize.width / 2.0), y: floor(selfTargetRect.midY - expandedSize.height / 2.0)), size: expandedSize)
