@@ -581,7 +581,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 var encryptionKeyFingerprint: SecretChatKeyFingerprint?
                 if let secretChatId = secretChatId, let peerChatStateView = combinedView.views[.peerChatState(peerId: secretChatId)] as? PeerChatStateView {
-                    if let peerChatState = peerChatStateView.chatState as? SecretChatKeyState {
+                    if let peerChatState = peerChatStateView.chatState?.getLegacy() as? SecretChatState {
                         encryptionKeyFingerprint = peerChatState.keyFingerprint
                     }
                 }

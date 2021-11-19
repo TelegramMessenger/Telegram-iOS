@@ -394,7 +394,7 @@ public extension ContainedViewLayoutTransition {
         case .immediate:
             completion?(true)
         case let .animated(duration, curve):
-            node.layer.animateKeyframes(values: keyframes, duration: duration, keyPath: "position", timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: false, completion: { value in
+            node.layer.animateKeyframes(values: keyframes, duration: duration, keyPath: "position", timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: { value in
                 completion?(value)
             })
         }
