@@ -154,7 +154,7 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
                     
                     switch result {
                     case .stickerSetNotModified:
-                        preconditionFailure()
+                        return .complete()
                     case let .stickerSet(set, packs, documents):
                         let namespace: ItemCollectionId.Namespace
                         switch set {

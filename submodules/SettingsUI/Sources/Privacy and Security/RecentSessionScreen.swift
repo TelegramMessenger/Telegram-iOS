@@ -162,6 +162,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
     private let backgroundNode: ASDisplayNode
     private let contentBackgroundNode: ASDisplayNode
     private var iconNode: ASImageNode?
+    private var animationBackgroundNode: ASDisplayNode?
     private var animationNode: AnimationNode?
     private var avatarNode: AvatarNode?
     private let titleNode: ImmediateTextNode
@@ -304,10 +305,17 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 location = session.country
                 ip = session.ip
             
-                let (icon, animationName) = iconForSession(session)
+                let (icon, backgroundColor, animationName, colors) = iconForSession(session)
                 if let animationName = animationName {
-                    let animationNode = AnimationNode(animation: animationName, colors: [:], scale: 1.0)
+                    let animationNode = AnimationNode(animation: animationName, colors: colors ?? ["apple.apple.Заливка 1": backgroundColor ?? .black], scale: 1.0)
                     self.animationNode = animationNode
+                    
+                    animationNode.animationView()?.logHierarchyKeypaths()
+                    
+                    let animationBackgroundNode = ASDisplayNode()
+                    animationBackgroundNode.cornerRadius = 20.0
+                    animationBackgroundNode.backgroundColor = backgroundColor
+                    self.animationBackgroundNode = animationBackgroundNode
                 } else if let icon = icon {
                     let iconNode = ASImageNode()
                     iconNode.displaysAsynchronously = false
@@ -424,6 +432,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.topContentContainerNode.addSubnode(self.cancelButton)
         
         self.iconNode.flatMap { self.contentContainerNode.addSubnode($0) }
+        self.animationBackgroundNode.flatMap { self.contentContainerNode.addSubnode($0) }
         self.animationNode.flatMap { self.contentContainerNode.addSubnode($0) }
         self.avatarNode.flatMap { self.contentContainerNode.addSubnode($0) }
         
@@ -469,6 +478,10 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         
         let ipGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleIpLongPress(_:)))
         self.ipValueNode.view.addGestureRecognizer(ipGestureRecognizer)
+        
+        if let animationNode = self.animationNode {
+            animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.animationPressed)))
+        }
     }
     
     @objc private func handleTitleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
@@ -560,6 +573,12 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.terminateButton.updateTheme(SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: self.presentationData.theme.list.itemDestructiveColor))
     }
     
+    @objc func animationPressed() {
+        if let animationNode = self.animationNode, !animationNode.isPlaying {
+            animationNode.playOnce()
+        }
+    }
+    
     @objc func cancelButtonPressed() {
         self.animateOut()
     }
@@ -637,6 +656,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let isFirstTime = self.containerLayout == nil
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.statusBar, .input])
@@ -655,9 +675,17 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         
         if let iconNode = self.iconNode {
             transition.updateFrame(node: iconNode, frame: iconFrame)
-        } else if let animationNode = self.animationNode {
+        } else if let animationNode = self.animationNode, let animationBackgroundNode = self.animationBackgroundNode {
             transition.updateFrame(node: animationNode, frame: iconFrame)
-            animationNode.loop()
+            transition.updateFrame(node: animationBackgroundNode, frame: iconFrame)
+            if #available(iOS 13.0, *) {
+                animationBackgroundNode.layer.cornerCurve = .continuous
+            }
+            if isFirstTime {
+                Queue.mainQueue().after(0.5) {
+                    animationNode.playOnce()
+                }
+            }
         } else if let avatarNode = self.avatarNode {
             transition.updateFrame(node: avatarNode, frame: iconFrame)
         }
@@ -715,7 +743,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         
         var contentHeight = locationInfoTextFrame.maxY + bottomInset + 64.0
         
-        if case .session = self.subject {
+        if let _ = self.secretChatsBackgroundNode.supernode {
             let secretFrame = CGRect(x: inset, y: locationInfoTextFrame.maxY + 59.0, width: width - inset * 2.0, height: fieldItemHeight)
             transition.updateFrame(node: self.secretChatsBackgroundNode, frame: secretFrame)
             

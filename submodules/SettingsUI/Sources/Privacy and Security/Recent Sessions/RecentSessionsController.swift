@@ -30,7 +30,10 @@ private final class RecentSessionsControllerArguments {
     let openOtherAppsUrl: () -> Void
     let setupAuthorizationTTL: () -> Void
     
-    init(context: AccountContext, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, openSession: @escaping (RecentAccountSession) -> Void, openWebSession: @escaping (WebAuthorization, Peer?) -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void, openOtherAppsUrl: @escaping () -> Void, setupAuthorizationTTL: @escaping () -> Void) {
+    let openDesktopLink: () -> Void
+    let openWebLink: () -> Void
+    
+    init(context: AccountContext, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, openSession: @escaping (RecentAccountSession) -> Void, openWebSession: @escaping (WebAuthorization, Peer?) -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void, openOtherAppsUrl: @escaping () -> Void, setupAuthorizationTTL: @escaping () -> Void, openDesktopLink: @escaping () -> Void, openWebLink: @escaping () -> Void) {
         self.context = context
         self.setSessionIdWithRevealedOptions = setSessionIdWithRevealedOptions
         self.removeSession = removeSession
@@ -47,6 +50,9 @@ private final class RecentSessionsControllerArguments {
         self.openOtherAppsUrl = openOtherAppsUrl
         
         self.setupAuthorizationTTL = setupAuthorizationTTL
+        
+        self.openDesktopLink = openDesktopLink
+        self.openWebLink = openWebLink
     }
 }
 
@@ -56,6 +62,7 @@ private enum RecentSessionsMode: Int {
 }
 
 private enum RecentSessionsSection: Int32 {
+    case header
     case currentSession
     case pendingSessions
     case otherSessions
@@ -82,6 +89,7 @@ private struct SortIndex: Comparable {
 }
 
 private enum RecentSessionsEntry: ItemListNodeEntry {
+    case header(SortIndex, String)
     case currentSessionHeader(SortIndex, String)
     case currentSession(SortIndex, PresentationStrings, PresentationDateTimeFormat, RecentAccountSession)
     case terminateOtherSessions(SortIndex, String)
@@ -101,6 +109,8 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
+            case .header:
+                return RecentSessionsSection.header.rawValue
             case .currentSessionHeader, .currentSession, .terminateOtherSessions, .terminateAllWebSessions, .currentAddDevice, .currentSessionInfo:
                 return RecentSessionsSection.currentSession.rawValue
             case .pendingSessionsHeader, .pendingSession, .pendingSessionsInfo:
@@ -114,28 +124,30 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     
     var stableId: RecentSessionsEntryStableId {
         switch self {
-        case .currentSessionHeader:
+        case .header:
             return .index(0)
-        case .currentSession:
+        case .currentSessionHeader:
             return .index(1)
-        case .terminateOtherSessions:
+        case .currentSession:
             return .index(2)
-        case .terminateAllWebSessions:
+        case .terminateOtherSessions:
             return .index(3)
-        case .currentAddDevice:
+        case .terminateAllWebSessions:
             return .index(4)
-        case .currentSessionInfo:
+        case .currentAddDevice:
             return .index(5)
-        case .pendingSessionsHeader:
+        case .currentSessionInfo:
             return .index(6)
+        case .pendingSessionsHeader:
+            return .index(7)
         case let .pendingSession(_, _, _, _, session, _, _, _):
             return .session(session.hash)
         case .pendingSessionsInfo:
-            return .index(7)
-        case .otherSessionsHeader:
             return .index(8)
-        case .addDevice:
+        case .otherSessionsHeader:
             return .index(9)
+        case .addDevice:
+            return .index(10)
         case let .session(_, _, _, _, session, _, _, _):
             return .session(session.hash)
         case let .website(_, _, _, _, _, website, _, _, _, _):
@@ -143,14 +155,16 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
         case .devicesInfo:
             return .devicesInfo
         case .ttlHeader:
-            return .index(10)
-        case .ttlTimeout:
             return .index(11)
+        case .ttlTimeout:
+            return .index(12)
         }
     }
 
     var sortIndex: SortIndex {
         switch self {
+        case let .header(index, _):
+            return index
         case let .currentSessionHeader(index, _):
             return index
         case let .currentSession(index, _, _, _):
@@ -188,6 +202,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     
     static func ==(lhs: RecentSessionsEntry, rhs: RecentSessionsEntry) -> Bool {
         switch lhs {
+        case let .header(lhsSortIndex, lhsText):
+            if case let .header(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
         case let .currentSessionHeader(lhsSortIndex, lhsText):
             if case let .currentSessionHeader(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
@@ -294,6 +314,10 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! RecentSessionsControllerArguments
         switch self {
+        case let .header(_, text):
+            return RecentSessionsHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animationName: "Requests", sectionId: self.section, linkAction: { _ in
+                arguments.openDesktopLink()
+            })
         case let .currentSessionHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .currentSession(_, _, dateTimeFormat, session):
@@ -735,6 +759,10 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
         presentControllerImpl?(controller, nil)
+    }, openDesktopLink: {
+        
+    }, openWebLink: {
+        
     })
     
     let previousMode = Atomic<RecentSessionsMode>(value: .sessions)
