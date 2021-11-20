@@ -8,21 +8,17 @@
 import Foundation
 import CoreGraphics
 
-final class ShapeNodeProperties: NodePropertyMap, KeypathSearchable {
-  
-  var keypathName: String
+final class ShapeNodeProperties: NodePropertyMap {
   
   init(shape: Shape) {
-    self.keypathName = shape.name
     self.path = NodeProperty(provider: KeyframeInterpolator(keyframes: shape.path.keyframes))
-    self.keypathProperties = [
+    let keypathProperties: [String : AnyNodeProperty] = [
       "Path" : path
     ]
     self.properties = Array(keypathProperties.values)
   }
   
   let path: NodeProperty<BezierPath>
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
   
 }
@@ -40,7 +36,7 @@ final class ShapeNode: AnimatorNode, PathNode {
   }
 
   // MARK: Animator Node
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return properties
   }
   

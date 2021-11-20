@@ -44,55 +44,45 @@ private let reactionCountFont = Font.semibold(11.0)
 private let reactionFont = Font.regular(12.0)
 
 private final class StatusReactionNode: ASDisplayNode {
-    let emptyImageNode: ASImageNode
     let selectedImageNode: ASImageNode
     
     private var theme: PresentationTheme?
+    private var value: String?
     private var isSelected: Bool?
     
     override init() {
-        self.emptyImageNode = ASImageNode()
-        self.emptyImageNode.displaysAsynchronously = false
         self.selectedImageNode = ASImageNode()
         self.selectedImageNode.displaysAsynchronously = false
         
         super.init()
         
-        self.addSubnode(self.emptyImageNode)
         self.addSubnode(self.selectedImageNode)
     }
     
-    func update(type: ChatMessageDateAndStatusType, isSelected: Bool, count: Int, theme: PresentationTheme, wallpaper: TelegramWallpaper, animated: Bool) {
-        if self.theme !== theme {
-            self.theme = theme
+    func update(type: ChatMessageDateAndStatusType, value: String, isSelected: Bool, count: Int, theme: PresentationTheme, wallpaper: TelegramWallpaper, animated: Bool) {
+        if self.value != value {
+            self.value = value
             
-            let emptyImage: UIImage?
-            let selectedImage: UIImage?
-            switch type {
-            case .BubbleIncoming:
-                emptyImage = PresentationResourcesChat.chatMessageLike(theme, incoming: true, isSelected: false)
-                selectedImage = PresentationResourcesChat.chatMessageLike(theme, incoming: true, isSelected: true)
-            case .BubbleOutgoing:
-                emptyImage = PresentationResourcesChat.chatMessageLike(theme, incoming: false, isSelected: false)
-                selectedImage = PresentationResourcesChat.chatMessageLike(theme, incoming: false, isSelected: true)
-            case .ImageIncoming, .ImageOutgoing:
-                emptyImage = PresentationResourcesChat.chatMessageMediaLike(theme, isSelected: false)
-                selectedImage = PresentationResourcesChat.chatMessageMediaLike(theme, isSelected: true)
-            case .FreeIncoming, .FreeOutgoing:
-                emptyImage = PresentationResourcesChat.chatMessageFreeLike(theme, wallpaper: wallpaper, isSelected: false)
-                selectedImage = PresentationResourcesChat.chatMessageFreeLike(theme, wallpaper: wallpaper, isSelected: true)
-            }
-            
-            if let emptyImage = emptyImage, let selectedImage = selectedImage {
-                self.emptyImageNode.image = emptyImage
-                self.emptyImageNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: emptyImage.size)
+            let selectedImage: UIImage? = generateImage(CGSize(width: 14.0, height: 14.0), rotatedContext: { size, context in
+                UIGraphicsPushContext(context)
                 
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                context.scaleBy(x: size.width / 20.0, y: size.width / 20.0)
+                
+                let string = NSAttributedString(string: value, font: reactionFont, textColor: .black)
+                string.draw(at: CGPoint(x: 1.0, y: 2.0))
+                
+                UIGraphicsPopContext()
+            })
+            
+            if let selectedImage = selectedImage {
                 self.selectedImageNode.image = selectedImage
                 self.selectedImageNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: selectedImage.size)
             }
         }
         
-        if self.isSelected != isSelected {
+        /*if self.isSelected != isSelected {
             let wasSelected = self.isSelected
             self.isSelected = isSelected
             
@@ -143,7 +133,7 @@ private final class StatusReactionNode: ASDisplayNode {
                     }
                 }
             }
-        }
+        }*/
     }
 }
 
@@ -758,7 +748,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             }
                         }
                         
-                        node.update(type: type, isSelected: reactions[i].isSelected, count: Int(reactions[i].count), theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, animated: false)
+                        node.update(type: type, value: reactions[i].value, isSelected: reactions[i].isSelected, count: Int(reactions[i].count), theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, animated: false)
                         if node.supernode == nil {
                             strongSelf.addSubnode(node)
                             if animated {
@@ -797,7 +787,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             }
                         }
                         node.frame = CGRect(origin: CGPoint(x: reactionOffset + 1.0, y: backgroundInsets.top + 1.0 + offset), size: layout.size)
-                        reactionOffset += 1.0 + layout.size.width
+                        reactionOffset += 1.0 + layout.size.width + 4.0
                     } else if let reactionCountNode = strongSelf.reactionCountNode {
                         strongSelf.reactionCountNode = nil
                         if animated {
@@ -892,7 +882,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     
     func reactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
         for node in self.reactionNodes {
-            return (node.emptyImageNode, node.selectedImageNode)
+            return (node.selectedImageNode, node.selectedImageNode)
         }
         return nil
     }

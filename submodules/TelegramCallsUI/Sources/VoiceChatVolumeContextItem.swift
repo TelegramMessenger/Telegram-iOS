@@ -126,7 +126,7 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
         let _ = self.foregroundTextNode.updateLayout(CGSize(width: 70.0, height: .greatestFiniteMagnitude))
     }
     
-    func updateLayout(constrainedWidth: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
+    func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
         let valueWidth: CGFloat = 70.0
         let height: CGFloat = 45.0
         

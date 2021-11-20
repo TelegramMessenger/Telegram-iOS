@@ -48,7 +48,7 @@ typedef enum {
 @property (nonatomic, copy) UIImage *(^requestImage)(void);
 @property (nonatomic, copy) void (^requestToolbarsHidden)(bool hidden, bool animated);
 
-@property (nonatomic, copy) void (^captionSet)(NSString *caption, NSArray *entities);
+@property (nonatomic, copy) void (^captionSet)(NSAttributedString *caption);
 
 @property (nonatomic, copy) void (^willFinishEditing)(id<TGMediaEditAdjustments> adjustments, id temporaryRep, bool hasChanges);
 @property (nonatomic, copy) void (^didFinishRenderingFullSizeImage)(UIImage *fullSizeImage);

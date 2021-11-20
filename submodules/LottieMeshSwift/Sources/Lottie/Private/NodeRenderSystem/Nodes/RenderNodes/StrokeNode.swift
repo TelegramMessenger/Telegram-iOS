@@ -9,10 +9,9 @@ import Foundation
 import QuartzCore
 // MARK: - Properties
 
-final class StrokeNodeProperties: NodePropertyMap, KeypathSearchable {
+final class StrokeNodeProperties: NodePropertyMap {
   
   init(stroke: Stroke) {
-    self.keypathName = stroke.name
     self.color = NodeProperty(provider: KeyframeInterpolator(keyframes: stroke.color.keyframes))
     self.opacity = NodeProperty(provider: KeyframeInterpolator(keyframes: stroke.opacity.keyframes))
     self.width = NodeProperty(provider: KeyframeInterpolator(keyframes: stroke.width.keyframes))
@@ -40,7 +39,7 @@ final class StrokeNodeProperties: NodePropertyMap, KeypathSearchable {
       self.dashPattern = NodeProperty(provider: SingleValueProvider([Vector1D]()))
       self.dashPhase = NodeProperty(provider: SingleValueProvider(Vector1D(0)))
     }
-    self.keypathProperties = [
+    let keypathProperties: [String : AnyNodeProperty] = [
       "Opacity" : opacity,
       "Color" : color,
       "Stroke Width" : width,
@@ -50,8 +49,6 @@ final class StrokeNodeProperties: NodePropertyMap, KeypathSearchable {
     self.properties = Array(keypathProperties.values)
   }
   
-  let keypathName: String
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
   
   let opacity: NodeProperty<Vector1D>
@@ -87,7 +84,7 @@ final class StrokeNode: AnimatorNode, RenderNode {
   
   // MARK: Animator Node Protocol
   
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return strokeProperties
   }
   

@@ -32,8 +32,7 @@ private enum RequestUpdateMessageReactionError {
 }
 
 private func requestUpdateMessageReaction(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Never, RequestUpdateMessageReactionError> {
-    return .complete()
-    /*return postbox.transaction { transaction -> (Peer, String?)? in
+    return postbox.transaction { transaction -> (Peer, String?)? in
         guard let peer = transaction.getPeer(messageId.peerId) else {
             return nil
         }
@@ -82,14 +81,14 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
                     if let reactions = reactions {
                         attributes.append(reactions)
                     }
-                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
                 stateManager.addUpdates(result)
             }
             |> castError(RequestUpdateMessageReactionError.self)
             |> ignoreValues
         }
-    }*/
+    }
 }
 
 private final class ManagedApplyPendingMessageReactionsActionsHelper {

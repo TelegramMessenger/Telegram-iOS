@@ -153,6 +153,8 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
                     var items: [StickerPackItem] = []
                     
                     switch result {
+                    case .stickerSetNotModified:
+                        return .complete()
                     case let .stickerSet(set, packs, documents):
                         let namespace: ItemCollectionId.Namespace
                         switch set {

@@ -826,7 +826,7 @@
     }
 }
 
-- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *, NSString *))descriptionGenerator
+- (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *, NSString *))descriptionGenerator
 {
     bool storeAssets = (_editingContext != nil) && self.shouldStoreAssets;
     
@@ -843,7 +843,7 @@
     return value;
 }
 
-+ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets convertToJpeg:(bool)convertToJpeg descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos
++ (NSArray *)resultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(TGMediaAsset *)currentItem storeAssets:(bool)storeAssets convertToJpeg:(bool)convertToJpeg descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *, NSString *))descriptionGenerator saveEditedPhotos:(bool)saveEditedPhotos
 {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     NSMutableArray *selectedItems = selectionContext.selectedItems ? [selectionContext.selectedItems mutableCopy] : [[NSMutableArray alloc] init];
@@ -939,12 +939,10 @@
             asset = ((TGCameraCapturedVideo *)asset).originalAsset;
         }
         
-        NSString *caption = [editingContext captionForItem:asset];
-        NSArray *entities = [editingContext entitiesForItem:asset];
+        NSAttributedString *caption = [editingContext captionForItem:asset];
         
         if (editingContext.isForcedCaption && num > 0) {
             caption = nil;
-            entities = nil;
         }
         
         switch (asset.type)
@@ -967,7 +965,7 @@
                         if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                        id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
                     }] catch:^SSignal *(id error)
                     {
@@ -993,7 +991,7 @@
                             if (groupedId != nil)
                                 dict[@"groupedId"] = groupedId;
                             
-                            id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                            id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                             return generatedItem;
                         }];
                     }]];
@@ -1019,7 +1017,7 @@
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                        id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
                     }];
                     
@@ -1095,7 +1093,7 @@
                                 else if (groupedId != nil && !hasAnyTimers)
                                     dict[@"groupedId"] = groupedId;
                                 
-                                id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                                id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                                 return generatedItem;
                             }];
                         }]];
@@ -1178,7 +1176,7 @@
                             else if (groupedId != nil && !hasAnyTimers)
                                 dict[@"groupedId"] = groupedId;
                             
-                            id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                            id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                             return generatedItem;
                         }] catch:^SSignal *(__unused id error)
                         {
@@ -1218,7 +1216,7 @@
                         if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                        id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
                     }]];
                     
@@ -1287,7 +1285,7 @@
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
                         
-                        id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                        id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
                     }]];
                     
@@ -1364,7 +1362,7 @@
                     if (timer != nil)
                         dict[@"timer"] = timer;
                     
-                    id generatedItem = descriptionGenerator(dict, caption, entities, nil, asset.identifier);
+                    id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                     return generatedItem;
                 }]];
                 

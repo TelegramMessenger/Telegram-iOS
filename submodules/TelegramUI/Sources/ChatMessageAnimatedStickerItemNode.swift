@@ -865,7 +865,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var edited = false
             var viewCount: Int? = nil
             var dateReplies = 0
-            var dateReactions: [MessageReaction] = []
+            let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: item.message.attributes)?.reactions ?? []
             for attribute in item.message.attributes {
                 if let _ = attribute as? EditedMessageAttribute, isEmoji {
                     edited = true
@@ -874,10 +874,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
                     if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
                         dateReplies = Int(attribute.count)
-                    }
-                } else if let attribute = attribute as? PendingReactionsMessageAttribute {
-                    if let value = attribute.value {
-                        dateReactions = [MessageReaction(value: value, count: 1, isSelected: true)]
                     }
                 }
             }

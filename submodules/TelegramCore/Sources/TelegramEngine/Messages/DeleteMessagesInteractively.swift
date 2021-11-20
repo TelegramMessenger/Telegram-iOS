@@ -181,9 +181,8 @@ func _internal_clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type:
 
 func _internal_clearAuthorHistory(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputChannel = apiInputChannel(peer), let inputUser = apiInputUser(memberPeer) {
-            
-            let signal = account.network.request(Api.functions.channels.deleteUserHistory(channel: inputChannel, userId: inputUser))
+        if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputChannel = apiInputChannel(peer), let inputUser = apiInputPeer(memberPeer) {
+            let signal = account.network.request(Api.functions.channels.deleteParticipantHistory(channel: inputChannel, participant: inputUser))
                 |> map { result -> Api.messages.AffectedHistory? in
                     return result
                 }
