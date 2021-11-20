@@ -246,6 +246,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.avatarNode)
         self.containerNode.addSubnode(self.typeIconNode)
         self.containerNode.addSubnode(self.titleNode)
