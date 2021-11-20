@@ -7644,9 +7644,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.push(controller)
             }
         }, openSendAsPeer: { [weak self] node, gesture in
-            guard let strongSelf = self, let node = node as? ContextReferenceContentNode, let peers = strongSelf.presentationInterfaceState.sendAsPeers else {
+            guard let strongSelf = self, let node = node as? ContextReferenceContentNode, let peers = strongSelf.presentationInterfaceState.sendAsPeers, let layout = strongSelf.validLayout else {
                 return
             }
+            
+            let cleanInsets = layout.intrinsicInsets
+            let insets = layout.insets(options: .input)
+            let bottomInset = max(insets.bottom, cleanInsets.bottom) + 43.0
             
             let defaultMyPeerId: PeerId
             if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
@@ -7660,7 +7664,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             items.append(.custom(ChatSendAsPeerTitleContextItem(text: strongSelf.presentationInterfaceState.strings.Conversation_SendMesageAs.uppercased()), false))
             items.append(.custom(ChatSendAsPeerListContextItem(context: strongSelf.context, chatPeerId: peerId, peers: peers, selectedPeerId: myPeerId), false))
             
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceNode: node, insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0))), items: .single(ContextController.Items(items: items)), gesture: gesture)
             contextController.dismissed = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(interactive: true, {
@@ -14179,14 +14183,16 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
 private final class ChatControllerContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
     private let sourceNode: ContextReferenceContentNode
+    private let insets: UIEdgeInsets
     
-    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode, insets: UIEdgeInsets) {
         self.controller = controller
         self.sourceNode = sourceNode
+        self.insets = insets
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds.insetBy(dx: 0.0, dy: 72.0))
+        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds.inset(by: insets))
     }
 }
 
