@@ -214,12 +214,12 @@ private enum PreferencesKeyValues: Int32 {
     case appConfiguration = 14
     case searchBotsConfiguration = 15
     case contactsSettings = 16
-    case secretChatSettings = 17
     case walletCollection = 18
     case contentSettings = 19
     case chatListFilters = 20
     case peersNearby = 21
     case chatListFiltersFeaturedState = 22
+    case secretChatSettings = 23
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
