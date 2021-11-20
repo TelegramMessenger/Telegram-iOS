@@ -573,13 +573,13 @@ public final class MeshRenderer: MTKView {
     }
 }
 
-private func generateSegments(geometry: CapturedGeometryNode, superAlpha: CGFloat, superTransform: CGAffineTransform, writeSegment: (MeshAnimation.Frame.Segment) -> Void) {
+private func generateSegments(writeBuffer: MeshWriteBuffer, segmentCount: inout Int, geometry: CapturedGeometryNode, superAlpha: CGFloat, superTransform: CGAffineTransform) {
     if geometry.isHidden || geometry.alpha.isZero {
         return
     }
 
     for i in 0 ..< geometry.subnodes.count {
-        generateSegments(geometry: geometry.subnodes[i], superAlpha: superAlpha * geometry.alpha, superTransform: CATransform3DGetAffineTransform(geometry.transform).concatenating(superTransform), writeSegment: writeSegment)
+        generateSegments(writeBuffer: writeBuffer, segmentCount: &segmentCount, geometry: geometry.subnodes[i], superAlpha: superAlpha * geometry.alpha, superTransform: CATransform3DGetAffineTransform(geometry.transform).concatenating(superTransform))
     }
 
     if let displayItem = geometry.displayItem {
@@ -617,17 +617,6 @@ private func generateSegments(geometry: CapturedGeometryNode, superAlpha: CGFloa
             meshData = LottieMeshData.generate(with: UIBezierPath(cgPath: displayItem.path), fill: nil, stroke: LottieMeshStroke(lineWidth: stroke.lineWidth, lineJoin: stroke.lineJoin, lineCap: stroke.lineCap, miterLimit: stroke.miterLimit))
         }
         if let meshData = meshData, meshData.triangleCount() != 0 {
-            let mappedTriangles = WriteBuffer()
-            for i in 0 ..< meshData.triangleCount() {
-                var v0: Int = 0
-                var v1: Int = 0
-                var v2: Int = 0
-                meshData.getTriangleAt(i, v0: &v0, v1: &v1, v2: &v2)
-                mappedTriangles.writeInt32(Int32(v0))
-                mappedTriangles.writeInt32(Int32(v1))
-                mappedTriangles.writeInt32(Int32(v2))
-            }
-
             let mappedVertices = WriteBuffer()
             for i in 0 ..< meshData.vertexCount() {
                 var x: Float = 0.0
@@ -636,13 +625,15 @@ private func generateSegments(geometry: CapturedGeometryNode, superAlpha: CGFloa
                 mappedVertices.writeFloat(x)
                 mappedVertices.writeFloat(y)
             }
+            
+            let trianglesData = Data(bytes: meshData.getTriangles(), count: meshData.triangleCount() * 3 * 4)
 
             let verticesData = mappedVertices.makeData()
-            let trianglesData = mappedTriangles.makeData()
             
             let segment = MeshAnimation.Frame.Segment(vertices: DataRange(data: verticesData, range: 0 ..< verticesData.count), triangles: DataRange(data: trianglesData, range: 0 ..< trianglesData.count), fill: triangleFill, transform: CATransform3DGetAffineTransform(geometry.transform).concatenating(superTransform))
             
-            writeSegment(segment)
+            segment.write(buffer: writeBuffer)
+            segmentCount += 1
         }
     }
 }
@@ -666,9 +657,9 @@ public func generateMeshAnimation(data: Data) -> TempBoxFile? {
 
     for i in 0 ..< Int(animation.endFrame) {
         container.setFrame(frame: CGFloat(i))
-        #if DEBUG
+        //#if DEBUG
         print("Frame \(i) / \(Int(animation.endFrame))")
-        #endif
+        //#endif
         
         let segmentCountOffset = writeBuffer.offset
         writeBuffer.writeInt32(0)
@@ -677,11 +668,7 @@ public func generateMeshAnimation(data: Data) -> TempBoxFile? {
         let geometry = container.captureGeometry()
         geometry.transform = CATransform3DMakeTranslation(256.0, 256.0, 0.0)
         
-        generateSegments(geometry: geometry, superAlpha: 1.0, superTransform: .identity, writeSegment: { segment in
-            segment.write(buffer: writeBuffer)
-            
-            segmentCount += 1
-        })
+        generateSegments(writeBuffer: writeBuffer, segmentCount: &segmentCount, geometry: geometry, superAlpha: 1.0, superTransform: .identity)
         
         let currentOffset = writeBuffer.offset
         writeBuffer.seek(offset: segmentCountOffset)

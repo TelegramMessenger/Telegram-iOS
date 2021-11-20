@@ -528,6 +528,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         itemNode.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 0.5) / itemNode.bounds.width, duration: duration, removeOnCompletion: false)
     }
     
+    public func willAnimateOutToReaction(value: String) {
+        for itemNode in self.itemNodes {
+            if itemNode.item.reaction.rawValue != value {
+                continue
+            }
+            itemNode.isExtracted = true
+        }
+    }
+    
     public func animateOutToReaction(value: String, targetEmptyNode: ASDisplayNode, targetFilledNode: ASDisplayNode, hideNode: Bool, completion: @escaping () -> Void) {
         for itemNode in self.itemNodes {
             if itemNode.item.reaction.rawValue != value {

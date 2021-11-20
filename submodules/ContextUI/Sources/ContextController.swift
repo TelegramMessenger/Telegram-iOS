@@ -1135,6 +1135,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         self.reactionContextNodeIsAnimatingOut = true
+        reactionContextNode.willAnimateOutToReaction(value: value)
+        self.animateOut(result: .default, completion: {
+            contentCompleted = true
+            intermediateCompletion()
+        })
         reactionContextNode.animateOutToReaction(value: value, targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: hideNode, completion: { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -1142,10 +1147,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             strongSelf.reactionContextNode?.removeFromSupernode()
             strongSelf.reactionContextNode = nil
             reactionCompleted = true
-            intermediateCompletion()
-        })
-        self.animateOut(result: .default, completion: {
-            contentCompleted = true
             intermediateCompletion()
         })
         

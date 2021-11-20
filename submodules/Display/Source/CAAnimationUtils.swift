@@ -151,7 +151,7 @@ public extension CALayer {
         let animationGroup = CAAnimationGroup()
         var timeOffset = 0.0
         for animation in animations {
-            animation.beginTime = animation.beginTime + timeOffset
+            animation.beginTime = self.convertTime(animation.beginTime, from: nil) + timeOffset
             timeOffset += animation.duration / Double(animation.speed)
         }
         animationGroup.animations = animations
@@ -217,7 +217,7 @@ public extension CALayer {
         }
         
         if !delay.isZero {
-            animation.beginTime = CACurrentMediaTime() + delay * UIView.animationDurationFactor()
+            animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
             animation.fillMode = .both
         }
         
