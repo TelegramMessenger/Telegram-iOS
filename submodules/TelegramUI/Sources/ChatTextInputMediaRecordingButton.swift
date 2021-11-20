@@ -98,6 +98,8 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
     private let presentController: (ViewController) -> Void
     let container: ChatTextInputMediaRecordingButtonPresenterContainer
     private var presentationController: ChatTextInputMediaRecordingButtonPresenterController?
+    private var timer: SwiftSignalKit.Timer?
+    fileprivate weak var button: ChatTextInputMediaRecordingButton?
     
     init(account: Account, presentController: @escaping (ViewController) -> Void) {
         self.account = account
@@ -111,6 +113,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
             presentationController.presentingViewController?.dismiss(animated: false, completion: {})
             self.presentationController = nil
         }
+        self.timer?.invalidate()
     }
     
     func view() -> UIView! {
@@ -124,6 +127,14 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
     func present() {
         if let keyboardWindow = LegacyComponentsGlobals.provider().applicationKeyboardWindow(), !keyboardWindow.isHidden {
             keyboardWindow.addSubview(self.container)
+            
+            self.timer = SwiftSignalKit.Timer(timeout: 0.05, repeat: true, completion: { [weak self] in
+                if let keyboardWindow = LegacyComponentsGlobals.provider().applicationKeyboardWindow(), !keyboardWindow.isHidden {
+                } else {
+                    self?.present()
+                }
+            }, queue: Queue.mainQueue())
+            self.timer?.start()
         } else {
             var presentNow = false
             if self.presentationController == nil {
@@ -137,10 +148,16 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
             if let presentationController = self.presentationController, presentNow {
                 self.presentController(presentationController)
             }
+            
+            if let timer = self.timer {
+                self.button?.reset()
+                timer.invalidate()
+            }
         }
     }
     
     func dismiss() {
+        self.timer?.invalidate()
         self.container.removeFromSuperview()
         if let presentationController = self.presentationController {
             presentationController.presentingViewController?.dismiss(animated: false, completion: {})
@@ -171,7 +188,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     
     private var recordingOverlay: ChatTextInputAudioRecordingOverlay?
     private var startTouchLocation: CGPoint?
-    private(set) var controlsOffset: CGFloat = 0.0
+    fileprivate var controlsOffset: CGFloat = 0.0
     private(set) var cancelTranslation: CGFloat = 0.0
     
     private var micLevelDisposable: MetaDisposable?
@@ -426,6 +443,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     
     func micButtonPresenter() -> TGModernConversationInputMicButtonPresentation! {
         let presenter = ChatTextInputMediaRecordingButtonPresenter(account: self.account!, presentController: self.presentController)
+        presenter.button = self
         self.currentPresenter = presenter.view()
         return presenter
     }

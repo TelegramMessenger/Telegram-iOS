@@ -1167,9 +1167,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
                 
                 var scrollAnimationCurve: ListViewAnimationCurve? = nil
-                if let strongSelf = self, strongSelf.appliedPlayingMessageId != currentlyPlayingMessageId, let currentlyPlayingMessageId = currentlyPlayingMessageId {
-                    updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Down, animated: true, highlight: true)
-                    scrollAnimationCurve = .Spring(duration: 0.4)
+                if let strongSelf = self, case .default = source {
+                    if strongSelf.appliedPlayingMessageId != currentlyPlayingMessageId, let currentlyPlayingMessageId = currentlyPlayingMessageId  {
+                        if isFirstTime {
+                        } else if case let .peer(peerId) = chatLocation, currentlyPlayingMessageId.id.peerId != peerId {
+                        } else {
+                            updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true)
+                            scrollAnimationCurve = .Spring(duration: 0.4)
+                        }
+                    }
+                    isFirstTime = false
                 }
 
                 var disableAnimations = false
