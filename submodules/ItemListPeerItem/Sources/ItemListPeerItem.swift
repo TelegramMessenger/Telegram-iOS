@@ -449,6 +449,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     private let maskNode: ASImageNode
     
     private let containerNode: ContextControllerSourceNode
+    public override var controlsContainer: ASDisplayNode {
+        return self.containerNode
+    }
     
     fileprivate let avatarNode: AvatarNode
     private let titleNode: TextNode

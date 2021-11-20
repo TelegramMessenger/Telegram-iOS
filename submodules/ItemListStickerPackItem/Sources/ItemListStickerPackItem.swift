@@ -151,6 +151,11 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     private var disabledOverlayNode: ASDisplayNode?
     private let maskNode: ASImageNode
     
+    private let containerNode: ASDisplayNode
+    override var controlsContainer: ASDisplayNode {
+        return self.containerNode
+    }
+    
     fileprivate let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
     private var placeholderNode: StickerShimmerEffectNode?
@@ -203,6 +208,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
         
+        self.containerNode = ASDisplayNode()
+        
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
@@ -245,17 +252,19 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
-        if let placeholderNode = self.placeholderNode {
-            self.addSubnode(placeholderNode)
-        }
-        self.addSubnode(self.imageNode)
+        self.addSubnode(self.containerNode)
         
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.statusNode)
-        self.addSubnode(self.unreadNode)
-        self.addSubnode(self.installationActionImageNode)
-        self.addSubnode(self.installationActionNode)
-        self.addSubnode(self.selectionIconNode)
+        if let placeholderNode = self.placeholderNode {
+            self.containerNode.addSubnode(placeholderNode)
+        }
+        
+        self.containerNode.addSubnode(self.imageNode)
+        self.containerNode.addSubnode(self.titleNode)
+        self.containerNode.addSubnode(self.statusNode)
+        self.containerNode.addSubnode(self.unreadNode)
+        self.containerNode.addSubnode(self.installationActionImageNode)
+        self.containerNode.addSubnode(self.installationActionNode)
+        self.containerNode.addSubnode(self.selectionIconNode)
         self.addSubnode(self.activateArea)
         
         self.installationActionNode.addTarget(self, action: #selector(self.installationActionPressed), forControlEvents: .touchUpInside)
@@ -689,6 +698,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: strongSelf.backgroundNode.frame.size)
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))

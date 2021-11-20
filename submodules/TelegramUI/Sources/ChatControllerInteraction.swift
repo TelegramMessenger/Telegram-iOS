@@ -79,6 +79,7 @@ public final class ChatControllerInteraction {
     let updateInputMode: ((ChatInputMode) -> ChatInputMode) -> Void
     let openMessageShareMenu: (MessageId) -> Void
     let presentController: (ViewController, Any?) -> Void
+    let presentControllerInCurrent: (ViewController, Any?) -> Void
     let navigationController: () -> NavigationController?
     let chatControllerNode: () -> ASDisplayNode?
     let presentGlobalOverlayController: (ViewController, Any?) -> Void
@@ -174,6 +175,7 @@ public final class ChatControllerInteraction {
         updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void,
         openMessageShareMenu: @escaping (MessageId) -> Void,
         presentController: @escaping (ViewController, Any?) -> Void,
+        presentControllerInCurrent: @escaping (ViewController, Any?) -> Void,
         navigationController: @escaping () -> NavigationController?,
         chatControllerNode: @escaping () -> ASDisplayNode?,
         presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void,
@@ -255,6 +257,7 @@ public final class ChatControllerInteraction {
         self.updateInputMode = updateInputMode
         self.openMessageShareMenu = openMessageShareMenu
         self.presentController = presentController
+        self.presentControllerInCurrent = presentControllerInCurrent
         self.navigationController = navigationController
         self.chatControllerNode = chatControllerNode
         self.presentGlobalOverlayController = presentGlobalOverlayController
@@ -311,7 +314,7 @@ public final class ChatControllerInteraction {
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
         return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, updateMessageReaction: { _ in }, activateMessagePinch: { _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
-        }, presentController: { _, _ in }, navigationController: {
+        }, presentController: { _, _ in }, presentControllerInCurrent: { _, _ in }, navigationController: {
             return nil
         }, chatControllerNode: {
             return nil

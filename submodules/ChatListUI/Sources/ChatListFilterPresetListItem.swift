@@ -109,6 +109,11 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
     private let highlightedBackgroundNode: ASDisplayNode
     private let maskNode: ASImageNode
     
+    private let containerNode: ASDisplayNode
+    override var controlsContainer: ASDisplayNode {
+        return self.containerNode
+    }
+    
     private let titleNode: TextNode
     private let labelNode: TextNode
     private let arrowNode: ASImageNode
@@ -138,6 +143,8 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
         
+        self.containerNode = ASDisplayNode()
+        
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
         
@@ -161,9 +168,10 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.labelNode)
-        self.addSubnode(self.arrowNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.titleNode)
+        self.containerNode.addSubnode(self.labelNode)
+        self.containerNode.addSubnode(self.arrowNode)
         self.addSubnode(self.activateArea)
         
         self.activateArea.activate = { [weak self] in
@@ -345,6 +353,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: strongSelf.backgroundNode.frame.size)
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
