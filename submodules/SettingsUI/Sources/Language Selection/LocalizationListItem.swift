@@ -120,6 +120,11 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
     
     private let activateArea: AccessibilityAreaNode
     
+    private let containerNode: ASDisplayNode
+    override var controlsContainer: ASDisplayNode {
+        return self.containerNode
+    }
+    
     override var canBeSelected: Bool {
         if self.editableControlNode != nil {
             return false
@@ -143,6 +148,8 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
+        
+        self.containerNode = ASDisplayNode()
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -169,10 +176,12 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.activityNode)
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.containerNode)
+        
+        self.containerNode.addSubnode(self.iconNode)
+        self.containerNode.addSubnode(self.activityNode)
+        self.containerNode.addSubnode(self.titleNode)
+        self.containerNode.addSubnode(self.subtitleNode)
         
         self.addSubnode(self.activateArea)
     }
@@ -282,7 +291,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     if strongSelf.maskNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        strongSelf.addSubnode(strongSelf.maskNode)
                     }
                     let hasCorners = itemListHasRoundedBlockLayout(params)
                     var hasTopCorners = false
@@ -307,6 +316,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: strongSelf.backgroundNode.frame.size)
                     strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))

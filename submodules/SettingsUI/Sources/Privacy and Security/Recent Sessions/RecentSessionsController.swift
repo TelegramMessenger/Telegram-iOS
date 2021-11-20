@@ -829,12 +829,12 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             }
         }
         
-        let emptyStateItem: ItemListControllerEmptyStateItem?
-        if sessionsState.sessions.count == 1 && mode == .sessions {
-            emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
-        } else {
-            emptyStateItem = nil
-        }
+        let emptyStateItem: ItemListControllerEmptyStateItem? = nil
+//        if sessionsState.sessions.count == 1 && mode == .sessions {
+//            emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
+//        } else {
+//            emptyStateItem = nil
+//        }
         
         let title: ItemListControllerTitle
         let entries: [RecentSessionsEntry]

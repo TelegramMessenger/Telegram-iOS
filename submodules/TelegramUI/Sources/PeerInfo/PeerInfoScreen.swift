@@ -6115,7 +6115,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 var testView: UIView? = localResult
                 while true {
                     if let testViewValue = testView {
-                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                        if let node = testViewValue.asyncdisplaykit_node as? PeerInfoHeaderNavigationButton {
+                            node.isUserInteractionEnabled = false
+                            DispatchQueue.main.async {
+                                node.isUserInteractionEnabled = true
+                            }
+                            return .dismiss(consume: false, result: nil)
+                        } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
                             node.brieflyDisableTouchActions()
                             return .dismiss(consume: false, result: nil)
                         } else {
