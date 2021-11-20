@@ -1883,6 +1883,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, presentController: { [weak self] controller, arguments in
             self?.present(controller, in: .window(.root), with: arguments)
+        }, presentControllerInCurrent: { [weak self] controller, arguments in
+            self?.present(controller, in: .current, with: arguments)
         }, navigationController: { [weak self] in
             return self?.navigationController as? NavigationController
         }, chatControllerNode: { [weak self] in

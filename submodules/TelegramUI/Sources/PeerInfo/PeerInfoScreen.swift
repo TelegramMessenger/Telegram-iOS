@@ -2039,6 +2039,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, openMessageShareMenu: { _ in
         }, presentController: { [weak self] c, a in
             self?.controller?.present(c, in: .window(.root), with: a)
+        }, presentControllerInCurrent: { [weak self] c, a in
+            self?.controller?.present(c, in: .current, with: a)
         }, navigationController: { [weak self] in
             return self?.controller?.navigationController as? NavigationController
         }, chatControllerNode: {

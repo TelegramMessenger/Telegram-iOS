@@ -27,6 +27,7 @@ swift_library(
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/LegacyMediaPickerUI:LegacyMediaPickerUI",
         "//submodules/SaveToCameraRoll:SaveToCameraRoll",
+        "//submodules/UndoUI:UndoUI",
     ],
     visibility = [
         "//visibility:public",
