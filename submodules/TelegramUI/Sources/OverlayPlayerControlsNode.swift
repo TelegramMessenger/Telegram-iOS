@@ -314,7 +314,6 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             }
             
             var rateButtonIsHidden = true
-            strongSelf.shareNode.isHidden = false
             var displayData: SharedMediaPlaybackDisplayData?
             if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading {
                 var isPaused: Bool
