@@ -644,7 +644,8 @@ public struct PremiumIntroUISplitTest: SplitTest {
 public func premiumIntroUISplitTest(postbox: Postbox) -> Signal<PremiumIntroUISplitTest, NoError> {
     return postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> mapToSignal { view -> Signal<PremiumIntroUISplitTest, NoError> in
-        if let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration, appConfiguration.data != nil {
+        let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+        if appConfiguration.data != nil {
             let (config, bucket) = PremiumIntroUISplitTest.Configuration.with(appConfiguration: appConfiguration)
             return .single(PremiumIntroUISplitTest(postbox: postbox, bucket: bucket, configuration: config))
         } else {
