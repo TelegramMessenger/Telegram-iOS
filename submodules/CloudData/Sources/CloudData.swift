@@ -12,7 +12,8 @@ private enum FetchError {
 @available(iOS 10.0, *)
 private func fetchRawData(prefix: String) -> Signal<Data, FetchError> {
     return Signal { subscriber in
-        #if targetEnvironment(simulator)
+        // MARK: Nicegram disable iCloud
+        #if targetEnvironment(simulator) || true
         return EmptyDisposable
         #else
         let container = CKContainer.default()
