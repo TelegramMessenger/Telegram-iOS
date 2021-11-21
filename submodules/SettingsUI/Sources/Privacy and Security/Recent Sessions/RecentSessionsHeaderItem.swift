@@ -152,7 +152,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                     
                     let buttonWidth = min(375, contentSize.width - params.leftInset - params.rightInset)
                     let buttonHeight = strongSelf.buttonNode.updateLayout(width: buttonWidth, transition: .immediate)
-                    let buttonFrame = CGRect(x: params.leftInset, y: contentSize.height - buttonHeight + 4.0, width: buttonWidth, height: buttonHeight)
+                    let buttonFrame = CGRect(x: floorToScreenPixels((params.width - buttonWidth) / 2.0), y: contentSize.height - buttonHeight + 4.0, width: buttonWidth, height: buttonHeight)
                     strongSelf.buttonNode.frame = buttonFrame
                     
                     strongSelf.accessibilityLabel = attributedText.string
