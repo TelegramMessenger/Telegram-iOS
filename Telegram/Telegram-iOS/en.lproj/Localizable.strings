@@ -7057,6 +7057,11 @@ Sorry for the inconvenience.";
 "Conversation.CopyProtectionInfoGroup" = "Admins restricted members to copy or forward content from this group.";
 "Conversation.CopyProtectionInfoChannel" = "Admins restricted members to copy or forward content from this channel.";
 
+"Conversation.CopyProtectionForwardingDisabledGroup" = "Forwards from this group are restricted";
+"Conversation.CopyProtectionForwardingDisabledChannel" = "Forwards from this channel are restricted";
+"Conversation.CopyProtectionSavingDisabledGroup" = "Saving from this group is restricted";
+"Conversation.CopyProtectionSavingDisabledChannel" = "Saving from this channel is restricted";
+
 "Channel.AdminLog.MessageToggleNoForwardsOn" = "%@ restricted message forwarding";
 "Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ allowed message forwarding";
 

@@ -1118,6 +1118,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             tmpWidth = baseWidth
             if needsShareButton || isAd {
                 tmpWidth -= 38.0
+            } else {
+                tmpWidth -= 4.0
             }
         } else {
             tmpWidth = layoutConstants.bubble.maximumWidthFill.widthFor(baseWidth)

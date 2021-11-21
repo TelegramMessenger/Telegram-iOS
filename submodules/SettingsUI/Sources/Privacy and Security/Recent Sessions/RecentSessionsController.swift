@@ -757,7 +757,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             pushControllerImpl?(AuthTransferScanScreen(context: context, activeSessionsContext: activeSessionsContext))
         })
     }, openOtherAppsUrl: {
-        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://desktop.telegram.org", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://getdesktop.telegram.org", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
     }, setupAuthorizationTTL: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationData: presentationData)
