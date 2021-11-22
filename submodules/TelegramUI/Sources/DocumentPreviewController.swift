@@ -111,14 +111,16 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
 final class CompactDocumentPreviewController: QLPreviewController, QLPreviewControllerDelegate, QLPreviewControllerDataSource {
     private let postbox: Postbox
     private let file: TelegramMediaFile
+    private let canShare: Bool
     
     private var item: DocumentPreviewItem?
     
     private var tempFile: TempBoxFile?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile) {
+    init(theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile, canShare: Bool = true) {
         self.postbox = postbox
         self.file = file
+        self.canShare = canShare
         
         super.init(nibName: nil, bundle: nil)
         
@@ -144,6 +146,7 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
         if let tempFile = self.tempFile {
             TempBox.shared.dispose(tempFile)
         }
+        self.timer?.invalidate()
     }
     
     @objc private func cancelPressed() {
@@ -174,9 +177,51 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
     func previewControllerDidDismiss(_ controller: QLPreviewController) {
         //self.cancelPressed()
     }
+    
+    private var toolbars: [UIView] = []
+    private var observations : [NSKeyValueObservation] = []
+    
+    private var initialized = false
+    private var timer: SwiftSignalKit.Timer?
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        if !self.canShare && !self.initialized {
+            self.initialized = true
+            
+            self.timer = SwiftSignalKit.Timer(timeout: 0.01, repeat: true, completion: { [weak self] in
+                self?.tick()
+            }, queue: Queue.mainQueue())
+            self.timer?.start()
+        }
+    }
+    
+    private func tick() {
+        self.navigationItem.rightBarButtonItems?[0] = UIBarButtonItem()
+        self.navigationItem.setRightBarButton(UIBarButtonItem(), animated: false)
+        
+        self.navigationController?.toolbar.isHidden = true
+
+        self.toolbars = self.toolbarsInSubviews(forView: self.view)
+
+        for toolbar in self.toolbars {
+            toolbar.isHidden = true
+        }
+    }
+
+    private func toolbarsInSubviews(forView view: UIView) -> [UIView] {
+        var toolbars: [UIView] = []
+        for subview in view.subviews {
+            if subview is UIToolbar {
+                toolbars.append(subview)
+            }
+            toolbars.append(contentsOf: toolbarsInSubviews(forView: subview))
+        }
+        return toolbars
+    }
 }
 
-func presentDocumentPreviewController(rootController: UIViewController, theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile) {
+func presentDocumentPreviewController(rootController: UIViewController, theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile, canShare: Bool) {
     if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
         let navigationBar = UINavigationBar.appearance(whenContainedInInstancesOf: [QLPreviewController.self])
         navigationBar.barTintColor = theme.rootController.navigationBar.opaqueBackgroundColor
@@ -194,5 +239,5 @@ func presentDocumentPreviewController(rootController: UIViewController, theme: P
         navigationBar.titleTextAttributes = [NSAttributedString.Key.font: Font.semibold(17.0), NSAttributedString.Key.foregroundColor: theme.rootController.navigationBar.primaryTextColor]
     }
     
-    rootController.present(CompactDocumentPreviewController(theme: theme, strings: strings, postbox: postbox, file: file), animated: true, completion: nil)
+    rootController.present(CompactDocumentPreviewController(theme: theme, strings: strings, postbox: postbox, file: file, canShare: canShare), animated: true, completion: nil)
 }

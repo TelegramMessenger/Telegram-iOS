@@ -131,7 +131,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                 
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height + 85.0)
+            let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height + 69.0)
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -150,9 +150,9 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                         strongSelf.buttonNode.updateTheme(SolidRoundedButtonTheme(theme: item.theme))
                     }
                     
-                    let buttonWidth = contentSize.width - 32.0
+                    let buttonWidth = min(375, contentSize.width - params.leftInset - params.rightInset)
                     let buttonHeight = strongSelf.buttonNode.updateLayout(width: buttonWidth, transition: .immediate)
-                    let buttonFrame = CGRect(x: 16.0, y: contentSize.height - buttonHeight - 12.0, width: buttonWidth, height: buttonHeight)
+                    let buttonFrame = CGRect(x: floorToScreenPixels((params.width - buttonWidth) / 2.0), y: contentSize.height - buttonHeight + 4.0, width: buttonWidth, height: buttonHeight)
                     strongSelf.buttonNode.frame = buttonFrame
                     
                     strongSelf.accessibilityLabel = attributedText.string

@@ -757,7 +757,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             pushControllerImpl?(AuthTransferScanScreen(context: context, activeSessionsContext: activeSessionsContext))
         })
     }, openOtherAppsUrl: {
-        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://desktop.telegram.org", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://getdesktop.telegram.org", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
     }, setupAuthorizationTTL: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationData: presentationData)
@@ -829,12 +829,12 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             }
         }
         
-        let emptyStateItem: ItemListControllerEmptyStateItem?
-        if sessionsState.sessions.count == 1 && mode == .sessions {
-            emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
-        } else {
-            emptyStateItem = nil
-        }
+        let emptyStateItem: ItemListControllerEmptyStateItem? = nil
+//        if sessionsState.sessions.count == 1 && mode == .sessions {
+//            emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
+//        } else {
+//            emptyStateItem = nil
+//        }
         
         let title: ItemListControllerTitle
         let entries: [RecentSessionsEntry]

@@ -380,15 +380,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
             
-            var needShareButton = false
+            var needsShareButton = false
             if case .pinnedMessages = item.associatedData.subject {
-                needShareButton = true
+                needsShareButton = true
             } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
-                needShareButton = false
+                needsShareButton = false
             } else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
                     if let _ = attribute as? SourceReferenceMessageAttribute {
-                        needShareButton = true
+                        needsShareButton = true
                         break
                     }
                 }
@@ -396,30 +396,34 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 if let peer = item.message.peers[item.message.id.peerId] {
                     if let channel = peer as? TelegramChannel {
                         if case .broadcast = channel.info {
-                            needShareButton = true
+                            needsShareButton = true
                         }
                     }
                 }
-                if !needShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty {
-                    needShareButton = true
+                if !needsShareButton, let author = item.message.author as? TelegramUser, let _ = author.botInfo, !item.message.media.isEmpty {
+                    needsShareButton = true
                 }
-                if !needShareButton {
+                if !needsShareButton {
                     loop: for media in item.message.media {
                         if media is TelegramMediaGame || media is TelegramMediaInvoice {
-                            needShareButton = true
+                            needsShareButton = true
                             break loop
                         } else if let media = media as? TelegramMediaWebpage, case .Loaded = media.content {
-                            needShareButton = true
+                            needsShareButton = true
                             break loop
                         }
                     }
                 } else {
                     loop: for media in item.message.media {
                         if media is TelegramMediaAction {
-                            needShareButton = false
+                            needsShareButton = false
                             break loop
                         }
                     }
+                }
+                
+                if item.associatedData.isCopyProtectionEnabled {
+                    needsShareButton = false
                 }
             }
             
@@ -553,7 +557,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var updatedShareButtonNode: ChatMessageShareButton?
-            if needShareButton {
+            if needsShareButton {
                 if let currentShareButtonNode = currentShareButtonNode {
                     updatedShareButtonNode = currentShareButtonNode
                 } else {

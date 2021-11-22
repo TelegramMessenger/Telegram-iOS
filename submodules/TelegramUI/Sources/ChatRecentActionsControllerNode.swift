@@ -295,6 +295,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }))
             }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
+        }, presentControllerInCurrent: { _, _ in
         }, navigationController: { [weak self] in
             return self?.getNavigationController()
         }, chatControllerNode: { [weak self] in

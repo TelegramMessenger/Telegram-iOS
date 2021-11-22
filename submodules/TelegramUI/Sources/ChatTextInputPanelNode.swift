@@ -1115,7 +1115,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var hasMenuButton = false
         var menuButtonExpanded = false
         var isSendAsButton = false
-        if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty {
+        if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty && interfaceState.editMessageState == nil {
             hasMenuButton = true
             menuButtonExpanded = false
             isSendAsButton = true

@@ -379,7 +379,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         } else if let animateOutToAnchorRect = animateOutToAnchorRect {
             let targetBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: insets, anchorRect: animateOutToAnchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight)).0
             
-            self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: targetBackgroundFrame.minX - backgroundFrame.minX, y: targetBackgroundFrame.minY - backgroundFrame.minY), duration: 0.2, removeOnCompletion: false, additive: true)
+            let offset = CGPoint(x: -(targetBackgroundFrame.minX - backgroundFrame.minX), y: -(targetBackgroundFrame.minY - backgroundFrame.minY))
+            self.position = CGPoint(x: self.position.x - offset.x, y: self.position.y - offset.y)
+            self.layer.animatePosition(from: offset, to: CGPoint(), duration: 0.2, removeOnCompletion: true, additive: true)
         }
     }
     
@@ -526,6 +528,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         targetSnapshotView.layer.animateKeyframes(values: keyframes, duration: duration, keyPath: "position", removeOnCompletion: false)*/
         
         itemNode.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 0.5) / itemNode.bounds.width, duration: duration, removeOnCompletion: false)
+    }
+    
+    public func willAnimateOutToReaction(value: String) {
+        for itemNode in self.itemNodes {
+            if itemNode.item.reaction.rawValue != value {
+                continue
+            }
+            itemNode.isExtracted = true
+        }
     }
     
     public func animateOutToReaction(value: String, targetEmptyNode: ASDisplayNode, targetFilledNode: ASDisplayNode, hideNode: Bool, completion: @escaping () -> Void) {

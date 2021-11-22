@@ -114,7 +114,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     params.present(controller, nil)
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     let proceed = {
-                        presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
+                        presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: !params.message.isCopyProtected())
                     }
                     if file.mimeType.contains("image/svg") {
                         let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }

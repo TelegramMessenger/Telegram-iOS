@@ -843,8 +843,13 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 updatedContentAreaInScreenSpace.size.width = self.bounds.width
                 
                 self.clippingNode.view.mask = putBackInfo.maskView
-                self.clippingNode.layer.animateFrame(from: self.clippingNode.frame, to: updatedContentAreaInScreenSpace, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
-                self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: updatedContentAreaInScreenSpace.minY, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
+                let previousFrame = self.clippingNode.frame
+                self.clippingNode.position = updatedContentAreaInScreenSpace.center
+                self.clippingNode.bounds = CGRect(origin: CGPoint(), size: updatedContentAreaInScreenSpace.size)
+                self.clippingNode.layer.animatePosition(from: previousFrame.center, to: updatedContentAreaInScreenSpace.center, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: true)
+                self.clippingNode.layer.animateBounds(from: CGRect(origin: CGPoint(), size: previousFrame.size), to: CGRect(origin: CGPoint(), size: updatedContentAreaInScreenSpace.size), duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: true)
+                //self.clippingNode.layer.animateFrame(from: previousFrame, to: updatedContentAreaInScreenSpace, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
+                //self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: updatedContentAreaInScreenSpace.minY, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
             }
             
             let intermediateCompletion: () -> Void = { [weak self, weak contentParentNode] in
@@ -1135,6 +1140,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         self.reactionContextNodeIsAnimatingOut = true
+        reactionContextNode.willAnimateOutToReaction(value: value)
         reactionContextNode.animateOutToReaction(value: value, targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: hideNode, completion: { [weak self] in
             guard let strongSelf = self else {
                 return
