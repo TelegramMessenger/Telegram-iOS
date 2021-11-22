@@ -446,14 +446,15 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
         }
         
-        if let requestChatPeer = interfaceState.contactStatus?.requestChatPeer, let renderedPeer = interfaceState.renderedPeer, let peer = renderedPeer.chatMainPeer {
+        if let requestChatTitle = interfaceState.contactStatus?.peerStatusSettings?.requestChatTitle, let requestChatIsChannel = interfaceState.contactStatus?.peerStatusSettings?.requestChatIsChannel, let renderedPeer = interfaceState.renderedPeer, let peer = renderedPeer.chatMainPeer {
             let text: NSAttributedString
             let regular = MarkdownAttributeSet(font: Font.regular(15.0), textColor: interfaceState.theme.rootController.navigationBar.primaryTextColor)
             let bold = MarkdownAttributeSet(font: Font.bold(15.0), textColor: interfaceState.theme.rootController.navigationBar.primaryTextColor)
-            if let requestChatPeer = requestChatPeer as? TelegramChannel, case .broadcast = requestChatPeer.info {
-                text = addAttributesToStringWithRanges(interfaceState.strings.Conversation_InviteRequestAdminChannel(EnginePeer(peer).compactDisplayTitle, EnginePeer(requestChatPeer).displayTitle(strings: interfaceState.strings, displayOrder: interfaceState.nameDisplayOrder))._tuple, body: regular, argumentAttributes: [0: bold, 1: bold])
+            
+            if requestChatIsChannel {
+                text = addAttributesToStringWithRanges(interfaceState.strings.Conversation_InviteRequestAdminChannel(EnginePeer(peer).compactDisplayTitle, requestChatTitle)._tuple, body: regular, argumentAttributes: [0: bold, 1: bold])
             } else {
-                text = addAttributesToStringWithRanges(interfaceState.strings.Conversation_InviteRequestAdminGroup(EnginePeer(peer).compactDisplayTitle, EnginePeer(requestChatPeer).displayTitle(strings: interfaceState.strings, displayOrder: interfaceState.nameDisplayOrder))._tuple, body: regular, argumentAttributes: [0: bold, 1: bold])
+                text = addAttributesToStringWithRanges(interfaceState.strings.Conversation_InviteRequestAdminGroup(EnginePeer(peer).compactDisplayTitle, requestChatTitle)._tuple, body: regular, argumentAttributes: [0: bold, 1: bold])
             }
             self.textNode.attributedText = text
             

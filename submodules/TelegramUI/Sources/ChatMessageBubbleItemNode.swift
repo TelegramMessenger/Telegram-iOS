@@ -1117,7 +1117,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if allowFullWidth {
             tmpWidth = baseWidth
             if needsShareButton || isAd {
-                tmpWidth -= 38.0
+                tmpWidth -= 45.0
             } else {
                 tmpWidth -= 4.0
             }
