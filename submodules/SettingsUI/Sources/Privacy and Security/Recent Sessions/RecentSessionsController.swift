@@ -316,7 +316,7 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
         let arguments = arguments as! RecentSessionsControllerArguments
         switch self {
         case let .header(_, text):
-            return RecentSessionsHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animationName: "Requests", sectionId: self.section, buttonAction: {
+            return RecentSessionsHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animationName: "Devices", sectionId: self.section, buttonAction: {
                 arguments.addDevice()
             }, linkAction: { action in
                 if case let .tap(link) = action {

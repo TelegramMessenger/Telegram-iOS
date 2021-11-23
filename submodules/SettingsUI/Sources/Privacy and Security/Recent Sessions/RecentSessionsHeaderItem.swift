@@ -139,7 +139,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     if strongSelf.item == nil {
-                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.animationName), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.animationName), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                         strongSelf.animationNode.visibility = true
                     }
                     strongSelf.item = item

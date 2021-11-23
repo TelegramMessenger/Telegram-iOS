@@ -63,7 +63,7 @@ extension StickerPackReference {
             case .inputStickerSetAnimatedEmojiAnimations:
                 self = .animatedEmojiAnimations
             case .inputStickerSetAnimatedEmojiReactions:
-                self = .animatedEmojiAnimations
+                self = .animatedEmojiReactions
         }
     }
 }
