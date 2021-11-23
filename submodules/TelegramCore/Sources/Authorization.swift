@@ -72,7 +72,9 @@ private func ~=<T: RegularExpressionMatchable>(pattern: Regex, matchable: T) -> 
 }
 
 public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, syncContacts: Bool) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {
-    let sendCode = Api.functions.auth.sendCode(phoneNumber: phoneNumber, apiId: apiId, apiHash: apiHash, settings: .codeSettings(flags: 0))
+    var flags: Int32 = 0
+    flags |= 1 << 5 //allowMissedCall
+    let sendCode = Api.functions.auth.sendCode(phoneNumber: phoneNumber, apiId: apiId, apiHash: apiHash, settings: .codeSettings(flags: flags, logoutTokens: nil))
     
     let codeAndAccount = account.network.request(sendCode, automaticFloodWait: false)
     |> map { result in
@@ -111,7 +113,7 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
     |> timeout(20.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.timeout))
     
     return codeAndAccount
-    |> mapToSignal { (sentCode, account) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> in
+    |> mapToSignal { sentCode, account -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> in
         return account.postbox.transaction { transaction -> UnauthorizedAccount in
             switch sentCode {
                 case let .sentCode(_, type, phoneCodeHash, nextType, timeout):

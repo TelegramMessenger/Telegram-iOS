@@ -5,7 +5,7 @@ import TelegramApi
 extension ReactionsMessageAttribute {
     func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
         switch reactions {
-        case let .messageReactions(flags, results):
+        case let .messageReactions(flags, results, _):
             let min = (flags & (1 << 0)) != 0
             var reactions = results.map { result -> MessageReaction in
                 switch result {
@@ -87,7 +87,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
 extension ReactionsMessageAttribute {
     convenience init(apiReactions: Api.MessageReactions) {
         switch apiReactions {
-        case let .messageReactions(_, results):
+        case let .messageReactions(_, results, _):
             self.init(reactions: results.map { result in
                 switch result {
                 case let .reactionCount(flags, reaction, count):

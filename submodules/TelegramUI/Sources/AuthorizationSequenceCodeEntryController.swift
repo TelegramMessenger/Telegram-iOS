@@ -137,6 +137,8 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
                 minimalCodeLength = Int(length)
             case .flashCall:
                 break
+            case let .missedCall(_, length):
+                minimalCodeLength = Int(length)
         }
         
         if self.controllerNode.currentCode.count < minimalCodeLength {

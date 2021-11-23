@@ -426,8 +426,8 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
                 account.shouldBeServiceTaskMaster.set(.single(.always))
                 return account.network.request(Api.functions.auth.logOut())
                 |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-                    return .single(.boolFalse)
+                |> `catch` { _ -> Signal<Api.auth.LoggedOut?, NoError> in
+                    return .single(nil)
                 }
                 |> mapToSignal { _ -> Signal<Void, NoError> in
                     account.shouldBeServiceTaskMaster.set(.single(.never))

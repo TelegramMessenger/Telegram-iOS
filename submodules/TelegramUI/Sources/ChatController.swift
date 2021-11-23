@@ -4511,7 +4511,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     location = .Initial(count: count)
                 }
                 
-                return (chatHistoryViewForLocation(ChatHistoryLocationInput(content: location, id: 0), context: context, chatLocation: .peer(peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), scheduled: false, fixedCombinedReadStates: nil, tagMask: MessageTags.pinned, appendMessagesFromTheSameGroup: false, additionalData: [], orderStatistics: .combinedLocation)
+                return (chatHistoryViewForLocation(ChatHistoryLocationInput(content: location, id: 0), ignoreMessagesInTimestampRange: nil, context: context, chatLocation: .peer(peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), scheduled: false, fixedCombinedReadStates: nil, tagMask: MessageTags.pinned, appendMessagesFromTheSameGroup: false, additionalData: [], orderStatistics: .combinedLocation)
                 |> castError(Bool.self)
                 |> mapToSignal { update -> Signal<ChatHistoryViewUpdate, Bool> in
                     switch update {
@@ -11815,6 +11815,47 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.presentInGlobalOverlay(contextController)
             }
         )
+        
+        calendarScreen.completedWithRemoveMessagesInRange = { [weak self] range, type, dayCount, calendarSource in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            //TODO:localize
+            var statusText: String
+            statusText = "Messages for \(dayCount) \(dayCount == 1 ? "day" : "days") deleted"
+            switch type {
+            case .forEveryone:
+                statusText += " for both sides"
+            default:
+                break
+            }
+            statusText += "."
+            
+            strongSelf.chatDisplayNode.historyNode.ignoreMessagesInTimestampRange = range
+            
+            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, action: { value in
+                guard let strongSelf = self else {
+                    return false
+                }
+                
+                if value == .commit {
+                    let _ = calendarSource.removeMessagesInRange(minTimestamp: range.lowerBound, maxTimestamp: range.upperBound, type: type, completion: {
+                        Queue.mainQueue().after(1.0, {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.chatDisplayNode.historyNode.ignoreMessagesInTimestampRange = nil
+                        })
+                    })
+                    return true
+                } else if value == .undo {
+                    strongSelf.chatDisplayNode.historyNode.ignoreMessagesInTimestampRange = nil
+                    return true
+                }
+                return false
+            }), in: .current)
+        }
 
         self.push(calendarScreen)
         dismissCalendarScreen = { [weak calendarScreen] in
