@@ -18,7 +18,7 @@ public enum RequestCancelAccountResetDataError {
 }
 
 func _internal_requestCancelAccountResetData(network: Network, hash: String) -> Signal<CancelAccountResetData, RequestCancelAccountResetDataError> {
-    return network.request(Api.functions.account.sendConfirmPhoneCode(hash: hash, settings: .codeSettings(flags: 0)), automaticFloodWait: false)
+    return network.request(Api.functions.account.sendConfirmPhoneCode(hash: hash, settings: .codeSettings(flags: 0, logoutTokens: nil)), automaticFloodWait: false)
     |> mapError { error -> RequestCancelAccountResetDataError in
         if error.errorDescription.hasPrefix("FLOOD_WAIT") {
             return .limitExceeded

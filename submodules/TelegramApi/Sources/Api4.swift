@@ -5426,15 +5426,15 @@ public extension Api {
                     })
                 }
             
-                public static func logOut() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                public static func logOut() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.auth.LoggedOut>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1461180992)
+                    buffer.appendInt32(1047706137)
                     
-                    return (FunctionDescription(name: "auth.logOut", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "auth.logOut", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.auth.LoggedOut? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
+                        var result: Api.auth.LoggedOut?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                            result = Api.parse(reader, signature: signature) as? Api.auth.LoggedOut
                         }
                         return result
                     })

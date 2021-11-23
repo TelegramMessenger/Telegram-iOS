@@ -54,41 +54,6 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 encoder.encodeInt32(4, forKey: "r")
         }
     }
-    
-    public static func ==(lhs: StickerPackReference, rhs: StickerPackReference) -> Bool {
-        switch lhs {
-            case let .id(id, accessHash):
-                if case .id(id, accessHash) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .name(name):
-                if case .name(name) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .animatedEmoji:
-                if case .animatedEmoji = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .dice(emoji):
-                if case .dice(emoji) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .animatedEmojiAnimations:
-                if case .animatedEmojiAnimations = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 public struct TelegramMediaVideoFlags: OptionSet {

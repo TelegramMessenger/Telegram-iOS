@@ -256,6 +256,8 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                         action = .participantJoinByRequest(invitation: ExportedInvitation(apiExportedInvite: invite), approvedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(approvedBy)))
                                     case let .channelAdminLogEventActionToggleNoForwards(new):
                                         action = .toggleCopyProtection(boolFromApiValue(new))
+                                    case .channelAdminLogEventActionSendMessage:
+                                         action = nil
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {
