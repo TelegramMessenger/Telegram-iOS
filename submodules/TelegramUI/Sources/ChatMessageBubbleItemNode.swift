@@ -993,7 +993,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 var allowAuthor = incoming
                 
-                if let author = firstMessage.author, author is TelegramChannel, author.id == firstMessage.id.peerId, !incoming {
+                if let author = firstMessage.author, author is TelegramChannel, !incoming {
                     allowAuthor = true
                 }
                 
@@ -2168,14 +2168,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         if let nameNode = nameNodeSizeApply.1() {
             strongSelf.nameNode = nameNode
+            nameNode.displaysAsynchronously = !item.presentationData.isPreview && !item.presentationData.theme.theme.forceSync
+            
+            let previousNameNodeFrame = nameNode.frame
+            let nameNodeFrame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
+            nameNode.frame = nameNodeFrame
             if nameNode.supernode == nil {
                 if !nameNode.isNodeLoaded {
                     nameNode.isUserInteractionEnabled = false
                 }
                 strongSelf.clippingNode.addSubnode(nameNode)
+            } else {
+                transition.animatePositionAdditive(node: nameNode, offset: CGPoint(x: previousNameNodeFrame.maxX - nameNodeFrame.maxX, y: 0.0))
             }
-            nameNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
-            nameNode.displaysAsynchronously = !item.presentationData.isPreview && !item.presentationData.theme.theme.forceSync
             
             if let credibilityIconImage = currentCredibilityIconImage {
                 let credibilityIconNode: ASImageNode

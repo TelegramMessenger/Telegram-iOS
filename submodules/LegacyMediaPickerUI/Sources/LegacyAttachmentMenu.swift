@@ -240,7 +240,8 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                     allItems.append(currentItem)
                 }
                 for item in allItems {
-                    if let asset = item as? TGMediaAsset, asset.uniformTypeIdentifier.contains("heic") {
+                    if item is TGCameraCapturedVideo {
+                    } else if let asset = item as? TGMediaAsset, asset.uniformTypeIdentifier.contains("heic") {
                         hasHeic = true
                         break
                     }
