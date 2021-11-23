@@ -7090,3 +7090,5 @@ Sorry for the inconvenience.";
 "AuthSessions.HeaderInfo" = "Link [Telegram Desktop](desktop) or [Telegram Web](web) by scanning a QR code.";
 "AuthSessions.LinkDesktopDevice" = "Link Desktop Device";
 "AuthSessions.AddDevice.ScanInstallInfo" = "Go to [getdesktop.telegram.org](desktop) or [web.telegram.org](web) to get the QR code";
+
+"Channel.AdminLog.MessageSent" = "%@ sent message:";

@@ -3475,13 +3475,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var contactStatus: ChatContactStatus?
                         if let peer = peerView.peers[peerView.peerId] {
                             if let cachedData = peerView.cachedData as? CachedUserData {
-                                var requestChatPeer: Peer?
-                                if let requestChatPeerId = cachedData.peerStatusSettings?.requestChatPeerId {
-                                    if let peer = peerView.peers[requestChatPeerId] {
-                                        requestChatPeer = peer
-                                    }
-                                }
-                                contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil, requestChatPeer: requestChatPeer)
+                                contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil)
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
@@ -3489,7 +3483,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         invitedBy = peer
                                     }
                                 }
-                                contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, requestChatPeer: nil)
+                                contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy)
                             } else if let cachedData = peerView.cachedData as? CachedChannelData {
                                 var canReportIrrelevantLocation = true
                                 if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, peer.participationStatus == .member {
@@ -3504,7 +3498,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         invitedBy = peer
                                     }
                                 }
-                                contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, requestChatPeer: nil)
+                                contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy)
                             }
                             
                             var peers = SimpleDictionary<PeerId, Peer>()
@@ -13995,13 +13989,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func presentChatRequestAdminInfo() {
-        if let requestChatPeer = self.presentationInterfaceState.contactStatus?.requestChatPeer, let requestDate = self.presentationInterfaceState.contactStatus?.peerStatusSettings?.requestChatDate {
+        if let requestChatTitle = self.presentationInterfaceState.contactStatus?.peerStatusSettings?.requestChatTitle, let requestDate = self.presentationInterfaceState.contactStatus?.peerStatusSettings?.requestChatDate {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             
             let controller = ActionSheetController(presentationData: presentationData)
             var items: [ActionSheetItem] = []
             
-            let text = presentationData.strings.Conversation_InviteRequestInfo(EnginePeer(requestChatPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), stringForDate(timestamp: requestDate, strings: presentationData.strings))
+            let text = presentationData.strings.Conversation_InviteRequestInfo(requestChatTitle, stringForDate(timestamp: requestDate, strings: presentationData.strings))
             
             items.append(ActionSheetTextItem(title: text.string))
             items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_InviteRequestInfoConfirm, color: .accent, action: { [weak self, weak controller] in

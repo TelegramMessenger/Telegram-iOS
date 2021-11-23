@@ -21,28 +21,31 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
     
     public var flags: PeerStatusSettings.Flags
     public var geoDistance: Int32?
-    public var requestChatPeerId: PeerId?
+    public var requestChatTitle: String?
     public var requestChatDate: Int32?
+    public var requestChatIsChannel: Bool?
     
     public init() {
         self.flags = PeerStatusSettings.Flags()
         self.geoDistance = nil
-        self.requestChatPeerId = nil
+        self.requestChatTitle = nil
         self.requestChatDate = nil
     }
     
-    public init(flags: PeerStatusSettings.Flags, geoDistance: Int32? = nil, requestChatPeerId: PeerId? = nil, requestChatDate: Int32? = nil) {
+    public init(flags: PeerStatusSettings.Flags, geoDistance: Int32? = nil, requestChatTitle: String? = nil, requestChatDate: Int32? = nil, requestChatIsChannel: Bool? = nil) {
         self.flags = flags
         self.geoDistance = geoDistance
-        self.requestChatPeerId = requestChatPeerId
+        self.requestChatTitle = requestChatTitle
         self.requestChatDate = requestChatDate
+        self.requestChatIsChannel = requestChatIsChannel
     }
     
     public init(decoder: PostboxDecoder) {
         self.flags = Flags(rawValue: decoder.decodeInt32ForKey("flags", orElse: 0))
         self.geoDistance = decoder.decodeOptionalInt32ForKey("geoDistance")
-        self.requestChatPeerId = decoder.decodeOptionalInt64ForKey("requestChatPeerId").map { PeerId($0) }
+        self.requestChatTitle = decoder.decodeOptionalStringForKey("requestChatTitle")
         self.requestChatDate = decoder.decodeOptionalInt32ForKey("requestChatDate")
+        self.requestChatIsChannel = decoder.decodeOptionalBoolForKey("requestChatIsChannel")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -52,15 +55,20 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "geoDistance")
         }
-        if let requestChatPeerId = self.requestChatPeerId {
-            encoder.encodeInt64(requestChatPeerId.toInt64(), forKey: "requestChatPeerId")
+        if let requestChatTitle = self.requestChatTitle {
+            encoder.encodeString(requestChatTitle, forKey: "requestChatTitle")
         } else {
-            encoder.encodeNil(forKey: "requestPeerId")
+            encoder.encodeNil(forKey: "requestChatTitle")
         }
         if let requestChatDate = self.requestChatDate {
             encoder.encodeInt32(requestChatDate, forKey: "requestChatDate")
         } else {
             encoder.encodeNil(forKey: "requestChatDate")
+        }
+        if let requestChatIsChannel = self.requestChatIsChannel {
+            encoder.encodeBool(requestChatIsChannel, forKey: "requestChatIsChannel")
+        } else {
+            encoder.encodeNil(forKey: "requestChatIsChannel")
         }
     }
     

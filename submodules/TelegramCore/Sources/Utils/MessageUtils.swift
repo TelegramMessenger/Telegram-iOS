@@ -224,8 +224,6 @@ public extension Message {
             return true
         } else if let channel = self.peers[self.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
             return true
-        } else if self.id.peerId.namespace == Namespaces.Peer.CloudChannel, self.author?.id != accountPeerId {
-            return true
         } else {
             return false
         }

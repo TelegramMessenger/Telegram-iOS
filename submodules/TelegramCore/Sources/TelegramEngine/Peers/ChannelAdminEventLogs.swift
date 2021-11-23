@@ -66,6 +66,7 @@ public enum AdminLogEventAction {
     case changeTheme(previous: String?, updated: String?)
     case participantJoinByRequest(invitation: ExportedInvitation, approvedBy: PeerId)
     case toggleCopyProtection(Bool)
+    case sendMessage(Message)
 }
 
 public enum ChannelAdminLogEventError {
@@ -256,6 +257,10 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                         action = .participantJoinByRequest(invitation: ExportedInvitation(apiExportedInvite: invite), approvedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(approvedBy)))
                                     case let .channelAdminLogEventActionToggleNoForwards(new):
                                         action = .toggleCopyProtection(boolFromApiValue(new))
+                                    case let .channelAdminLogEventActionSendMessage(message):
+                                        if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                            action = .sendMessage(rendered)
+                                        }
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

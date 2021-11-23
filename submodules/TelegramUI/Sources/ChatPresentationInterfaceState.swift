@@ -198,7 +198,6 @@ struct ChatContactStatus: Equatable {
     var canReportIrrelevantLocation: Bool
     var peerStatusSettings: PeerStatusSettings?
     var invitedBy: Peer?
-    var requestChatPeer: Peer?
     
     var isEmpty: Bool {
         guard var peerStatusSettings = self.peerStatusSettings else {
@@ -224,9 +223,6 @@ struct ChatContactStatus: Equatable {
             return false
         }
         if !arePeersEqual(lhs.invitedBy, rhs.invitedBy) {
-            return false
-        }
-        if !arePeersEqual(lhs.requestChatPeer, rhs.requestChatPeer) {
             return false
         }
         return true

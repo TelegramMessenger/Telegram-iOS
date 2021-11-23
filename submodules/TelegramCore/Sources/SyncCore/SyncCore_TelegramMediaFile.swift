@@ -1,4 +1,4 @@
-import Foundation
+    import Foundation
 import Postbox
 
 private let typeFileName: Int32 = 0
@@ -17,6 +17,7 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
     case animatedEmoji
     case dice(String)
     case animatedEmojiAnimations
+    case animatedEmojiReactions
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -30,6 +31,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 self = .dice(decoder.decodeStringForKey("e", orElse: "🎲"))
             case 4:
                 self = .animatedEmojiAnimations
+            case 5:
+                self = .animatedEmojiReactions
             default:
                 self = .name("")
                 assertionFailure()
@@ -52,6 +55,8 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 encoder.encodeString(emoji, forKey: "e")
             case .animatedEmojiAnimations:
                 encoder.encodeInt32(4, forKey: "r")
+            case .animatedEmojiReactions:
+                encoder.encodeInt32(5, forKey: "r")
         }
     }
     
@@ -83,6 +88,12 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable {
                 }
             case .animatedEmojiAnimations:
                 if case .animatedEmojiAnimations = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .animatedEmojiReactions:
+                if case .animatedEmojiReactions = rhs {
                     return true
                 } else {
                     return false

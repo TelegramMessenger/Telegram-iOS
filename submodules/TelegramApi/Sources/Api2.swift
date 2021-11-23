@@ -11664,6 +11664,7 @@ public extension Api {
         case channelAdminLogEventActionChangeHistoryTTL(prevValue: Int32, newValue: Int32)
         case channelAdminLogEventActionParticipantJoinByRequest(invite: Api.ExportedChatInvite, approvedBy: Int64)
         case channelAdminLogEventActionToggleNoForwards(newValue: Api.Bool)
+        case channelAdminLogEventActionSendMessage(message: Api.Message)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11886,6 +11887,12 @@ public extension Api {
                     }
                     newValue.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionSendMessage(let message):
+                    if boxed {
+                        buffer.appendInt32(663693416)
+                    }
+                    message.serialize(buffer, true)
+                    break
     }
     }
     
@@ -11959,6 +11966,8 @@ public extension Api {
                 return ("channelAdminLogEventActionParticipantJoinByRequest", [("invite", invite), ("approvedBy", approvedBy)])
                 case .channelAdminLogEventActionToggleNoForwards(let newValue):
                 return ("channelAdminLogEventActionToggleNoForwards", [("newValue", newValue)])
+                case .channelAdminLogEventActionSendMessage(let message):
+                return ("channelAdminLogEventActionSendMessage", [("message", message)])
     }
     }
     
@@ -12428,6 +12437,19 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleNoForwards(newValue: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionSendMessage(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Message?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionSendMessage(message: _1!)
             }
             else {
                 return nil
@@ -15880,17 +15902,17 @@ public extension Api {
     
     }
     public enum PeerSettings: TypeConstructorDescription {
-        case peerSettings(flags: Int32, geoDistance: Int32?, requestChat: Api.Peer?, requestChatDate: Int32?)
+        case peerSettings(flags: Int32, geoDistance: Int32?, requestChatTitle: String?, requestChatDate: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .peerSettings(let flags, let geoDistance, let requestChat, let requestChatDate):
+                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate):
                     if boxed {
-                        buffer.appendInt32(-1474130642)
+                        buffer.appendInt32(-1525149427)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 6) != 0 {serializeInt32(geoDistance!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 9) != 0 {requestChat!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 9) != 0 {serializeString(requestChatTitle!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 9) != 0 {serializeInt32(requestChatDate!, buffer: buffer, boxed: false)}
                     break
     }
@@ -15898,8 +15920,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .peerSettings(let flags, let geoDistance, let requestChat, let requestChatDate):
-                return ("peerSettings", [("flags", flags), ("geoDistance", geoDistance), ("requestChat", requestChat), ("requestChatDate", requestChatDate)])
+                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate):
+                return ("peerSettings", [("flags", flags), ("geoDistance", geoDistance), ("requestChatTitle", requestChatTitle), ("requestChatDate", requestChatDate)])
     }
     }
     
@@ -15908,10 +15930,8 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             if Int(_1!) & Int(1 << 6) != 0 {_2 = reader.readInt32() }
-            var _3: Api.Peer?
-            if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Peer
-            } }
+            var _3: String?
+            if Int(_1!) & Int(1 << 9) != 0 {_3 = parseString(reader) }
             var _4: Int32?
             if Int(_1!) & Int(1 << 9) != 0 {_4 = reader.readInt32() }
             let _c1 = _1 != nil
@@ -15919,7 +15939,7 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 9) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 9) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
-                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChat: _3, requestChatDate: _4)
+                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChatTitle: _3, requestChatDate: _4)
             }
             else {
                 return nil
@@ -17328,6 +17348,7 @@ public extension Api {
         case inputStickerSetAnimatedEmoji
         case inputStickerSetDice(emoticon: String)
         case inputStickerSetAnimatedEmojiAnimations
+        case inputStickerSetAnimatedEmojiReactions
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -17368,6 +17389,12 @@ public extension Api {
                     }
                     
                     break
+                case .inputStickerSetAnimatedEmojiReactions:
+                    if boxed {
+                        buffer.appendInt32(1189248700)
+                    }
+                    
+                    break
     }
     }
     
@@ -17385,6 +17412,8 @@ public extension Api {
                 return ("inputStickerSetDice", [("emoticon", emoticon)])
                 case .inputStickerSetAnimatedEmojiAnimations:
                 return ("inputStickerSetAnimatedEmojiAnimations", [])
+                case .inputStickerSetAnimatedEmojiReactions:
+                return ("inputStickerSetAnimatedEmojiReactions", [])
     }
     }
     
@@ -17432,6 +17461,9 @@ public extension Api {
         }
         public static func parse_inputStickerSetAnimatedEmojiAnimations(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetAnimatedEmojiAnimations
+        }
+        public static func parse_inputStickerSetAnimatedEmojiReactions(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetAnimatedEmojiReactions
         }
     
     }
