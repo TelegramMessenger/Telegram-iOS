@@ -122,6 +122,7 @@ class ChatImageGalleryItem: GalleryItem {
     func node(synchronous: Bool) -> GalleryItemNode {
         let node = ChatImageGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions, present: self.present)
         
+        node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
         for media in self.message.media {
             if let image = media as? TelegramMediaImage {
                 node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
@@ -147,7 +148,6 @@ class ChatImageGalleryItem: GalleryItem {
         if self.displayInfoOnTop {
             node.titleContentView?.setMessage(self.message, presentationData: self.presentationData, accountPeerId: self.context.account.peerId)
         }
-        node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
         
         return node
     }
@@ -258,6 +258,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     fileprivate func setMessage(_ message: Message, displayInfo: Bool) {
+        self.message = message
+        self.imageNode.captureProtected = message.isCopyProtected()
         self.footerContentNode.setMessage(message, displayInfo: displayInfo)
     }
     

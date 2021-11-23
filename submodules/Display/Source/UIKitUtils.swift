@@ -1,5 +1,6 @@
 import UIKit
 import UIKitRuntimeUtils
+import AVFoundation
 
 public extension UIView {
     static func animationDurationFactor() -> Double {
@@ -399,6 +400,9 @@ public extension UIImage {
 }
 
 private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) -> UIView? {
+    if layer is AVSampleBufferDisplayLayer {
+        return nil
+    }
     let view = UIView()
     view.layer.isHidden = layer.isHidden
     view.layer.opacity = layer.opacity
@@ -441,7 +445,7 @@ private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) ->
                 }
                 view.addSubview(subtree)
             } else {
-                return nil
+                continue
             }
         }
     }
@@ -449,6 +453,9 @@ private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) ->
 }
 
 private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
+    if layer is AVSampleBufferDisplayLayer {
+        return nil
+    }
     let view = CALayer()
     view.isHidden = layer.isHidden
     view.opacity = layer.opacity
