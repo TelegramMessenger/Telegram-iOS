@@ -990,12 +990,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var tip: ContextController.Tip?
 
                     if tip == nil {
-                        if strongSelf.presentationInterfaceState.copyProtectionEnabled {
-                            var isChannel = false
-                            if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
-                                isChannel = true
+                        var isAction = false
+                        for media in message.media {
+                            if media is TelegramMediaAction {
+                                isAction = true
+                                break
                             }
-                            tip = .messageCopyProtection(isChannel: isChannel)
+                        }
+                        if strongSelf.presentationInterfaceState.copyProtectionEnabled && !isAction {
+                            if case .scheduledMessages = strongSelf.subject {
+                            } else {
+                                var isChannel = false
+                                if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = channel.info {
+                                    isChannel = true
+                                }
+                                tip = .messageCopyProtection(isChannel: isChannel)
+                            }
                         } else {
                             let numberOfComponents = message.text.components(separatedBy: CharacterSet.whitespacesAndNewlines).count
                             let displayTextSelectionTip = numberOfComponents >= 3 && !message.text.isEmpty && chatTextSelectionTips < 3

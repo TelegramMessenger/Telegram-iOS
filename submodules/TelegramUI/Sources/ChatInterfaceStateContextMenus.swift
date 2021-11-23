@@ -1395,7 +1395,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         }
                     } else if let group = peer as? TelegramGroup {
                         if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia {
-                            if !isAction {
+                            if !isAction && !message.isCopyProtected() {
                                 if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                     optionsMap[id]!.insert(.forward)
                                 }

@@ -178,6 +178,7 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
         //self.cancelPressed()
     }
     
+    private var navigationBars: [UINavigationBar] = []
     private var toolbars: [UIView] = []
     private var observations : [NSKeyValueObservation] = []
     
@@ -197,28 +198,42 @@ final class CompactDocumentPreviewController: QLPreviewController, QLPreviewCont
     }
     
     private func tick() {
-        self.navigationItem.rightBarButtonItems?[0] = UIBarButtonItem()
+        self.navigationItem.rightBarButtonItems = [UIBarButtonItem()]
         self.navigationItem.setRightBarButton(UIBarButtonItem(), animated: false)
         
         self.navigationController?.toolbar.isHidden = true
 
-        self.toolbars = self.toolbarsInSubviews(forView: self.view)
+        let (navigationBars, toolbars) = navigationAndToolbarsInSubviews(forView: self.view)
+        self.navigationBars = navigationBars
+        self.toolbars = toolbars
 
+        for navigationBar in self.navigationBars {
+            navigationBar.topItem?.rightBarButtonItem = UIBarButtonItem()
+            navigationBar.topItem?.rightBarButtonItems = [UIBarButtonItem()]
+        }
+        
         for toolbar in self.toolbars {
             toolbar.isHidden = true
         }
     }
 
-    private func toolbarsInSubviews(forView view: UIView) -> [UIView] {
+    private func navigationAndToolbarsInSubviews(forView view: UIView) -> ([UINavigationBar], [UIView]) {
+        var navigationBars: [UINavigationBar] = []
         var toolbars: [UIView] = []
         for subview in view.subviews {
-            if subview is UIToolbar {
+            if let subview = subview as? UINavigationBar {
+                navigationBars.append(subview)
+            } else if let subview = subview as? UIToolbar {
                 toolbars.append(subview)
+            } else {
+                let (subNavigationBars, subToolbars) = navigationAndToolbarsInSubviews(forView: subview)
+                navigationBars.append(contentsOf: subNavigationBars)
+                toolbars.append(contentsOf: subToolbars)
             }
-            toolbars.append(contentsOf: toolbarsInSubviews(forView: subview))
         }
-        return toolbars
+        return (navigationBars, toolbars)
     }
+    
 }
 
 func presentDocumentPreviewController(rootController: UIViewController, theme: PresentationTheme, strings: PresentationStrings, postbox: Postbox, file: TelegramMediaFile, canShare: Bool) {

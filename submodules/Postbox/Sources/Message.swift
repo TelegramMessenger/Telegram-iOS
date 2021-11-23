@@ -469,6 +469,10 @@ public struct MessageFlags: OptionSet {
             rawValue |= MessageFlags.CountedAsIncoming.rawValue
         }
         
+        if flags.contains(StoreMessageFlags.CopyProtected) {
+            rawValue |= MessageFlags.CopyProtected.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
@@ -480,6 +484,7 @@ public struct MessageFlags: OptionSet {
     public static let CanBeGroupedIntoFeed = MessageFlags(rawValue: 64)
     public static let WasScheduled = MessageFlags(rawValue: 128)
     public static let CountedAsIncoming = MessageFlags(rawValue: 256)
+    public static let CopyProtected = MessageFlags(rawValue: 512)
     
     public static let IsIncomingMask = MessageFlags([.Incoming, .CountedAsIncoming])
 }
@@ -729,6 +734,10 @@ public struct StoreMessageFlags: OptionSet {
             rawValue |= StoreMessageFlags.CountedAsIncoming.rawValue
         }
         
+        if flags.contains(.CopyProtected) {
+            rawValue |= StoreMessageFlags.CopyProtected.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
@@ -740,6 +749,7 @@ public struct StoreMessageFlags: OptionSet {
     public static let CanBeGroupedIntoFeed = StoreMessageFlags(rawValue: 64)
     public static let WasScheduled = StoreMessageFlags(rawValue: 128)
     public static let CountedAsIncoming = StoreMessageFlags(rawValue: 256)
+    public static let CopyProtected = StoreMessageFlags(rawValue: 512)
     
     public static let IsIncomingMask = StoreMessageFlags([.Incoming, .CountedAsIncoming])
 }

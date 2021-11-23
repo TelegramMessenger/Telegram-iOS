@@ -749,6 +749,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             additionalData.append(.peerNotificationSettings(peerId))
             if peerId.namespace == Namespaces.Peer.CloudChannel {
                 additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: peerId)))
+            }
+            if [Namespaces.Peer.CloudChannel, Namespaces.Peer.CloudGroup].contains(peerId.namespace) {
                 additionalData.append(.peer(peerId))
             }
             if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
