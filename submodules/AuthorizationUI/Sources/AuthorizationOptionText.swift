@@ -14,7 +14,11 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, st
         let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: primaryColor)
         let bold = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: primaryColor)
         return parseMarkdownIntoAttributedString(strings.Login_CodeSentInternal, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
-    case .call, .flashCall, .missedCall:
+    case .missedCall:
+        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: primaryColor)
+        let bold = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: primaryColor)
+        return parseMarkdownIntoAttributedString("Within a few seconds you should\nreceive a short call from:", attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
+    case .call, .flashCall:
         return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
     }
 }

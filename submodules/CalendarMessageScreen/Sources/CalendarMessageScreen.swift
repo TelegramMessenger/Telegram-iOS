@@ -909,7 +909,7 @@ private final class MonthComponent: CombinedComponent {
                             if case .none = transition.animation {
                                 return
                             }
-                            let delay = Double(delayIndex) * 0.1
+                            let delay = Double(min(delayIndex, 6)) * 0.1
                             view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.05, delay: delay)
                             view.layer.animateFrame(from: CGRect(origin: view.frame.origin, size: CGSize(width: leftRadius, height: view.frame.height)), to: view.frame, duration: 0.25, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
                         })
