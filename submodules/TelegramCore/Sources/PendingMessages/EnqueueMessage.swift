@@ -682,23 +682,11 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         } else {
                             attributes.append(contentsOf: filterMessageAttributesForOutgoingMessage(sourceMessage.attributes))
                         }
-                        
-                        let authorId: PeerId?
-                        if let peer = peer as? TelegramChannel {
-                            if case .broadcast = peer.info {
-                                authorId = peer.id
-                            } else if case .group = peer.info, peer.hasPermission(.canBeAnonymous) {
-                                authorId = peer.id
-                            } else {
-                                authorId = account.peerId
-                            }
-                        }  else {
-                            authorId = account.peerId
-                        }
-                        
+                                                
                         var messageNamespace = Namespaces.Message.Local
                         var entitiesAttribute: TextEntitiesMessageAttribute?
                         var effectiveTimestamp = timestamp
+                        var sendAsPeer: Peer?
                         var threadId: Int64?
                         for attribute in attributes {
                             if let attribute = attribute as? TextEntitiesMessageAttribute {
@@ -713,7 +701,26 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 if let threadMessageId = attribute.threadMessageId {
                                     threadId = makeMessageThreadId(threadMessageId)
                                 }
+                            } else if let attribute = attribute as? SendAsMessageAttribute {
+                                if let peer = transaction.getPeer(attribute.peerId) {
+                                    sendAsPeer = peer
+                                }
                             }
+                        }
+                        
+                        let authorId: PeerId?
+                        if let sendAsPeer = sendAsPeer {
+                            authorId = sendAsPeer.id
+                        } else if let peer = peer as? TelegramChannel {
+                            if case .broadcast = peer.info {
+                                authorId = peer.id
+                            } else if case .group = peer.info, peer.hasPermission(.canBeAnonymous) {
+                                authorId = peer.id
+                            } else {
+                                authorId = account.peerId
+                            }
+                        }  else {
+                            authorId = account.peerId
                         }
                         
                         if messageNamespace != Namespaces.Message.ScheduledLocal {

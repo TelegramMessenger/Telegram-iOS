@@ -119,7 +119,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
             var updatedTheme: PresentationTheme?
             
             let leftInset: CGFloat = 32.0 + params.leftInset
-            let topInset: CGFloat = 92.0
+            let topInset: CGFloat = 124.0
             
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
@@ -139,8 +139,12 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     if strongSelf.item == nil {
-                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.animationName), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                        strongSelf.animationNode.autoplay = true
+                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: item.animationName), width: 256, height: 256, playbackMode: .still(.start), mode: .direct(cachePathPrefix: nil))
                         strongSelf.animationNode.visibility = true
+                        Queue.mainQueue().after(0.3) {
+                            strongSelf.animationNode.play()
+                        }
                     }
                     strongSelf.item = item
                     
@@ -157,7 +161,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                     
                     strongSelf.accessibilityLabel = attributedText.string
                                         
-                    let iconSize = CGSize(width: 96.0, height: 96.0)
+                    let iconSize = CGSize(width: 128.0, height: 128.0)
                     strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
                     strongSelf.animationNode.updateLayout(size: iconSize)
                     

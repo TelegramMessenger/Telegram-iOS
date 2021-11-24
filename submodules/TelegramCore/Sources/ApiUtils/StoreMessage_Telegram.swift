@@ -588,6 +588,10 @@ extension StoreMessage {
                     storeFlags.insert(.WasScheduled)
                     storeFlags.insert(.CountedAsIncoming)
                 }
+            
+                if (flags & (1 << 26)) != 0 {
+                    storeFlags.insert(.CopyProtected)
+                }
                 
                 if (flags & (1 << 4)) != 0 || (flags & (1 << 13)) != 0 {
                     var notificationFlags: NotificationInfoMessageAttributeFlags = []
@@ -674,6 +678,10 @@ extension StoreMessage {
                 
                 if (flags & (1 << 18)) != 0 {
                     storeFlags.insert(.WasScheduled)
+                }
+            
+                if (flags & (1 << 26)) != 0 {
+                    storeFlags.insert(.CopyProtected)
                 }
                 
                 self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)

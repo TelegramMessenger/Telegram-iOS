@@ -426,10 +426,28 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
                 account.shouldBeServiceTaskMaster.set(.single(.always))
                 return account.network.request(Api.functions.auth.logOut())
                 |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-                    return .single(.boolFalse)
+                |> `catch` { _ -> Signal<Api.auth.LoggedOut?, NoError> in
+                    return .single(nil)
                 }
-                |> mapToSignal { _ -> Signal<Void, NoError> in
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    let _ = (accountManager.transaction { transaction -> Void in
+                        var tokens = transaction.getStoredLoginTokens()
+                        switch result {
+                        case let .loggedOut(_, futureAuthToken, futureAuthExpires):
+                            if let futureAuthToken = futureAuthToken {
+                                tokens.insert(futureAuthToken.makeData(), at: 0)
+                            }
+                            let _ = futureAuthExpires
+                        default:
+                            break
+                        }
+                        
+                        if tokens.count > 20 {
+                            tokens.removeLast(tokens.count - 20)
+                        }
+                        
+                        transaction.setStoredLoginTokens(tokens)
+                    }).start()
                     account.shouldBeServiceTaskMaster.set(.single(.never))
                     return accountManager.transaction { transaction -> Void in
                         transaction.updateRecord(id, { _ in

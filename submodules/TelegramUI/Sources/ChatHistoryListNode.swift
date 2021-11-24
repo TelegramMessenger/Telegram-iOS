@@ -82,6 +82,7 @@ struct ChatHistoryView {
     let lastHeaderId: Int64
     let id: Int32
     let locationInput: ChatHistoryLocationInput?
+    let ignoreMessagesInTimestampRange: ClosedRange<Int32>?
 }
 
 enum ChatHistoryViewTransitionReason {
@@ -467,6 +468,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return id
     }
     
+    private let ignoreMessagesInTimestampRangePromise = ValuePromise<ClosedRange<Int32>?>(nil)
+    var ignoreMessagesInTimestampRange: ClosedRange<Int32>? = nil {
+        didSet {
+            if self.ignoreMessagesInTimestampRange != oldValue {
+                self.ignoreMessagesInTimestampRangePromise.set(self.ignoreMessagesInTimestampRange)
+            }
+        }
+    }
+    
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
@@ -739,6 +749,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             additionalData.append(.peerNotificationSettings(peerId))
             if peerId.namespace == Namespaces.Peer.CloudChannel {
                 additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: peerId)))
+            }
+            if [Namespaces.Peer.CloudChannel, Namespaces.Peer.CloudGroup].contains(peerId.namespace) {
                 additionalData.append(.peer(peerId))
             }
             if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
@@ -761,7 +773,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
 
         let currentViewVersion = Atomic<Int?>(value: nil)
         
-        let historyViewUpdate: Signal<(ChatHistoryViewUpdate, Int, ChatHistoryLocationInput?), NoError>
+        let historyViewUpdate: Signal<(ChatHistoryViewUpdate, Int, ChatHistoryLocationInput?, ClosedRange<Int32>?), NoError>
         var isFirstTime = true
         var updateAllOnEachVersion = false
         if case let .custom(messages, at, _) = source {
@@ -784,13 +796,24 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     scrollPosition = nil
                 }
                 
-                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tagMask: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore, holeLater: false, isLoading: false), type: .Generic(type: version > 0 ? ViewUpdateType.Generic : ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version, nil)
+                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tagMask: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore, holeLater: false, isLoading: false), type: .Generic(type: version > 0 ? ViewUpdateType.Generic : ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version, nil, nil)
             }
         } else {
-            historyViewUpdate = self.chatHistoryLocationPromise.get()
-            |> distinctUntilChanged
-            |> mapToSignal { location in
-                return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduledMessages, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, additionalData: additionalData, orderStatistics: [.combinedLocation])
+            historyViewUpdate = combineLatest(queue: .mainQueue(),
+                self.chatHistoryLocationPromise.get(),
+                self.ignoreMessagesInTimestampRangePromise.get()
+            )
+            |> distinctUntilChanged(isEqual: { lhs, rhs in
+                if lhs.0 != rhs.0 {
+                    return false
+                }
+                if lhs.1 != rhs.1 {
+                    return false
+                }
+                return true
+            })
+            |> mapToSignal { location, ignoreMessagesInTimestampRange in
+                return chatHistoryViewForLocation(location, ignoreMessagesInTimestampRange: ignoreMessagesInTimestampRange, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduledMessages, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, additionalData: additionalData, orderStatistics: [.combinedLocation])
                 |> beforeNext { viewUpdate in
                     switch viewUpdate {
                         case let .HistoryView(view, _, _, _, _, _, _):
@@ -799,7 +822,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             break
                     }
                 }
-                |> map { view -> (ChatHistoryViewUpdate, Int, ChatHistoryLocationInput?) in
+                |> map { view -> (ChatHistoryViewUpdate, Int, ChatHistoryLocationInput?, ClosedRange<Int32>?) in
                     let version = currentViewVersion.modify({ value in
                         if let value = value {
                             return value + 1
@@ -807,7 +830,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             return 0
                         }
                     })!
-                    return (view, version, location)
+                    return (view, version, location, ignoreMessagesInTimestampRange)
                 }
             }
         }
@@ -1115,7 +1138,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     adMessages: adMessages
                 )
                 let lastHeaderId = filteredEntries.last.flatMap { listMessageDateHeaderId(timestamp: $0.index.timestamp) } ?? 0
-                let processedView = ChatHistoryView(originalView: view, filteredEntries: filteredEntries, associatedData: associatedData, lastHeaderId: lastHeaderId, id: id, locationInput: update.2)
+                let processedView = ChatHistoryView(originalView: view, filteredEntries: filteredEntries, associatedData: associatedData, lastHeaderId: lastHeaderId, id: id, locationInput: update.2, ignoreMessagesInTimestampRange: update.3)
                 let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages))
                 let previous = previousValueAndVersion?.0
                 let previousSelectedMessages = previousValueAndVersion?.2

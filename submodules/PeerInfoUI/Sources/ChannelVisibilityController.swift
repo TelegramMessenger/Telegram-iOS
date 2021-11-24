@@ -839,7 +839,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         
         entries.append(.forwardingHeader(presentationData.theme, presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased()))
         entries.append(.forwardingEnabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingEnabled, forwardingEnabled))
-        entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingEnabled, !forwardingEnabled))
+        entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
         entries.append(.forwardingInfo(presentationData.theme, presentationData.strings.Group_Setup_ForwardingGroupInfo))
     }
     

@@ -8902,13 +8902,13 @@ public extension Api {
     
     }
     public enum MessageReactions: TypeConstructorDescription {
-        case messageReactions(flags: Int32, results: [Api.ReactionCount])
+        case messageReactions(flags: Int32, results: [Api.ReactionCount], recentReactons: [Api.MessageUserReaction]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageReactions(let flags, let results):
+                case .messageReactions(let flags, let results, let recentReactons):
                     if boxed {
-                        buffer.appendInt32(-1199954735)
+                        buffer.appendInt32(142306870)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -8916,14 +8916,19 @@ public extension Api {
                     for item in results {
                         item.serialize(buffer, true)
                     }
+                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(recentReactons!.count))
+                    for item in recentReactons! {
+                        item.serialize(buffer, true)
+                    }}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageReactions(let flags, let results):
-                return ("messageReactions", [("flags", flags), ("results", results)])
+                case .messageReactions(let flags, let results, let recentReactons):
+                return ("messageReactions", [("flags", flags), ("results", results), ("recentReactons", recentReactons)])
     }
     }
     
@@ -8934,10 +8939,15 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ReactionCount.self)
             }
+            var _3: [Api.MessageUserReaction]?
+            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageUserReaction.self)
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageReactions.messageReactions(flags: _1!, results: _2!)
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageReactions.messageReactions(flags: _1!, results: _2!, recentReactons: _3)
             }
             else {
                 return nil
@@ -13262,32 +13272,42 @@ public extension Api {
     
     }
     public enum CodeSettings: TypeConstructorDescription {
-        case codeSettings(flags: Int32)
+        case codeSettings(flags: Int32, logoutTokens: [Buffer]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .codeSettings(let flags):
+                case .codeSettings(let flags, let logoutTokens):
                     if boxed {
-                        buffer.appendInt32(-557924733)
+                        buffer.appendInt32(-1973130814)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 6) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(logoutTokens!.count))
+                    for item in logoutTokens! {
+                        serializeBytes(item, buffer: buffer, boxed: false)
+                    }}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .codeSettings(let flags):
-                return ("codeSettings", [("flags", flags)])
+                case .codeSettings(let flags, let logoutTokens):
+                return ("codeSettings", [("flags", flags), ("logoutTokens", logoutTokens)])
     }
     }
     
         public static func parse_codeSettings(_ reader: BufferReader) -> CodeSettings? {
             var _1: Int32?
             _1 = reader.readInt32()
+            var _2: [Buffer]?
+            if Int(_1!) & Int(1 << 6) != 0 {if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: Buffer.self)
+            } }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.CodeSettings.codeSettings(flags: _1!)
+            let _c2 = (Int(_1!) & Int(1 << 6) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.CodeSettings.codeSettings(flags: _1!, logoutTokens: _2)
             }
             else {
                 return nil
@@ -20162,15 +20182,15 @@ public extension Api {
     
     }
     public enum MessageUserReaction: TypeConstructorDescription {
-        case messageUserReaction(userId: Int32, reaction: String)
+        case messageUserReaction(userId: Int64, reaction: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageUserReaction(let userId, let reaction):
                     if boxed {
-                        buffer.appendInt32(-764945220)
+                        buffer.appendInt32(-1826077446)
                     }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
                     serializeString(reaction, buffer: buffer, boxed: false)
                     break
     }
@@ -20184,8 +20204,8 @@ public extension Api {
     }
     
         public static func parse_messageUserReaction(_ reader: BufferReader) -> MessageUserReaction? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: String?
             _2 = parseString(reader)
             let _c1 = _1 != nil

@@ -22,7 +22,7 @@ open class TransformImageNode: ASDisplayNode {
     
     private var currentTransform: ((TransformImageArguments) -> DrawingContext?)?
     private var currentArguments: TransformImageArguments?
-    private var image: UIImage?
+    public private(set) var image: UIImage?
     private var argumentsPromise = ValuePromise<TransformImageArguments>(ignoreRepeated: true)
     
     private var overlayColor: UIColor?
@@ -276,6 +276,7 @@ private final class NullActionClass: NSObject, CAAction {
 private let nullAction = NullActionClass()
 
 private class CaptureProtectedContentLayer: AVSampleBufferDisplayLayer {
+
     override func action(forKey event: String) -> CAAction? {
         return nullAction
     }
@@ -289,13 +290,13 @@ open class TransformImageView: UIView {
     private var currentTransform: ((TransformImageArguments) -> DrawingContext?)?
     private var currentArguments: TransformImageArguments?
     private var argumentsPromise = ValuePromise<TransformImageArguments>(ignoreRepeated: true)
-    private var image: UIImage?
+    public private(set) var image: UIImage?
 
     private var captureProtectedContentLayer: CaptureProtectedContentLayer?
 
     private var overlayColor: UIColor?
     private var overlayView: UIView?
-
+    
     open override var bounds: CGRect {
         didSet {
             if let captureProtectedContentLayer = self.captureProtectedContentLayer, super.bounds.size != oldValue.size {

@@ -142,6 +142,8 @@ private final class ChatSendAsPeerListContextItemNode: ASDisplayNode, ContextMen
 
     func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
         let minActionsWidth: CGFloat = 250.0
+        let maxActionsWidth: CGFloat = 300.0
+        let constrainedWidth = min(constrainedWidth, maxActionsWidth)
         var maxWidth: CGFloat = 0.0
         var contentHeight: CGFloat = 0.0
         var heightsAndCompletions: [(CGFloat, (CGSize, ContainedViewLayoutTransition) -> Void)?] = []
