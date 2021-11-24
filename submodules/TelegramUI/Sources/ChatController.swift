@@ -411,6 +411,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private weak var mediaRestrictedTooltipController: TooltipController?
     private var mediaRestrictedTooltipControllerMode = true
     private weak var checksTooltipController: TooltipController?
+    private weak var copyProtectionTooltipController: TooltipController?
     
     private var currentMessageTooltipScreens: [(TooltipScreen, ListViewItemNode)] = []
     
@@ -7685,6 +7686,37 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }, presentChatRequestAdminInfo: { [weak self] in
             self?.presentChatRequestAdminInfo()
+        }, displayCopyProtectionTip: { [weak self] node, save in
+            if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
+                let isChannel: Bool
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    isChannel = true
+                } else {
+                    isChannel = false
+                }
+                let text: String
+                if save {
+                    text = isChannel ? strongSelf.presentationInterfaceState.strings.Conversation_CopyProtectionSavingDisabledChannel : strongSelf.presentationInterfaceState.strings.Conversation_CopyProtectionSavingDisabledGroup
+                } else {
+                    text = isChannel ? strongSelf.presentationInterfaceState.strings.Conversation_CopyProtectionForwardingDisabledChannel : strongSelf.presentationInterfaceState.strings.Conversation_CopyProtectionForwardingDisabledGroup
+                }
+                
+                strongSelf.copyProtectionTooltipController?.dismiss()
+                let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+                strongSelf.copyProtectionTooltipController = tooltipController
+                tooltipController.dismissed = { [weak tooltipController] _ in
+                    if let strongSelf = self, let tooltipController = tooltipController, strongSelf.copyProtectionTooltipController === tooltipController {
+                        strongSelf.copyProtectionTooltipController = nil
+                    }
+                }
+                strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                    if let strongSelf = self {
+                        let rect = node.view.convert(node.view.bounds, to: strongSelf.chatDisplayNode.view).offsetBy(dx: 0.0, dy: 3.0)
+                        return (strongSelf.chatDisplayNode, rect)
+                    }
+                    return nil
+                }))
+           }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         do {
@@ -13548,6 +13580,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.mediaRecordingModeTooltipController?.dismiss()
         self.mediaRestrictedTooltipController?.dismiss()
         self.checksTooltipController?.dismiss()
+        self.copyProtectionTooltipController?.dismiss()
         
         self.window?.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {

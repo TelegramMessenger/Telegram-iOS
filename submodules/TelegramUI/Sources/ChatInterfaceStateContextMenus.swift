@@ -1285,6 +1285,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
         var hadPersonalIncoming = false
         var hadBanPeerId = false
         var disableDelete = false
+        var isCopyProtected = false
         
         func getPeer(_ peerId: PeerId) -> Peer? {
             if let peer = transaction.getPeer(peerId) {
@@ -1306,12 +1307,16 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
             }
         }
         
+        
         for id in messageIds {
             let isScheduled = id.namespace == Namespaces.Message.ScheduledCloud
             if optionsMap[id] == nil {
                 optionsMap[id] = []
             }
             if let message = getMessage(id) {
+                if message.isCopyProtected() {
+                    isCopyProtected = true
+                }
                 for media in message.media {
                     if let file = media as? TelegramMediaFile, file.isSticker {
                         for case let .Sticker(_, packReference, _) in file.attributes {
@@ -1501,9 +1506,9 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
             if hadPersonalIncoming && optionsMap.values.contains(where: { $0.contains(.deleteGlobally) }) && !reducedOptions.contains(.deleteGlobally) {
                 reducedOptions.insert(.unsendPersonal)
             }
-            return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer, disableDelete: disableDelete)
+            return ChatAvailableMessageActions(options: reducedOptions, banAuthor: banPeer, disableDelete: disableDelete, isCopyProtected: isCopyProtected)
         } else {
-            return ChatAvailableMessageActions(options: [], banAuthor: nil, disableDelete: false)
+            return ChatAvailableMessageActions(options: [], banAuthor: nil, disableDelete: false, isCopyProtected: isCopyProtected)
         }
     }
 }
