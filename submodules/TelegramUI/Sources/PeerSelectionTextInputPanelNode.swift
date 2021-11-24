@@ -103,13 +103,24 @@ private func textInputBackgroundImage(backgroundColor: UIColor?, inputBackground
     }
 }
 
+class CaptionEditableTextNode: EditableTextNode {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let previousAlpha = self.alpha
+        self.alpha = 1.0
+        let result = super.hitTest(point, with: event)
+        self.alpha = previousAlpha
+        return result
+    }
+}
+
 class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, ASEditableTextNodeDelegate {
     private let isCaption: Bool
     
     var textPlaceholderNode: ImmediateTextNode
     let textInputContainerBackgroundNode: ASImageNode
     let textInputContainer: ASDisplayNode
-    var textInputNode: EditableTextNode?
+    var textInputNode: CaptionEditableTextNode?
+    private var oneLineNode: ImmediateTextNode
     
     let textInputBackgroundNode: ASDisplayNode
     let textInputBackgroundImageNode: ASImageNode
@@ -220,6 +231,10 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
         }
     }
     
+    func caption() -> NSAttributedString {
+        return self.textInputNode?.attributedText ?? NSAttributedString()
+    }
+    
     private let textInputViewInternalInsets = UIEdgeInsets(top: 1.0, left: 13.0, bottom: 1.0, right: 13.0)
     
     init(presentationInterfaceState: ChatPresentationInterfaceState, isCaption: Bool = false, presentController: @escaping (ViewController) -> Void) {
@@ -243,6 +258,10 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
         self.textPlaceholderNode = ImmediateTextNode()
         self.textPlaceholderNode.maximumNumberOfLines = 1
         self.textPlaceholderNode.isUserInteractionEnabled = false
+        
+        self.oneLineNode = ImmediateTextNode()
+        self.oneLineNode.maximumNumberOfLines = 1
+        self.oneLineNode.isUserInteractionEnabled = false
         
         self.actionButtons = ChatTextInputActionButtonsNode(presentationInterfaceState: presentationInterfaceState, presentationContext: nil, presentController: presentController)
         self.counterTextNode = ImmediateTextNode()
@@ -268,6 +287,10 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
         
         self.addSubnode(self.actionButtons)
         self.addSubnode(self.counterTextNode)
+        
+        if isCaption {
+            self.addSubnode(self.oneLineNode)
+        }
                 
         self.textInputBackgroundImageNode.clipsToBounds = true
         let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
@@ -317,7 +340,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     }
     
     private func loadTextInputNode() {
-        let textInputNode = EditableTextNode()
+        let textInputNode = CaptionEditableTextNode()
         textInputNode.initialPrimaryLanguage = self.presentationInterfaceState?.interfaceState.inputLanguage
         var textColor: UIColor = .black
         var tintColor: UIColor = .blue
@@ -568,8 +591,8 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
         
         let baseWidth = width - leftInset - rightInset
         let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: baseWidth, maxHeight: maxHeight, metrics: metrics)
-        let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
-                                    
+        var panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
+        
         var composeButtonsOffset: CGFloat = 0.0
         let textInputBackgroundWidthOffset: CGFloat = 0.0
         
@@ -579,6 +602,35 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
         if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
             inputHasText = true
         }
+        
+        var textFieldInsets = self.textFieldInsets(metrics: metrics)
+        if additionalSideInsets.right > 0.0 {
+            textFieldInsets.right += additionalSideInsets.right / 3.0
+        }
+        
+        var textInputViewRealInsets = UIEdgeInsets()
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            textInputViewRealInsets = calculateTextFieldRealInsets(presentationInterfaceState)
+        }
+        
+        if self.isCaption {
+            if !(self.textInputNode?.isFirstResponder() ?? false) {
+                panelHeight = minimalHeight
+                
+                transition.updateAlpha(node: self.oneLineNode, alpha: inputHasText ? 1.0 : 0.0)
+                if let textInputNode = self.textInputNode {
+                    transition.updateAlpha(node: textInputNode, alpha: inputHasText ? 0.0 : 1.0)
+                }
+            } else {
+                self.oneLineNode.alpha = 0.0
+                self.textInputNode?.alpha = 1.0
+            }
+            
+            let oneLineSize = self.oneLineNode.updateLayout(CGSize(width: baseWidth - textFieldInsets.left - textFieldInsets.right, height: CGFloat.greatestFiniteMagnitude))
+            let oneLineFrame = CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: oneLineSize)
+            self.oneLineNode.frame = oneLineFrame
+        }
+        self.textPlaceholderNode.isHidden = inputHasText
         
         if self.isCaption {
             if self.isFocused {
@@ -603,16 +655,6 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
             self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), transition: transition, interfaceState: presentationInterfaceState)
         }
 
-        var textFieldInsets = self.textFieldInsets(metrics: metrics)
-        if additionalSideInsets.right > 0.0 {
-            textFieldInsets.right += additionalSideInsets.right / 3.0
-        }
-
-        var textInputViewRealInsets = UIEdgeInsets()
-        if let presentationInterfaceState = self.presentationInterfaceState {
-            textInputViewRealInsets = calculateTextFieldRealInsets(presentationInterfaceState)
-        }
-        
         let textInputFrame = CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom)
         let textInputBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: textInputFrame.size.width + composeButtonsOffset, height: textInputFrame.size.height))
         transition.updateFrame(node: self.textInputContainer, frame: textInputFrame)
@@ -626,8 +668,6 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
                 textInputNode.layout()
             }
         }
-        
-        self.textPlaceholderNode.isHidden = inputHasText
         
         let placeholderFrame: CGRect
         if self.isCaption && !self.isFocused {
@@ -714,6 +754,8 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
         if let _ = self.presentationInterfaceState {
             self.textPlaceholderNode.isHidden = inputHasText
         }
+        
+        self.oneLineNode.attributedText = self.textInputNode?.attributedText
         
         self.updateTextHeight(animated: animated)
     }

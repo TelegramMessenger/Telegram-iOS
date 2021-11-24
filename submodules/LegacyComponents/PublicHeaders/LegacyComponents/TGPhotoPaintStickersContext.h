@@ -39,6 +39,7 @@
 
 @property (nonatomic, readonly) UIView *view;
 
+- (NSAttributedString *)caption;
 - (void)setCaption:(NSAttributedString *)caption;
 - (void)dismissInput;
 
