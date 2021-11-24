@@ -115,6 +115,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var selectedFilterKeyPromise = Promise<ChatListSearchFilterEntryId?>()
     private var transitionFraction: CGFloat = 0.0
     
+    private weak var copyProtectionTooltipController: TooltipController?
+    
     private var didSetReady: Bool = false
     private let _ready = Promise<Void>()
     public override func ready() -> Signal<Void, NoError> {
@@ -417,6 +419,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.presentationDataDisposable?.dispose()
         self.suggestedFiltersDisposable.dispose()
         self.shareStatusDisposable?.dispose()
+        
+        self.copyProtectionTooltipController?.dismiss()
     }
     
     private func updateState(_ f: (ChatListSearchContainerNodeSearchState) -> ChatListSearchContainerNodeSearchState) {
@@ -588,6 +592,53 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         return
                     }
                     strongSelf.forwardMessages(messageIds: nil)
+                }, displayCopyProtectionTip: { [weak self] node, save in
+                    guard let strongSelf = self, let messageIds = strongSelf.stateValue.selectedMessageIds, !messageIds.isEmpty else {
+                        return
+                    }
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [EngineMessage] in
+                        var messages: [EngineMessage] = []
+                        for id in messageIds {
+                            if let message = transaction.getMessage(id) {
+                                messages.append(EngineMessage(message))
+                            }
+                        }
+                        return messages
+                    }
+                    |> deliverOnMainQueue).start(next: { messages in
+                        if let strongSelf = self, !messages.isEmpty {
+                            var isChannel = false
+                            for message in messages {
+                                if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                                    isChannel = true
+                                    break
+                                }
+                            }
+                            
+                            let text: String
+                            if save {
+                                text = isChannel ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledChannel : strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledGroup
+                            } else {
+                                text = isChannel ? strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledChannel : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledGroup
+                            }
+                            
+                            strongSelf.copyProtectionTooltipController?.dismiss()
+                            let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+                            strongSelf.copyProtectionTooltipController = tooltipController
+                            tooltipController.dismissed = { [weak tooltipController] _ in
+                                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.copyProtectionTooltipController === tooltipController {
+                                    strongSelf.copyProtectionTooltipController = nil
+                                }
+                            }
+                            strongSelf.present?(tooltipController, TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                                if let strongSelf = self {
+                                    let rect = node.view.convert(node.view.bounds, to: strongSelf.view).offsetBy(dx: 0.0, dy: 3.0)
+                                    return (strongSelf, rect)
+                                }
+                                return nil
+                            }))
+                        }
+                    })
                 })
                 selectionPanelNode.chatAvailableMessageActions = { [weak self] messageIds -> Signal<ChatAvailableMessageActions, NoError> in
                     guard let strongSelf = self else {

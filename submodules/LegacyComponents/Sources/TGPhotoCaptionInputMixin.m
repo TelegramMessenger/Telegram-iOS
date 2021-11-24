@@ -153,20 +153,14 @@
     
     [self.inputPanel dismissInput];
     [_dismissView removeFromSuperview];
+    
+    if (self.finishedWithCaption != nil)
+        self.finishedWithCaption([_inputPanel caption]);
 }
 
 #pragma mark - Input Panel Delegate
 
-//- (void)inputPanelRequestedSetCaption:(TGMediaPickerCaptionInputPanel *)__unused inputPanel text:(NSString *)text entities:(NSArray *)entities
-//{
-//    [TGViewController enableAutorotation];
-//
-//    _dismissView.hidden = true;
-//
-//    if (self.finishedWithCaption != nil)
-//        self.finishedWithCaption(text, entities);
-//}
-//
+
 //- (void)inputPanelMentionEntered:(TGMediaPickerCaptionInputPanel *)__unused inputTextPanel mention:(NSString *)mention startOfLine:(bool)__unused startOfLine
 //{
 //    if (mention == nil)
@@ -319,11 +313,6 @@
 //    [_inputPanel inputField].internalTextView.enableFirstResponder = true;
 //}
 //
-//- (void)inputPanelWillChangeHeight:(TGMediaPickerCaptionInputPanel *)inputPanel height:(CGFloat)__unused height duration:(NSTimeInterval)duration animationCurve:(int)animationCurve
-//{
-//    [inputPanel adjustForOrientation:UIInterfaceOrientationPortrait keyboardHeight:_keyboardHeight duration:duration animationCurve:animationCurve];
-//}
-
 - (void)setContentAreaHeight:(CGFloat)contentAreaHeight
 {
     _contentAreaHeight = contentAreaHeight;
@@ -369,7 +358,7 @@
     CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size sideInset:0.0];
     [UIView animateWithDuration:duration delay:0.0f options:curve animations:^{
         _inputPanelView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, panelHeight);
-        _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, panelHeight);
+        _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, MAX(panelHeight, _keyboardHeight));
     } completion:nil];
 
     if (self.keyboardHeightChanged != nil)
@@ -383,7 +372,7 @@
     
     CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size sideInset:0.0];
     _inputPanelView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, panelHeight);
-    _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, panelHeight);
+    _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, MAX(panelHeight, _keyboardHeight));
 }
 
 @end

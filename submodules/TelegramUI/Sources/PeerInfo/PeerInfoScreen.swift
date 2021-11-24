@@ -222,18 +222,20 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
     private let shareMessages: () -> Void
     private let forwardMessages: () -> Void
     private let reportMessages: () -> Void
+    private let displayCopyProtectionTip: (ASDisplayNode, Bool) -> Void
     
     let selectionPanel: ChatMessageSelectionInputPanelNode
     let separatorNode: ASDisplayNode
     let backgroundNode: NavigationBackgroundNode
     
-    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, deleteMessages: @escaping () -> Void, shareMessages: @escaping () -> Void, forwardMessages: @escaping () -> Void, reportMessages: @escaping () -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, deleteMessages: @escaping () -> Void, shareMessages: @escaping () -> Void, forwardMessages: @escaping () -> Void, reportMessages: @escaping () -> Void, displayCopyProtectionTip: @escaping (ASDisplayNode, Bool) -> Void) {
         self.context = context
         self.peerId = peerId
         self.deleteMessages = deleteMessages
         self.shareMessages = shareMessages
         self.forwardMessages = forwardMessages
         self.reportMessages = reportMessages
+        self.displayCopyProtectionTip = displayCopyProtectionTip
         
         let presentationData = presentationData
         
@@ -337,7 +339,10 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, updateShowSendAsPeers: { _ in
         }, openInviteRequests: {
         }, openSendAsPeer: { _, _ in
-        }, presentChatRequestAdminInfo: {}, statuses: nil)
+        }, presentChatRequestAdminInfo: {
+        }, displayCopyProtectionTip: { node, save in
+            displayCopyProtectionTip(node, save)
+        }, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction
         
@@ -1506,6 +1511,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private let supportPeerDisposable = MetaDisposable()
     private let tipsPeerDisposable = MetaDisposable()
     private let cachedFaq = Promise<ResolvedUrl?>(nil)
+    
+    private weak var copyProtectionTooltipController: TooltipController?
     
     private let _ready = Promise<Bool>()
     var ready: Promise<Bool> {
@@ -2877,6 +2884,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.shareStatusDisposable?.dispose()
         self.customStatusDisposable?.dispose()
         self.refreshMessageTagStatsDisposable?.dispose()
+        
+        self.copyProtectionTooltipController?.dismiss()
     }
     
     override func didLoad() {
@@ -6477,6 +6486,37 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }, push: { c in
                         self?.controller?.push(c)
                     }, completion: { _, _ in }), in: .window(.root))
+                }, displayCopyProtectionTip: { [weak self] node, save in
+                    if let strongSelf = self, let peer = strongSelf.data?.peer {
+                        let isChannel: Bool
+                        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                            isChannel = true
+                        } else {
+                            isChannel = false
+                        }
+                        let text: String
+                        if save {
+                            text = isChannel ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledChannel : strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledGroup
+                        } else {
+                            text = isChannel ? strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledChannel : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledGroup
+                        }
+                        
+                        strongSelf.copyProtectionTooltipController?.dismiss()
+                        let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+                        strongSelf.copyProtectionTooltipController = tooltipController
+                        tooltipController.dismissed = { [weak tooltipController] _ in
+                            if let strongSelf = self, let tooltipController = tooltipController, strongSelf.copyProtectionTooltipController === tooltipController {
+                                strongSelf.copyProtectionTooltipController = nil
+                            }
+                        }
+                        strongSelf.controller?.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                            if let strongSelf = self {
+                                let rect = node.view.convert(node.view.bounds, to: strongSelf.view).offsetBy(dx: 0.0, dy: 3.0)
+                                return (strongSelf, rect)
+                            }
+                            return nil
+                        }))
+                   }
                 })
                 self.paneContainerNode.selectionPanelNode = selectionPanelNode
                 self.paneContainerNode.addSubnode(selectionPanelNode)
@@ -6856,7 +6896,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     private let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)?>(nil)
 
     private var tabBarItemDisposable: Disposable?
-    
+
     fileprivate var controllerNode: PeerInfoScreenNode {
         return self.displayNode as! PeerInfoScreenNode
     }

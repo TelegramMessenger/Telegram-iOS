@@ -136,6 +136,7 @@ final class ChatPanelInterfaceInteraction {
     let openInviteRequests: () -> Void
     let openSendAsPeer: (ASDisplayNode, ContextGesture?) -> Void
     let presentChatRequestAdminInfo: () -> Void
+    let displayCopyProtectionTip: (ASDisplayNode, Bool) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -226,6 +227,7 @@ final class ChatPanelInterfaceInteraction {
         openInviteRequests: @escaping () -> Void,
         openSendAsPeer: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         presentChatRequestAdminInfo: @escaping () -> Void,
+        displayCopyProtectionTip: @escaping (ASDisplayNode, Bool) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
@@ -315,6 +317,7 @@ final class ChatPanelInterfaceInteraction {
         self.openInviteRequests = openInviteRequests
         self.openSendAsPeer = openSendAsPeer
         self.presentChatRequestAdminInfo = presentChatRequestAdminInfo
+        self.displayCopyProtectionTip = displayCopyProtectionTip
         self.statuses = statuses
     }
     
@@ -411,6 +414,7 @@ final class ChatPanelInterfaceInteraction {
         }, openInviteRequests: {
         }, openSendAsPeer:  { _, _ in
         }, presentChatRequestAdminInfo: {
+        }, displayCopyProtectionTip: { _, _ in
         }, statuses: nil)
     }
 }
