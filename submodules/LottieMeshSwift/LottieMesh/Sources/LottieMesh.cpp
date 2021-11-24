@@ -56,13 +56,23 @@ std::unique_ptr<Mesh> generateMesh(std::vector<Path> const &paths, std::unique_p
         
         assert(mesh->triangles.size() % 3 == 0);
         return mesh;
-    } else {
+    } else if (fill) {
         TESStesselator *tessellator = tessNewTess(NULL);
         tessSetOption(tessellator, TESS_CONSTRAINED_DELAUNAY_TRIANGULATION, 1);
         for (const auto &path : paths) {
             tessAddContour(tessellator, 2, path.points.data(), sizeof(Point), (int)path.points.size());
         }
-        tessTesselate(tessellator, TESS_WINDING_ODD, TESS_POLYGONS, 3, 2, NULL);
+        
+        switch (fill->rule) {
+            case Fill::Rule::EvenOdd: {
+                tessTesselate(tessellator, TESS_WINDING_ODD, TESS_POLYGONS, 3, 2, NULL);
+                break;
+            }
+            default: {
+                tessTesselate(tessellator, TESS_WINDING_NONZERO, TESS_POLYGONS, 3, 2, NULL);
+                break;
+            }
+        }
         
         int vertexCount = tessGetVertexCount(tessellator);
         const TESSreal *vertices = tessGetVertices(tessellator);
@@ -77,6 +87,8 @@ std::unique_ptr<Mesh> generateMesh(std::vector<Path> const &paths, std::unique_p
             mesh->triangles.push_back(indices[i]);
         }
         return mesh;
+    } else {
+        return nullptr;
     }
 }
 

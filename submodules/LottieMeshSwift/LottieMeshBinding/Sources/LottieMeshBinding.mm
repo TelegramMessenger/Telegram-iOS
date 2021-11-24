@@ -24,7 +24,7 @@ float approximateBezierQuadraticLength(MeshGenerator::Point const &p0, MeshGener
 }
 
 void tesselateBezier(MeshGenerator::Path &path, MeshGenerator::Point const &p1, MeshGenerator::Point const &p2, MeshGenerator::Point const &p3, MeshGenerator::Point const &p4, int level) {
-    const float tessTol = 0.25f / 0.5f;
+    const float tessTol = 0.25f / 0.1f;
     
     float x1 = p1.x;
     float y1 = p1.y;
