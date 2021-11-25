@@ -7096,3 +7096,5 @@ Sorry for the inconvenience.";
 "ChatList.ClearSearchHistory" = "Are you sure you want to clear your search history?";
 
 "AuthSessions.TerminateSessionText" = "Are you sure you want to terminate this session?";
+
+"Notifications.ResetAllNotificationsText" = "Are you sure you want to reset all notification settings to default?";

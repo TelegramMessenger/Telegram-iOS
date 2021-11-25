@@ -671,6 +671,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationData: presentationData)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+            ActionSheetTextItem(title: presentationData.strings.Notifications_ResetAllNotificationsText),
             ActionSheetButtonItem(title: presentationData.strings.Notifications_Reset, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
