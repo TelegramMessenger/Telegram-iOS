@@ -82,7 +82,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     let backgroundNode: WallpaperBackgroundNode
     let historyNode: ChatHistoryListNode
-    let historyScrollingArea: SparseDiscreteScrollingArea
+    //let historyScrollingArea: SparseDiscreteScrollingArea
     var blurredHistoryNode: ASImageNode?
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
@@ -334,12 +334,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         })
         self.historyNode.rotated = true
 
-        self.historyScrollingArea = SparseDiscreteScrollingArea()
-        self.historyNode.historyScrollingArea = self.historyScrollingArea
+        //self.historyScrollingArea = SparseDiscreteScrollingArea()
+        //self.historyNode.historyScrollingArea = self.historyScrollingArea
 
         self.historyNodeContainer = ASDisplayNode()
         self.historyNodeContainer.addSubnode(self.historyNode)
-        self.historyNodeContainer.addSubnode(self.historyScrollingArea)
+        //self.historyNodeContainer.addSubnode(self.historyScrollingArea)
 
         var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
         var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
@@ -453,7 +453,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         })
 
-        /*var backgroundColors: [UInt32] = []
+        var backgroundColors: [UInt32] = []
         switch chatPresentationInterfaceState.chatWallpaper {
         case let .file(file):
             if file.isPattern {
@@ -476,8 +476,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else {
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
         }
-        self.historyNode.enableExtractedBackgrounds = true*/
-        self.historyNode.verticalScrollIndicatorColor = .clear
+        self.historyNode.enableExtractedBackgrounds = true
+        //self.historyNode.verticalScrollIndicatorColor = .clear
     
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.historyNodeContainer)
@@ -1058,7 +1058,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.updateFrame(node: blurredHistoryNode, frame: contentBounds)
         }
 
-        transition.updateFrame(node: self.historyScrollingArea, frame: contentBounds)
+        //transition.updateFrame(node: self.historyScrollingArea, frame: contentBounds)
         
         transition.updateFrame(node: self.loadingNode, frame: contentBounds)
         

@@ -684,6 +684,7 @@ private final class MonthComponent: CombinedComponent {
     let strings: PresentationStrings
     let theme: PresentationTheme
     let dayAction: (Int32) -> Void
+    let monthAction: (ClosedRange<Int32>) -> Void
     let selectedDays: ClosedRange<Int32>?
 
     init(
@@ -693,6 +694,7 @@ private final class MonthComponent: CombinedComponent {
         strings: PresentationStrings,
         theme: PresentationTheme,
         dayAction: @escaping (Int32) -> Void,
+        monthAction: @escaping (ClosedRange<Int32>) -> Void,
         selectedDays: ClosedRange<Int32>?
     ) {
         self.context = context
@@ -701,6 +703,7 @@ private final class MonthComponent: CombinedComponent {
         self.strings = strings
         self.theme = theme
         self.dayAction = dayAction
+        self.monthAction = monthAction
         self.selectedDays = selectedDays
     }
 
@@ -808,7 +811,9 @@ private final class MonthComponent: CombinedComponent {
                         selection: daySelection,
                         isSelecting: context.component.selectedDays != nil,
                         action: {
-                            dayAction(dayTimestamp)
+                            if isEnabled {
+                                dayAction(dayTimestamp)
+                            }
                         }
                     )),
                     environment: {
@@ -821,8 +826,15 @@ private final class MonthComponent: CombinedComponent {
 
             let titleFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - title.size.width) / 2.0), y: 0.0), size: title.size)
 
+            let monthAction = context.component.monthAction
+            let firstDayStart = Int32(context.component.model.firstDay.timeIntervalSince1970)
+            let lastDayStart = firstDayStart + 24 * 60 * 60 * Int32(context.component.model.numberOfDays)
+            
             context.add(title
                 .position(CGPoint(x: titleFrame.midX, y: titleFrame.midY))
+                .gesture(.tap {
+                    monthAction(firstDayStart ... lastDayStart)
+                })
             )
 
             let baseWeekdayTitleY = titleFrame.maxY + titleWeekdaysSpacing
@@ -918,7 +930,7 @@ private final class MonthComponent: CombinedComponent {
                                 completion()
                                 return
                             }
-                            view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+                            view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                                 completion()
                             })
                         })
@@ -1622,6 +1634,8 @@ public final class CalendarMessageScreen: ViewController {
                         theme: self.presentationData.theme,
                         dayAction: { _ in
                         },
+                        monthAction: { _ in
+                        },
                         selectedDays: nil
                     )),
                     environment: {
@@ -1737,6 +1751,30 @@ public final class CalendarMessageScreen: ViewController {
                                     }
                                 }
                             }
+                        },
+                        monthAction: { [weak self] range in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            guard var selectionState = strongSelf.selectionState else {
+                                return
+                            }
+                            var transition = Transition(animation: .curve(duration: 0.2, curve: .spring))
+                            if let dayRange = selectionState.dayRange {
+                                if dayRange == range {
+                                    selectionState.dayRange = nil
+                                    transition = transition.withUserData(SelectionTransition.end)
+                                } else {
+                                    selectionState.dayRange = range
+                                    transition = transition.withUserData(SelectionTransition.change)
+                                }
+                            } else {
+                                selectionState.dayRange = range
+                                transition = transition.withUserData(SelectionTransition.begin)
+                            }
+                            strongSelf.selectionState = selectionState
+
+                            strongSelf.updateSelectionState(transition: transition)
                         },
                         selectedDays: self.selectionState?.dayRange
                     )),
