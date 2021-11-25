@@ -919,7 +919,8 @@ private final class ItemView: UIView, SparseItemGridView {
         chatLocation: ChatLocation,
         interaction: ListMessageItemInteraction,
         isSelected: Bool?,
-        size: CGSize
+        size: CGSize,
+        insets: UIEdgeInsets
     ) {
         self.item = item
         self.interaction = interaction
@@ -940,7 +941,7 @@ private final class ItemView: UIView, SparseItemGridView {
         let messageItemNode: ListViewItemNode
         if let current = self.messageItemNode {
             messageItemNode = current
-            messageItem.updateNode(async: { f in f() }, node: { return current }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2), completion: { layout, apply in
+            messageItem.updateNode(async: { f in f() }, node: { return current }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2), completion: { layout, apply in
                 current.contentSize = layout.contentSize
                 current.insets = layout.insets
 
@@ -948,7 +949,7 @@ private final class ItemView: UIView, SparseItemGridView {
             })
         } else {
             var itemNode: ListViewItemNode?
-            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 0.0), synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+            messageItem.nodeConfiguredForParams(async: { f in f() }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
                 itemNode = node
                 apply().1(ListViewItemApply(isOnScreen: true))
             })
@@ -960,6 +961,7 @@ private final class ItemView: UIView, SparseItemGridView {
         messageItemNode.frame = CGRect(origin: CGPoint(), size: size)
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
     }
+    
     func unbind() {
         self.item = nil
     }
@@ -968,7 +970,18 @@ private final class ItemView: UIView, SparseItemGridView {
         return false
     }
 
-    func update(size: CGSize) {
+    func update(size: CGSize, insets: UIEdgeInsets) {
+        if let messageItem = self.messageItem, let messageItemNode = self.messageItemNode {
+            messageItem.updateNode(async: { f in f() }, node: { return messageItemNode }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2), completion: { layout, apply in
+                messageItemNode.contentSize = layout.contentSize
+                messageItemNode.insets = layout.insets
+
+                apply(ListViewItemApply(isOnScreen: true))
+            })
+            
+            messageItemNode.frame = CGRect(origin: CGPoint(), size: size)
+            self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
+        }
     }
 }
 
@@ -1189,7 +1202,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         return (list.map(\.0), list.map(\.1))
     }()
 
-    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], synchronous: SparseItemGrid.Synchronous) {
+    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], size: CGSize, insets: UIEdgeInsets, synchronous: SparseItemGrid.Synchronous) {
         for i in 0 ..< items.count {
             guard let item = items[i] as? VisualMediaItem else {
                 continue
@@ -1208,7 +1221,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                     chatLocation: self.chatLocation,
                     interaction: self.listItemInteraction,
                     isSelected: self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id),
-                    size: view.bounds.size
+                    size: CGSize(width: size.width, height: view.bounds.height),
+                    insets: insets
                 )
             } else {
                 guard let layer = displayItem.layer as? ItemLayer else {
@@ -1972,7 +1986,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
         self.presentationDataDisposable = (self.context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let (size, topInset, sideInset, bottomInset, _, _, _, _) = strongSelf.currentParams  else {
                 return
             }
             strongSelf.itemGridBinding.updatePresentationData(presentationData: presentationData)
@@ -1980,7 +1994,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             strongSelf.itemGrid.updatePresentationData(theme: presentationData.theme)
 
             strongSelf.itemGrid.forEachVisibleItem { item in
-                guard let itemView = item.view as? ItemView else {
+                guard let strongSelf = self, let itemView = item.view as? ItemView else {
                     return
                 }
                 if let item = itemView.item {
@@ -1991,7 +2005,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                         chatLocation: strongSelf.itemGridBinding.chatLocation,
                         interaction: strongSelf.itemGridBinding.listItemInteraction,
                         isSelected: strongSelf.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id),
-                        size: itemView.bounds.size
+                        size: CGSize(width: size.width, height: itemView.bounds.height),
+                        insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset)
                     )
                 }
             }
@@ -2221,7 +2236,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         switch self.contentType {
         case .files, .music, .voiceAndVideoMessages:
             self.itemGrid.forEachVisibleItem { item in
-                guard let itemView = item.view as? ItemView else {
+                guard let itemView = item.view as? ItemView, let (size, topInset, sideInset, bottomInset, _, _, _, _) = self.currentParams else {
                     return
                 }
                 if let item = itemView.item {
@@ -2232,7 +2247,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                         chatLocation: self.itemGridBinding.chatLocation,
                         interaction: self.itemGridBinding.listItemInteraction,
                         isSelected: self.chatControllerInteraction.selectionState?.selectedIds.contains(item.message.id),
-                        size: itemView.bounds.size
+                        size: CGSize(width: size.width, height: itemView.bounds.height),
+                        insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset)
                     )
                 }
             }
@@ -2258,6 +2274,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             let wasFirstTime = !self.didUpdateItemsOnce
             self.didUpdateItemsOnce = true
             let fixedItemHeight: CGFloat?
+            var isList = false
             switch self.contentType {
             case .files, .music, .voiceAndVideoMessages:
                 let fakeFile = TelegramMediaFile(
@@ -2313,11 +2330,12 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 } else {
                     preconditionFailure()
                 }
+                isList = true
             default:
                 fixedItemHeight = nil
             }
-
-            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom: bottomInset, right: sideInset), scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none)
+         
+            self.itemGrid.update(size: size, insets: UIEdgeInsets(top: topInset, left: sideInset, bottom:  bottomInset, right: sideInset), useSideInsets: !isList, scrollIndicatorInsets: UIEdgeInsets(top: 0.0, left: sideInset, bottom: bottomInset, right: sideInset), lockScrollingAtTop: isScrollingLockedAtTop, fixedItemHeight: fixedItemHeight, items: items, theme: self.itemGridBinding.chatPresentationData.theme.theme, synchronous: wasFirstTime ? .full : .none)
         }
     }
 

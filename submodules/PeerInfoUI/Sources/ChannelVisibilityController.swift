@@ -712,7 +712,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         entries.append(.forwardingHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased() : presentationData.strings.Group_Setup_ForwardingChannelTitle.uppercased()))
         entries.append(.forwardingEnabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingEnabled, forwardingEnabled))
         entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
-        entries.append(.forwardingInfo(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingChannelInfo))
+        entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingChannelInfo) : (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled : presentationData.strings.Group_Setup_ForwardingChannelInfoDisabled)))
         
     } else if let peer = view.peers[view.peerId] as? TelegramGroup {
         switch mode {
@@ -844,7 +844,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         entries.append(.forwardingHeader(presentationData.theme, presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased()))
         entries.append(.forwardingEnabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingEnabled, forwardingEnabled))
         entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
-        entries.append(.forwardingInfo(presentationData.theme, presentationData.strings.Group_Setup_ForwardingGroupInfo))
+        entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled))
     }
     
     return entries

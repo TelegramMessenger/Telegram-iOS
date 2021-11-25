@@ -4806,7 +4806,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let currentAccountPeer = self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
         |> map { peer in
-            return [FoundPeer(peer: peer, subscribers: nil)]
+            return FoundPeer(peer: peer, subscribers: nil)
         }
         
         self.sendAsPeersDisposable = (combineLatest(queue: Queue.mainQueue(), currentAccountPeer, self.context.account.postbox.peerView(id: self.chatLocation.peerId), self.context.engine.peers.sendAsAvailablePeers(peerId: self.chatLocation.peerId)))
@@ -4817,11 +4817,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var allPeers: [FoundPeer]?
             if !peers.isEmpty {
                 if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
-                    allPeers = []
+                    allPeers = peers
+                    
+                    var hasAnonymousPeer = false
+                    for peer in peers {
+                        if peer.peer.id == channel.id {
+                            hasAnonymousPeer = true
+                            break
+                        }
+                    }
+                    if !hasAnonymousPeer {
+                        allPeers?.insert(FoundPeer(peer: channel, subscribers: 0), at: 0)
+                    }
                 } else {
-                    allPeers = currentAccountPeer
+                    allPeers = peers.filter { $0.peer.id != peerViewMainPeer(peerView)?.id }
+                    allPeers?.insert(currentAccountPeer, at: 0)
                 }
-                allPeers?.append(contentsOf: peers)
             }
             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                 return $0.updatedSendAsPeers(allPeers)
