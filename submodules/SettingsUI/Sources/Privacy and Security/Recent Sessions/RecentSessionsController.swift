@@ -609,6 +609,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.AuthSessions_TerminateSessionText),
                 ActionSheetButtonItem(title: presentationData.strings.AuthSessions_TerminateSession, color: .destructive, action: {
                     dismissAction()
                     completion()

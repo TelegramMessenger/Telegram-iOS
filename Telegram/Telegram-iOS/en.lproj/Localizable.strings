@@ -7094,3 +7094,5 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageSent" = "%@ sent message:";
 
 "ChatList.ClearSearchHistory" = "Are you sure you want to clear your search history?";
+
+"AuthSessions.TerminateSessionText" = "Are you sure you want to terminate this session?";
