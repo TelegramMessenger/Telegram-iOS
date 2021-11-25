@@ -384,6 +384,7 @@ official_apple_pay_merchants = [
     "merchant.yoomoney.prod.telegramios",
     "merchant.org.telegram.Best2pay.test",
     "merchant.psbank.test.telegramios",
+    "merchant.psbank.prod.telegramios",
 ]
 
 official_bundle_ids = [
