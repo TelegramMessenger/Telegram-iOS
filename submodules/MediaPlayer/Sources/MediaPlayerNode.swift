@@ -367,6 +367,14 @@ public final class MediaPlayerNode: ASDisplayNode {
         }
     }
     
+    public var captureProtected: Bool = false {
+        didSet {
+            if #available(iOS 13.0, *) {
+                self.videoLayer?.preventsCapture = captureProtected
+            }
+        }
+    }
+    
     public init(backgroundThread: Bool = false) {
         self.videoNode = MediaPlayerNodeDisplayNode()
         
@@ -397,6 +405,9 @@ public final class MediaPlayerNode: ASDisplayNode {
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     strongSelf.videoLayer = videoLayer
+                    if #available(iOS 13.0, *) {
+                        videoLayer.preventsCapture = strongSelf.captureProtected
+                    }
                     strongSelf.updateLayout()
                     
                     strongSelf.layer.addSublayer(videoLayer)

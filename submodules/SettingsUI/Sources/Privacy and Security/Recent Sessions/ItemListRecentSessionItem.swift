@@ -159,7 +159,7 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, UIColor?, Str
     if platform.contains("windows") || systemVersion.contains("windows") {
         return (UIImage(bundleImageName: "Settings/Devices/Windows"), UIColor(rgb: 0x0079ff), "device_windows", nil)
     }
-    return (nil, nil, nil, nil)
+    return (UIImage(bundleImageName: "Settings/Devices/Generic"), UIColor(rgb: 0x8e8e93), nil, nil)
 }
 
 private func trimmedLocationName(_ session: RecentAccountSession) -> String {

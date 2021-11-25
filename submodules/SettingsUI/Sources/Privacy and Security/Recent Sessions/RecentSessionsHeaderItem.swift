@@ -154,7 +154,8 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                         strongSelf.buttonNode.updateTheme(SolidRoundedButtonTheme(theme: item.theme))
                     }
                     
-                    let buttonWidth = min(375, contentSize.width - params.leftInset - params.rightInset)
+                    let inset = max(16.0, params.leftInset)
+                    let buttonWidth = min(375, contentSize.width - inset - inset)
                     let buttonHeight = strongSelf.buttonNode.updateLayout(width: buttonWidth, transition: .immediate)
                     let buttonFrame = CGRect(x: floorToScreenPixels((params.width - buttonWidth) / 2.0), y: contentSize.height - buttonHeight + 4.0, width: buttonWidth, height: buttonHeight)
                     strongSelf.buttonNode.frame = buttonFrame

@@ -3503,7 +3503,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 let filteredButtons = allHeaderButtons.subtracting(headerButtons)
                 
                 var canChangeColors = false
-                if peer is TelegramUser, strongSelf.data?.encryptionKeyFingerprint == nil {
+                if let peer = peer as? TelegramUser, peer.botInfo == nil && strongSelf.data?.encryptionKeyFingerprint == nil {
                     canChangeColors = true
                 }
                 
