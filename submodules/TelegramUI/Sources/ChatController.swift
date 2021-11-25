@@ -4827,7 +4827,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     if !hasAnonymousPeer {
-                        allPeers?.insert(FoundPeer(peer: channel, subscribers: nil), at: 0)
+                        allPeers?.insert(FoundPeer(peer: channel, subscribers: 0), at: 0)
                     }
                 } else {
                     allPeers = peers.filter { $0.peer.id != peerViewMainPeer(peerView)?.id }
