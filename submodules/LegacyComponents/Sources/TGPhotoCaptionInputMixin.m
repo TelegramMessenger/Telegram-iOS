@@ -64,6 +64,8 @@
         [TGViewController enableAutorotation];
         strongSelf->_dismissView.hidden = true;
     
+        strongSelf->_editing = false;
+        
         if (strongSelf.finishedWithCaption != nil)
             strongSelf.finishedWithCaption(string);
     };
@@ -117,11 +119,15 @@
 
 - (void)setCaption:(NSAttributedString *)caption
 {
+    if (_editing)
+        return;
     [self setCaption:caption animated:false];
 }
 
 - (void)setCaption:(NSAttributedString *)caption animated:(bool)animated
 {
+    if (_editing)
+        return;
     _caption = caption;
     [_inputPanel setCaption:caption];
 }
@@ -150,6 +156,8 @@
 {
     if (gestureRecognizer.state != UIGestureRecognizerStateRecognized)
         return;
+    
+    _editing = false;
     
     [self.inputPanel dismissInput];
     [_dismissView removeFromSuperview];
@@ -356,9 +364,14 @@
     CGRect frame = _currentFrame;
     UIEdgeInsets edgeInsets = _currentEdgeInsets;
     CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size sideInset:0.0];
-    [UIView animateWithDuration:duration delay:0.0f options:curve animations:^{
+    [UIView animateWithDuration:duration delay:0.0f options:(curve << 16) animations:^{
         _inputPanelView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, panelHeight);
-        _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, MAX(panelHeight, _keyboardHeight));
+        
+        CGFloat backgroundHeight = panelHeight;
+        if (_keyboardHeight > 0.0) {
+            backgroundHeight += _keyboardHeight - edgeInsets.bottom;
+        }
+        _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, backgroundHeight);
     } completion:nil];
 
     if (self.keyboardHeightChanged != nil)
@@ -372,7 +385,12 @@
     
     CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size sideInset:0.0];
     _inputPanelView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, panelHeight);
-    _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, MAX(panelHeight, _keyboardHeight));
+    
+    CGFloat backgroundHeight = panelHeight;
+    if (_keyboardHeight > 0.0) {
+        backgroundHeight += _keyboardHeight - edgeInsets.bottom;
+    }
+    _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, backgroundHeight);
 }
 
 @end
