@@ -714,12 +714,12 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
         entries.append(.forwardingInfo(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingChannelInfo))
         
-    } else if let _ = view.peers[view.peerId] as? TelegramGroup {
+    } else if let peer = view.peers[view.peerId] as? TelegramGroup {
         switch mode {
             case .privateLink:
                 let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
                 entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
-            entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
+                entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
                 entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.GroupInfo_InviteLink_Help))
                 switch mode {
                     case .initialSetup:
@@ -829,12 +829,16 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         }
             }
         }
-        
+
         let forwardingEnabled: Bool
         if let enabled = state.forwardingEnabled {
             forwardingEnabled = enabled
         } else {
-            forwardingEnabled = true
+            if peer.flags.contains(.copyProtectionEnabled) {
+                forwardingEnabled = false
+            } else {
+                forwardingEnabled = true
+            }
         }
         
         entries.append(.forwardingHeader(presentationData.theme, presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased()))
