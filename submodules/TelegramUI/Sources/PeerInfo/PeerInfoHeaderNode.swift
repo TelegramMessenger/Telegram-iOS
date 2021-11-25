@@ -1312,7 +1312,7 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         }
         
         self.backgroundNode.frame = CGRect(origin: CGPoint(x: safeInset, y: 0.0), size: CGSize(width: max(1.0, width - safeInset * 2.0), height: height))
-        self.textNode.frame = CGRect(origin: CGPoint(x: safeInset + 16.0, y: floor((height - 40.0) / 2.0)), size: CGSize(width: max(1.0, width - 16.0 * 2.0 - 32.0), height: 40.0))
+        self.textNode.frame = CGRect(origin: CGPoint(x: safeInset + 16.0, y: floor((height - 40.0) / 2.0)), size: CGSize(width: max(1.0, width - safeInset * 2.0 - 16.0 * 2.0 - 38.0), height: 40.0))
         
         let hasCorners = safeInset > 0.0 && (!hasPrevious || !hasNext)
         let hasTopCorners = hasCorners && !hasPrevious
@@ -2105,14 +2105,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let buttonKeys: [PeerInfoHeaderButtonKey] = self.isSettings ? [] : peerInfoHeaderButtons(peer: peer, cachedData: cachedData, isOpenedFromChat: self.isOpenedFromChat, isExpanded: false, videoCallsEnabled: self.videoCallsEnabled, isSecretChat: isSecretChat, isContact: isContact)
         
         var isVerified = false
+        var isFake = false
         let smallTitleString: NSAttributedString
         let titleString: NSAttributedString
         let smallSubtitleString: NSAttributedString
         let subtitleString: NSAttributedString
         var panelSubtitleString: NSAttributedString?
         let usernameString: NSAttributedString
-        if let peer = peer, peer.isVerified {
-            isVerified = true
+        if let peer = peer {
+            isVerified = peer.isVerified
+            isFake = peer.isFake || peer.isScam
         }
         
         if let peer = peer {
@@ -2186,7 +2188,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let textSideInset: CGFloat = 36.0
         let expandedAvatarHeight: CGFloat = expandedAvatarListSize.height
         
-        let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isVerified ? 16.0 : 0.0), height: .greatestFiniteMagnitude)
+        let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
         
         let titleNodeLayout = self.titleNode.updateLayout(states: [
             TitleNodeStateRegular: MultiScaleTextState(attributedText: titleString, constrainedSize: titleConstrainedSize),

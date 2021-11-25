@@ -755,7 +755,20 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
             self.textPlaceholderNode.isHidden = inputHasText
         }
         
-        self.oneLineNode.attributedText = self.textInputNode?.attributedText
+        if let attributedText = self.textInputNode?.attributedText, let presentationInterfaceState = self.presentationInterfaceState {
+            let range = (attributedText.string as NSString).range(of: "\n")
+            if range.location != NSNotFound {
+                let textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
+                let textFont = Font.regular(max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize))
+                let trimmedText = NSMutableAttributedString(attributedString: attributedText.attributedSubstring(from: NSMakeRange(0, range.location)))
+                trimmedText.append(NSAttributedString(string: "\u{2026}", font: textFont, textColor: textColor))
+                self.oneLineNode.attributedText = trimmedText
+            } else {
+                self.oneLineNode.attributedText = attributedText
+            }
+        } else {
+            self.oneLineNode.attributedText = nil
+        }
         
         self.updateTextHeight(animated: animated)
     }
