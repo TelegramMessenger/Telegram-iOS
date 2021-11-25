@@ -185,6 +185,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             let presentationData = strongSelf.presentationData
             let actionSheet = ActionSheetController(presentationData: presentationData)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.ChatList_ClearSearchHistory),
                 ActionSheetButtonItem(title: presentationData.strings.WebSearch_RecentSectionClear, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     

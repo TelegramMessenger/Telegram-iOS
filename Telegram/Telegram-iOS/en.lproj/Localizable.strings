@@ -7092,3 +7092,9 @@ Sorry for the inconvenience.";
 "AuthSessions.AddDevice.ScanInstallInfo" = "Go to [getdesktop.telegram.org](desktop) or [web.telegram.org](web) to get the QR code";
 
 "Channel.AdminLog.MessageSent" = "%@ sent message:";
+
+"ChatList.ClearSearchHistory" = "Are you sure you want to clear your search history?";
+
+"AuthSessions.TerminateSessionText" = "Are you sure you want to terminate this session?";
+
+"Notifications.ResetAllNotificationsText" = "Are you sure you want to reset all notification settings to default?";
