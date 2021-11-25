@@ -172,8 +172,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
                 actionAtEndImpl?()
             })
         }
-        self.playerNode = MediaPlayerNode(backgroundThread: false)
-        self.playerNode.captureProtected = captureProtected
+        self.playerNode = MediaPlayerNode(backgroundThread: false, captureProtected: captureProtected)
         self.player.attachPlayerNode(self.playerNode)
         
         self.dimensions = fileReference.media.dimensions?.cgSize
