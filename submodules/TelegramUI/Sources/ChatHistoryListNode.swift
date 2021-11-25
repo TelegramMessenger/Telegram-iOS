@@ -18,7 +18,6 @@ import AccountContext
 import ChatInterfaceState
 import ChatListUI
 import ComponentFlow
-import SparseItemGrid
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
@@ -574,7 +573,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var preloadAdPeerId: PeerId?
     private let preloadAdPeerDisposable = MetaDisposable()
 
-    var historyScrollingArea: SparseDiscreteScrollingArea? {
+    /*var historyScrollingArea: SparseDiscreteScrollingArea? {
         didSet {
             oldValue?.navigateToPosition = nil
             if let historyScrollingArea = self.historyScrollingArea {
@@ -586,10 +585,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
             }
         }
-    }
-    private var scrollingState: ListView.ScrollingIndicatorState?
-    private let sparseScrollingContext: SparseMessageScrollingContext?
-    private let scrollNavigationDisposable = MetaDisposable()
+    }*/
+    //private var scrollingState: ListView.ScrollingIndicatorState?
+    //private let sparseScrollingContext: SparseMessageScrollingContext?
+    //private let scrollNavigationDisposable = MetaDisposable()
     
     private let clientId: Atomic<Int32>
     
@@ -617,12 +616,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.prefetchManager = InChatPrefetchManager(context: context)
 
         var displayAdPeer: PeerId?
-        var sparseScrollPeerId: PeerId?
+        //var sparseScrollPeerId: PeerId?
         switch subject {
         case .none, .message:
             if case let .peer(peerId) = chatLocation {
                 displayAdPeer = peerId
-                sparseScrollPeerId = peerId
+                //sparseScrollPeerId = peerId
             }
         default:
             break
@@ -637,11 +636,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             adMessages = .single([])
         }
 
-        if case .bubbles = mode, let peerId = sparseScrollPeerId {
+        /*if case .bubbles = mode, let peerId = sparseScrollPeerId {
             self.sparseScrollingContext = context.engine.messages.sparseMessageScrollingContext(peerId: peerId)
         } else {
             self.sparseScrollingContext = nil
-        }
+        }*/
         
         let clientId = Atomic<Int32>(value: nextClientId)
         self.clientId = clientId
@@ -1435,7 +1434,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self?.isInteractivelyScrollingValue = true
             self?.isInteractivelyScrollingPromise.set(true)
             self?.beganDragging?()
-            self?.updateHistoryScrollingArea(transition: .immediate)
+            //self?.updateHistoryScrollingArea(transition: .immediate)
         }
 
         self.endedInteractiveDragging = { [weak self] _ in
@@ -1477,16 +1476,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
             strongSelf.isInteractivelyScrollingValue = false
             strongSelf.isInteractivelyScrollingPromise.set(false)
-            strongSelf.updateHistoryScrollingArea(transition: .immediate)
+            //strongSelf.updateHistoryScrollingArea(transition: .immediate)
         }
 
-        self.updateScrollingIndicator = { [weak self] scrollingState, transition in
+        /*self.updateScrollingIndicator = { [weak self] scrollingState, transition in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.scrollingState = scrollingState
             strongSelf.updateHistoryScrollingArea(transition: transition)
-        }
+        }*/
         
         let selectionRecognizer = ChatHistoryListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
         selectionRecognizer.shouldBegin = { [weak self] in
@@ -1505,14 +1504,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.canReadHistoryDisposable?.dispose()
         self.loadedMessagesFromCachedDataDisposable?.dispose()
         self.preloadAdPeerDisposable.dispose()
-        self.scrollNavigationDisposable.dispose()
+        //self.scrollNavigationDisposable.dispose()
     }
     
     public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {
         self.loadStateUpdated = f
     }
 
-    private func updateHistoryScrollingArea(transition: ContainedViewLayoutTransition) {
+    /*private func updateHistoryScrollingArea(transition: ContainedViewLayoutTransition) {
         guard let historyScrollingArea = self.historyScrollingArea else {
             return
         }
@@ -1633,7 +1632,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         } else {
             self.historyScrollingArea?.resetNavigatingToPosition()
         }
-    }
+    }*/
 
     private func maybeUpdateOverscrollAction(offset: CGFloat?) {
         if self.freezeOverscrollControl {
