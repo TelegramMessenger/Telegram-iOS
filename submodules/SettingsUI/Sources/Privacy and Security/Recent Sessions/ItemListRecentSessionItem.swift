@@ -114,6 +114,7 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, UIColor?, Str
     let platform = session.platform.lowercased()
     let device = session.deviceModel.lowercased()
     let systemVersion = session.systemVersion.lowercased()
+
     if device.contains("xbox") {
         return (UIImage(bundleImageName: "Settings/Devices/Xbox"), UIColor(rgb: 0x35c759), nil, nil)
     }
@@ -136,13 +137,13 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, UIColor?, Str
         return (UIImage(bundleImageName: "Settings/Devices/Opera"), UIColor(rgb: 0xff3c30), nil, nil)
     }
     if platform.contains("android") {
-        return (UIImage(bundleImageName: "Settings/Devices/Android"), UIColor(rgb: 0x35c759), "device_android", nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Android"), UIColor(rgb: 0x35c759), "device_android", ["Eye L.Eye L.Заливка 1", "Eye R.Eye R.Заливка 1"])
     }
     if device.contains("iphone") {
         return (UIImage(bundleImageName: "Settings/Devices/iPhone"), UIColor(rgb: 0x0079ff), "device_iphone", ["apple.apple.Заливка 1"])
     }
     if device.contains("ipad") {
-        return (UIImage(bundleImageName: "Settings/Devices/iPad"), UIColor(rgb: 0x0079ff), "device_ipad", nil)
+        return (UIImage(bundleImageName: "Settings/Devices/iPad"), UIColor(rgb: 0x0079ff), "device_ipad", ["apple.apple.Заливка 1"])
     }
     if (platform.contains("macos") || systemVersion.contains("macos")) && device.contains("mac") {
         return (UIImage(bundleImageName: "Settings/Devices/Mac"), UIColor(rgb: 0x0079ff), "device_mac", nil)
@@ -151,13 +152,13 @@ func iconForSession(_ session: RecentAccountSession) -> (UIImage?, UIColor?, Str
         return (UIImage(bundleImageName: "Settings/Devices/iOS"), UIColor(rgb: 0x0079ff), nil, nil)
     }
     if platform.contains("ubuntu") || systemVersion.contains("ubuntu") {
-        return (UIImage(bundleImageName: "Settings/Devices/Ubuntu"), UIColor(rgb: 0xff9500), "device_ubuntu", nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Ubuntu"), UIColor(rgb: 0xff9500), "device_ubuntu", ["Ellipse 25.Ellipse 24.Обводка 1", "Ellipse 24.Ellipse 24.Обводка 1", "Union.Union.Заливка 1"])
     }
     if platform.contains("linux") || systemVersion.contains("linux") {
         return (UIImage(bundleImageName: "Settings/Devices/Linux"), UIColor(rgb: 0x8e8e93), "device_linux", nil)
     }
     if platform.contains("windows") || systemVersion.contains("windows") {
-        return (UIImage(bundleImageName: "Settings/Devices/Windows"), UIColor(rgb: 0x0079ff), "device_windows", nil)
+        return (UIImage(bundleImageName: "Settings/Devices/Windows"), UIColor(rgb: 0x0079ff), "device_windows", ["Union.Union.Заливка 1"])
     }
     return (UIImage(bundleImageName: "Settings/Devices/Generic"), UIColor(rgb: 0x8e8e93), nil, nil)
 }
