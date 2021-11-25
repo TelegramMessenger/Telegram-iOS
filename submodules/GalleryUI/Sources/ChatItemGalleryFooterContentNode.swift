@@ -576,7 +576,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.currentMessage = message
         
         let canDelete: Bool
-        var canShare = !message.containsSecretMedia && !message.isCopyProtected()
+        var canShare = !message.containsSecretMedia
 
         var canFullscreen = false
         
@@ -634,6 +634,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             canEdit = false
         }
         
+        if message.isCopyProtected() {
+            canShare = false
+            canEdit = false
+        }
         
         var authorNameText: String?
         if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
