@@ -57,8 +57,6 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
         }
     } else if message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.id.namespace != Namespaces.Message.Cloud {
         hasEditRights = false
-    } else if let author = message.author, author.id.namespace == Namespaces.Peer.CloudChannel && message.id.peerId.namespace == Namespaces.Peer.CloudChannel, !message.flags.contains(.Incoming) {
-        hasEditRights = true
     } else if let author = message.author, author.id == accountPeerId, let peer = message.peers[message.id.peerId] {
         hasEditRights = true
         if let peer = peer as? TelegramChannel {
@@ -80,6 +78,8 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
                 }
             }
         }
+    } else if let author = message.author, message.author?.id != message.id.peerId, author.id.namespace == Namespaces.Peer.CloudChannel && message.id.peerId.namespace == Namespaces.Peer.CloudChannel, !message.flags.contains(.Incoming) {
+        hasEditRights = true
     } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
         if let peer = peer as? TelegramChannel {
             switch peer.info {
