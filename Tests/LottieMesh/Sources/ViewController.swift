@@ -12,6 +12,7 @@ public final class ViewController: UIViewController {
         
         self.view.backgroundColor = .black
         
+        //let path = Bundle.main.path(forResource: "SUPER Fire", ofType: "json")!
         let path = Bundle.main.path(forResource: "Fireworks", ofType: "json")!
         //let path = Bundle.main.path(forResource: "Cat", ofType: "json")!
         /*for _ in 0 ..< 100 {
@@ -25,7 +26,7 @@ public final class ViewController: UIViewController {
             let buffer = MeshReadBuffer(data: try! Data(contentsOf: URL(fileURLWithPath: animationFile.path)))
             let animation = MeshAnimation.read(buffer: buffer)
             
-            let renderer = MeshRenderer(wireframe: true)!
+            let renderer = MeshRenderer(wireframe: false)!
             
             renderer.frame = CGRect(origin: CGPoint(x: 0.0, y: 50.0), size: CGSize(width: 300.0, height: 300.0))
             self.view.addSubview(renderer)

@@ -8,6 +8,7 @@ import TelegramPresentationData
 import TextFormat
 import AuthorizationUI
 import CodeInputView
+import PhoneNumberFormat
 
 final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
@@ -278,7 +279,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         case let .otherSession(length):
             codeLength = Int(length)
         case let .missedCall(prefix, length):
-            codePrefix = prefix
+            if prefix.hasPrefix("+") {
+                codePrefix = prefix
+            } else {
+                codePrefix = InteractivePhoneFormatter().updateText("+" + prefix).1
+            }
             codeLength = Int(length)
         case let .sms(length):
             codeLength = Int(length)

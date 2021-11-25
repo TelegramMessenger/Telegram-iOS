@@ -433,11 +433,10 @@ private func cleanupAccount(networkArguments: NetworkInitializationArguments, ac
                     let _ = (accountManager.transaction { transaction -> Void in
                         var tokens = transaction.getStoredLoginTokens()
                         switch result {
-                        case let .loggedOut(_, futureAuthToken, futureAuthExpires):
+                        case let .loggedOut(_, futureAuthToken):
                             if let futureAuthToken = futureAuthToken {
                                 tokens.insert(futureAuthToken.makeData(), at: 0)
                             }
-                            let _ = futureAuthExpires
                         default:
                             break
                         }

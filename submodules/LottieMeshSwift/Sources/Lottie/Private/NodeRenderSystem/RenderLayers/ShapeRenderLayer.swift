@@ -124,8 +124,10 @@ final class ShapeRenderLayer: ShapeContainerLayer {
             for i in stride(from: (renderer.numberOfColors * 4), to: renderer.colors.endIndex, by: 2) {
                 let alpha = renderer.colors[i + 1]
                 var currentAlpha: CGFloat = 1.0
-                gradientColors[alphaIndex].getRed(nil, green: nil, blue: nil, alpha: &currentAlpha)
-                gradientColors[alphaIndex] = gradientColors[alphaIndex].withAlphaComponent(alpha * currentAlpha)
+                    if alphaIndex < gradientColors.count {
+                    gradientColors[alphaIndex].getRed(nil, green: nil, blue: nil, alpha: &currentAlpha)
+                    gradientColors[alphaIndex] = gradientColors[alphaIndex].withAlphaComponent(alpha * currentAlpha)
+                }
                 alphaIndex += 1
             }
 

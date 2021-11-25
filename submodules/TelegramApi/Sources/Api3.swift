@@ -1417,25 +1417,24 @@ public struct auth {
     
     }
     public enum LoggedOut: TypeConstructorDescription {
-        case loggedOut(flags: Int32, futureAuthToken: Buffer?, futureAuthExpires: Int32?)
+        case loggedOut(flags: Int32, futureAuthToken: Buffer?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .loggedOut(let flags, let futureAuthToken, let futureAuthExpires):
+                case .loggedOut(let flags, let futureAuthToken):
                     if boxed {
-                        buffer.appendInt32(-1957096922)
+                        buffer.appendInt32(-1012759713)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeBytes(futureAuthToken!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(futureAuthExpires!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .loggedOut(let flags, let futureAuthToken, let futureAuthExpires):
-                return ("loggedOut", [("flags", flags), ("futureAuthToken", futureAuthToken), ("futureAuthExpires", futureAuthExpires)])
+                case .loggedOut(let flags, let futureAuthToken):
+                return ("loggedOut", [("flags", flags), ("futureAuthToken", futureAuthToken)])
     }
     }
     
@@ -1444,13 +1443,10 @@ public struct auth {
             _1 = reader.readInt32()
             var _2: Buffer?
             if Int(_1!) & Int(1 << 0) != 0 {_2 = parseBytes(reader) }
-            var _3: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.auth.LoggedOut.loggedOut(flags: _1!, futureAuthToken: _2, futureAuthExpires: _3)
+            if _c1 && _c2 {
+                return Api.auth.LoggedOut.loggedOut(flags: _1!, futureAuthToken: _2)
             }
             else {
                 return nil
