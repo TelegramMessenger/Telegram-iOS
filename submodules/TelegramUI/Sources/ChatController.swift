@@ -14304,7 +14304,8 @@ extension Peer {
 }
 
 func canAddMessageReactions(message: Message) -> Bool {
-    if let peer = message.peers[message.id.peerId] {
+    return false
+    /*if let peer = message.peers[message.id.peerId] {
         if let channel = peer as? TelegramChannel {
             if case .group = channel.info {
             } else {
@@ -14322,5 +14323,5 @@ func canAddMessageReactions(message: Message) -> Bool {
             return false
         }
     }
-    return true
+    return true*/
 }

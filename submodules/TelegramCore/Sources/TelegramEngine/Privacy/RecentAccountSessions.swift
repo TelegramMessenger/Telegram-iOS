@@ -70,7 +70,7 @@ public enum UpdateSessionError {
 }
 
 func updateAccountSessionAcceptsSecretChats(account: Account, hash: Int64, accepts: Bool) -> Signal<Void, UpdateSessionError> {
-    return account.network.request(Api.functions.account.changeAuthorizationSettings(hash: hash, encryptedRequestsDisabled: accepts ? .boolFalse : .boolTrue))
+    return account.network.request(Api.functions.account.changeAuthorizationSettings(flags: 1 << 0, hash: hash, encryptedRequestsDisabled: accepts ? .boolFalse : .boolTrue, callRequestsDisabled: nil))
     |> mapError { error -> UpdateSessionError in
         return .generic
     }

@@ -20,8 +20,6 @@ extension StickerPackReference {
                 return .inputStickerSetDice(emoticon: emoji)
             case .animatedEmojiAnimations:
                 return .inputStickerSetAnimatedEmojiAnimations
-            case .animatedEmojiReactions:
-                return .inputStickerSetAnimatedEmojiReactions
         }
     }
 }
