@@ -828,7 +828,7 @@ private final class MonthComponent: CombinedComponent {
 
             let monthAction = context.component.monthAction
             let firstDayStart = Int32(context.component.model.firstDay.timeIntervalSince1970)
-            let lastDayStart = firstDayStart + 24 * 60 * 60 * Int32(context.component.model.numberOfDays)
+            let lastDayStart = firstDayStart + 24 * 60 * 60 * Int32(context.component.model.numberOfDays - 1)
             
             context.add(title
                 .position(CGPoint(x: titleFrame.midX, y: titleFrame.midY))
