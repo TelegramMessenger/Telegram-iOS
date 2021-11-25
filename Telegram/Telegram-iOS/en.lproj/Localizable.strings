@@ -7071,6 +7071,8 @@ Sorry for the inconvenience.";
 "Group.Setup.ForwardingDisabled" = "Restrict Forwarding";
 "Group.Setup.ForwardingGroupInfo" = "Participants can forward messages from this group and save media files.";
 "Group.Setup.ForwardingChannelInfo" = "Participants can forward messages from this channel and save media files.";
+"Group.Setup.ForwardingGroupInfoDisabled" = "Participants can't forward messages from this group and save media files.";
+"Group.Setup.ForwardingChannelInfoDisabled" = "Participants can't forward messages from this channel and save media files.";
 
 "AuthSessions.TerminateIfAwayTitle" = "Automatically Terminate Old Sessions";
 "AuthSessions.TerminateIfAwayFor" = "If Inactive For";
