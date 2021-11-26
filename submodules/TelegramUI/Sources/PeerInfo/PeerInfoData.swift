@@ -1086,7 +1086,10 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if hasDiscussion {
             result.append(.discussion)
         }
-        result.append(.search)
+        if isExpanded && hasDiscussion {
+        } else {
+            result.append(.search)
+        }
         if displayLeave && result.count < 4 {
             result.append(.leave)
         }
@@ -1122,12 +1125,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         result.append(.search)
         result.append(.more)
     }
-    if isExpanded && result.count > 3 {
-        result = result.filter { !peerInfoHeaderButtonIsHiddenWhileExpanded(buttonKey: $0, isOpenedFromChat: isOpenedFromChat) }
-        if !result.contains(.more) {
-            result.append(.more)
-        }
-    }
+    
     return result
 }
 
