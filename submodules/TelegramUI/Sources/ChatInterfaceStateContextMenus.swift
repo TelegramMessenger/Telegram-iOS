@@ -1374,6 +1374,13 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                                     } else if banPeer?.id != message.author?.id {
                                         banPeer = nil
                                     }
+                                } else if message.author is TelegramChannel {
+                                    if !hadBanPeerId {
+                                        hadBanPeerId = true
+                                        banPeer = message.author
+                                    } else if banPeer?.id != message.author?.id {
+                                        banPeer = nil
+                                    }
                                 } else {
                                     hadBanPeerId = true
                                     banPeer = nil
