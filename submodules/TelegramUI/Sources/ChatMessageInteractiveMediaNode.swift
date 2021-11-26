@@ -1573,6 +1573,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 imageView.contentMode = .scaleToFill
                 imageView.image = strongSelf.imageNode.image
                 imageView.frame = strongSelf.imageNode.frame
+                if imageView.layer.contents == nil {
+                    imageView.layer.contents = imageView.image?.cgImage
+                }
                 strongSelf.imageNode.view.superview?.insertSubview(imageView, aboveSubview: strongSelf.imageNode.view)
                 
                 view = self?.view.snapshotContentTree(unhide: true)
