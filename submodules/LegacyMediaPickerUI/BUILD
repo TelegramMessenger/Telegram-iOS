@@ -27,6 +27,7 @@ swift_library(
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/StickerResources:StickerResources",
+        "//submodules/TextFormat:TextFormat",
     ],
     visibility = [
         "//visibility:public",

@@ -255,6 +255,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openPeerMention(name)
         }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _ in
             self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
+        }, updateMessageReaction: { _ in
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
@@ -294,6 +295,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }))
             }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
+        }, presentControllerInCurrent: { _, _ in
         }, navigationController: { [weak self] in
             return self?.getNavigationController()
         }, chatControllerNode: { [weak self] in

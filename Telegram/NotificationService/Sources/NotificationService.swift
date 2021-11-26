@@ -273,7 +273,7 @@ private extension CGSize {
 
 private func convertLottieImage(data: Data) -> UIImage? {
     let decompressedData = TGGUnzipData(data, 512 * 1024) ?? data
-    guard let animation = LottieInstance(data: decompressedData, cacheKey: "") else {
+    guard let animation = LottieInstance(data: decompressedData, fitzModifier: .none, cacheKey: "") else {
         return nil
     }
     let size = animation.dimensions.fitted(CGSize(width: 200.0, height: 200.0))
@@ -627,6 +627,13 @@ private final class NotificationServiceHandler {
         } else {
             isLockedMessage = nil
         }
+        
+        let incomingCallMessage: String
+        if let notificationsPresentationData = try? Data(contentsOf: URL(fileURLWithPath: notificationsPresentationDataPath(rootPath: rootPath))), let notificationsPresentationDataValue = try? JSONDecoder().decode(NotificationsPresentationData.self, from: notificationsPresentationData) {
+            incomingCallMessage = notificationsPresentationDataValue.incomingCallString
+        } else {
+            incomingCallMessage = "is calling you"
+        }
 
         Logger.shared.log("NotificationService \(episode)", "Begin processing payload \(payload)")
 
@@ -646,7 +653,7 @@ private final class NotificationServiceHandler {
 
         let _ = (combineLatest(queue: self.queue,
             self.accountManager.accountRecords(),
-            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
+            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings])
         )
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
@@ -670,6 +677,13 @@ private final class NotificationServiceHandler {
             }
 
             let inAppNotificationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
+            
+            let voiceCallSettings: VoiceCallSettings
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) {
+                voiceCallSettings = value
+            } else {
+                voiceCallSettings = VoiceCallSettings.defaultSettings
+            }
 
             guard let strongSelf = self, let recordId = recordId else {
                 Logger.shared.log("NotificationService \(episode)", "Couldn't find a matching decryption key")
@@ -754,6 +768,7 @@ private final class NotificationServiceHandler {
                         var fromId: PeerId
                         var updates: String
                         var accountId: Int64
+                        var peer: EnginePeer?
                     }
 
                     var callData: CallData?
@@ -782,12 +797,27 @@ private final class NotificationServiceHandler {
 
                     if let callIdString = payloadJson["call_id"] as? String, let callAccessHashString = payloadJson["call_ah"] as? String, let peerId = peerId, let updates = payloadJson["updates"] as? String {
                         if let callId = Int64(callIdString), let callAccessHash = Int64(callAccessHashString) {
+                            var peer: EnginePeer?
+                            
+                            var updateString = updates
+                            updateString = updateString.replacingOccurrences(of: "-", with: "+")
+                            updateString = updateString.replacingOccurrences(of: "_", with: "/")
+                            while updateString.count % 4 != 0 {
+                                updateString.append("=")
+                            }
+                            if let updateData = Data(base64Encoded: updateString) {
+                                if let callUpdate = AccountStateManager.extractIncomingCallUpdate(data: updateData) {
+                                    peer = callUpdate.peer
+                                }
+                            }
+                            
                             callData = CallData(
                                 id: callId,
                                 accessHash: callAccessHash,
                                 fromId: peerId,
                                 updates: updates,
-                                accountId: recordId.int64
+                                accountId: recordId.int64,
+                                peer: peer
                             )
                         }
                     }
@@ -937,17 +967,27 @@ private final class NotificationServiceHandler {
                                 "updates": callData.updates,
                                 "accountId": "\(callData.accountId)"
                             ]
-                            Logger.shared.log("NotificationService \(episode)", "Will report voip notification")
-                            let content = NotificationContent(isLockedMessage: isLockedMessage)
-                            updateCurrentContent(content)
 
-                            if #available(iOS 14.5, *) {
+                            if #available(iOS 14.5, *), voiceCallSettings.enableSystemIntegration {
+                                Logger.shared.log("NotificationService \(episode)", "Will report voip notification")
+                                let content = NotificationContent(isLockedMessage: isLockedMessage)
+                                updateCurrentContent(content)
+                                
                                 CXProvider.reportNewIncomingVoIPPushPayload(voipPayload, completion: { error in
                                     Logger.shared.log("NotificationService \(episode)", "Did report voip notification, error: \(String(describing: error))")
 
                                     completed()
                                 })
                             } else {
+                                var content = NotificationContent(isLockedMessage: nil)
+                                if let peer = callData.peer {
+                                    content.title = peer.debugDisplayTitle
+                                    content.body = incomingCallMessage
+                                } else {
+                                    content.body = "Incoming Call"
+                                }
+                                
+                                updateCurrentContent(content)
                                 completed()
                             }
                         case .logout:

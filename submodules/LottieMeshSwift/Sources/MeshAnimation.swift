@@ -2,6 +2,7 @@ import Foundation
 import Metal
 import MetalKit
 import LottieMeshBinding
+import Postbox
 
 enum TriangleFill {
     struct Color {
@@ -109,15 +110,29 @@ enum MeshOption {
     case stroke(lineWidth: CGFloat, miterLimit: CGFloat, lineJoin: CGLineJoin, lineCap: CGLineCap)
 }
 
+final class DataRange {
+    let data: Data
+    let range: Range<Int>
+    
+    init(data: Data, range: Range<Int>) {
+        self.data = data
+        self.range = range
+    }
+    
+    var count: Int {
+        return self.range.upperBound - self.range.lowerBound
+    }
+}
+
 public final class MeshAnimation {
     final class Frame {
         final class Segment {
-            let vertices: Data
-            let triangles: Data
+            let vertices: DataRange
+            let triangles: DataRange
             let fill: TriangleFill
             let transform: CGAffineTransform
 
-            init(vertices: Data, triangles: Data, fill: TriangleFill, transform: CGAffineTransform) {
+            init(vertices: DataRange, triangles: DataRange, fill: TriangleFill, transform: CGAffineTransform) {
                 self.vertices = vertices
                 self.triangles = triangles
                 self.fill = fill
@@ -126,16 +141,10 @@ public final class MeshAnimation {
 
             static func read(buffer: MeshReadBuffer) -> Segment {
                 let vertCount = Int(buffer.readInt32())
-                var vertices = Data(count: 4 * vertCount * 2)
-                vertices.withUnsafeMutableBytes { bytes in
-                    buffer.read(bytes.baseAddress!, length: bytes.count)
-                }
+                let vertices = buffer.readDataRange(count: vertCount)
 
                 let triCount = Int(buffer.readInt32())
-                var triangles = Data(count: 3 * triCount * 4)
-                triangles.withUnsafeMutableBytes { bytes in
-                    buffer.read(bytes.baseAddress!, length: bytes.count)
-                }
+                let triangles = buffer.readDataRange(count: triCount)
 
                 return Segment(vertices: vertices, triangles: triangles, fill: TriangleFill.read(buffer: buffer), transform: CGAffineTransform(a: CGFloat(buffer.readFloat()), b: CGFloat(buffer.readFloat()), c: CGFloat(buffer.readFloat()), d: CGFloat(buffer.readFloat()), tx: CGFloat(buffer.readFloat()), ty: CGFloat(buffer.readFloat())))
             }
@@ -171,12 +180,12 @@ public final class MeshAnimation {
             return Frame(segments: segments)
         }
 
-        func write(buffer: MeshWriteBuffer) {
+        /*func write(buffer: MeshWriteBuffer) {
             buffer.writeInt32(Int32(self.segments.count))
             for segment in self.segments {
                 segment.write(buffer: buffer)
             }
-        }
+        }*/
     }
 
     let frames: [Frame]
@@ -194,12 +203,12 @@ public final class MeshAnimation {
         return MeshAnimation(frames: frames)
     }
 
-    public func write(buffer: MeshWriteBuffer) {
+    /*public func write(buffer: MeshWriteBuffer) {
         buffer.writeInt32(Int32(self.frames.count))
         for frame in self.frames {
             frame.write(buffer: buffer)
         }
-    }
+    }*/
 }
 
 @available(iOS 13.0, *)
@@ -207,6 +216,7 @@ public final class MeshRenderer: MTKView {
     private final class RenderingMesh {
         let mesh: MeshAnimation
         let offset: CGPoint
+        let loop: Bool
         var currentFrame: Int = 0
         let vertexBuffer: MTLBuffer
         let indexBuffer: MTLBuffer
@@ -214,9 +224,10 @@ public final class MeshRenderer: MTKView {
         let maxVertices: Int
         let maxTriangles: Int
 
-        init(device: MTLDevice, mesh: MeshAnimation, offset: CGPoint) {
+        init(device: MTLDevice, mesh: MeshAnimation, offset: CGPoint, loop: Bool) {
             self.mesh = mesh
             self.offset = offset
+            self.loop = loop
 
             var maxTriangles = 0
             var maxVertices = 0
@@ -254,6 +265,7 @@ public final class MeshRenderer: MTKView {
         }
     }
 
+    private let wireframe: Bool
     private let commandQueue: MTLCommandQueue
     private let drawPassthroughPipelineState: MTLRenderPipelineState
     private let drawRadialGradientPipelineStates: [Int: MTLRenderPipelineState]
@@ -272,6 +284,8 @@ public final class MeshRenderer: MTKView {
     public var allAnimationsCompleted: (() -> Void)?
 
     public init?(wireframe: Bool = false) {
+        self.wireframe = wireframe
+        
         let mainBundle = Bundle(for: MeshRenderer.self)
 
         guard let path = mainBundle.path(forResource: "LottieMeshSwiftBundle", ofType: "bundle") else {
@@ -357,6 +371,7 @@ public final class MeshRenderer: MTKView {
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         if #available(iOS 15.0, *) {
             self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 60.0, preferred: 60.0)
+            //self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 10.0, maximum: 60.0, preferred: 10.0)
         }
         self.displayLink?.add(to: .main, forMode: .common)
         self.displayLink?.isPaused = false
@@ -372,8 +387,8 @@ public final class MeshRenderer: MTKView {
         self.displayLink?.invalidate()
     }
 
-    public func add(mesh: MeshAnimation, offset: CGPoint) {
-        self.meshes.append(RenderingMesh(device: self.device!, mesh: mesh, offset: offset))
+    public func add(mesh: MeshAnimation, offset: CGPoint, loop: Bool = false) {
+        self.meshes.append(RenderingMesh(device: self.device!, mesh: mesh, offset: offset, loop: loop))
     }
 
     @objc private func displayLinkEvent() {
@@ -400,9 +415,9 @@ public final class MeshRenderer: MTKView {
         }
 
         renderEncoder.setCullMode(.none)
-        /*if displayDebug {
+        if self.wireframe {
             renderEncoder.setTriangleFillMode(.lines)
-        }*/
+        }
 
         func addTriangle(vertexData: UnsafeMutablePointer<Float>, maxVertices: Int, nextVertexIndex: inout Int, vertices: Data, triangles: Data, triangleIndex: Int) {
             assert(nextVertexIndex + 3 <= maxVertices)
@@ -450,15 +465,15 @@ public final class MeshRenderer: MTKView {
                 let startVertexIndex = nextVertexIndex
                 let startIndexIndex = nextIndexIndex
 
-                segment.vertices.withUnsafeBytes { vertices in
-                    let _ = memcpy(vertexData.advanced(by: nextVertexIndex * 2), vertices.baseAddress!, vertices.count)
+                segment.vertices.data.withUnsafeBytes { vertices in
+                    let _ = memcpy(vertexData.advanced(by: nextVertexIndex * 2), vertices.baseAddress!.advanced(by: segment.vertices.range.lowerBound), segment.vertices.count)
                 }
                 nextVertexIndex += segment.vertices.count / (4 * 2)
 
                 let baseVertexIndex = Int32(startVertexIndex)
 
-                segment.triangles.withUnsafeBytes { triangles in
-                    let _ = memcpy(indexData.advanced(by: nextIndexIndex), triangles.baseAddress!, triangles.count)
+                segment.triangles.data.withUnsafeBytes { triangles in
+                    let _ = memcpy(indexData.advanced(by: nextIndexIndex), triangles.baseAddress!.advanced(by: segment.triangles.range.lowerBound), segment.triangles.count)
                 }
                 nextIndexIndex += segment.triangles.count / 4
 
@@ -528,13 +543,15 @@ public final class MeshRenderer: MTKView {
 
                 renderEncoder.setVertexBuffer(mesh.vertexBuffer, offset: 0, index: 0)
                 renderEncoder.drawIndexedPrimitives(type: .triangle, indexCount: iCount, indexType: .uint32, indexBuffer: mesh.indexBuffer, indexBufferOffset: iStart * 4)
-                //renderEncoder.drawIndexedPrimitives(type: .triangle, indexCount: iCount, indexType: .uint32, indexBuffer: mesh.indexBuffer, indexBufferOffset: iStart, instanceCount: 1)
-                //renderEncoder.drawPrimitives(type: .triangle, vertexStart: startIndex, vertexCount: count, instanceCount: 1)
             }
 
             let nextFrame = mesh.currentFrame + 1
             if nextFrame >= mesh.mesh.frames.count {
-                removeMeshes.append(i)
+                if mesh.loop {
+                    mesh.currentFrame = 0
+                } else {
+                    removeMeshes.append(i)
+                }
             } else {
                 mesh.currentFrame = nextFrame
             }
@@ -556,18 +573,13 @@ public final class MeshRenderer: MTKView {
     }
 }
 
-private func generateSegments(geometry: CapturedGeometryNode, superAlpha: CGFloat = 1.0, path: [Int] = []) -> [MeshAnimation.Frame.Segment] {
+private func generateSegments(writeBuffer: MeshWriteBuffer, segmentCount: inout Int, geometry: CapturedGeometryNode, superAlpha: CGFloat, superTransform: CGAffineTransform) {
     if geometry.isHidden || geometry.alpha.isZero {
-        return []
+        return
     }
 
-    var result: [MeshAnimation.Frame.Segment] = []
-
     for i in 0 ..< geometry.subnodes.count {
-        let subResult = generateSegments(geometry: geometry.subnodes[i], superAlpha: superAlpha * geometry.alpha, path: path + [i]).map { segment in
-            return MeshAnimation.Frame.Segment(vertices: segment.vertices, triangles: segment.triangles, fill: segment.fill, transform: segment.transform.concatenating(CATransform3DGetAffineTransform(geometry.transform)))
-        }
-        result.append(contentsOf: subResult)
+        generateSegments(writeBuffer: writeBuffer, segmentCount: &segmentCount, geometry: geometry.subnodes[i], superAlpha: superAlpha * geometry.alpha, superTransform: CATransform3DGetAffineTransform(geometry.transform).concatenating(superTransform))
     }
 
     if let displayItem = geometry.displayItem {
@@ -605,18 +617,7 @@ private func generateSegments(geometry: CapturedGeometryNode, superAlpha: CGFloa
             meshData = LottieMeshData.generate(with: UIBezierPath(cgPath: displayItem.path), fill: nil, stroke: LottieMeshStroke(lineWidth: stroke.lineWidth, lineJoin: stroke.lineJoin, lineCap: stroke.lineCap, miterLimit: stroke.miterLimit))
         }
         if let meshData = meshData, meshData.triangleCount() != 0 {
-            let mappedTriangles = MeshWriteBuffer()
-            for i in 0 ..< meshData.triangleCount() {
-                var v0: Int = 0
-                var v1: Int = 0
-                var v2: Int = 0
-                meshData.getTriangleAt(i, v0: &v0, v1: &v1, v2: &v2)
-                mappedTriangles.writeInt32(Int32(v0))
-                mappedTriangles.writeInt32(Int32(v1))
-                mappedTriangles.writeInt32(Int32(v2))
-            }
-
-            let mappedVertices = MeshWriteBuffer()
+            let mappedVertices = WriteBuffer()
             for i in 0 ..< meshData.vertexCount() {
                 var x: Float = 0.0
                 var y: Float = 0.0
@@ -624,33 +625,68 @@ private func generateSegments(geometry: CapturedGeometryNode, superAlpha: CGFloa
                 mappedVertices.writeFloat(x)
                 mappedVertices.writeFloat(y)
             }
+            
+            let trianglesData = Data(bytes: meshData.getTriangles(), count: meshData.triangleCount() * 3 * 4)
 
-            result.append(MeshAnimation.Frame.Segment(vertices: mappedVertices.makeData(), triangles: mappedTriangles.makeData(), fill: triangleFill, transform: CATransform3DGetAffineTransform(geometry.transform)))
+            let verticesData = mappedVertices.makeData()
+            
+            let segment = MeshAnimation.Frame.Segment(vertices: DataRange(data: verticesData, range: 0 ..< verticesData.count), triangles: DataRange(data: trianglesData, range: 0 ..< trianglesData.count), fill: triangleFill, transform: CATransform3DGetAffineTransform(geometry.transform).concatenating(superTransform))
+            
+            segment.write(buffer: writeBuffer)
+            segmentCount += 1
         }
     }
-
-    return result
 }
 
-public func generateMeshAnimation(data: Data) -> MeshAnimation? {
+public func generateMeshAnimation(data: Data) -> TempBoxFile? {
     guard let animation = try? JSONDecoder().decode(Animation.self, from: data) else {
         return nil
     }
     let container = MyAnimationContainer(animation: animation)
-
-    var frames: [MeshAnimation.Frame] = []
+    
+    let tempFile = TempBox.shared.tempFile(fileName: "data")
+    guard let file = ManagedFile(queue: nil, path: tempFile.path, mode: .readwrite) else {
+        return nil
+    }
+    let writeBuffer = MeshWriteBuffer(file: file)
+    
+    let frameCountOffset = writeBuffer.offset
+    writeBuffer.writeInt32(0)
+    
+    var frameCount: Int = 0
 
     for i in 0 ..< Int(animation.endFrame) {
         container.setFrame(frame: CGFloat(i))
-        #if DEBUG
+        //#if DEBUG
         print("Frame \(i) / \(Int(animation.endFrame))")
-        #endif
+        //#endif
+        
+        let segmentCountOffset = writeBuffer.offset
+        writeBuffer.writeInt32(0)
+        var segmentCount: Int = 0
 
         let geometry = container.captureGeometry()
         geometry.transform = CATransform3DMakeTranslation(256.0, 256.0, 0.0)
-        let segments = generateSegments(geometry: geometry)
-        frames.append(MeshAnimation.Frame(segments: segments))
+        
+        generateSegments(writeBuffer: writeBuffer, segmentCount: &segmentCount, geometry: geometry, superAlpha: 1.0, superTransform: .identity)
+        
+        let currentOffset = writeBuffer.offset
+        writeBuffer.seek(offset: segmentCountOffset)
+        writeBuffer.writeInt32(Int32(segmentCount))
+        
+        writeBuffer.seek(offset: currentOffset)
+        
+        frameCount += 1
     }
+    
+    let currentOffset = writeBuffer.offset
+    writeBuffer.seek(offset: frameCountOffset)
+    writeBuffer.writeInt32(Int32(frameCount))
+    writeBuffer.seek(offset: currentOffset)
 
-    return MeshAnimation(frames: frames)
+    return tempFile
+}
+
+public final class MeshRenderingContext {
+    
 }

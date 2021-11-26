@@ -39,7 +39,7 @@ protocol NodeOutput {
  if the node needs an update for the current frame.
  
  */
-protocol AnimatorNode: AnyObject, KeypathSearchable {
+protocol AnimatorNode: AnyObject {
   
   /**
    The available properties of the Node.
@@ -49,7 +49,7 @@ protocol AnimatorNode: AnyObject, KeypathSearchable {
    property system.
    
    */
-  var propertyMap: NodePropertyMap & KeypathSearchable { get }
+  var propertyMap: NodePropertyMap { get }
   
   /// The upstream input node
   var parentNode: AnimatorNode? { get }
@@ -170,28 +170,6 @@ extension AnimatorNode {
   func updateTree(_ frame: CGFloat, forceUpdates: Bool = false) {
     updateContents(frame, forceLocalUpdate: forceUpdates)
     updateOutputs(frame, forceOutputUpdate: forceUpdates)
-  }
-  
-}
-
-extension AnimatorNode {
-  /// Default implementation for Keypath searchable.
-  /// Forward all calls to the propertyMap.
-  
-  var keypathName: String {
-    return propertyMap.keypathName
-  }
-  
-  var keypathProperties: [String : AnyNodeProperty] {
-    return propertyMap.keypathProperties
-  }
-  
-  var childKeypaths: [KeypathSearchable] {
-    return propertyMap.childKeypaths
-  }
-  
-  var keypathLayer: CALayer? {
-    return nil
   }
   
 }

@@ -58,7 +58,7 @@ public enum LegacyAttachmentMenuMediaEditing {
     case file
 }
 
-public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMediaReference, initialCaption: String, snapshots: [UIView], transitionCompletion: (() -> Void)?, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMediaReference, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {
@@ -73,6 +73,9 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
         }
         
         let paintStickersContext = LegacyPaintStickersContext(context: context)
+        paintStickersContext.captionPanelView = {
+            return getCaptionPanelView()
+        }
         paintStickersContext.presentStickersController = { completion in
             return presentStickers({ file, animated, view, rect in
                 let coder = PostboxEncoder()
@@ -102,7 +105,7 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
         
         present(legacyController, nil)
         
-        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, entities: [], withItem: item, paint: true, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: snapshots as [Any], immediate: transitionCompletion != nil, appeared: {
+        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, withItem: item, paint: true, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: snapshots as [Any], immediate: transitionCompletion != nil, appeared: {
             transitionCompletion?()
         }, completion: { result, editingContext in
             let nativeGenerator = legacyAssetPickerItemGenerator()
@@ -110,8 +113,8 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
             if let result = result {
                 selectableResult = unsafeDowncast(result, to: TGMediaSelectableItem.self)
             }
-            let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3, _4 in
-                nativeGenerator(_1, _2, _3, _4, nil)
+            let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3 in
+                nativeGenerator(_1, _2, _3, nil)
             })
             sendMessagesWithSignals(signals, false, 0)
         }, dismissed: { [weak legacyController] in
@@ -119,8 +122,8 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
         })
     })
 }
-
-public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
+    
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: NSAttributedString, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
     let defaultVideoPreset = defaultVideoPresetForContext(context)
     UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
     
@@ -169,6 +172,9 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
     }
     
     let paintStickersContext = LegacyPaintStickersContext(context: context)
+    paintStickersContext.captionPanelView = {
+        return getCaptionPanelView()
+    }
     paintStickersContext.presentStickersController = { completion in
         return presentStickers({ file, animated, view, rect in
             let coder = PostboxEncoder()
@@ -234,7 +240,8 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                     allItems.append(currentItem)
                 }
                 for item in allItems {
-                    if let asset = item as? TGMediaAsset, asset.uniformTypeIdentifier.contains("heic") {
+                    if item is TGCameraCapturedVideo {
+                    } else if let asset = item as? TGMediaAsset, asset.uniformTypeIdentifier.contains("heic") {
                         hasHeic = true
                         break
                     }
@@ -266,8 +273,8 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
             }
         };
         carouselItem.allowCaptions = true
-        if !initialCaption.isEmpty {
-            carouselItem.editingContext.setForcedCaption(initialCaption, entities: [])
+        if !initialCaption.string.isEmpty {
+            carouselItem.editingContext.setForcedCaption(initialCaption)
         }
         itemViews.append(carouselItem)
         
@@ -353,15 +360,15 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                 
                 present(legacyController, nil)
                 
-                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: "", entities: [], withItem: item, paint: false, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: [], immediate: false, appeared: {
+                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: NSAttributedString(), withItem: item, paint: false, recipientName: recipientName, stickersContext: paintStickersContext, snapshots: [], immediate: false, appeared: {
                 }, completion: { result, editingContext in
                     let nativeGenerator = legacyAssetPickerItemGenerator()
                     var selectableResult: TGMediaSelectableItem?
                     if let result = result {
                         selectableResult = unsafeDowncast(result, to: TGMediaSelectableItem.self)
                     }
-                    let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3, _4 in
-                        nativeGenerator(_1, _2, _3, _4, nil)
+                    let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3 in
+                        nativeGenerator(_1, _2, _3, nil)
                     })
                     sendMessagesWithSignals(signals, false, 0, { _ in nil}, {})
                 }, dismissed: { [weak legacyController] in
@@ -440,7 +447,7 @@ public func legacyMenuPaletteFromTheme(_ theme: PresentationTheme, forceDark: Bo
     return TGMenuSheetPallete(dark: forceDark || theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
 }
 
-public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), images: [UIImage], presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
+public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), images: [UIImage], presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
     let defaultVideoPreset = defaultVideoPresetForContext(context)
     UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
     
@@ -471,6 +478,9 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLoca
     let suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
     
     let paintStickersContext = LegacyPaintStickersContext(context: context)
+    paintStickersContext.captionPanelView = {
+        return getCaptionPanelView()
+    }
     paintStickersContext.presentStickersController = { completion in
         return presentStickers({ file, animated, view, rect in
             let coder = PostboxEncoder()
@@ -489,8 +499,8 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLoca
         }
     }, completed: { selectionContext, editingContext, currentItem, silentPosting, scheduleTime in
         let nativeGenerator = legacyAssetPickerItemGenerator()
-        let signals = TGClipboardMenu.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, descriptionGenerator: { _1, _2, _3, _4 in
-            nativeGenerator(_1, _2, _3, _4, nil)
+        let signals = TGClipboardMenu.resultSignals(for: selectionContext, editingContext: editingContext, currentItem: currentItem, descriptionGenerator: { _1, _2, _3 in
+            nativeGenerator(_1, _2, _3, nil)
         })
         sendMessagesWithSignals(signals, silentPosting, scheduleTime)
     }, dismissed: { [weak legacyController] in

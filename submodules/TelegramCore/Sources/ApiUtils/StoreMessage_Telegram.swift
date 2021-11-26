@@ -374,7 +374,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason, ttlPeriod):
+            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId/*, reactions*/, restrictionReason, ttlPeriod):
                 let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
                 
                 let peerId: PeerId
@@ -545,6 +545,10 @@ extension StoreMessage {
                 if (flags & (1 << 17)) != 0 {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
+            
+                /*if let reactions = reactions {
+                    attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
+                }*/
                 
                 if let replies = replies {
                     let recentRepliersPeerIds: [PeerId]?
@@ -583,6 +587,10 @@ extension StoreMessage {
                 if (flags & (1 << 18)) != 0 {
                     storeFlags.insert(.WasScheduled)
                     storeFlags.insert(.CountedAsIncoming)
+                }
+            
+                if (flags & (1 << 26)) != 0 {
+                    storeFlags.insert(.CopyProtected)
                 }
                 
                 if (flags & (1 << 4)) != 0 || (flags & (1 << 13)) != 0 {
@@ -670,6 +678,10 @@ extension StoreMessage {
                 
                 if (flags & (1 << 18)) != 0 {
                     storeFlags.insert(.WasScheduled)
+                }
+            
+                if (flags & (1 << 26)) != 0 {
+                    storeFlags.insert(.CopyProtected)
                 }
                 
                 self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)

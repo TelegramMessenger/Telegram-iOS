@@ -2691,6 +2691,20 @@ final class MessageHistoryTable: Table {
         }
         return closestIndex
     }
+
+    func findMessageAtAbsoluteIndex(peerId: PeerId, namespace: MessageId.Namespace, index: Int) -> MessageIndex? {
+        var count = 0
+        var result: MessageIndex?
+        self.valueBox.range(self.table, start: self.upperBound(peerId: peerId, namespace: namespace), end: self.lowerBound(peerId: peerId, namespace: namespace), keys: { key in
+            if count == index {
+                result = extractKey(key)
+                return false
+            }
+            count += 1
+            return true
+        }, limit: 10000)
+        return result
+    }
     
     func findRandomMessage(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, ignoreIds: ([MessageId], Set<MessageId>)) -> MessageIndex? {
         if let index = self.tagsTable.findRandomIndex(peerId: peerId, namespace: namespace, tag: tag, ignoreIds: ignoreIds, isMessage: { index in
@@ -2811,8 +2825,22 @@ final class MessageHistoryTable: Table {
         return indices
     }
     
-    func getMessageCountInRange(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
-        return self.tagsTable.getMessageCountInRange(tag: tag, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
+    func getMessageCountInRange(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags?, lowerBound: MessageIndex, upperBound: MessageIndex) -> Int {
+        if let tag = tag {
+            return self.tagsTable.getMessageCountInRange(tag: tag, peerId: peerId, namespace: namespace, lowerBound: lowerBound, upperBound: upperBound)
+        } else {
+            precondition(lowerBound.id.namespace == namespace)
+            precondition(upperBound.id.namespace == namespace)
+            var lowerBoundKey = self.key(lowerBound)
+            if lowerBound.timestamp > 1 {
+                lowerBoundKey = lowerBoundKey.predecessor
+            }
+            var upperBoundKey = self.key(upperBound)
+            if upperBound.timestamp < Int32.max - 1 {
+                upperBoundKey = upperBoundKey.successor
+            }
+            return Int(self.valueBox.count(self.table, start: lowerBoundKey, end: upperBoundKey))
+        }
     }
     
     func setPendingMessageAction(id: MessageId, type: PendingMessageActionType, action: PendingMessageActionData?, pendingActionsOperations: inout [PendingMessageActionsOperation], updatedMessageActionsSummaries: inout [PendingMessageActionsSummaryKey: Int32]) {
@@ -2876,7 +2904,7 @@ final class MessageHistoryTable: Table {
         return (result, mediaRefs, count == 0 ? nil : lastIndex)
     }
     
-    func fetch(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags?, threadId: Int64?, from fromIndex: MessageIndex, includeFrom: Bool, to toIndex: MessageIndex, limit: Int) -> [IntermediateMessage] {
+    func fetch(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags?, threadId: Int64?, from fromIndex: MessageIndex, includeFrom: Bool, to toIndex: MessageIndex, ignoreMessagesInTimestampRange: ClosedRange<Int32>?, limit: Int) -> [IntermediateMessage] {
         precondition(fromIndex.id.peerId == toIndex.id.peerId)
         precondition(fromIndex.id.namespace == toIndex.id.namespace)
         var result: [IntermediateMessage] = []
@@ -2898,6 +2926,11 @@ final class MessageHistoryTable: Table {
                 localIncludeFrom = false
                 
                 for index in sliceIndices {
+                    if let ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange {
+                        if ignoreMessagesInTimestampRange.contains(index.timestamp) {
+                            continue
+                        }
+                    }
                     if let tag = tag {
                         if self.tagsTable.entryExists(tag: tag, index: index) {
                             indices.append(index)
@@ -2933,6 +2966,72 @@ final class MessageHistoryTable: Table {
             } else {
                 indices = self.tagsTable.earlierIndices(tag: tag, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
             }
+            for index in indices {
+                if let ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange {
+                    if ignoreMessagesInTimestampRange.contains(index.timestamp) {
+                        continue
+                    }
+                }
+                if fromIndex < toIndex {
+                    if index < fromIndex || index > toIndex {
+                        continue
+                    }
+                } else {
+                    if index < toIndex || index > fromIndex {
+                        continue
+                    }
+                }
+                if let message = self.getMessage(index) {
+                    result.append(message)
+                } else {
+                    assertionFailure()
+                }
+            }
+        } else if ignoreMessagesInTimestampRange != nil {
+            var indices: [MessageIndex] = []
+            var startIndex = fromIndex
+            var localIncludeFrom = includeFrom
+            while true {
+                let startKey: ValueBoxKey
+                if localIncludeFrom && startIndex != MessageIndex.upperBound(peerId: peerId, namespace: namespace) {
+                    if startIndex < toIndex {
+                        startKey = self.key(startIndex).predecessor
+                    } else {
+                        startKey = self.key(startIndex).successor
+                    }
+                } else {
+                    startKey = self.key(startIndex)
+                }
+                
+                var sliceIndices: [MessageIndex] = []
+                
+                self.valueBox.range(self.table, start: startKey, end: self.key(toIndex), values: { key, value in
+                    sliceIndices.append(extractKey(key))
+                    return true
+                }, limit: limit)
+                
+                if sliceIndices.isEmpty {
+                    break
+                }
+                startIndex = sliceIndices[sliceIndices.count - 1]
+                localIncludeFrom = false
+                
+                for index in sliceIndices {
+                    if let ignoreMessagesInTimestampRange = ignoreMessagesInTimestampRange {
+                        if ignoreMessagesInTimestampRange.contains(index.timestamp) {
+                            continue
+                        }
+                    }
+                    indices.append(index)
+                    if indices.count >= limit {
+                        break
+                    }
+                }
+                if indices.count >= limit {
+                    break
+                }
+            }
+            assert(Set(indices).count == indices.count)
             for index in indices {
                 if fromIndex < toIndex {
                     if index < fromIndex || index > toIndex {

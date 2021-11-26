@@ -24,12 +24,15 @@ public struct AccountManagerModifier<Types: AccountManagerTypes> {
     public let getNotice: (NoticeEntryKey) -> CodableEntry?
     public let setNotice: (NoticeEntryKey, CodableEntry?) -> Void
     public let clearNotices: () -> Void
+    public let getStoredLoginTokens: () -> [Data]
+    public let setStoredLoginTokens: ([Data]) -> Void
 }
 
 final class AccountManagerImpl<Types: AccountManagerTypes> {
     private let queue: Queue
     private let basePath: String
     private let atomicStatePath: String
+    private let loginTokensPath: String
     private let temporarySessionId: Int64
     private let guardValueBox: ValueBox?
     private let valueBox: ValueBox
@@ -76,6 +79,7 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         self.queue = queue
         self.basePath = basePath
         self.atomicStatePath = "\(basePath)/atomic-state"
+        self.loginTokensPath = "\(basePath)/login-tokens"
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         guard let guardValueBox = SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, isTemporary: isTemporary, isReadOnly: false, useCaches: useCaches, encryptionParameters: nil, upgradeProgress: { _ in }) else {
@@ -209,6 +213,10 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             self.currentUpdatedNoticeEntryKeys.insert(key)
         }, clearNotices: {
             self.noticeTable.clear()
+        }, getStoredLoginTokens: {
+            return self.getLoginTokens()
+        }, setStoredLoginTokens: { list in
+            self.setLoginTokens(list: list)
         })
 
         let result = f(transaction)
@@ -240,6 +248,23 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             }
         } else {
             preconditionFailure()
+        }
+    }
+    
+    private func getLoginTokens() -> [Data] {
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: self.loginTokensPath)) else {
+            return []
+        }
+        guard let list = try? JSONDecoder().decode([Data].self, from: data) else {
+            return []
+        }
+        return list
+    }
+    
+    private func setLoginTokens(list: [Data]) {
+        if let data = try? JSONEncoder().encode(list) {
+            if let _ = try? data.write(to: URL(fileURLWithPath: self.loginTokensPath), options: [.atomic]) {
+            }
         }
     }
     

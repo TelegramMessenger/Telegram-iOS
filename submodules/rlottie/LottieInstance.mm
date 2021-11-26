@@ -10,10 +10,32 @@
 
 @implementation LottieInstance
 
-- (instancetype _Nullable)initWithData:(NSData * _Nonnull)data cacheKey:(NSString * _Nonnull)cacheKey {
+- (instancetype _Nullable)initWithData:(NSData * _Nonnull)data fitzModifier:(LottieFitzModifier)fitzModifier cacheKey:(NSString * _Nonnull)cacheKey {
     self = [super init];
     if (self != nil) {
-        _animation = rlottie::Animation::loadFromData(std::string(reinterpret_cast<const char *>(data.bytes), data.length), std::string([cacheKey UTF8String]));
+        rlottie::FitzModifier modifier;
+        switch(fitzModifier) {
+            case LottieFitzModifierNone:
+                modifier = rlottie::FitzModifier::None;
+                break;
+            case LottieFitzModifierType12:
+                modifier = rlottie::FitzModifier::Type12;
+                break;
+            case LottieFitzModifierType3:
+                modifier = rlottie::FitzModifier::Type3;
+                break;
+            case LottieFitzModifierType4:
+                modifier = rlottie::FitzModifier::Type4;
+                break;
+            case LottieFitzModifierType5:
+                modifier = rlottie::FitzModifier::Type5;
+                break;
+            case LottieFitzModifierType6:
+                modifier = rlottie::FitzModifier::Type6;
+                break;
+        }
+        
+        _animation = rlottie::Animation::loadFromData(std::string(reinterpret_cast<const char *>(data.bytes), data.length), std::string([cacheKey UTF8String]), "", true, {}, modifier);
         if (_animation == nullptr) {
             return nil;
         }

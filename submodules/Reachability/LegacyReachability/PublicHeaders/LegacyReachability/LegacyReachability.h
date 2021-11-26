@@ -1,10 +1,5 @@
-/*
- Copyright (C) 2016 Apple Inc. All Rights Reserved.
- See LICENSE.txt for this sample’s licensing information
- 
- Abstract:
- Basic demonstration of how to use the SystemConfiguration Reachablity APIs.
- */
+#ifndef LegacyReachability_h
+#define LegacyReachability_h
 
 #import <Foundation/Foundation.h>
 #import <SystemConfiguration/SystemConfiguration.h>
@@ -16,10 +11,6 @@ typedef enum : NSInteger {
 	ReachableViaWiFi,
 	ReachableViaWWAN
 } NetworkStatus;
-
-#pragma mark IPv6 Support
-//Reachability fully support IPv6.  For full details, see ReadMe.md.
-
 
 extern NSString *kReachabilityChangedNotification;
 
@@ -64,3 +55,4 @@ extern NSString *kReachabilityChangedNotification;
 @end
 
 
+#endif

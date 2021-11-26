@@ -279,34 +279,49 @@ final class LocationInfoListItemNode: ListViewItemNode {
                         let iconNodeFrame = CGRect(origin: CGPoint(x: params.leftInset + inset, y: 10.0), size: CGSize(width: iconSize, height: iconSize))
                         strongSelf.venueIconNode.frame = iconNodeFrame
                         
-                        if case let .ready(drivingTime) = item.drivingTime {
-                            strongSelf.drivingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: drivingTime, format: { $0 })
+                        var directionsWidth: CGFloat = 93.0
+                        
+                        if item.drivingTime == .unknown && item.transitTime == .unknown && item.walkingTime == .unknown {
+                            strongSelf.drivingButtonNode?.icon = nil
+                            strongSelf.drivingButtonNode?.title = item.presentationData.strings.Map_GetDirections
+                            if let drivingButtonNode = strongSelf.drivingButtonNode {
+                                let buttonSize = drivingButtonNode.sizeThatFits(contentSize)
+                                directionsWidth = buttonSize.width
+                            }
                             
                             if let previousDrivingTime = currentItem?.drivingTime, case .calculating = previousDrivingTime {
                                 strongSelf.drivingButtonNode?.alpha = 1.0
                                 strongSelf.drivingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
-                        }
-                        
-                        if case let .ready(transitTime) = item.transitTime {
-                            strongSelf.transitButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: transitTime, format: { $0 })
+                        } else {
+                            if case let .ready(drivingTime) = item.drivingTime {
+                                strongSelf.drivingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: drivingTime, format: { $0 })
+                                
+                                if let previousDrivingTime = currentItem?.drivingTime, case .calculating = previousDrivingTime {
+                                    strongSelf.drivingButtonNode?.alpha = 1.0
+                                    strongSelf.drivingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
+                            }
                             
-                            if let previousTransitTime = currentItem?.transitTime, case .calculating = previousTransitTime {
-                                strongSelf.transitButtonNode?.alpha = 1.0
-                                strongSelf.transitButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            if case let .ready(transitTime) = item.transitTime {
+                                strongSelf.transitButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: transitTime, format: { $0 })
+                                
+                                if let previousTransitTime = currentItem?.transitTime, case .calculating = previousTransitTime {
+                                    strongSelf.transitButtonNode?.alpha = 1.0
+                                    strongSelf.transitButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
+                            }
+                            
+                            if case let .ready(walkingTime) = item.walkingTime {
+                                strongSelf.walkingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: walkingTime, format: { $0 })
+                                
+                                if let previousWalkingTime = currentItem?.walkingTime, case .calculating = previousWalkingTime {
+                                    strongSelf.walkingButtonNode?.alpha = 1.0
+                                    strongSelf.walkingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
                             }
                         }
                         
-                        if case let .ready(walkingTime) = item.walkingTime {
-                            strongSelf.walkingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: walkingTime, format: { $0 })
-                            
-                            if let previousWalkingTime = currentItem?.walkingTime, case .calculating = previousWalkingTime {
-                                strongSelf.walkingButtonNode?.alpha = 1.0
-                                strongSelf.walkingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                            }
-                        }
-                        
-                        let directionsWidth: CGFloat = 93.0
                         let directionsSpacing: CGFloat = 8.0
                         
                         if case .calculating = item.drivingTime, case .calculating = item.transitTime, case .calculating = item.walkingTime {

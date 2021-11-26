@@ -1887,6 +1887,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {
         let signal = self.sharedContextPromise.get()
         |> take(1)
+        |> deliverOnMainQueue
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
             if let accountId = accountId {
                 sharedApplicationContext.sharedContext.switchToAccount(id: accountId)

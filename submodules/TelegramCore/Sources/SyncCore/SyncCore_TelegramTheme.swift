@@ -59,7 +59,7 @@ public final class TelegramThemeSettings: Codable, Equatable {
         self.baseTheme = TelegramBaseTheme(rawValue: try container.decode(Int32.self, forKey: "baseTheme")) ?? .classic
         self.accentColor = UInt32(bitPattern: try container.decode(Int32.self, forKey: "accent"))
         self.outgoingAccentColor = (try container.decodeIfPresent(Int32.self, forKey: "outgoingAccent")).flatMap { UInt32(bitPattern: $0) }
-        let messageColors = try container.decode([Int32].self, forKey: "messageColors")
+        let messageColors = try container.decodeIfPresent([Int32].self, forKey: "messageColors") ?? []
         if !messageColors.isEmpty {
             self.messageColors = messageColors.map(UInt32.init(bitPattern:))
         } else {
@@ -69,7 +69,7 @@ public final class TelegramThemeSettings: Codable, Equatable {
                 self.messageColors = []
             }
         }
-        self.animateMessageColors = try container.decode(Int32.self, forKey: "animateMessageColors") != 0
+        self.animateMessageColors = (try container.decodeIfPresent(Int32.self, forKey: "animateMessageColors") ?? 0) != 0
 
         self.wallpaper = (try container.decodeIfPresent(TelegramWallpaperNativeCodable.self, forKey: "wallpaper"))?.value
     }

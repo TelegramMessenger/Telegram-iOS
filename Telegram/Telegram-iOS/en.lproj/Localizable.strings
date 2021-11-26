@@ -2657,6 +2657,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CaptionEdited" = "%@ edited caption:";
 "Channel.AdminLog.MessageDeleted" = "%@ deleted message:";
 "Channel.AdminLog.MessagePinned" = "%@ pinned message:";
+"Channel.AdminLog.MessageUnpinnedExtended" = "%@ unpinned message:";
 
 "Channel.AdminLog.MessageInvitedName" = "invited %1$@";
 "Channel.AdminLog.MessageInvitedNameUsername" = "invited %1$@ (%2$@)";
@@ -2891,6 +2892,7 @@ Unused sets are archived when you add more.";
 "FastTwoStepSetup.EmailHelp" = "Please add your valid e-mail. It is the only way to recover a forgotten password.";
 
 "Conversation.ViewMessage" = "VIEW MESSAGE";
+"Conversation.ViewPost" = "VIEW POST";
 
 "GroupInfo.GroupHistory" = "History For New Members";
 "GroupInfo.GroupHistoryVisible" = "Visible";
@@ -4848,6 +4850,7 @@ Sorry for the inconvenience.";
 "ChatList.Context.Mute" = "Mute";
 "ChatList.Context.Unmute" = "Unmute";
 "ChatList.Context.JoinChannel" = "Join Channel";
+"ChatList.Context.JoinChat" = "Join Chat";
 "ChatList.Context.Delete" = "Delete";
 
 "ContactList.Context.SendMessage" = "Send Message";
@@ -7046,3 +7049,55 @@ Sorry for the inconvenience.";
 "Themes.CreateNewTheme" = "Create a New Theme";
 
 "Chat.JumpToDate" = "Jump to Date";
+
+"VoiceChat.DiscussionGroup" = "discussion group";
+
+"Group.Edit.PrivatePublicLinkAlert" = "Please note that if you choose a public link for your group, anyone will be able to find it in search and join.\n\nDo not create this link if you want your group to stay private.";
+
+"Conversation.CopyProtectionInfoGroup" = "Admins restricted members to copy or forward content from this group.";
+"Conversation.CopyProtectionInfoChannel" = "Admins restricted members to copy or forward content from this channel.";
+
+"Conversation.CopyProtectionForwardingDisabledGroup" = "Forwards from this group are restricted";
+"Conversation.CopyProtectionForwardingDisabledChannel" = "Forwards from this channel are restricted";
+"Conversation.CopyProtectionSavingDisabledGroup" = "Saving from this group is restricted";
+"Conversation.CopyProtectionSavingDisabledChannel" = "Saving from this channel is restricted";
+
+"Channel.AdminLog.MessageToggleNoForwardsOn" = "%@ restricted message forwarding";
+"Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ allowed message forwarding";
+
+"Group.Setup.ForwardingGroupTitle" = "Forwarding From This Group";
+"Group.Setup.ForwardingChannelTitle" = "Forwarding From This Channel";
+"Group.Setup.ForwardingEnabled" = "Allow Forwarding";
+"Group.Setup.ForwardingDisabled" = "Restrict Forwarding";
+"Group.Setup.ForwardingGroupInfo" = "Participants can forward messages from this group and save media files.";
+"Group.Setup.ForwardingChannelInfo" = "Participants can forward messages from this channel and save media files.";
+"Group.Setup.ForwardingGroupInfoDisabled" = "Participants can't forward messages from this group and save media files.";
+"Group.Setup.ForwardingChannelInfoDisabled" = "Participants can't forward messages from this channel and save media files.";
+
+"AuthSessions.TerminateIfAwayTitle" = "Automatically Terminate Old Sessions";
+"AuthSessions.TerminateIfAwayFor" = "If Inactive For";
+
+"AuthSessions.View.LocationInfo" = "This location estimate is based on the IP address and may not always be accurate.";
+
+"AuthSessions.View.AcceptSecretChatsTitle" = "Incoming Secret Chats";
+"AuthSessions.View.AcceptSecretChats" = "Accept on This Device";
+"AuthSessions.View.AcceptSecretChatsInfo" = "You can disable the acception of incoming secret chats on this device.";
+
+"Conversation.SendMesageAs" = "Send Message As...";
+"Conversation.InviteRequestAdminGroup" = "%1$@ is an admin of %2$@, a group you requested to join.";
+"Conversation.InviteRequestAdminChannel" = "%1$@ is an admin of %2$@, a channel you requested to join.";
+"Conversation.InviteRequestInfo" = "You received this message because you requested to join %1$@ on %2$@.";
+"Conversation.InviteRequestInfoConfirm" = "I understand";
+
+"AuthSessions.HeaderInfo" = "Link [Telegram Desktop](desktop) or [Telegram Web](web) by scanning a QR code.";
+"AuthSessions.LinkDesktopDevice" = "Link Desktop Device";
+"AuthSessions.AddDevice.ScanInstallInfo" = "Go to [getdesktop.telegram.org](desktop) or [web.telegram.org](web) to get the QR code";
+
+"Channel.AdminLog.MessageSent" = "%@ sent message:";
+
+"ChatList.ClearSearchHistory" = "Are you sure you want to clear your search history?";
+
+"AuthSessions.TerminateSessionText" = "Are you sure you want to terminate this session?";
+"AuthSessions.TerminateOtherSessionsText" = "Are you sure you want to terminate all other sessions?";
+
+"Notifications.ResetAllNotificationsText" = "Are you sure you want to reset all notification settings to default?";

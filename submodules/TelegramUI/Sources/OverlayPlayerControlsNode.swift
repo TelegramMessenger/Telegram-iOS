@@ -314,7 +314,6 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             }
             
             var rateButtonIsHidden = true
-            strongSelf.shareNode.isHidden = false
             var displayData: SharedMediaPlaybackDisplayData?
             if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading {
                 var isPaused: Bool
@@ -393,10 +392,12 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             
             if strongSelf.displayData != displayData {
                 strongSelf.displayData = displayData
-                                
+                          
+                var canShare = true
                 if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
                     switch source {
-                        case let .telegramFile(fileReference):
+                        case let .telegramFile(fileReference, isCopyProtected):
+                            canShare = !isCopyProtected
                             strongSelf.currentFileReference = fileReference
                             if let size = fileReference.media.size {
                                 strongSelf.scrubberNode.bufferingStatus = strongSelf.postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
@@ -411,6 +412,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     strongSelf.scrubberNode.bufferingStatus = nil
                 }
                 strongSelf.updateLabels(transition: .immediate)
+                
+                strongSelf.shareNode.isHidden = !canShare
             }
         })
         

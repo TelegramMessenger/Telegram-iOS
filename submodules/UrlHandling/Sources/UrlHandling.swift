@@ -10,7 +10,14 @@ import TelegramNotices
 import AccountContext
 
 private let baseTelegramMePaths = ["telegram.me", "t.me", "telegram.dog"]
-private let baseTelegraPhPaths = ["telegra.ph/", "te.legra.ph/", "graph.org/", "t.me/iv?"]
+private let baseTelegraPhPaths = [
+    "telegra.ph/",
+    "te.legra.ph/",
+    "graph.org/",
+    "t.me/iv?",
+    "telegram.org/blog/",
+    "telegram.org/tour/"
+]
 
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)

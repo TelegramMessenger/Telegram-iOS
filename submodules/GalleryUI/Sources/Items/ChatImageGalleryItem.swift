@@ -122,6 +122,7 @@ class ChatImageGalleryItem: GalleryItem {
     func node(synchronous: Bool) -> GalleryItemNode {
         let node = ChatImageGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions, present: self.present)
         
+        node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
         for media in self.message.media {
             if let image = media as? TelegramMediaImage {
                 node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
@@ -147,7 +148,6 @@ class ChatImageGalleryItem: GalleryItem {
         if self.displayInfoOnTop {
             node.titleContentView?.setMessage(self.message, presentationData: self.presentationData, accountPeerId: self.context.account.peerId)
         }
-        node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
         
         return node
     }
@@ -258,6 +258,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     fileprivate func setMessage(_ message: Message, displayInfo: Bool) {
+        self.message = message
+        self.imageNode.captureProtected = message.isCopyProtected()
         self.footerContentNode.setMessage(message, displayInfo: displayInfo)
     }
     
@@ -455,6 +457,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+        let wasCaptureProtected = self.imageNode.captureProtected
+        self.imageNode.captureProtected = false
+        
         let contentNode = self.tilingNode ?? self.imageNode
         
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: contentNode.view)
@@ -496,8 +501,14 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let positionDuration: Double = 0.21
         
-        copyView.layer.animatePosition(from: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), to: CGPoint(x: transformedCopyViewFinalFrame.midX, y: transformedCopyViewFinalFrame.midY), duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak copyView] _ in
+        copyView.layer.animatePosition(from: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), to: CGPoint(x: transformedCopyViewFinalFrame.midX, y: transformedCopyViewFinalFrame.midY), duration: positionDuration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak copyView, weak self] _ in
             copyView?.removeFromSuperview()
+            
+            if wasCaptureProtected {
+                Queue.mainQueue().after(0.2) {
+                    self?.imageNode.captureProtected = true
+                }
+            }
         })
         let scale = CGSize(width: transformedCopyViewFinalFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewFinalFrame.size.height / transformedSelfFrame.size.height)
         copyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)

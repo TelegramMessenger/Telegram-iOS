@@ -107,6 +107,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: item.message.attributes)?.reactions ?? []
+                
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -164,7 +166,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         isReplyThread = true
                     }
                     
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
                     statusSize = size
                     statusApply = apply
                 }
@@ -578,7 +580,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
-            if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
+            if self.textSelectionNode == nil, let item = self.item, !item.associatedData.isCopyProtectionEnabled, let rootNode = item.controllerInteraction.chatControllerNode() {
                 let selectionColor: UIColor
                 let knobColor: UIColor
                 if item.message.effectivelyIncoming(item.context.account.peerId) {
@@ -614,6 +616,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 textSelectionNode?.removeFromSupernode()
             })
         }
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        if !self.statusNode.isHidden {
+            return self.statusNode.reactionNode(value: value)
+        }
+        return nil
     }
     
     override func getStatusNode() -> ASDisplayNode? {

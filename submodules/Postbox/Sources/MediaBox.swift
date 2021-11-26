@@ -213,7 +213,7 @@ public final class MediaBox {
         return ResourceStorePaths(partial: "\(fileNameForId(id))_partial", complete: "\(fileNameForId(id))")
     }
     
-    private func cachedRepresentationPathsForId(_ id: MediaResourceId, representationId: String, keepDuration: CachedMediaRepresentationKeepDuration) -> ResourceStorePaths {
+    private func cachedRepresentationPathsForId(_ id: String, representationId: String, keepDuration: CachedMediaRepresentationKeepDuration) -> ResourceStorePaths {
         let cacheString: String
         switch keepDuration {
             case .general:
@@ -784,15 +784,31 @@ public final class MediaBox {
     
     public func storeCachedResourceRepresentation(_ resource: MediaResource, representation: CachedMediaResourceRepresentation, data: Data) {
         self.dataQueue.async {
-            let path = self.cachedRepresentationPathsForId(resource.id, representationId: representation.uniqueId, keepDuration: representation.keepDuration).complete
+            let path = self.cachedRepresentationPathsForId(resource.id.stringRepresentation, representationId: representation.uniqueId, keepDuration: representation.keepDuration).complete
             let _ = try? data.write(to: URL(fileURLWithPath: path))
         }
     }
 
     public func storeCachedResourceRepresentation(_ resource: MediaResource, representationId: String, keepDuration: CachedMediaRepresentationKeepDuration, data: Data, completion: @escaping (String) -> Void = { _ in }) {
         self.dataQueue.async {
-            let path = self.cachedRepresentationPathsForId(resource.id, representationId: representationId, keepDuration: keepDuration).complete
+            let path = self.cachedRepresentationPathsForId(resource.id.stringRepresentation, representationId: representationId, keepDuration: keepDuration).complete
             let _ = try? data.write(to: URL(fileURLWithPath: path))
+            completion(path)
+        }
+    }
+    
+    public func storeCachedResourceRepresentation(_ resourceId: String, representationId: String, keepDuration: CachedMediaRepresentationKeepDuration, data: Data, completion: @escaping (String) -> Void = { _ in }) {
+        self.dataQueue.async {
+            let path = self.cachedRepresentationPathsForId(resourceId, representationId: representationId, keepDuration: keepDuration).complete
+            let _ = try? data.write(to: URL(fileURLWithPath: path))
+            completion(path)
+        }
+    }
+    
+    public func storeCachedResourceRepresentation(_ resourceId: String, representationId: String, keepDuration: CachedMediaRepresentationKeepDuration, tempFile: TempBoxFile, completion: @escaping (String) -> Void = { _ in }) {
+        self.dataQueue.async {
+            let path = self.cachedRepresentationPathsForId(resourceId, representationId: representationId, keepDuration: keepDuration).complete
+            let _ = try? FileManager.default.moveItem(atPath: tempFile.path, toPath: path)
             completion(path)
         }
     }
@@ -802,7 +818,7 @@ public final class MediaBox {
             let disposable = MetaDisposable()
             
             let begin: () -> Void = {
-                let paths = self.cachedRepresentationPathsForId(resource.id, representationId: representation.uniqueId, keepDuration: representation.keepDuration)
+                let paths = self.cachedRepresentationPathsForId(resource.id.stringRepresentation, representationId: representation.uniqueId, keepDuration: representation.keepDuration)
                 if let size = fileSize(paths.complete) {
                     self.timeBasedCleanup.touch(paths: [
                         paths.complete
@@ -971,7 +987,7 @@ public final class MediaBox {
             let begin: () -> Void = {
                 let paths: ResourceStorePaths
                 if let baseResourceId = baseResourceId {
-                    paths = self.cachedRepresentationPathsForId(MediaResourceId(baseResourceId), representationId: id, keepDuration: keepDuration)
+                    paths = self.cachedRepresentationPathsForId(MediaResourceId(baseResourceId).stringRepresentation, representationId: id, keepDuration: keepDuration)
                 } else {
                     paths = self.storePathsForId(MediaResourceId(id))
                 }

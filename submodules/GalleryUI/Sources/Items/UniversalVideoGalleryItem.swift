@@ -2423,8 +2423,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         let url = content.url
                         
                         let item = OpenInItem.url(url: url)
-                        let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: item).count > 1
-                        let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
+                        let openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
                         items.append(.action(ContextMenuActionItem(text: openText, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                             f(.default)
 
@@ -2446,7 +2445,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             
-            if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile {
+            if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() {
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveVideo, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                     f(.default)
 

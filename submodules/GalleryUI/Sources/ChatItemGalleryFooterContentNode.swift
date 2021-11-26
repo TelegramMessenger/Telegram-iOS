@@ -634,6 +634,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             canEdit = false
         }
         
+        if message.isCopyProtected() {
+            canShare = false
+            canEdit = false
+        }
         
         var authorNameText: String?
         if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
@@ -1192,7 +1196,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         shareController.actionCompleted = { [weak self] in
                             if let strongSelf = self, let actionCompletionText = actionCompletionText {
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: actionCompletionText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: actionCompletionText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
                             }
                         }
                         shareController.completed = { [weak self] peerIds in

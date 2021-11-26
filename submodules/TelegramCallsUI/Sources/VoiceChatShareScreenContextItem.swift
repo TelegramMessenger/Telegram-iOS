@@ -117,7 +117,7 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
     }
     
     private var validLayout: CGSize?
-    func updateLayout(constrainedWidth: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
+    func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
         let sideInset: CGFloat = 16.0
         let iconSideInset: CGFloat = 12.0
         let verticalInset: CGFloat = 12.0

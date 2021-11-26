@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 
-public enum ViewUpdateType {
+public enum ViewUpdateType : Equatable {
     case Initial
     case InitialUnread(MessageIndex)
     case Generic

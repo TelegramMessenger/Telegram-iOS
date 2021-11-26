@@ -8,6 +8,23 @@ import GZip
 import YuvConversion
 import MediaResources
 
+public extension EmojiFitzModifier {
+    var lottieFitzModifier: LottieFitzModifier {
+        switch self {
+        case .type12:
+            return .type12
+        case .type3:
+            return .type3
+        case .type4:
+            return .type4
+        case .type5:
+            return .type5
+        case .type6:
+            return .type6
+        }
+    }
+}
+
 private let sharedQueue = Queue()
 private let sharedStoreQueue = Queue.concurrentDefaultQueue()
 
@@ -666,7 +683,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         let rawData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
         let decompressedData = transformedWithFitzModifier(data: rawData, fitzModifier: fitzModifier)
         
-        guard let animation = LottieInstance(data: decompressedData, cacheKey: "") else {
+        guard let animation = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, cacheKey: "") else {
             return nil
         }
         self.animation = animation

@@ -1020,7 +1020,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let messagePeer = itemPeer.chatMainPeer {
                             peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                         }
-                    } else if let message = messages.last, case let .user(author) = message.author, let peer = itemPeer.chatMainPeer, !isUser {
+                    } else if let message = messages.last, let author = message.author?._asPeer(), let peer = itemPeer.chatMainPeer, !isUser {                        
                         if case let .channel(peer) = peer, case .broadcast = peer.info {
                         } else if !displayAsMessage {
                             if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {

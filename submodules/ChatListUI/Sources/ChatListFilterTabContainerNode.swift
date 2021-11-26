@@ -83,6 +83,7 @@ private final class ItemNode: ASDisplayNode {
     private(set) var unreadCount: Int = 0
     
     private var isReordering: Bool = false
+    private var isEditing: Bool = false
     
     private var theme: PresentationTheme?
     
@@ -192,6 +193,8 @@ private final class ItemNode: ASDisplayNode {
     }
     
     func updateText(strings: PresentationStrings, title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, selectionFraction: CGFloat, isEditing: Bool, isAllChats: Bool, isReordering: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+        self.isEditing = isEditing
+        
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             
@@ -212,7 +215,7 @@ private final class ItemNode: ASDisplayNode {
         self.selectionFraction = selectionFraction
         self.unreadCount = unreadCount
         
-        transition.updateAlpha(node: self.containerNode, alpha: isReordering && isAllChats ? 0.5 : 1.0)
+        transition.updateAlpha(node: self.containerNode, alpha: isEditing || (isReordering && isAllChats) ? 0.5 : 1.0)
         
         if isReordering && !isAllChats {
             if self.deleteButtonNode == nil {
@@ -234,7 +237,7 @@ private final class ItemNode: ASDisplayNode {
             })
         }
         
-        transition.updateAlpha(node: self.badgeContainerNode, alpha: (isReordering || unreadCount == 0) ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.badgeContainerNode, alpha: (isEditing || isReordering || unreadCount == 0) ? 0.0 : 1.0)
         
         let selectionAlpha: CGFloat = selectionFraction * selectionFraction
         let deselectionAlpha: CGFloat = 1.0// - selectionFraction
@@ -302,7 +305,7 @@ private final class ItemNode: ASDisplayNode {
         self.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((badgeBackgroundFrame.width - badgeSize.width) / 2.0), y: floor((badgeBackgroundFrame.height - badgeSize.height) / 2.0)), size: badgeSize)
         
         let width: CGFloat
-        if self.unreadCount == 0 || self.isReordering {
+        if self.unreadCount == 0 || self.isReordering || self.isEditing {
             if !self.isReordering {
                 self.badgeContainerNode.alpha = 0.0
             }
@@ -636,6 +639,11 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         let isFirstTime = self.currentParams == nil
         let transition: ContainedViewLayoutTransition = isFirstTime ? .immediate : proposedTransition
         
+        var isEditing = isEditing
+        if isReordering {
+            isEditing = false
+        }
+        
         var focusOnSelectedFilter = self.currentParams?.selectedFilter != selectedFilter
         let previousScrollBounds = self.scrollNode.bounds
         let previousContentWidth = self.scrollNode.view.contentSize.width
@@ -674,7 +682,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         
         self.currentParams = (size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering, isEditing, transitionFraction, presentationData: presentationData)
         
-        self.reorderingGesture?.isEnabled = isEditing || isReordering
+        self.reorderingGesture?.isEnabled = isReordering
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
         
@@ -754,7 +762,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 selectionFraction = 0.0
             }
             
-            itemNode.updateText(strings: presentationData.strings, title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: false, isAllChats: isNoFilter, isReordering: isEditing || isReordering, presentationData: presentationData, transition: itemNodeTransition)
+            itemNode.updateText(strings: presentationData.strings, title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: isEditing, isAllChats: isNoFilter, isReordering: isReordering, presentationData: presentationData, transition: itemNodeTransition)
         }
         var removeKeys: [ChatListFilterTabEntryId] = []
         for (id, _) in self.itemNodes {

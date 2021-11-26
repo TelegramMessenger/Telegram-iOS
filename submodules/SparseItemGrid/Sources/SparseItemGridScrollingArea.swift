@@ -555,7 +555,7 @@ private final class ShadowRoundedRectangle: Component {
     }
 }
 
-private final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
+final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
     let backgroundColor: UIColor
     let shadowColor: UIColor
     let foregroundColor: UIColor

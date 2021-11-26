@@ -152,6 +152,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             }
             var viewCount: Int?
             var dateReplies = 0
+            let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: item.message.attributes)?.reactions ?? []
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                     if case .mosaic = preparePosition {
@@ -199,6 +200,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     type: statusType,
                     edited: edited,
                     viewCount: viewCount,
+                    dateReactions: dateReactions,
                     dateReplies: dateReplies,
                     isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     dateText: dateText
@@ -384,5 +386,12 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         return false
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        if !self.interactiveImageNode.dateAndStatusNode.isHidden {
+            return self.interactiveImageNode.dateAndStatusNode.reactionNode(value: value)
+        }
+        return nil
     }
 }

@@ -212,6 +212,8 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     }
                 case let .setupPoll(isQuiz):
                     self.controllerInteraction.openPollCreation(isQuiz)
+                case let .openUserProfile(peerId):
+                    self.controllerInteraction.openPeer(peerId, .info, nil)
             }
             if dismissIfOnce {
                 if let message = self.message {

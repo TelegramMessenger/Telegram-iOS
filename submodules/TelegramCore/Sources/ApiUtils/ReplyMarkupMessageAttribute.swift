@@ -38,6 +38,10 @@ extension ReplyMarkupButton {
                     }
                 }
                 self.init(title: text, titleWhenForwarded: nil, action: .setupPoll(isQuiz: isQuiz))
+            case let .keyboardButtonUserProfile(text, userId):
+                self.init(title: text, titleWhenForwarded: nil, action: .openUserProfile(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))))
+            case let .inputKeyboardButtonUserProfile(text, _):
+                self.init(title: text, titleWhenForwarded: nil, action: .openUserProfile(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0))))
         }
     }
 }

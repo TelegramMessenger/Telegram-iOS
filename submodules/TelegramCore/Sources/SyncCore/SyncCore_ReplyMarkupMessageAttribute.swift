@@ -11,6 +11,7 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
     case payment
     case urlAuth(url: String, buttonId: Int32)
     case setupPoll(isQuiz: Bool?)
+    case openUserProfile(peerId: PeerId)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -34,6 +35,8 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
                 self = .urlAuth(url: decoder.decodeStringForKey("u", orElse: ""), buttonId: decoder.decodeInt32ForKey("b", orElse: 0))
             case 9:
                 self = .setupPoll(isQuiz: decoder.decodeOptionalInt32ForKey("isq").flatMap { $0 != 0 })
+            case 10:
+                self = .openUserProfile(peerId: PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0)))
             default:
                 self = .text
         }
@@ -73,6 +76,9 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
             } else {
                 encoder.encodeNil(forKey: "isq")
             }
+        case let .openUserProfile(peerId):
+            encoder.encodeInt32(10, forKey: "v")
+            encoder.encodeInt64(peerId.toInt64(), forKey: "peerId")
         }
     }
 }

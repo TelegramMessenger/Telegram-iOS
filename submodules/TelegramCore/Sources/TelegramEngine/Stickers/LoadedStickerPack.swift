@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-
 extension StickerPackReference {
     init(_ stickerPackInfo: StickerPackCollectionInfo) {
         self = .id(id: stickerPackInfo.id.id, accessHash: stickerPackInfo.accessHash)
@@ -32,7 +31,7 @@ public enum LoadedStickerPack {
 }
 
 func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [StickerPackItem])?, NoError> {
-    return network.request(Api.functions.messages.getStickerSet(stickerset: reference.apiInputStickerSet))
+    return network.request(Api.functions.messages.getStickerSet(stickerset: reference.apiInputStickerSet, hash: 0))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.messages.StickerSet?, NoError> in
             return .single(nil)
@@ -45,6 +44,8 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
             let info: StickerPackCollectionInfo
             var items: [StickerPackItem] = []
             switch result {
+            case .stickerSetNotModified:
+                return .complete()
             case let .stickerSet(set, packs, documents):
                 let namespace: ItemCollectionId.Namespace
                 switch set {

@@ -224,7 +224,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var contentFileNode: ChatMessageInteractiveFileNode?
     private var buttonNode: ChatMessageAttachedContentButtonNode?
     
-    private let statusNode: ChatMessageDateAndStatusNode
+    let statusNode: ChatMessageDateAndStatusNode
     private var additionalImageBadgeNode: ChatMessageInteractiveMediaBadge?
     private var linkHighlightingNode: LinkHighlightingNode?
     
@@ -322,6 +322,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             var viewCount: Int?
             var dateReplies = 0
+            let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
             for attribute in message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                     edited = !attribute.isHidden
@@ -497,6 +498,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     type: statusType,
                     edited: edited,
                     viewCount: viewCount,
+                    dateReactions: dateReactions,
                     dateReplies: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                     dateText: dateText
@@ -617,7 +619,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 let textConstrainedSize = CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height - insets.top - insets.bottom)
 
                 if let textStatusType = textStatusType {
-                    statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, textStatusType, textConstrainedSize, dateReplies, message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread, message.isSelfExpiring)
+                    statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, textStatusType, textConstrainedSize, dateReactions, dateReplies, message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread, message.isSelfExpiring)
                 }
                 
                 var updatedAdditionalImageBadge: ChatMessageInteractiveMediaBadge?

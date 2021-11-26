@@ -449,6 +449,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     private let maskNode: ASImageNode
     
     private let containerNode: ContextControllerSourceNode
+    public override var controlsContainer: ASDisplayNode {
+        return self.containerNode
+    }
     
     fileprivate let avatarNode: AvatarNode
     private let titleNode: TextNode
@@ -1012,6 +1015,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     case .sameSection(false):
                         bottomStripeInset = leftInset + editingOffset
                         bottomStripeOffset = -separatorHeight
+                        strongSelf.bottomStripeNode.isHidden = !item.displayDecorations
                     default:
                         bottomStripeInset = 0.0
                         bottomStripeOffset = 0.0

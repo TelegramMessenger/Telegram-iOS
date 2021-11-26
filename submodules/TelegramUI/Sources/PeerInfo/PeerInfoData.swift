@@ -581,7 +581,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 
                 var encryptionKeyFingerprint: SecretChatKeyFingerprint?
                 if let secretChatId = secretChatId, let peerChatStateView = combinedView.views[.peerChatState(peerId: secretChatId)] as? PeerChatStateView {
-                    if let peerChatState = peerChatStateView.chatState as? SecretChatKeyState {
+                    if let peerChatState = peerChatStateView.chatState?.getLegacy() as? SecretChatState {
                         encryptionKeyFingerprint = peerChatState.keyFingerprint
                     }
                 }
@@ -1066,9 +1066,6 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
                 hasDiscussion = true
             }
         case .group:
-            if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
-                result.append(.addMember)
-            }
             if channel.flags.contains(.hasVoiceChat) {
                 hasVoiceChat = true
             }
@@ -1082,10 +1079,10 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         default:
             displayLeave = false
         }
-        result.append(.mute)
         if hasVoiceChat || canStartVoiceChat {
             result.append(.voiceChat)
         }
+        result.append(.mute)
         if hasDiscussion {
             result.append(.discussion)
         }
@@ -1104,7 +1101,6 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             result.append(.more)
         }
     } else if let group = peer as? TelegramGroup {
-        var canAddMembers = false
         var hasVoiceChat = false
         var canStartVoiceChat = false
         
@@ -1119,18 +1115,6 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             }
         }
 
-        switch group.role {
-            case .admin, .creator:
-                canAddMembers = true
-            case .member:
-                break
-        }
-        if !group.hasBannedPermission(.banAddMembers) {
-            canAddMembers = true
-        }
-        if canAddMembers {
-            result.append(.addMember)
-        }
         result.append(.mute)
         if hasVoiceChat || canStartVoiceChat {
             result.append(.voiceChat)

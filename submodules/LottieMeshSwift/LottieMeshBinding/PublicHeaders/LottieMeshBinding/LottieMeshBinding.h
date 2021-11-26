@@ -34,7 +34,7 @@ typedef NS_CLOSED_ENUM(NSInteger, LottieMeshFillRule) {
 - (void)getVertexAt:(NSInteger)index x:(float * _Nullable)x y:(float * _Nullable)y;
 
 - (NSInteger)triangleCount;
-- (void)getTriangleAt:(NSInteger)index v0:(NSInteger * _Nullable)v0 v1:(NSInteger * _Nullable)v1 v2:(NSInteger * _Nullable)v2;
+- (void * _Nonnull)getTriangles;
 
 + (LottieMeshData * _Nullable)generateWithPath:(UIBezierPath * _Nonnull)path fill:(LottieMeshFill * _Nullable)fill stroke:(LottieMeshStroke * _Nullable)stroke;
 

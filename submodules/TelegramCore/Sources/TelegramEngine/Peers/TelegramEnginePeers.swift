@@ -231,6 +231,10 @@ public extension TelegramEngine {
             return _internal_toggleShouldChannelMessagesSignatures(account: self.account, peerId: peerId, enabled: enabled)
         }
 
+        public func toggleMessageCopyProtection(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
+            return _internal_toggleMessageCopyProtection(account: self.account, peerId: peerId, enabled: enabled)
+        }
+
         public func requestPeerPhotos(peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
             return _internal_requestPeerPhotos(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
         }
@@ -513,7 +517,7 @@ public extension TelegramEngine {
                         }
                     }
 
-                    var results: [(EnginePeer, Int32)] = []
+                    var results: [(EnginePeer, PeerGroupId, ChatListIndex)] = []
 
                     for listId in peerIds {
                         guard let peer = transaction.getPeer(listId) else {
@@ -528,14 +532,14 @@ public extension TelegramEngine {
                         guard let readState = transaction.getCombinedPeerReadState(channel.id), readState.count != 0 else {
                             continue
                         }
-                        guard let topMessageIndex = transaction.getTopPeerMessageIndex(peerId: channel.id) else {
+                        guard let (groupId, index) = transaction.getPeerChatListIndex(channel.id) else {
                             continue
                         }
 
-                        results.append((EnginePeer(channel), topMessageIndex.timestamp))
+                        results.append((EnginePeer(channel), groupId, index))
                     }
 
-                    results.sort(by: { $0.1 > $1.1 })
+                    results.sort(by: { $0.2 > $1.2 })
 
                     if let peer = results.first?.0 {
                         let unreadCount: Int32 = transaction.getCombinedPeerReadState(peer.id)?.count ?? 0
@@ -655,6 +659,14 @@ public extension TelegramEngine {
                 }
             }
             |> ignoreValues
+        }
+        
+        public func sendAsAvailablePeers(peerId: PeerId) -> Signal<[FoundPeer], NoError> {
+            return _internal_cachedPeerSendAsAvailablePeers(account: self.account, peerId: peerId)
+        }
+        
+        public func updatePeerSendAsPeer(peerId: PeerId, sendAs: PeerId) -> Signal<Never, UpdatePeerSendAsPeerError> {
+            return _internal_updatePeerSendAsPeer(account: self.account, peerId: peerId, sendAs: sendAs)
         }
     }
 }

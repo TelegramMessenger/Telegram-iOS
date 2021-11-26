@@ -25,8 +25,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]]
     public let forcedResourceStatus: FileMediaResourceStatus?
     public let currentlyPlayingMessageId: EngineMessage.Index?
+    public let isCopyProtectionEnabled: Bool
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
@@ -37,6 +38,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.additionalAnimatedEmojiStickers = additionalAnimatedEmojiStickers
         self.forcedResourceStatus = forcedResourceStatus
         self.currentlyPlayingMessageId = currentlyPlayingMessageId
+        self.isCopyProtectionEnabled = isCopyProtectionEnabled
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -65,6 +67,12 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.forcedResourceStatus != rhs.forcedResourceStatus {
+            return false
+        }
+        if lhs.currentlyPlayingMessageId != rhs.currentlyPlayingMessageId {
+            return false
+        }
+        if lhs.isCopyProtectionEnabled != rhs.isCopyProtectionEnabled {
             return false
         }
         return true
