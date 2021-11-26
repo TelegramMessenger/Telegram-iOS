@@ -42,17 +42,26 @@ open class TransformImageNode: ASDisplayNode {
                             captureProtectedContentLayer.preventsDisplaySleepDuringVideoPlayback = false
                         }
                         captureProtectedContentLayer.frame = self.bounds
-                            self.layer.addSublayer(captureProtectedContentLayer)
+                        self.layer.addSublayer(captureProtectedContentLayer)
+                        var hasImage = false
                         if let image = self.image {
+                            hasImage = true
                             if let cmSampleBuffer = image.cmSampleBuffer {
                                 captureProtectedContentLayer.enqueue(cmSampleBuffer)
                             }
                         }
-                        self.contents = nil
+                        if hasImage {
+                            Queue.mainQueue().after(0.1) {
+                                self.contents = nil
+                            }
+                        } else {
+                            self.contents = nil
+                        }
                     }
                 } else if let captureProtectedContentLayer = self.captureProtectedContentLayer {
                     self.captureProtectedContentLayer = nil
                     captureProtectedContentLayer.removeFromSuperlayer()
+                    self.contents = self.image?.cgImage
                 }
             }
         }
@@ -276,7 +285,6 @@ private final class NullActionClass: NSObject, CAAction {
 private let nullAction = NullActionClass()
 
 private class CaptureProtectedContentLayer: AVSampleBufferDisplayLayer {
-
     override func action(forKey event: String) -> CAAction? {
         return nullAction
     }
@@ -334,6 +342,7 @@ open class TransformImageView: UIView {
                 } else if let captureProtectedContentLayer = self.captureProtectedContentLayer {
                     self.captureProtectedContentLayer = nil
                     captureProtectedContentLayer.removeFromSuperlayer()
+                    self.layer.contents = self.image?.cgImage
                 }
             }
         }
