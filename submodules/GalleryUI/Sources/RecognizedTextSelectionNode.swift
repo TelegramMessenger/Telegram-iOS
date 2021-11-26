@@ -241,10 +241,11 @@ public final class RecognizedTextSelectionNode: ASDisplayNode {
         })
         var textRecognitions: [(String, RecognizedContent.Rect)] = []
         for recognition in sortedRecognitions {
-            if case let .text(string, words) = recognition.content {
-                for word in words {
-                    textRecognitions.append((String(string[word.0]), word.1))
-                }
+            if case let .text(string, _) = recognition.content {
+                textRecognitions.append((string, recognition.rect))
+//                for word in words {
+//                    textRecognitions.append((String(string[word.0]), word.1))
+//                }
             }
         }
         self.recognitions = textRecognitions
@@ -493,7 +494,7 @@ public final class RecognizedTextSelectionNode: ASDisplayNode {
             if selectedIndices.contains(i) {
                 let (string, _) = self.recognitions[i]
                 if !selectedText.isEmpty {
-                    selectedText += " "
+                    selectedText += "\n"
                 }
                 selectedText.append(contentsOf: string.trimmingCharacters(in: .whitespacesAndNewlines))
             }
