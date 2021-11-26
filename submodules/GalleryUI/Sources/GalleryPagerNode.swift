@@ -114,6 +114,10 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
     public var baseNavigationController: () -> NavigationController? = { return nil }
     public var galleryController: () -> ViewController? = { return nil }
     
+    private var pagingEnabled = true
+    public var pagingEnabledPromise = Promise<Bool>(true)
+    private var pagingEnabledDisposable: Disposable?
+    
     public init(pageGap: CGFloat, disableTapNavigation: Bool) {
         self.pageGap = pageGap
         self.disableTapNavigation = disableTapNavigation
@@ -146,6 +150,17 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         
         self.addSubnode(self.leftFadeNode)
         self.addSubnode(self.rightFadeNode)
+        
+        self.pagingEnabledDisposable = (self.pagingEnabledPromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] pagingEnabled  in
+            if let strongSelf = self {
+                strongSelf.pagingEnabled = pagingEnabled
+            }
+        })
+    }
+    
+    deinit {
+        self.pagingEnabledDisposable?.dispose()
     }
     
     public override func didLoad() {
@@ -155,7 +170,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         recognizer.delegate = self
         self.tapRecognizer = recognizer
         recognizer.tapActionAtPoint = { [weak self] point in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, strongSelf.pagingEnabled else {
                 return .fail
             }
             
@@ -186,7 +201,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
             return .keepWithSingleTap
         }
         recognizer.highlight = { [weak self] point in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, strongSelf.pagingEnabled else {
                 return
             }
             let size = strongSelf.bounds

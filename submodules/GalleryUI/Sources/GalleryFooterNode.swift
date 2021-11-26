@@ -101,7 +101,7 @@ public final class GalleryFooterNode: ASDisplayNode {
         
         let contentTransition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
         if let overlayContentNode = self.currentOverlayContentNode {
-            overlayContentNode.updateLayout(size: layout.size, metrics: layout.metrics, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: backgroundHeight, transition: transition)
+            overlayContentNode.updateLayout(size: layout.size, metrics: layout.metrics, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: isHidden ? layout.intrinsicInsets.bottom : backgroundHeight, isHidden: isHidden, transition: transition)
             transition.updateFrame(node: overlayContentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             
             if animateOverlayIn {

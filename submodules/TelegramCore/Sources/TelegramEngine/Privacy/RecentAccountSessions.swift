@@ -78,3 +78,13 @@ func updateAccountSessionAcceptsSecretChats(account: Account, hash: Int64, accep
         return .single(Void())
     }
 }
+
+func updateAccountSessionAcceptsIncomingCalls(account: Account, hash: Int64, accepts: Bool) -> Signal<Void, UpdateSessionError> {
+    return account.network.request(Api.functions.account.changeAuthorizationSettings(flags: 1 << 1, hash: hash, encryptedRequestsDisabled: nil, callRequestsDisabled: accepts ? .boolFalse : .boolTrue))
+    |> mapError { error -> UpdateSessionError in
+        return .generic
+    }
+    |> mapToSignal { _ -> Signal<Void, UpdateSessionError> in
+        return .single(Void())
+    }
+}

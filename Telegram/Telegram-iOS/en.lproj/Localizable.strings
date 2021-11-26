@@ -7080,9 +7080,9 @@ Sorry for the inconvenience.";
 
 "AuthSessions.View.LocationInfo" = "This location estimate is based on the IP address and may not always be accurate.";
 
-"AuthSessions.View.AcceptSecretChatsTitle" = "Incoming Secret Chats";
-"AuthSessions.View.AcceptSecretChats" = "Accept on This Device";
-"AuthSessions.View.AcceptSecretChatsInfo" = "You can disable the acception of incoming secret chats on this device.";
+"AuthSessions.View.AcceptTitle" = "Accept on This Device";
+"AuthSessions.View.AcceptSecretChats" = "New Secret Chats";
+"AuthSessions.View.AcceptIncomingCalls" = "Incoming Calls";
 
 "Conversation.SendMesageAs" = "Send Message As...";
 "Conversation.InviteRequestAdminGroup" = "%1$@ is an admin of %2$@, a group you requested to join.";

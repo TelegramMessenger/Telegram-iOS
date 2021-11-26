@@ -716,7 +716,13 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     }
     
     private func updateCounterTextNode(transition: ContainedViewLayoutTransition) {
-        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
+        let inputTextMaxLength: Int32?
+        if self.isCaption {
+            inputTextMaxLength = self.context?.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength
+        } else {
+            inputTextMaxLength = nil
+        }
+        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let inputTextMaxLength = inputTextMaxLength {
             let textCount = Int32(textInputNode.textView.text.count)
             let counterColor: UIColor = textCount > inputTextMaxLength ? presentationInterfaceState.theme.chat.inputPanel.panelControlDestructiveColor : presentationInterfaceState.theme.chat.inputPanel.panelControlColor
             
@@ -1028,7 +1034,13 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
             sendPressed(effectiveInputText)
             return
         }
-        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
+        let inputTextMaxLength: Int32?
+        if self.isCaption {
+            inputTextMaxLength = self.context?.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength
+        } else {
+            inputTextMaxLength = nil
+        }
+        if let textInputNode = self.textInputNode, let inputTextMaxLength = inputTextMaxLength {
             let textCount = Int32(textInputNode.textView.text.count)
             let remainingCount = inputTextMaxLength - textCount
 
