@@ -716,7 +716,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     }
     
     private func updateCounterTextNode(transition: ContainedViewLayoutTransition) {
-        let inputTextMaxLength: Int?
+        let inputTextMaxLength: Int32?
         if self.isCaption {
             inputTextMaxLength = self.context?.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength
         } else {
@@ -1034,13 +1034,13 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
             sendPressed(effectiveInputText)
             return
         }
-        let inputTextMaxLength: Int?
+        let inputTextMaxLength: Int32?
         if self.isCaption {
             inputTextMaxLength = self.context?.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength
         } else {
             inputTextMaxLength = nil
         }
-        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let inputTextMaxLength = inputTextMaxLength {
+        if let textInputNode = self.textInputNode, let inputTextMaxLength = inputTextMaxLength {
             let textCount = Int32(textInputNode.textView.text.count)
             let remainingCount = inputTextMaxLength - textCount
 

@@ -1141,6 +1141,11 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
         self.action?(newValue)
         self.buttonNode.isSelected = newValue
         self.selectedBackgroundNode.isHidden = !newValue
+        
+        if self.interfaceIsHidden && !newValue {
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+            transition.updateAlpha(node: self.buttonNode, alpha: 0.0)
+        }
     }
     
     func transitionIn() {
@@ -1152,17 +1157,28 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
         self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    private var interfaceIsHidden: Bool = false
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.interfaceIsHidden = isHidden
+        
         let buttonSize = CGSize(width: 32.0, height: 32.0)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: buttonSize)
         self.selectedBackgroundNode.frame = CGRect(origin: CGPoint(), size: buttonSize)
         self.iconNode.frame = CGRect(origin: CGPoint(), size: buttonSize)
         
+        if self.appeared {
+            if !self.buttonNode.isSelected && isHidden {
+                transition.updateAlpha(node: self.buttonNode, alpha: 0.0)
+            } else {
+                transition.updateAlpha(node: self.buttonNode, alpha: 1.0)
+            }
+        }
+        
         transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - rightInset - buttonSize.width - 12.0, y: size.height - bottomInset - buttonSize.height - 12.0, width: buttonSize.width, height: buttonSize.height))
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {
-        guard self.appeared else {
+        guard self.appeared && (!self.interfaceIsHidden || self.buttonNode.isSelected) else {
             return
         }
         self.buttonNode.alpha = 1.0

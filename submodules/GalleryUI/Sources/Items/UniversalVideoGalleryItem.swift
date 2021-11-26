@@ -203,7 +203,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.fullscreenNode.addTarget(self, action: #selector(self.toggleFullscreenPressed), forControlEvents: .touchUpInside)
     }
     
-    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, metrics, leftInset, rightInset, bottomInset)
         
         let isLandscape = size.width > size.height
@@ -235,7 +235,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.wrapperNode.alpha = self.visibilityAlpha
         
         if let validLayout = self.validLayout {
-            self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, transition: .animated(duration: 0.3, curve: .easeInOut))
+            self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, isHidden: false, transition: .animated(duration: 0.3, curve: .easeInOut))
         }
     }
     
