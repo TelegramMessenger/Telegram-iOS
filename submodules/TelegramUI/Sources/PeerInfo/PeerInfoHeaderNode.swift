@@ -76,9 +76,11 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
+        self.iconNode.isUserInteractionEnabled = false
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
+        self.textNode.isUserInteractionEnabled = false
         
         super.init()
         
