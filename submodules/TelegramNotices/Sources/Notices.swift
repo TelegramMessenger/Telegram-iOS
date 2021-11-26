@@ -162,6 +162,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case interactiveEmojiSyncTip = 28
     case sharedMediaScrollingTooltip = 29
     case sharedMediaFastScrollingTooltip = 30
+    case forcedPasswordSetup = 31
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -209,6 +210,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func irrelevantPeerGeoNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: peerReportNamespace), key: noticeKey(peerId: peerId, key: 0))
+    }
+    
+    static func forcedPasswordSetup() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.secretChatInlineBotUsage.key)
     }
     
     static func secretChatInlineBotUsage() -> NoticeEntryKey {
@@ -1096,6 +1101,23 @@ public struct ApplicationSpecificNotice {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedInvitationRequestsNotice(peerId: peerId), entry)
             }
         }
+    }
+    
+    public static func forcedPasswordSetupKey() -> NoticeEntryKey {
+        return ApplicationSpecificNoticeKeys.forcedPasswordSetup()
+    }
+    
+    public static func setForcedPasswordSetup(postbox: Postbox, reloginDaysTimeout: Int32?) -> Signal<Never, NoError> {
+        return postbox.transaction { transaction -> Void in
+            if let reloginDaysTimeout = reloginDaysTimeout {
+                if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: reloginDaysTimeout)) {
+                    transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.forcedPasswordSetup(), value: entry)
+                }
+            } else {
+                transaction.setNoticeEntry(key: ApplicationSpecificNoticeKeys.forcedPasswordSetup(), value: nil)
+            }
+        }
+        |> ignoreValues
     }
     
     public static func reset(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Void, NoError> {

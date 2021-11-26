@@ -105,11 +105,11 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                         }
                         |> `catch` { error -> Signal<(SendCodeResult, UnauthorizedAccount), MTRpcError> in
                             if error.errorDescription == "SESSION_PASSWORD_NEEDED" {
-                                return account.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
+                                return updatedAccount.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
                                 |> mapToSignal { result -> Signal<(SendCodeResult, UnauthorizedAccount), MTRpcError> in
                                     switch result {
                                     case let .password(_, _, _, _, hint, _, _, _, _, _):
-                                        return .single((.password(hint: hint), account))
+                                        return .single((.password(hint: hint), updatedAccount))
                                     }
                                 }
                             } else {
@@ -160,12 +160,6 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                 case let .sentCode(sentCode):
                     switch sentCode {
                     case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
-                        /*#if DEBUG
-                        var type = type
-                        type = .sentCodeTypeMissedCall(prefix: "+44 1234 8", length: 5)
-                        var nextType = nextType
-                        nextType = nil
-                        #endif*/
                         var parsedNextType: AuthorizationCodeNextType?
                         if let nextType = nextType {
                             parsedNextType = AuthorizationCodeNextType(apiType: nextType)
@@ -258,7 +252,7 @@ public enum AuthorizeWithCodeResult {
     case loggedIn
 }
 
-public func authorizeWithCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, code: String, termsOfService: UnauthorizedAccountTermsOfService?) -> Signal<AuthorizeWithCodeResult, AuthorizationCodeVerificationError> {
+public func authorizeWithCode(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, code: String, termsOfService: UnauthorizedAccountTermsOfService?, forcedPasswordSetupNotice: @escaping (Int32) -> (NoticeEntryKey, CodableEntry)?) -> Signal<AuthorizeWithCodeResult, AuthorizationCodeVerificationError> {
     return account.postbox.transaction { transaction -> Signal<AuthorizeWithCodeResult, AuthorizationCodeVerificationError> in
         if let state = transaction.getState() as? UnauthorizedAccountState {
             switch state.contents {
@@ -308,11 +302,14 @@ public func authorizeWithCode(accountManager: AccountManager<TelegramAccountMana
                                     return .single(.loggedIn)
                                 case let .authorization(authorization):
                                     switch authorization {
-                                    case let .authorization(_, _, _, user):
+                                    case let .authorization(_, otherwiseReloginDays, _, user):
                                         let user = TelegramUser(user: user)
                                         let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
                                         initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
                                         transaction.setState(state)
+                                        if let otherwiseReloginDays = otherwiseReloginDays, let value = forcedPasswordSetupNotice(otherwiseReloginDays) {
+                                            transaction.setNoticeEntry(key: value.0, value: value.1)
+                                        }
                                         return accountManager.transaction { transaction -> AuthorizeWithCodeResult in
                                             switchToAuthorizedAccount(transaction: transaction, account: account)
                                             return .loggedIn
@@ -548,7 +545,7 @@ public enum SignUpError {
     case invalidLastName
 }
 
-public func signUpWithName(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, firstName: String, lastName: String, avatarData: Data?, avatarVideo: Signal<UploadedPeerPhotoData?, NoError>?, videoStartTimestamp: Double?) -> Signal<Void, SignUpError> {
+public func signUpWithName(accountManager: AccountManager<TelegramAccountManagerTypes>, account: UnauthorizedAccount, firstName: String, lastName: String, avatarData: Data?, avatarVideo: Signal<UploadedPeerPhotoData?, NoError>?, videoStartTimestamp: Double?, forcedPasswordSetupNotice: @escaping (Int32) -> (NoticeEntryKey, CodableEntry)?) -> Signal<Void, SignUpError> {
     return account.postbox.transaction { transaction -> Signal<Void, SignUpError> in
         if let state = transaction.getState() as? UnauthorizedAccountState, case let .signUp(number, codeHash, _, _, _, syncContacts) = state.contents {
             return account.network.request(Api.functions.auth.signUp(phoneNumber: number, phoneCodeHash: codeHash, firstName: firstName, lastName: lastName))
@@ -567,7 +564,7 @@ public func signUpWithName(accountManager: AccountManager<TelegramAccountManager
             }
             |> mapToSignal { result -> Signal<Void, SignUpError> in
                 switch result {
-                case let .authorization(_, _, _, user):
+                case let .authorization(_, otherwiseReloginDays, _, user):
                     let user = TelegramUser(user: user)
                     let appliedState = account.postbox.transaction { transaction -> Void in
                         let state = AuthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, peerId: user.id, state: nil)
@@ -576,8 +573,11 @@ public func signUpWithName(accountManager: AccountManager<TelegramAccountManager
                         }
                         initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
                         transaction.setState(state)
+                        if let otherwiseReloginDays = otherwiseReloginDays, let value = forcedPasswordSetupNotice(otherwiseReloginDays) {
+                            transaction.setNoticeEntry(key: value.0, value: value.1)
                         }
-                        |> castError(SignUpError.self)
+                    }
+                    |> castError(SignUpError.self)
                     
                     let switchedAccounts = accountManager.transaction { transaction -> Void in
                         switchToAuthorizedAccount(transaction: transaction, account: account)

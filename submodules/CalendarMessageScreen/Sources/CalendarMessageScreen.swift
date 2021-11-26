@@ -11,6 +11,7 @@ import ComponentFlow
 import PhotoResources
 import DirectMediaImageCache
 import TelegramStringFormatting
+import TooltipUI
 
 private final class NullActionClass: NSObject, CAAction {
     @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
@@ -896,21 +897,20 @@ private final class MonthComponent: CombinedComponent {
                     let dayEnvironment = context.environment[DayEnvironment.self].value
 
                     let dayItemSize = updatedDays[0].size
-                    let deltaWidth = floor((weekdayWidth - dayItemSize.width) / 2.0)
-                    let deltaHeight = floor((weekdaySize - dayItemSize.width) / 2.0)
+                    let selectionRadius: CGFloat = min(dayItemSize.width, dayItemSize.height)
+
+                    let deltaWidth = floor((weekdayWidth - selectionRadius) / 2.0)
+                    let deltaHeight = floor((weekdaySize - selectionRadius) / 2.0)
                     let minX = sideInset + CGFloat(selection.range.lowerBound) * weekdayWidth + deltaWidth
                     let maxX = sideInset + CGFloat(selection.range.upperBound + 1) * weekdayWidth - deltaWidth
                     let minY = baseDayY + CGFloat(lineIndex) * (weekdaySize + weekdaySpacing) + deltaHeight
-                    let maxY = minY + dayItemSize.width
-
-                    let leftRadius: CGFloat = dayItemSize.width
-                    let rightRadius: CGFloat = dayItemSize.width
+                    let maxY = minY + selectionRadius
 
                     let monthSelectionColor = context.component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.1)
 
                     let selectionRect = CGRect(origin: CGPoint(x: minX, y: minY), size: CGSize(width: maxX - minX, height: maxY - minY))
                     let selection = selections[lineIndex].update(
-                        component: AnyComponent(ImageComponent(image: dayEnvironment.imageCache.monthSelection(leftRadius: leftRadius, rightRadius: rightRadius, maxRadius: dayItemSize.width, color: monthSelectionColor))),
+                        component: AnyComponent(ImageComponent(image: dayEnvironment.imageCache.monthSelection(leftRadius: selectionRadius, rightRadius: selectionRadius, maxRadius: selectionRadius, color: monthSelectionColor))),
                         availableSize: selectionRect.size,
                         transition: .immediate
                     )
@@ -923,7 +923,7 @@ private final class MonthComponent: CombinedComponent {
                             }
                             let delay = Double(min(delayIndex, 6)) * 0.1
                             view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.05, delay: delay)
-                            view.layer.animateFrame(from: CGRect(origin: view.frame.origin, size: CGSize(width: leftRadius, height: view.frame.height)), to: view.frame, duration: 0.25, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
+                            view.layer.animateFrame(from: CGRect(origin: view.frame.origin, size: CGSize(width: selectionRadius, height: view.frame.height)), to: view.frame, duration: 0.25, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
                         })
                         .disappear(Transition.Disappear { view, transition, completion in
                             if case .none = transition.animation {
@@ -1314,37 +1314,36 @@ public final class CalendarMessageScreen: ViewController {
 
             if let selectionState = self.selectionState {
                 let selectionToolbarNode: ToolbarNode
-                if let currrent = self.selectionToolbarNode {
-                    selectionToolbarNode = currrent
+                let toolbarText: String
+                
+                var selectedCount = 0
+                if let dayRange = selectionState.dayRange {
+                    for i in 0 ..< self.months.count {
+                        let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
 
-                    var selectedCount = 0
-                    if let dayRange = selectionState.dayRange {
-                        for i in 0 ..< self.months.count {
-                            let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
+                        for day in 0 ..< self.months[i].numberOfDays {
+                            let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
 
-                            for day in 0 ..< self.months[i].numberOfDays {
-                                let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
-
-                                if dayRange.contains(dayTimestamp) {
-                                    selectedCount += 1
-                                }
+                            if dayRange.contains(dayTimestamp) {
+                                selectedCount += 1
                             }
                         }
                     }
-                    
-                    let toolbarText: String
-                    if selectedCount == 0 {
-                        toolbarText = self.presentationData.strings.DialogList_ClearHistoryConfirmation
-                    } else if selectedCount == 1 {
-                        //TODO:localize
-                        toolbarText = "Clear History For This Day"
-                    } else {
-                        //TODO:localize
-                        toolbarText = "Clear History For These Days"
-                    }
+                }
+                
+                if selectedCount == 0 {
+                    toolbarText = self.presentationData.strings.DialogList_ClearHistoryConfirmation
+                } else if selectedCount == 1 {
+                    toolbarText = self.presentationData.strings.MessageCalendar_ClearHistoryForThisDay
+                } else {
+                    toolbarText = self.presentationData.strings.MessageCalendar_ClearHistoryForTheseDays
+                }
+                
+                if let currrent = self.selectionToolbarNode {
+                    selectionToolbarNode = currrent
                     
                     transition.updateFrame(node: selectionToolbarNode, frame: tabBarFrame)
-                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: self.selectionState?.dayRange != nil, color: .custom(self.presentationData.theme.list.itemDestructiveColor))), transition: transition)
+                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: transition)
                 } else {
                     selectionToolbarNode = ToolbarNode(
                         theme: TabBarControllerTheme(
@@ -1359,7 +1358,7 @@ public final class CalendarMessageScreen: ViewController {
                         }
                     )
                     selectionToolbarNode.frame = tabBarFrame
-                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: self.presentationData.strings.DialogList_ClearHistoryConfirmation, isEnabled: self.selectionState?.dayRange != nil, color: .custom(self.presentationData.theme.list.itemDestructiveColor))), transition: .immediate)
+                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: .immediate)
                     self.addSubnode(selectionToolbarNode)
                     self.selectionToolbarNode = selectionToolbarNode
                     transition.animatePositionAdditive(node: selectionToolbarNode, offset: CGPoint(x: 0.0, y: tabBarFrame.height))
@@ -1425,6 +1424,16 @@ public final class CalendarMessageScreen: ViewController {
         }
 
         private func selectionToolbarActionSelected() {
+            if self.selectionState?.dayRange == nil {
+                if let selectionToolbarNode = self.selectionToolbarNode {
+                    let toolbarFrame = selectionToolbarNode.view.convert(selectionToolbarNode.bounds, to: self.view)
+                    self.controller?.present(TooltipScreen(account: self.context.account, text: self.presentationData.strings.MessageCalendar_EmptySelectionTooltip, style: .default, icon: .none, location: .point(toolbarFrame.insetBy(dx: 0.0, dy: 10.0), .bottom), shouldDismissOnTouch: { point in
+                        return .dismiss(consume: false)
+                    }), in: .current)
+                }
+                
+                return
+            }
             guard let selectionState = self.selectionState, let dayRange = selectionState.dayRange else {
                 return
             }
