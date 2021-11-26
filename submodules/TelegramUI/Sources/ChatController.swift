@@ -11864,16 +11864,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            //TODO:localize
-            var statusText: String
-            statusText = "Messages for \(dayCount) \(dayCount == 1 ? "day" : "days") deleted"
+            let statusText: String
             switch type {
             case .forEveryone:
-                statusText += " for both sides"
+                statusText = strongSelf.presentationData.strings.Chat_MessageRangeDeleted_ForBothSides(Int32(dayCount))
             default:
-                break
+                statusText = strongSelf.presentationData.strings.Chat_MessageRangeDeleted_ForMe(Int32(dayCount))
             }
-            statusText += "."
             
             strongSelf.chatDisplayNode.historyNode.ignoreMessagesInTimestampRange = range
             

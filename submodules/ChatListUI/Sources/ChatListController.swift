@@ -24,6 +24,7 @@ import TelegramIntents
 import TooltipUI
 import TelegramCallsUI
 import StickerResources
+import PasswordSetupUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -1264,6 +1265,53 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     })
                 ], actionLayout: .vertical, parseMarkdown: true), in: .window(.root))
             }))
+            
+            Queue.mainQueue().after(1.0, {
+                let _ = (self.context.account.postbox.transaction { transaction -> Int32? in
+                    if let value = transaction.getNoticeEntry(key: ApplicationSpecificNotice.forcedPasswordSetupKey())?.get(ApplicationSpecificCounterNotice.self) {
+                        return value.value
+                    } else {
+                        return nil
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] value in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    guard let value = value else {
+                        return
+                    }
+                    
+                    let controller = TwoFactorAuthSplashScreen(sharedContext: context.sharedContext, engine: .authorized(strongSelf.context.engine), mode: .intro(.init(
+                        title: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_Title,
+                        text: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_Text,
+                        actionText: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_Action,
+                        doneText: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_DoneAction
+                    )))
+                    controller.dismissConfirmation = { [weak controller] f in
+                        guard let strongSelf = self, let controller = controller else {
+                            return true
+                        }
+                        
+                        controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_DismissTitle, text: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_DismissText(value), actions: [
+                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_DismissActionCancel, action: {
+                            }),
+                            TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ForcedPasswordSetup_Intro_DismissActionOK, action: { [weak controller] in
+                                if let strongSelf = self {
+                                    let _ = ApplicationSpecificNotice.setForcedPasswordSetup(postbox: strongSelf.context.account.postbox, reloginDaysTimeout: nil).start()
+                                }
+                                controller?.dismiss()
+                            })
+                        ], parseMarkdown: true), in: .window(.root))
+                        
+                        return false
+                    }
+                    strongSelf.push(controller)
+                    
+                    let _ = value
+                })
+            })
         }
         
         self.chatListDisplayNode.containerNode.addedVisibleChatsWithPeerIds = { [weak self] peerIds in
