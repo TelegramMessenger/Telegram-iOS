@@ -703,6 +703,8 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     }, openSession: { session in
         let controller = RecentSessionScreen(context: context, subject: .session(session), updateAcceptSecretChats: { value in
             updateSessionDisposable.set(activeSessionsContext.updateSessionAcceptsSecretChats(session, accepts: value).start())
+        }, updateAcceptIncomingCalls: { value in
+            updateSessionDisposable.set(activeSessionsContext.updateSessionAcceptsIncomingCalls(session, accepts: value).start())
         }, remove: { completion in
             removeSessionImpl(session.hash, {
                 completion()
@@ -710,7 +712,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         })
         presentControllerImpl?(controller, nil)
     }, openWebSession: { session, peer in
-        let controller = RecentSessionScreen(context: context, subject: .website(session, peer), updateAcceptSecretChats: { _ in }, remove: { completion in
+        let controller = RecentSessionScreen(context: context, subject: .website(session, peer), updateAcceptSecretChats: { _ in }, updateAcceptIncomingCalls: { _ in }, remove: { completion in
             removeWebSessionImpl(session.hash)
             completion()
         })

@@ -8395,7 +8395,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.checksTooltipDisposable.set((getServerProvidedSuggestions(account: self.context.account)
         |> deliverOnMainQueue).start(next: { [weak self] values in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, strongSelf.chatLocation.peerId != strongSelf.context.account.peerId else {
                 return
             }
             if !values.contains(.newcomerTicks) {
@@ -13570,7 +13570,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             tooltipController.dismissed = { [weak self, weak tooltipController] _ in
                 if let strongSelf = self, let tooltipController = tooltipController, strongSelf.checksTooltipController === tooltipController {
                     strongSelf.checksTooltipController = nil
-    //                ApplicationSpecificNotice.setVolumeButtonToUnmute(accountManager: strongSelf.context.sharedContext.accountManager)
                 }
             }
             self.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in

@@ -322,7 +322,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.closeButton.displaysAsynchronously = false
         
         self.textNode = ImmediateTextNode()
-        self.textNode.maximumNumberOfLines = 2
+        self.textNode.maximumNumberOfLines = 3
         self.textNode.textAlignment = .center
         
         super.init()
