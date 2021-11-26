@@ -1122,6 +1122,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         strongSelf.centralItemRightBarButtonItems.set(node.rightBarButtonItems())
                         strongSelf.centralItemNavigationStyle.set(node.navigationStyle())
                         strongSelf.centralItemFooterContentNode.set(node.footerContent())
+                        strongSelf.galleryNode.pager.pagingEnabledPromise.set(node.isPagingEnabled())
                     }
                     
                     switch strongSelf.source {
@@ -1286,6 +1287,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             self.centralItemRightBarButtonItems.set(centralItemNode.rightBarButtonItems())
             self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
             self.centralItemFooterContentNode.set(centralItemNode.footerContent())
+            self.galleryNode.pager.pagingEnabledPromise.set(centralItemNode.isPagingEnabled())
             
             if let (media, _) = mediaForMessage(message: message) {
                 if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments, let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
@@ -1323,6 +1325,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             self.centralItemRightBarButtonItems.set(centralItemNode.rightBarButtonItems())
             self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
             self.centralItemFooterContentNode.set(centralItemNode.footerContent())
+            self.galleryNode.pager.pagingEnabledPromise.set(centralItemNode.isPagingEnabled())
             
             if let _ = mediaForMessage(message: message) {
                 centralItemNode.activateAsInitial()

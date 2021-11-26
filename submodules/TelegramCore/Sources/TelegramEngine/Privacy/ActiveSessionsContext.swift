@@ -144,6 +144,29 @@ private final class ActiveSessionsContextImpl {
         }
     }
     
+    func updateSessionAcceptsIncomingCalls(_ session: RecentAccountSession, accepts: Bool) -> Signal<Never, UpdateSessionError> {
+        let updatedSession = session.withUpdatedAcceptsIncomingCalls(accepts)
+        
+        var mergedSessions = self._state.sessions
+        for i in 0 ..< mergedSessions.count {
+            if mergedSessions[i].hash == updatedSession.hash {
+                mergedSessions.remove(at: i)
+                mergedSessions.insert(updatedSession, at: i)
+                break
+            }
+        }
+        self._state = ActiveSessionsContextState(isLoadingMore: self._state.isLoadingMore, sessions: mergedSessions, ttlDays: self._state.ttlDays)
+        
+        return updateAccountSessionAcceptsIncomingCalls(account: self.account, hash: session.hash, accepts: accepts)
+        |> deliverOnMainQueue
+        |> mapToSignal { [weak self] _ -> Signal<Never, UpdateSessionError> in
+            if let strongSelf = self {
+                strongSelf._state = ActiveSessionsContextState(isLoadingMore: strongSelf._state.isLoadingMore, sessions: mergedSessions, ttlDays: strongSelf._state.ttlDays)
+            }
+            return .complete()
+        }
+    }
+    
     func updateAuthorizationTTL(days: Int32) -> Signal<Never, UpadteAuthorizationTTLError> {
         self._state = ActiveSessionsContextState(isLoadingMore: self._state.isLoadingMore, sessions: self._state.sessions, ttlDays: days)
         
@@ -224,6 +247,20 @@ public final class ActiveSessionsContext {
             let disposable = MetaDisposable()
             self.impl.with { impl in
                 disposable.set(impl.updateSessionAcceptsSecretChats(session, accepts: accepts).start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func updateSessionAcceptsIncomingCalls(_ session: RecentAccountSession, accepts: Bool) -> Signal<Never, UpdateSessionError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.updateSessionAcceptsIncomingCalls(session, accepts: accepts).start(error: { error in
                     subscriber.putError(error)
                 }, completed: {
                     subscriber.putCompletion()

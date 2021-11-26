@@ -13,8 +13,27 @@ import PresentationDataUtils
 import TelegramCore
 
 public enum TwoFactorAuthSplashMode {
-    case intro
-    case done
+    public struct Intro {
+        public var title: String
+        public var text: String
+        public var actionText: String
+        public var doneText: String
+        
+        public init(
+            title: String,
+            text: String,
+            actionText: String,
+            doneText: String
+        ) {
+            self.title = title
+            self.text = text
+            self.actionText = actionText
+            self.doneText = doneText
+        }
+    }
+    
+    case intro(Intro)
+    case done(doneText: String)
     case recoveryDone(recoveredAccountData: RecoveredAccountData?, syncContacts: Bool, isPasswordSet: Bool)
     case remember
 }
@@ -24,6 +43,8 @@ public final class TwoFactorAuthSplashScreen: ViewController {
     private let engine: SomeTelegramEngine
     private var presentationData: PresentationData
     private var mode: TwoFactorAuthSplashMode
+    
+    public var dismissConfirmation: ((@escaping () -> Void) -> Bool)?
     
     public init(sharedContext: SharedAccountContext, engine: SomeTelegramEngine, mode: TwoFactorAuthSplashMode, presentation: ViewControllerNavigationPresentation = .modalInLargeLayout) {
         self.sharedContext = sharedContext
@@ -55,6 +76,14 @@ public final class TwoFactorAuthSplashScreen: ViewController {
         } else {
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: ASDisplayNode())
         }
+        
+        self.attemptNavigation = { [weak self] f in
+            guard let strongSelf = self, let dismissConfirmation = strongSelf.dismissConfirmation else {
+                return true
+            }
+            
+            return dismissConfirmation(f)
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -70,8 +99,8 @@ public final class TwoFactorAuthSplashScreen: ViewController {
                 return
             }
             switch strongSelf.mode {
-            case .intro:
-                strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .password, stateUpdated: { _ in
+            case let .intro(intro):
+                strongSelf.push(TwoFactorDataInputScreen(sharedContext: strongSelf.sharedContext, engine: strongSelf.engine, mode: .password(doneText: intro.doneText), stateUpdated: { _ in
                 }, presentation: strongSelf.navigationPresentation))
             case .done, .remember:
                 guard let navigationController = strongSelf.navigationController as? NavigationController else {
@@ -136,18 +165,18 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
         
         switch mode {
-        case .intro:
-            title = self.presentationData.strings.TwoFactorSetup_Intro_Title
-            texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Intro_Text, font: textFont, textColor: textColor)]
-            buttonText = self.presentationData.strings.TwoFactorSetup_Intro_Action
+        case let .intro(intro):
+            title = intro.title
+            texts = [NSAttributedString(string: intro.text, font: textFont, textColor: textColor)]
+            buttonText = intro.actionText
             
             self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupIntro"), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
             self.animationSize = CGSize(width: 124.0, height: 124.0)
             self.animationNode.visibility = true
-        case .done:
+        case let .done(doneText):
             title = self.presentationData.strings.TwoFactorSetup_Done_Title
             texts = [NSAttributedString(string: self.presentationData.strings.TwoFactorSetup_Done_Text, font: textFont, textColor: textColor)]
-            buttonText = self.presentationData.strings.TwoFactorSetup_Done_Action
+            buttonText = doneText
             
             self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "TwoFactorSetupDone"), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
             self.animationSize = CGSize(width: 124.0, height: 124.0)

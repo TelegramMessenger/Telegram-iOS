@@ -99,12 +99,13 @@ public struct AdminLogEventsFlags: OptionSet {
     public static let deleteMessages = AdminLogEventsFlags(rawValue: 1 << 13)
     public static let calls = AdminLogEventsFlags(rawValue: 1 << 14)
     public static let invites = AdminLogEventsFlags(rawValue: 1 << 15)
-    
+    public static let sendMessages = AdminLogEventsFlags(rawValue: 1 << 16)
+
     public static var all: AdminLogEventsFlags {
-        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites]
+        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .sendMessages, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites]
     }
     public static var flags: AdminLogEventsFlags {
-        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites]
+        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .sendMessages, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites]
     }
 }
 

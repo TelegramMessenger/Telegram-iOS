@@ -8395,7 +8395,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.checksTooltipDisposable.set((getServerProvidedSuggestions(account: self.context.account)
         |> deliverOnMainQueue).start(next: { [weak self] values in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, strongSelf.chatLocation.peerId != strongSelf.context.account.peerId else {
                 return
             }
             if !values.contains(.newcomerTicks) {
@@ -11864,16 +11864,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            //TODO:localize
-            var statusText: String
-            statusText = "Messages for \(dayCount) \(dayCount == 1 ? "day" : "days") deleted"
+            let statusText: String
             switch type {
             case .forEveryone:
-                statusText += " for both sides"
+                statusText = strongSelf.presentationData.strings.Chat_MessageRangeDeleted_ForBothSides(Int32(dayCount))
             default:
-                break
+                statusText = strongSelf.presentationData.strings.Chat_MessageRangeDeleted_ForMe(Int32(dayCount))
             }
-            statusText += "."
             
             strongSelf.chatDisplayNode.historyNode.ignoreMessagesInTimestampRange = range
             
@@ -13570,7 +13567,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             tooltipController.dismissed = { [weak self, weak tooltipController] _ in
                 if let strongSelf = self, let tooltipController = tooltipController, strongSelf.checksTooltipController === tooltipController {
                     strongSelf.checksTooltipController = nil
-    //                ApplicationSpecificNotice.setVolumeButtonToUnmute(accountManager: strongSelf.context.sharedContext.accountManager)
                 }
             }
             self.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in

@@ -3765,6 +3765,7 @@ Unused sets are archived when you add more.";
 "AuthCode.Alert" = "Your login code is %@. Enter it in the Telegram app where you are trying to log in.\n\nDo not give this code to anyone.";
 "Login.CheckOtherSessionMessages" = "Check your Telegram messages";
 "Login.SendCodeViaSms" = "Send the code as an SMS";
+"Login.SendCodeViaCall" = "Get code on my phone";
 "Login.CancelPhoneVerification" = "Do you want to stop the phone number verification process?";
 "Login.CancelPhoneVerificationStop" = "Stop";
 "Login.CancelPhoneVerificationContinue" = "Continue";
@@ -7079,9 +7080,9 @@ Sorry for the inconvenience.";
 
 "AuthSessions.View.LocationInfo" = "This location estimate is based on the IP address and may not always be accurate.";
 
-"AuthSessions.View.AcceptSecretChatsTitle" = "Incoming Secret Chats";
-"AuthSessions.View.AcceptSecretChats" = "Accept on This Device";
-"AuthSessions.View.AcceptSecretChatsInfo" = "You can disable the acception of incoming secret chats on this device.";
+"AuthSessions.View.AcceptTitle" = "Accept on This Device";
+"AuthSessions.View.AcceptSecretChats" = "New Secret Chats";
+"AuthSessions.View.AcceptIncomingCalls" = "Incoming Calls";
 
 "Conversation.SendMesageAs" = "Send Message As...";
 "Conversation.InviteRequestAdminGroup" = "%1$@ is an admin of %2$@, a group you requested to join.";
@@ -7101,3 +7102,24 @@ Sorry for the inconvenience.";
 "AuthSessions.TerminateOtherSessionsText" = "Are you sure you want to terminate all other sessions?";
 
 "Notifications.ResetAllNotificationsText" = "Are you sure you want to reset all notification settings to default?";
+
+"MessageCalendar.ClearHistoryForThisDay" = "Clear History For This Day";
+"MessageCalendar.ClearHistoryForTheseDays" = "Clear History For These Days";
+"MessageCalendar.EmptySelectionTooltip" = "Please select one or more days first.";
+"Chat.MessageRangeDeleted.ForMe_1" = "Messages for 1 day deleted.";
+"Chat.MessageRangeDeleted.ForMe_any" = "Messages for %@ days deleted.";
+"Chat.MessageRangeDeleted.ForBothSides_1" = "Messages for 1 day deleted for both sides.";
+"Chat.MessageRangeDeleted.ForBothSides_any" = "Messages for %@ days deleted for both sides.";
+
+"ForcedPasswordSetup.Intro.Title" = "Set a Password";
+"ForcedPasswordSetup.Intro.Text" = "If you want to log into your account frequently, please choose a password.";
+"ForcedPasswordSetup.Intro.Action" = "Set a Password";
+"ForcedPasswordSetup.Intro.DoneAction" = "Done";
+"ForcedPasswordSetup.Intro.DismissTitle" = "Warning";
+"ForcedPasswordSetup.Intro.DismissText_1" = "Proceed without a password? If you do not set a password, you will only be able to log into your account via SMS once every **day**.";
+"ForcedPasswordSetup.Intro.DismissText_any" = "Proceed without a password? If you do not set a password, you will only be able to log into your account via SMS once every **%@ days**.";
+"ForcedPasswordSetup.Intro.DismissActionCancel" = "No, let me set a password";
+"ForcedPasswordSetup.Intro.DismissActionOK" = "Yes, I’m sure";
+
+"Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the missed call number.";
+"Login.EnterMissingDigits" = "Enter the missing digits";

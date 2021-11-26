@@ -177,8 +177,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
         if case .missedCall = codeType {
-            //TODO:localize
-            self.currentOptionInfoNode.attributedText = NSAttributedString(string: "Please enter the last five digits\nof the missed call number.", font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+            self.currentOptionInfoNode.attributedText = NSAttributedString(string: self.strings.Login_CodePhonePatternInfoText, font: Font.regular(16.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         } else {
             self.currentOptionInfoNode.attributedText = NSAttributedString(string: "", font: Font.regular(15.0), textColor: self.theme.list.itemPrimaryTextColor)
         }
@@ -227,8 +226,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 case .otherSession:
                     self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_CheckOtherSessionMessages, font: Font.medium(32.0), textColor: self.theme.list.itemPrimaryTextColor)
                 case .missedCall:
-                    //TODO:localize
-                    self.titleNode.attributedText = NSAttributedString(string: "Enter the missing digits", font: Font.medium(32.0), textColor: self.theme.list.itemPrimaryTextColor)
+                    self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterMissingDigits, font: Font.medium(32.0), textColor: self.theme.list.itemPrimaryTextColor)
                 default:
                     self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(40.0), textColor: self.theme.list.itemPrimaryTextColor)
                 }
@@ -253,8 +251,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                     } else {
                         fontSize = 18.0
                     }
-                    //TODO:localize
-                    self.titleNode.attributedText = NSAttributedString(string: "Enter the missing digits", font: Font.semibold(fontSize), textColor: self.theme.list.itemPrimaryTextColor)
+                    self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterMissingDigits, font: Font.semibold(fontSize), textColor: self.theme.list.itemPrimaryTextColor)
                 default:
                     self.titleNode.attributedText = NSAttributedString(string: self.phoneNumber, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
                 }
