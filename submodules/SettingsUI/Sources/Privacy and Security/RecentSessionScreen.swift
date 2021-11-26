@@ -563,6 +563,8 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         }
         let previousTheme = self.presentationData.theme
         self.presentationData = presentationData
+        
+        self.contentBackgroundNode.backgroundColor =  self.presentationData.theme.list.blocksBackgroundColor
                         
         self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.regular(30.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
         
