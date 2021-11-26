@@ -160,12 +160,6 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                 case let .sentCode(sentCode):
                     switch sentCode {
                     case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
-                        /*#if DEBUG
-                        var type = type
-                        type = .sentCodeTypeMissedCall(prefix: "+44 1234 8", length: 5)
-                        var nextType = nextType
-                        nextType = nil
-                        #endif*/
                         var parsedNextType: AuthorizationCodeNextType?
                         if let nextType = nextType {
                             parsedNextType = AuthorizationCodeNextType(apiType: nextType)
