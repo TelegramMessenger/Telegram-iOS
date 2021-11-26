@@ -103,6 +103,19 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                         |> map { sentCode in
                             return (.sentCode(sentCode), updatedAccount)
                         }
+                        |> `catch` { error -> Signal<(SendCodeResult, UnauthorizedAccount), MTRpcError> in
+                            if error.errorDescription == "SESSION_PASSWORD_NEEDED" {
+                                return account.network.request(Api.functions.account.getPassword(), automaticFloodWait: false)
+                                |> mapToSignal { result -> Signal<(SendCodeResult, UnauthorizedAccount), MTRpcError> in
+                                    switch result {
+                                    case let .password(_, _, _, _, hint, _, _, _, _, _):
+                                        return .single((.password(hint: hint), account))
+                                    }
+                                }
+                            } else {
+                                return .fail(error)
+                            }
+                        }
                     }
                 case _:
                     return .fail(error)
