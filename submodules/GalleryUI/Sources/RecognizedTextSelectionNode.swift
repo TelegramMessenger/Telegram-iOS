@@ -82,7 +82,7 @@ private enum Knob {
     case right
 }
 
-private final class RecognizedTextSelectionGetureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+private final class RecognizedTextSelectionGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
     private var longTapTimer: Timer?
     private var movingKnob: (Knob, CGPoint, CGPoint)?
     private var currentLocation: CGPoint?
@@ -225,7 +225,7 @@ public final class RecognizedTextSelectionNode: ASDisplayNode {
     
     public let highlightAreaNode: ASDisplayNode
     
-    private var recognizer: RecognizedTextSelectionGetureRecognizer?
+    private var recognizer: RecognizedTextSelectionGestureRecognizer?
     
     public init(size: CGSize, theme: RecognizedTextSelectionTheme, strings: PresentationStrings, recognitions: [RecognizedContent], updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, performAction: @escaping (String, RecognizedTextSelectionAction) -> Void) {
         self.size = size
@@ -286,7 +286,7 @@ public final class RecognizedTextSelectionNode: ASDisplayNode {
             return self?.hitTest(point, with: event)
         }
        
-        let recognizer = RecognizedTextSelectionGetureRecognizer(target: nil, action: nil)
+        let recognizer = RecognizedTextSelectionGestureRecognizer(target: nil, action: nil)
         recognizer.knobAtPoint = { [weak self] point in
             return self?.knobAtPoint(point)
         }

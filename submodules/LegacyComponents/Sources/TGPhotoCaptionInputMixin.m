@@ -13,7 +13,6 @@
 
 @interface TGPhotoCaptionInputMixin ()
 {
-    UIView *_backgroundView;
     TGObserverProxy *_keyboardWillChangeFrameProxy;
     bool _editing;
     

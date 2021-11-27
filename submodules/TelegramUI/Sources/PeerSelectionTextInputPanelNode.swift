@@ -322,7 +322,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     }
     
     public func dismissInput() {
-        self.view.window?.endEditing(true)
+        self.ensureUnfocused()
     }
     
     public func baseHeight() -> CGFloat {
@@ -614,7 +614,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
         }
         
         if self.isCaption {
-            if !(self.textInputNode?.isFirstResponder() ?? false) {
+            if !self.isFocused {
                 panelHeight = minimalHeight
                 
                 transition.updateAlpha(node: self.oneLineNode, alpha: inputHasText ? 1.0 : 0.0)
@@ -942,8 +942,12 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
         }
     }
     
+    private var imitateFocus = false
     @objc func formatAttributesLink(_ sender: Any) {
         self.inputMenu.back()
+        if self.isCaption {
+            self.imitateFocus = true
+        }
         self.interfaceInteraction?.openLinkEditing()
     }
     
@@ -1061,6 +1065,9 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     }
     
     var isFocused: Bool {
+        if self.imitateFocus {
+            return true
+        }
         return self.textInputNode?.isFirstResponder() ?? false
     }
     
@@ -1069,6 +1076,8 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     }
     
     func ensureFocused() {
+        self.imitateFocus = false
+        
         if self.textInputNode == nil {
             self.loadTextInputNode()
         }

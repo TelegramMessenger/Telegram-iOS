@@ -1090,6 +1090,7 @@
             _portraitToolbarView.alpha = alpha;
             _landscapeToolbarView.alpha = alpha;
             _captionMixin.inputPanelView.alpha = alpha;
+            _captionMixin.backgroundView.alpha = alpha;
         } completion:^(BOOL finished)
         {
             if (finished)
@@ -1099,6 +1100,7 @@
                 _portraitToolbarView.userInteractionEnabled = !hidden;
                 _landscapeToolbarView.userInteractionEnabled = !hidden;
                 _captionMixin.inputPanelView.userInteractionEnabled = !hidden;
+                _captionMixin.backgroundView.userInteractionEnabled = !hidden;
             }
         }];
         
@@ -1133,6 +1135,9 @@
         
         _captionMixin.inputPanelView.alpha = alpha;
         _captionMixin.inputPanelView.userInteractionEnabled = !hidden;
+        
+        _captionMixin.backgroundView.alpha = alpha;
+        _captionMixin.backgroundView.userInteractionEnabled = !hidden;
     }
     
     if (hidden)
@@ -1301,6 +1306,7 @@
 - (void)immediateEditorTransitionIn {
     [self setSelectionInterfaceHidden:true animated:false];
     _captionMixin.inputPanelView.alpha = 0.0f;
+    _captionMixin.backgroundView.alpha = 0.0f;
     _portraitToolbarView.doneButton.alpha = 0.0f;
     _landscapeToolbarView.doneButton.alpha = 0.0f;
     
@@ -1321,6 +1327,7 @@
     [UIView animateWithDuration:0.2 animations:^
     {
         _captionMixin.inputPanelView.alpha = 0.0f;
+        _captionMixin.backgroundView.alpha = 0.0f;
         _portraitToolbarView.doneButton.alpha = 0.0f;
         _landscapeToolbarView.doneButton.alpha = 0.0f;
     }];
@@ -1333,6 +1340,7 @@
     [UIView animateWithDuration:0.3 animations:^
     {
         _captionMixin.inputPanelView.alpha = 1.0f;
+        _captionMixin.backgroundView.alpha = 1.0f;
         _portraitToolbarView.doneButton.alpha = 1.0f;
         _landscapeToolbarView.doneButton.alpha = 1.0f;
     }];

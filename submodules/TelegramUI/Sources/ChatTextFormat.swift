@@ -51,9 +51,9 @@ func chatTextInputClearFormattingAttributes(_ state: ChatTextInputState) -> Chat
     }
 }
 
-func chatTextInputAddLinkAttribute(_ state: ChatTextInputState, url: String) -> ChatTextInputState {
-    if !state.selectionRange.isEmpty {
-        let nsRange = NSRange(location: state.selectionRange.lowerBound, length: state.selectionRange.count)
+func chatTextInputAddLinkAttribute(_ state: ChatTextInputState, selectionRange: Range<Int>, url: String) -> ChatTextInputState {
+    if !selectionRange.isEmpty {
+        let nsRange = NSRange(location: selectionRange.lowerBound, length: selectionRange.count)
         var linkRange = nsRange
         var attributesToRemove: [(NSAttributedString.Key, NSRange)] = []
         state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
@@ -72,7 +72,7 @@ func chatTextInputAddLinkAttribute(_ state: ChatTextInputState, url: String) -> 
             result.removeAttribute(attribute, range: range)
         }
         result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: nsRange)
-        return ChatTextInputState(inputText: result, selectionRange: state.selectionRange)
+        return ChatTextInputState(inputText: result, selectionRange: selectionRange)
     } else {
         return state
     }

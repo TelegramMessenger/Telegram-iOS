@@ -7423,7 +7423,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self, let inputMode = inputMode, let selectionRange = selectionRange {
                         if let link = link {
                             strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-                                return (chatTextInputAddLinkAttribute(current, url: link), inputMode)
+                                return (chatTextInputAddLinkAttribute(current, selectionRange: selectionRange, url: link), inputMode)
                             }
                         } else {
                             
@@ -9666,6 +9666,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: presentationData.chatFontSize, bubbleCorners: presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(PeerId(0)), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
         
         var updateChatPresentationInterfaceStateImpl: (((ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void)?
+        var ensureFocusedImpl: (() -> Void)?
         
         let interfaceInteraction = ChatPanelInterfaceInteraction(updateTextInputStateAndMode: { f in
             updateChatPresentationInterfaceStateImpl?({
@@ -9704,10 +9705,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let link = link {
                             updateChatPresentationInterfaceStateImpl?({
                                 return $0.updatedInterfaceState({
-                                    $0.withUpdatedComposeInputState(chatTextInputAddLinkAttribute($0.composeInputState, url: link))
+                                    $0.withUpdatedEffectiveInputState(chatTextInputAddLinkAttribute($0.effectiveInputState, selectionRange: selectionRange, url: link))
                                 })
                             })
                         }
+                        ensureFocusedImpl?()
                         updateChatPresentationInterfaceStateImpl?({
                             return $0.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
                                 $0.withUpdatedEffectiveInputState(ChatTextInputState(inputText: $0.effectiveInputState.inputText, selectionRange: selectionRange.endIndex ..< selectionRange.endIndex))
@@ -9734,6 +9736,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let inputPanelNode = inputPanelNode, updateInputTextState {
                 inputPanelNode.updateInputTextState(updatedPresentationInterfaceState.interfaceState.effectiveInputState, animated: true)
             }
+        }
+        
+        ensureFocusedImpl =  { [weak inputPanelNode] in
+            inputPanelNode?.ensureFocused()
         }
         
         return inputPanelNode
