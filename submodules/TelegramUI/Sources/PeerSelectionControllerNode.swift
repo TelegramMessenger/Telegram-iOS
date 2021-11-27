@@ -286,14 +286,17 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     return state
                 })
                 
-                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: (presentationData, .never()), account: strongSelf.context.account, text: text ?? "", link: nil, apply: { link in
-                    if let inputMode = inputMode, let selectionRange = selectionRange {
+                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: (presentationData, .never()), account: strongSelf.context.account, text: text ?? "", link: nil, apply: { [weak self] link in
+                    if let strongSelf = self, let inputMode = inputMode, let selectionRange = selectionRange {
                         if let link = link {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, { state in
                                 return state.updatedInterfaceState({
                                     $0.withUpdatedEffectiveInputState(chatTextInputAddLinkAttribute($0.effectiveInputState, selectionRange: selectionRange, url: link))
                                 })
                             })
+                        }
+                        if let textInputPanelNode = strongSelf.textInputPanelNode {
+                            textInputPanelNode.ensureFocused()
                         }
                         strongSelf.updateChatPresentationInterfaceState(animated: true, { state in
                             return state.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
