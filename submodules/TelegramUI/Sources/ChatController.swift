@@ -7423,7 +7423,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self, let inputMode = inputMode, let selectionRange = selectionRange {
                         if let link = link {
                             strongSelf.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-                                return (chatTextInputAddLinkAttribute(current, url: link), inputMode)
+                                return (chatTextInputAddLinkAttribute(current, selectionRange: selectionRange, url: link), inputMode)
                             }
                         } else {
                             
@@ -9704,7 +9704,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let link = link {
                             updateChatPresentationInterfaceStateImpl?({
                                 return $0.updatedInterfaceState({
-                                    $0.withUpdatedComposeInputState(chatTextInputAddLinkAttribute($0.composeInputState, url: link))
+                                    $0.withUpdatedEffectiveInputState(chatTextInputAddLinkAttribute($0.effectiveInputState, selectionRange: selectionRange, url: link))
                                 })
                             })
                         }

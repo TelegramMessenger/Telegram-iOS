@@ -215,6 +215,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     imageNode.removeFromSupernode()
                     node.imageNode = nil
                 }
+                node.imageNode?.captureProtected = message.isCopyProtected()
                 
                 titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: spacing - textInsets.top), size: titleLayout.size)
                 textNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top), size: textLayout.size)

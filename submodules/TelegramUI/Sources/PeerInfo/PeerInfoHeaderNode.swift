@@ -2530,8 +2530,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         let buttonSpacing: CGFloat = 8.0
-        var buttonRightOrigin = CGPoint(x: width - containerInset, y: maxY + 25.0 - navigationHeight - UIScreenPixel)
-        let buttonWidth = (width - containerInset * 2.0 + buttonSpacing) / CGFloat(buttonKeys.count) - buttonSpacing
+        let buttonSideInset = max(16.0, containerInset)
+        var buttonRightOrigin = CGPoint(x: width - buttonSideInset, y: maxY + 25.0 - navigationHeight - UIScreenPixel)
+        let buttonWidth = (width - buttonSideInset * 2.0 + buttonSpacing) / CGFloat(buttonKeys.count) - buttonSpacing
         
         let apparentButtonSize = CGSize(width: buttonWidth, height: 58.0)
         let buttonsAlpha: CGFloat = 1.0

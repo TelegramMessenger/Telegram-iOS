@@ -1162,9 +1162,9 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
         self.interfaceIsHidden = isHidden
         
         let buttonSize = CGSize(width: 32.0, height: 32.0)
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: buttonSize)
-        self.selectedBackgroundNode.frame = CGRect(origin: CGPoint(), size: buttonSize)
-        self.iconNode.frame = CGRect(origin: CGPoint(), size: buttonSize)
+        self.backgroundNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: buttonSize)
+        self.selectedBackgroundNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: buttonSize)
+        self.iconNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: buttonSize)
         
         if self.appeared {
             if !self.buttonNode.isSelected && isHidden {
@@ -1174,7 +1174,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
             }
         }
         
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - rightInset - buttonSize.width - 12.0, y: size.height - bottomInset - buttonSize.height - 12.0, width: buttonSize.width, height: buttonSize.height))
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - rightInset - buttonSize.width - 24.0, y: size.height - bottomInset - buttonSize.height - 24.0, width: buttonSize.width + 24.0, height: buttonSize.height + 24.0))
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {

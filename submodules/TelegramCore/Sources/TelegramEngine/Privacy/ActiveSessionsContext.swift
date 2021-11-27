@@ -122,11 +122,10 @@ private final class ActiveSessionsContextImpl {
     }
     
     func updateSessionAcceptsSecretChats(_ session: RecentAccountSession, accepts: Bool) -> Signal<Never, UpdateSessionError> {
-        let updatedSession = session.withUpdatedAcceptsSecretChats(accepts)
-        
         var mergedSessions = self._state.sessions
         for i in 0 ..< mergedSessions.count {
-            if mergedSessions[i].hash == updatedSession.hash {
+            if mergedSessions[i].hash == session.hash {
+                let updatedSession = mergedSessions[i].withUpdatedAcceptsSecretChats(accepts)
                 mergedSessions.remove(at: i)
                 mergedSessions.insert(updatedSession, at: i)
                 break
@@ -145,11 +144,10 @@ private final class ActiveSessionsContextImpl {
     }
     
     func updateSessionAcceptsIncomingCalls(_ session: RecentAccountSession, accepts: Bool) -> Signal<Never, UpdateSessionError> {
-        let updatedSession = session.withUpdatedAcceptsIncomingCalls(accepts)
-        
         var mergedSessions = self._state.sessions
         for i in 0 ..< mergedSessions.count {
-            if mergedSessions[i].hash == updatedSession.hash {
+            if mergedSessions[i].hash == session.hash {
+                let updatedSession = mergedSessions[i].withUpdatedAcceptsIncomingCalls(accepts)
                 mergedSessions.remove(at: i)
                 mergedSessions.insert(updatedSession, at: i)
                 break
