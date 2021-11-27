@@ -90,6 +90,16 @@ public final class ConstantDisplayLinkAnimator {
     public var isPaused: Bool = true {
         didSet {
             if self.isPaused != oldValue {
+                if !self.isPaused && self.displayLink == nil {
+                    self.displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
+                        self?.tick()
+                    }), selector: #selector(DisplayLinkTarget.event))
+                    /*if #available(iOS 15.0, *) {
+                        self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
+                    }*/
+                    self.displayLink.add(to: RunLoop.main, forMode: .common)
+                }
+                
                 self.displayLink.isPaused = self.isPaused
             }
         }
@@ -97,15 +107,6 @@ public final class ConstantDisplayLinkAnimator {
     
     public init(update: @escaping () -> Void) {
         self.update = update
-        
-        self.displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
-            self?.tick()
-        }), selector: #selector(DisplayLinkTarget.event))
-        /*if #available(iOS 15.0, *) {
-            self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
-        }*/
-        self.displayLink.isPaused = true
-        self.displayLink.add(to: RunLoop.main, forMode: .common)
     }
     
     deinit {
