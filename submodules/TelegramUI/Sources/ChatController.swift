@@ -1583,7 +1583,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
                 strongSelf.chatDisplayNode.dismissInput()
                 openChatTheme(context: strongSelf.context, message: message, pushController: { [weak self] c in
-                    (self?.navigationController as? NavigationController)?.pushViewController(c)
+                    guard let strongSelf = self else { return }
+                    if case let .inline(navigationController) = strongSelf.presentationInterfaceState.mode {
+                        navigationController?.pushViewController(c)
+                    } else {
+                        strongSelf.push(c)
+                    }
                 }, present: { [weak self] c, a in
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)
                 })
