@@ -1042,43 +1042,33 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             result.append(.more)
         }
     } else if let channel = peer as? TelegramChannel {
-        var displayLeave = !channel.flags.contains(.isCreator)
-        var canViewStats = false
-        var hasDiscussion = false
-        var hasVoiceChat = false
-        var displayMore = true
-        var canStartVoiceChat = false
-        if let cachedChannelData = cachedData as? CachedChannelData {
-            canViewStats = cachedChannelData.flags.contains(.canViewStats)
-        }
-        if channel.flags.contains(.hasVoiceChat) {
-            hasVoiceChat = true
-        }
-        if channel.flags.contains(.isCreator) {
-            displayMore = true
-        }
+        let hasVoiceChat = channel.flags.contains(.hasVoiceChat)
+        let canStartVoiceChat = !hasVoiceChat && (channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls))
+        let canManage = channel.flags.contains(.isCreator) || channel.adminRights != nil
+            
+        let hasDiscussion: Bool
         switch channel.info {
-        case let .broadcast(info):
-            if !channel.flags.contains(.isCreator) {
-                displayLeave = true
-            }
-            if info.flags.contains(.hasDiscussionGroup) {
-                hasDiscussion = true
-            }
-        case .group:
-            if channel.flags.contains(.hasVoiceChat) {
-                hasVoiceChat = true
-            }
+            case let .broadcast(info):
+                hasDiscussion = info.flags.contains(.hasDiscussionGroup)
+            case .group:
+                hasDiscussion = false
         }
-        if !hasVoiceChat && (channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls)) {
-            canStartVoiceChat = true
-        }
+        
+        let canLeave: Bool
         switch channel.participationStatus {
         case .member:
-            break
+            canLeave = true
         default:
-            displayLeave = false
+            canLeave = false
         }
+        
+        let canViewStats: Bool
+        if let cachedChannelData = cachedData as? CachedChannelData {
+            canViewStats = cachedChannelData.flags.contains(.canViewStats)
+        } else {
+            canViewStats = false
+        }
+        
         if hasVoiceChat || canStartVoiceChat {
             result.append(.voiceChat)
         }
@@ -1086,42 +1076,57 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if hasDiscussion {
             result.append(.discussion)
         }
-        if isExpanded && hasDiscussion {
-        } else {
-            result.append(.search)
-        }
-        if displayLeave && result.count < 4 {
+        result.append(.search)
+        if canLeave {
             result.append(.leave)
         }
+        
         var canReport = true
         if channel.isVerified || channel.adminRights != nil || channel.flags.contains(.isCreator)  {
             canReport = false
         }
-        if !canReport && !canViewStats {
-            displayMore = false
-        }
-        if displayMore {
+        
+        var hasMore = false
+        if canReport || canViewStats {
+            hasMore = true
             result.append(.more)
         }
-    } else if let group = peer as? TelegramGroup {
-        var hasVoiceChat = false
-        var canStartVoiceChat = false
         
-        if group.flags.contains(.hasVoiceChat) {
-            hasVoiceChat = true
+        if hasDiscussion && isExpanded && result.count >= 5 {
+            result.removeAll(where: { $0 == .search })
+            if !hasMore {
+                hasMore = true
+                result.append(.more)
+            }
         }
+        
+        if canLeave && isExpanded && (canManage || result.count >= 5) {
+            result.removeAll(where: { $0 == .leave })
+            if !hasMore {
+                hasMore = true
+                result.append(.more)
+            }
+        }
+    } else if let group = peer as? TelegramGroup {
+        let hasVoiceChat = group.flags.contains(.hasVoiceChat)
+        let canStartVoiceChat: Bool
+        
         if !hasVoiceChat {
             if case .creator = group.role {
                 canStartVoiceChat = true
             } else if case let .admin(rights, _) = group.role, rights.rights.contains(.canManageCalls) {
                 canStartVoiceChat = true
+            } else {
+                canStartVoiceChat = false
             }
+        } else {
+            canStartVoiceChat = false
         }
 
-        result.append(.mute)
         if hasVoiceChat || canStartVoiceChat {
             result.append(.voiceChat)
         }
+        result.append(.mute)
         result.append(.search)
         result.append(.more)
     }

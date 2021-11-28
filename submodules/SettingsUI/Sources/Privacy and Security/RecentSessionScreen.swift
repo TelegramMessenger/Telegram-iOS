@@ -211,6 +211,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
         self.wrappingScrollNode.view.delaysContentTouches = false
+        self.wrappingScrollNode.view.showsVerticalScrollIndicator = false
         self.wrappingScrollNode.view.canCancelContentTouches = true
         
         self.dimNode = ASDisplayNode()
@@ -269,6 +270,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.terminateButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: self.presentationData.theme.list.itemDestructiveColor), font: .regular, height: 44.0, cornerRadius: 11.0, gloss: false)
         
         var hasSecretChats = false
+        var hasIncomingCalls = false
         
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         let title: String
@@ -341,8 +343,11 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
                 self.secretChatsSwitchNode.isOn = session.flags.contains(.acceptsSecretChats)
                 self.incomingCallsSwitchNode.isOn = session.flags.contains(.acceptsIncomingCalls)
             
-                if !session.flags.contains(.passwordPending) && ![2040, 2496].contains(session.apiId) {
-                    hasSecretChats = true
+                if !session.flags.contains(.passwordPending) {
+                    hasIncomingCalls = true
+                    if ![2040, 2496].contains(session.apiId)  {
+                        hasSecretChats = true
+                    }
                 }
             case let .website(website, peer):
                 self.terminateButton.title = self.presentationData.strings.AuthSessions_View_Logout
@@ -399,7 +404,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.locationTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_Location, font: Font.regular(17.0), textColor: textColor)
         self.locationValueNode.attributedText = NSAttributedString(string: location, font: Font.regular(17.0), textColor: secondaryTextColor)
         self.locationInfoNode.attributedText = NSAttributedString(string: self.presentationData.strings.AuthSessions_View_LocationInfo, font: Font.regular(13.0), textColor: secondaryTextColor)
-        self.locationInfoNode.maximumNumberOfLines = 3
+        self.locationInfoNode.maximumNumberOfLines = 4
         
         self.acceptBackgroundNode = ASDisplayNode()
         self.acceptBackgroundNode.clipsToBounds = true
@@ -454,26 +459,28 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         self.animationNode.flatMap { self.contentContainerNode.addSubnode($0) }
         self.avatarNode.flatMap { self.contentContainerNode.addSubnode($0) }
         
-        self.contentContainerNode.addSubnode(self.acceptBackgroundNode)
-        self.contentContainerNode.addSubnode(self.acceptHeaderNode)
-        if hasSecretChats {
-            self.contentContainerNode.addSubnode(self.secretChatsTitleNode)
-            self.contentContainerNode.addSubnode(self.secretChatsSwitchNode)
-            
-            self.secretChatsSwitchNode.valueUpdated = { [weak self] value in
-                if let strongSelf = self {
-                    strongSelf.updateAcceptSecretChats?(value)
+        if hasIncomingCalls {
+            self.contentContainerNode.addSubnode(self.acceptBackgroundNode)
+            self.contentContainerNode.addSubnode(self.acceptHeaderNode)
+            if hasSecretChats {
+                self.contentContainerNode.addSubnode(self.secretChatsTitleNode)
+                self.contentContainerNode.addSubnode(self.secretChatsSwitchNode)
+                
+                self.secretChatsSwitchNode.valueUpdated = { [weak self] value in
+                    if let strongSelf = self {
+                        strongSelf.updateAcceptSecretChats?(value)
+                    }
                 }
+                
+                self.contentContainerNode.addSubnode(self.acceptSeparatorNode)
             }
+            self.contentContainerNode.addSubnode(self.incomingCallsTitleNode)
+            self.contentContainerNode.addSubnode(self.incomingCallsSwitchNode)
             
-            self.contentContainerNode.addSubnode(self.acceptSeparatorNode)
-        }
-        self.contentContainerNode.addSubnode(self.incomingCallsTitleNode)
-        self.contentContainerNode.addSubnode(self.incomingCallsSwitchNode)
-        
-        self.incomingCallsSwitchNode.valueUpdated = { [weak self] value in
-            if let strongSelf = self {
-                strongSelf.updateAcceptIncomingCalls?(value)
+            self.incomingCallsSwitchNode.valueUpdated = { [weak self] value in
+                if let strongSelf = self {
+                    strongSelf.updateAcceptIncomingCalls?(value)
+                }
             }
         }
         
@@ -779,7 +786,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         }
         transition.updateFrame(node: self.acceptBackgroundNode, frame: secretFrame)
         
-        let secretChatsHeaderTextSize = self.acceptHeaderNode.updateLayout(CGSize(width: secretFrame.width - inset * 2.0 - locationTitleTextSize.width - 10.0, height: fieldItemHeight))
+        let secretChatsHeaderTextSize = self.acceptHeaderNode.updateLayout(CGSize(width: secretFrame.width - inset * 2.0, height: fieldItemHeight))
         let secretChatsHeaderTextFrame = CGRect(origin: CGPoint(x: secretFrame.minX + inset, y: secretFrame.minY - secretChatsHeaderTextSize.height - 6.0), size: secretChatsHeaderTextSize)
         transition.updateFrame(node: self.acceptHeaderNode, frame: secretChatsHeaderTextFrame)
         
@@ -813,7 +820,9 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
             self.incomingCallsSwitchNode.frame = CGRect(origin: CGPoint(x:  fieldFrame.maxX - switchSize.width - inset, y: secretFrame.maxY - fieldItemHeight + floorToScreenPixels((fieldItemHeight - switchSize.height) / 2.0)), size: switchSize)
         }
         
-        contentHeight += secretFrame.maxY - locationInfoTextFrame.maxY
+        if let _ = self.acceptBackgroundNode.supernode {
+            contentHeight += secretFrame.maxY - locationInfoTextFrame.maxY
+        }
         contentHeight += 40.0
         
         let isCurrent: Bool
@@ -823,7 +832,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
             isCurrent = false
         }
         
-        if isCurrent || (layout.size.width > layout.size.height && layout.metrics.widthClass == .compact) {
+        if isCurrent {
             contentHeight -= 68.0
             self.terminateButton.isHidden = true
         } else {
@@ -831,8 +840,11 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         }
         
         let sideInset = floor((layout.size.width - width) / 2.0)
-        let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - contentHeight), size: CGSize(width: width, height: contentHeight))
+        let scrollContentHeight = max(layout.size.height, contentHeight)
+        let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: max(layout.statusBarHeight ?? 20.0, layout.size.height - contentHeight)), size: CGSize(width: width, height: contentHeight))
         let contentFrame = contentContainerFrame
+        
+        self.wrappingScrollNode.view.contentSize = CGSize(width: layout.size.width, height: scrollContentHeight)
         
         var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY), size: CGSize(width: width, height: contentFrame.height + 2000.0))
         if backgroundFrame.minY < contentFrame.minY {

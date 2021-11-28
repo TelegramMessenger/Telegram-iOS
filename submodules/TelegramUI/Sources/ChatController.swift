@@ -10905,7 +10905,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 if let sendAsPeerId = self.presentationInterfaceState.currentSendAsPeerId {
-                    attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
+                    if attributes.first(where: { $0 is SendAsMessageAttribute }) == nil {
+                        attributes.append(SendAsMessageAttribute(peerId: sendAsPeerId))
+                    }
                 }
                 return attributes
             }

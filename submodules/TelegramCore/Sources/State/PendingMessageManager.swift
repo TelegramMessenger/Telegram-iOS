@@ -369,8 +369,10 @@ public final class PendingMessageManager {
                     guard let messageContext = strongSelf.messageContexts[message.id] else {
                         continue
                     }
-                    
-                    messageContext.activityType = uploadActivityTypeForMessage(message)
+                                        
+                    if message.author?.id == strongSelf.accountPeerId {
+                        messageContext.activityType = uploadActivityTypeForMessage(message)
+                    }
                     messageContext.threadId = message.threadId
                     strongSelf.collectUploadingInfo(messageContext: messageContext, message: message)
                 }

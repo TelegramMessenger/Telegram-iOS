@@ -949,6 +949,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var effectiveAuthor: Peer?
         var ignoreForward = false
         var displayAuthorInfo: Bool
+        var ignoreNameHiding = false
         
         let avatarInset: CGFloat
         var hasAvatar = false
@@ -995,6 +996,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 if let author = firstMessage.author, author is TelegramChannel, !incoming {
                     allowAuthor = true
+                    ignoreNameHiding = true
                 }
                 
                 displayAuthorInfo = !mergedTop.merged && allowAuthor && peerId.isGroupOrChannel && effectiveAuthor != nil
@@ -1370,7 +1372,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             initialDisplayHeader = false
         } else {
             if inlineBotNameString == nil && (ignoreForward || firstMessage.forwardInfo == nil) && replyMessage == nil {
-                if let first = contentPropertiesAndLayouts.first, first.1.hidesSimpleAuthorHeader {
+                if let first = contentPropertiesAndLayouts.first, first.1.hidesSimpleAuthorHeader && !ignoreNameHiding {
                     if let author = firstMessage.author as? TelegramChannel, case .group = author.info, author.id == firstMessage.id.peerId, !incoming {
                     } else {
                         initialDisplayHeader = false

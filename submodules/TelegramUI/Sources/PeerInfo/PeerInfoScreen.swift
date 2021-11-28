@@ -1119,8 +1119,11 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemDiscussionGroup = 3
                 let ItemSignMessages = 4
                 let ItemSignMessagesHelp = 5
+                let ItemDeleteChannel = 5
                 
-                if channel.flags.contains(.isCreator) {
+                let isCreator = channel.flags.contains(.isCreator)
+                
+                if isCreator {
                     let linkText: String
                     if let _ = channel.username {
                         linkText = presentationData.strings.Channel_Setup_TypePublic
@@ -1132,7 +1135,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                  
-                if (channel.flags.contains(.isCreator) && (channel.username?.isEmpty ?? true)) || (!channel.flags.contains(.isCreator) && channel.adminRights?.rights.contains(.canInviteUsers) == true) {
+                if (isCreator && (channel.username?.isEmpty ?? true)) || (!channel.flags.contains(.isCreator) && channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                     let invitesText: String
                     if let count = data.invitations?.count, count > 0 {
                         invitesText = "\(count)"
@@ -1144,7 +1147,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                 
-                if channel.flags.contains(.isCreator) || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                     let discussionGroupTitle: String
                     if let _ = data.cachedData as? CachedChannelData {
                         if let peer = data.linkedDiscussionPeer {
@@ -1165,7 +1168,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                 
-                if channel.flags.contains(.isCreator) || (channel.adminRights != nil && channel.hasPermission(.sendMessages)) {
+                if isCreator || (channel.adminRights != nil && channel.hasPermission(.sendMessages)) {
                     let messagesShouldHaveSignatures: Bool
                     switch channel.info {
                     case let .broadcast(info):
@@ -1177,6 +1180,12 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         interaction.editingToggleMessageSignatures(value)
                     }))
                     items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
+                }
+                
+                if isCreator {
+                    items[.peerActions]!.append(PeerInfoScreenActionItem(id: ItemDeleteChannel, text: presentationData.strings.ChannelInfo_DeleteChannel, color: .destructive, icon: nil, alignment: .natural, action: {
+                        interaction.openDeletePeer()
+                    }))
                 }
             case .group:
                 let ItemUsername = 101
@@ -3702,56 +3711,30 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     
                     switch channel.info {
                     case .broadcast:
-                        if channel.flags.contains(.isCreator) {
+                        if case .member = channel.participationStatus, !headerButtons.contains(.leave) {
                             if !items.isEmpty {
                                 items.append(.separator)
                             }
-                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_DeleteChannel, textColor: .destructive, icon: { theme in
-                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_LeaveChannel, textColor: .destructive, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.destructiveColor)
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)
                                 
-                                self?.openDeletePeer()
+                                self?.openLeavePeer()
                             })))
-                        } else {
-                            if case .member = channel.participationStatus, !headerButtons.contains(.leave) {
-                                if !items.isEmpty {
-                                    items.append(.separator)
-                                }
-                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Channel_LeaveChannel, textColor: .destructive, icon: { theme in
-                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.destructiveColor)
-                                }, action: { [weak self] _, f in
-                                    f(.dismissWithoutContent)
-                                    
-                                    self?.openLeavePeer()
-                                })))
-                            }
                         }
                     case .group:
-                        if channel.flags.contains(.isCreator) {
+                        if case .member = channel.participationStatus, !headerButtons.contains(.leave) {
                             if !items.isEmpty {
                                 items.append(.separator)
                             }
-                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_DeleteGroup, textColor: .destructive, icon: { theme in
-                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_LeaveGroup, textColor: .destructive, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.destructiveColor)
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)
                                 
-                                self?.openDeletePeer()
+                                self?.openLeavePeer()
                             })))
-                        } else {
-                            if case .member = channel.participationStatus, !headerButtons.contains(.leave) {
-                                if !items.isEmpty {
-                                    items.append(.separator)
-                                }
-                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_LeaveGroup, textColor: .destructive, icon: { theme in
-                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.destructiveColor)
-                                }, action: { [weak self] _, f in
-                                    f(.dismissWithoutContent)
-                                    
-                                    self?.openLeavePeer()
-                                })))
-                            }
                         }
                     }
                 } else if let group = peer as? TelegramGroup {
