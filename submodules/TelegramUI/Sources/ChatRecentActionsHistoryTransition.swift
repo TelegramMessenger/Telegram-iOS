@@ -31,7 +31,7 @@ struct ChatRecentActionsEntryId: Hashable, Comparable {
 
 private func eventNeedsHeader(_ event: AdminLogEvent) -> Bool {
     switch event.action {
-        case .changeAbout, .changeUsername, .editMessage, .deleteMessage, .pollStopped:
+        case .changeAbout, .changeUsername, .editMessage, .deleteMessage, .pollStopped, .sendMessage:
             return true
         case let .updatePinned(message):
             if message != nil {

@@ -7123,3 +7123,5 @@ Sorry for the inconvenience.";
 
 "Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the missed call number.";
 "Login.EnterMissingDigits" = "Enter the missing digits";
+
+"Channel.AdminLogFilter.EventsSentMessages" = "Sent Messages";
