@@ -328,16 +328,18 @@ private func recognizeContent(in image: UIImage) -> Signal<[RecognizedContent], 
     }
 }
 
-public func recognizedContent(postbox: Postbox, image: UIImage, messageId: MessageId) -> Signal<[RecognizedContent], NoError> {
+public func recognizedContent(postbox: Postbox, image: @escaping () -> UIImage?, messageId: MessageId) -> Signal<[RecognizedContent], NoError> {
     return cachedImageRecognizedContent(postbox: postbox, messageId: messageId)
     |> mapToSignal { cachedContent -> Signal<[RecognizedContent], NoError> in
         if let cachedContent = cachedContent {
             return .single(cachedContent.results)
-        } else {
+        } else if let image = image() {
             return recognizeContent(in: image)
             |> beforeNext { results in
                 let _ = updateCachedImageRecognizedContent(postbox: postbox, messageId: messageId, content: CachedImageRecognizedContent(results: results)).start()
             }
+        } else {
+            return .single([])
         }
     }
 }

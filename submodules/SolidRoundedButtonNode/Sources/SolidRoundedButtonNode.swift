@@ -38,7 +38,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private var fontSize: CGFloat
     
     private let buttonBackgroundNode: ASDisplayNode
-    private let buttonGlossNode: SolidRoundedButtonGlossNode
+    private let buttonGlossNode: SolidRoundedButtonGlossNode?
     private let buttonNode: HighlightTrackingButtonNode
     private let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
@@ -94,7 +94,11 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         self.buttonBackgroundNode.cornerRadius = cornerRadius
         
-        self.buttonGlossNode = SolidRoundedButtonGlossNode(color: theme.foregroundColor, cornerRadius: cornerRadius)
+        if gloss {
+            self.buttonGlossNode = SolidRoundedButtonGlossNode(color: theme.foregroundColor, cornerRadius: cornerRadius)
+        } else {
+            self.buttonGlossNode = nil
+        }
         
         self.buttonNode = HighlightTrackingButtonNode()
         
@@ -112,8 +116,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.buttonBackgroundNode)
-        if gloss {
-            self.addSubnode(self.buttonGlossNode)
+        if let buttonGlossNode = self.buttonGlossNode {
+            self.addSubnode(buttonGlossNode)
         }
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.titleNode)
@@ -207,7 +211,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.theme = theme
         
         self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
-        self.buttonGlossNode.color = theme.foregroundColor
+        self.buttonGlossNode?.color = theme.foregroundColor
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
         
@@ -231,7 +235,9 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         let buttonSize = CGSize(width: width, height: self.buttonHeight)
         let buttonFrame = CGRect(origin: CGPoint(), size: buttonSize)
         transition.updateFrame(node: self.buttonBackgroundNode, frame: buttonFrame)
-        transition.updateFrame(node: self.buttonGlossNode, frame: buttonFrame)
+        if let buttonGlossNode = self.buttonGlossNode {
+            transition.updateFrame(node: buttonGlossNode, frame: buttonFrame)
+        }
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         
         if self.title != self.titleNode.attributedText?.string {

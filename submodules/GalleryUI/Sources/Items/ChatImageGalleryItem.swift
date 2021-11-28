@@ -314,14 +314,14 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             strongSelf.statusNodeContainer.isHidden = true
                             
                             Queue.concurrentDefaultQueue().async {
-                                if let message = strongSelf.message, !message.isCopyProtected(), let image = generate(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))?.generateImage() {
-                                    strongSelf.recognitionDisposable.set((recognizedContent(postbox: strongSelf.context.account.postbox, image: image, messageId: message.id)
+                                if let message = strongSelf.message, !message.isCopyProtected() {
+                                    strongSelf.recognitionDisposable.set((recognizedContent(postbox: strongSelf.context.account.postbox, image: { return generate(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))?.generateImage() }, messageId: message.id)
                                     |> deliverOnMainQueue).start(next: { [weak self] results in
                                         if let strongSelf = self {
                                             strongSelf.recognizedContentNode?.removeFromSupernode()
                                             if !results.isEmpty {
                                                 let size = strongSelf.imageNode.bounds.size
-                                                let recognizedContentNode = RecognizedContentContainer(size: size, image: image, recognitions: results, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, present: { c, a in
+                                                let recognizedContentNode = RecognizedContentContainer(size: size, recognitions: results, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, present: { c, a in
                                                     strongSelf.galleryController()?.presentInGlobalOverlay(c, with: a)
                                                 }, performAction: { [weak self] string, action in
                                                     guard let strongSelf = self else {
@@ -357,11 +357,6 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                         return
                                                     }
                                                     strongSelf.footerContentNode.openActionOptions?(.url(url: payload, concealed: true), message)
-                                                }
-                                                recognizedContentNode.textAction = { _, _ in
-//                                                    guard let strongSelf = self else {
-//                                                        return
-//                                                    }
                                                 }
                                                 recognizedContentNode.alpha = 0.0
                                                 recognizedContentNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -1029,9 +1024,8 @@ private class RecognizedContentContainer: ASDisplayNode {
     private var selectionNode: RecognizedTextSelectionNode?
     
     var barcodeAction: ((String, CGRect) -> Void)?
-    var textAction: ((String, CGRect) -> Void)?
     
-    init(size: CGSize, image: UIImage, recognitions: [RecognizedContent], presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, performAction: @escaping (String, RecognizedTextSelectionAction) -> Void) {
+    init(size: CGSize, recognitions: [RecognizedContent], presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void, performAction: @escaping (String, RecognizedTextSelectionAction) -> Void) {
         self.size = size
         self.recognitions = recognitions
         
