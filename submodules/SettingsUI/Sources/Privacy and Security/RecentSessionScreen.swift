@@ -774,7 +774,7 @@ private class RecentSessionScreenNode: ViewControllerTracingNode, UIScrollViewDe
         let locationValueTextFrame = CGRect(origin: CGPoint(x: fieldFrame.maxX - locationValueTextSize.width - inset, y: fieldFrame.minY + fieldItemHeight + fieldItemHeight + floorToScreenPixels((fieldItemHeight - locationValueTextSize.height) / 2.0)), size: locationValueTextSize)
         transition.updateFrame(node: self.locationValueNode, frame: locationValueTextFrame)
         
-        let locationInfoTextSize = self.locationInfoNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0, height: fieldItemHeight))
+        let locationInfoTextSize = self.locationInfoNode.updateLayout(CGSize(width: fieldFrame.width - inset * 2.0, height: fieldItemHeight * 2.0))
         let locationInfoTextFrame = CGRect(origin: CGPoint(x: fieldFrame.minX + inset, y: fieldFrame.maxY + 6.0), size: locationInfoTextSize)
         transition.updateFrame(node: self.locationInfoNode, frame: locationInfoTextFrame)
         

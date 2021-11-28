@@ -248,6 +248,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
     public override init() {
         super.init()
         
+        if #available(iOS 11.0, *) {
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+        }
+        
         self.scrollView.showsVerticalScrollIndicator = false
         self.scrollView.showsHorizontalScrollIndicator = false
         self.scrollView.scrollsToTop = false
