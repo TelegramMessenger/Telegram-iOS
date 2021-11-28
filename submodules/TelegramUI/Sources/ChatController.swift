@@ -11419,7 +11419,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func openMessageReplies(messageId: MessageId, displayProgressInMessage: MessageId?, isChannelPost: Bool, atMessage atMessageId: MessageId?, displayModalProgress: Bool) {
-        guard let navigationController = self.navigationController as? NavigationController else {
+        var navigationController: NavigationController?
+        if case let .inline(inlineController) = presentationInterfaceState.mode {
+            navigationController = inlineController
+        } else {
+            navigationController = self.navigationController as? NavigationController
+        }
+        guard let navigationController = navigationController else {
             return
         }
         
