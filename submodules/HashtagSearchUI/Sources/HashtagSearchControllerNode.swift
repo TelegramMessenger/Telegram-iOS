@@ -18,28 +18,30 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     let chatController: ChatController?
     
     private let context: AccountContext
+    private let peer: EnginePeer?
     private let query: String
+    private var presentationData: PresentationData
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
     private var hasValidLayout = false
     
-    init(context: AccountContext, peer: EnginePeer?, query: String, theme: PresentationTheme, strings: PresentationStrings, navigationBar: NavigationBar?, navigationController: NavigationController?) {
+    init(context: AccountContext, peer: EnginePeer?, query: String, presentationData: PresentationData, navigationBar: NavigationBar?, navigationController: NavigationController?) {
         self.navigationBar = navigationBar
 
         self.context = context
+        self.peer = peer
         self.query = query
+        self.presentationData = presentationData
         self.listNode = ListView()
         self.listNode.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).string
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
         
-        self.toolbarBackgroundNode = NavigationBackgroundNode(color: theme.rootController.navigationBar.blurredBackgroundColor)
+        self.toolbarBackgroundNode = NavigationBackgroundNode(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor)
         
         self.toolbarSeparatorNode = ASDisplayNode()
-        self.toolbarSeparatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
-        
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.toolbarSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
         var items: [String] = []
         if peer?.id == context.account.peerId {
@@ -49,8 +51,8 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         } else {
             items.append(peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? "")
         }
-        items.append(strings.HashtagSearch_AllChats)
-        self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)
+        items.append(presentationData.strings.HashtagSearch_AllChats)
+        self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: presentationData.theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)
         
         if let peer = peer {
             self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
@@ -64,7 +66,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.backgroundColor = theme.chatList.backgroundColor
+        self.backgroundColor = presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.listNode)
         self.listNode.isHidden = true
@@ -78,6 +80,30 @@ final class HashtagSearchControllerNode: ASDisplayNode {
                     strongSelf.chatController?.displayNode.isHidden = true
                     strongSelf.listNode.isHidden = false
                 }
+            }
+        }
+    }
+    
+    func updateThemeAndStrings(presentationData: PresentationData) {
+        if presentationData.theme !== self.presentationData.theme || presentationData.strings !== self.presentationData.strings {
+            self.presentationData = presentationData
+            
+            self.toolbarSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
+            self.backgroundColor = presentationData.theme.chatList.backgroundColor
+            self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: presentationData.theme))
+            
+            var items: [String] = []
+            if peer?.id == context.account.peerId {
+                items.append(presentationData.strings.Conversation_SavedMessages)
+            } else if let id = peer?.id, id.isReplies {
+                items.append(presentationData.strings.DialogList_Replies)
+            } else {
+                items.append(peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? "")
+            }
+            items.append(presentationData.strings.HashtagSearch_AllChats)
+            self.segmentedControlNode.items = items.map { SegmentedControlItem(title: $0) }
+            self.listNode.accessibilityPageScrolledString = { row, count in
+                return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
             }
         }
     }
