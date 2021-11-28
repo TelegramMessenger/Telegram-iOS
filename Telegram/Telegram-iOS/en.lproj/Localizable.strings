@@ -3742,7 +3742,7 @@ Unused sets are archived when you add more.";
 "TwoStepAuth.RecoveryEmailAddDescription" = "Please add your valid e-mail. It is the only way to recover a forgotten password.";
 "TwoStepAuth.RecoveryEmailChangeDescription" = "Please enter your new recovery email. It is the only way to recover a forgotten password.";
 "TwoStepAuth.ChangeEmail" = "Change Email";
-"TwoStepAuth.ConfirmEmailDescription" = "Please enter the code we've just emailed at %1$@."; 
+"TwoStepAuth.ConfirmEmailDescription" = "Please enter the code we've just emailed at %1$@.";
 "TwoStepAuth.ConfirmEmailCodePlaceholder" = "Code";
 "TwoStepAuth.ConfirmEmailResendCode" = "Resend Code";
 
@@ -7056,7 +7056,7 @@ Sorry for the inconvenience.";
 "Group.Edit.PrivatePublicLinkAlert" = "Please note that if you choose a public link for your group, anyone will be able to find it in search and join.\n\nDo not create this link if you want your group to stay private.";
 
 "Conversation.CopyProtectionInfoGroup" = "Admins restricted members to copy or forward content from this group.";
-"Conversation.CopyProtectionInfoChannel" = "Admins restricted members to copy or forward content from this channel.";
+"Conversation.CopyProtectionInfoChannel" = "Copying and forwarding is not allowed in this channel.";
 
 "Conversation.CopyProtectionForwardingDisabledGroup" = "Forwards from this group are restricted";
 "Conversation.CopyProtectionForwardingDisabledChannel" = "Forwards from this channel are restricted";
@@ -7067,13 +7067,13 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ allowed message forwarding";
 
 "Group.Setup.ForwardingGroupTitle" = "Forwarding From This Group";
-"Group.Setup.ForwardingChannelTitle" = "Forwarding From This Channel";
-"Group.Setup.ForwardingEnabled" = "Allow Forwarding";
-"Group.Setup.ForwardingDisabled" = "Restrict Forwarding";
-"Group.Setup.ForwardingGroupInfo" = "Participants can forward messages from this group and save media files.";
-"Group.Setup.ForwardingChannelInfo" = "Participants can forward messages from this channel and save media files.";
-"Group.Setup.ForwardingGroupInfoDisabled" = "Participants can't forward messages from this group and save media files.";
-"Group.Setup.ForwardingChannelInfoDisabled" = "Participants can't forward messages from this channel and save media files.";
+"Group.Setup.ForwardingChannelTitle" = "Saving And Copying Content";
+"Group.Setup.ForwardingEnabled" = "Allow Saving Content";
+"Group.Setup.ForwardingDisabled" = "Restrict Saving Content";
+"Group.Setup.ForwardingGroupInfo" = "Participants will be able copy, save and forward content from this group.";
+"Group.Setup.ForwardingChannelInfo" = "Participants will be able copy, save and forward content from this channel.";
+"Group.Setup.ForwardingGroupInfoDisabled" = "Participants won't be able to copy, save and forward content from this group.";
+"Group.Setup.ForwardingChannelInfoDisabled" = "Participants won't be able to copy, save and forward content from this channel.";
 
 "AuthSessions.TerminateIfAwayTitle" = "Automatically Terminate Old Sessions";
 "AuthSessions.TerminateIfAwayFor" = "If Inactive For";
