@@ -32,7 +32,7 @@ extension PeerStatusSettings {
                 if (flags & (1 << 8)) != 0 {
                     result.insert(.suggestAddMembers)
                 }
-                self = PeerStatusSettings(flags: result, geoDistance: geoDistance, requestChatTitle: requestChatTitle, requestChatDate: requestChatDate, requestChatIsChannel: (flags & (1 << 9)) != 0)
+                self = PeerStatusSettings(flags: result, geoDistance: geoDistance, requestChatTitle: requestChatTitle, requestChatDate: requestChatDate, requestChatIsChannel: (flags & (1 << 10)) != 0)
         }
     }
 }
