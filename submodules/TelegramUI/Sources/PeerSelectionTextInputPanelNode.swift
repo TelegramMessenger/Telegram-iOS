@@ -829,8 +829,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
         
         if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState {
             if case .format = self.inputMenu.state {
-                self.inputMenu.deactivate()
-                UIMenuController.shared.update()
+                self.inputMenu.hide()
             }
             
             let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
