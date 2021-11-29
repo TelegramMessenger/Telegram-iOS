@@ -20,32 +20,39 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                 break
             }
             
-            let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, contextBytesPerRow in
-                switch type {
-                case .yuva:
-                    data.withUnsafeBytes { bytes -> Void in
-                        guard let baseAddress = bytes.baseAddress else {
-                            return
+            var image: UIImage?
+            
+            autoreleasepool {
+                image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, contextBytesPerRow in
+                    switch type {
+                    case .yuva:
+                        data.withUnsafeBytes { bytes -> Void in
+                            guard let baseAddress = bytes.baseAddress else {
+                                return
+                            }
+                            if bytesPerRow <= 0 || height <= 0 || width <= 0 || bytesPerRow * height > bytes.count {
+                                assert(false)
+                                return
+                            }
+                            decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(width), Int32(height), Int32(contextBytesPerRow))
                         }
-                        if bytesPerRow <= 0 || height <= 0 || width <= 0 || bytesPerRow * height > bytes.count {
-                            assert(false)
-                            return
+                    case .argb:
+                        data.withUnsafeBytes { bytes -> Void in
+                            guard let baseAddress = bytes.baseAddress else {
+                                return
+                            }
+                            memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
                         }
-                        decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(width), Int32(height), Int32(contextBytesPerRow))
                     }
-                case .argb:
-                    data.withUnsafeBytes { bytes -> Void in
-                        guard let baseAddress = bytes.baseAddress else {
-                            return
-                        }
-                        memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
-                    }
-                }
-            })
+                })
+            }
             
             Queue.mainQueue().async {
-                self?.contents = image?.cgImage
-                self?.updateHighlightedContentNode()
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.contents = image?.cgImage
+                strongSelf.updateHighlightedContentNode()
                 completion()
             }
         }
