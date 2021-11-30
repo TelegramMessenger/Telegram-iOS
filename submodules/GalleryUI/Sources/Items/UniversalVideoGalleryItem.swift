@@ -182,7 +182,7 @@ private let minimizeImage = generateTintedImage(image: UIImage(bundleImageName: 
 private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentNode {
     private let wrapperNode: ASDisplayNode
     private let fullscreenNode: HighlightableButtonNode
-    private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, LayoutMetrics, UIEdgeInsets)?
     
     var action: ((Bool) -> Void)?
     
@@ -203,15 +203,15 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.fullscreenNode.addTarget(self, action: #selector(self.toggleFullscreenPressed), forControlEvents: .touchUpInside)
     }
     
-    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, metrics, leftInset, rightInset, bottomInset)
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, metrics, insets)
         
         let isLandscape = size.width > size.height
         self.fullscreenNode.isSelected = isLandscape
         
         let iconSize: CGFloat = 42.0
         let inset: CGFloat = 4.0
-        let buttonFrame = CGRect(origin: CGPoint(x: size.width - iconSize - inset - rightInset, y: size.height - iconSize - inset - bottomInset), size: CGSize(width: iconSize, height: iconSize))
+        let buttonFrame = CGRect(origin: CGPoint(x: size.width - iconSize - inset - insets.right, y: size.height - iconSize - inset - insets.bottom), size: CGSize(width: iconSize, height: iconSize))
         transition.updateFrame(node: self.wrapperNode, frame: buttonFrame)
         transition.updateFrame(node: self.fullscreenNode, frame: CGRect(origin: CGPoint(), size: buttonFrame.size))
     }
@@ -235,13 +235,13 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.wrapperNode.alpha = self.visibilityAlpha
         
         if let validLayout = self.validLayout {
-            self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, isHidden: false, transition: .animated(duration: 0.3, curve: .easeInOut))
+            self.updateLayout(size: validLayout.0, metrics: validLayout.1, insets: validLayout.2, isHidden: false, transition: .animated(duration: 0.3, curve: .easeInOut))
         }
     }
     
     @objc func toggleFullscreenPressed() {
         var toLandscape = false
-        if let (size, _, _, _ ,_) = self.validLayout, size.width < size.height {
+        if let (size, _, _) = self.validLayout, size.width < size.height {
             toLandscape = true
         }
         if toLandscape {

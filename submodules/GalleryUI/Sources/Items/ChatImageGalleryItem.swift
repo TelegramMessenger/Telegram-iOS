@@ -1173,7 +1173,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
     }
     
     private var interfaceIsHidden: Bool = false
-    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
         self.interfaceIsHidden = isHidden
         
         let buttonSize = CGSize(width: 32.0, height: 32.0)
@@ -1190,7 +1190,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
             }
         }
         
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - rightInset - buttonSize.width - 24.0, y: 41.0, width: buttonSize.width + 24.0, height: buttonSize.height + 24.0))
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - insets.right - buttonSize.width - 24.0, y: insets.top - 50.0, width: buttonSize.width + 24.0, height: buttonSize.height + 24.0))
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {
