@@ -289,7 +289,23 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 isReplyThread = true
             }
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
+            let statusSuggestedWidthAndContinue = makeDateAndStatusLayout(ChatMessageDateAndStatusNode.Arguments(
+                context: item.context,
+                presentationData: item.presentationData,
+                edited: edited && !sentViaBot,
+                impressionCount: viewCount,
+                dateText: dateText,
+                type: statusType,
+                layoutInput: .standalone,
+                constrainedSize: CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude),
+                availableReactions: item.associatedData.availableReactions,
+                reactions: dateReactions,
+                replyCount: dateReplies,
+                isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
+                hasAutoremove: item.message.isSelfExpiring
+            ))
+            
+            let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
             
             var displayVideoFrame = videoFrame
             displayVideoFrame.size.width *= imageScale

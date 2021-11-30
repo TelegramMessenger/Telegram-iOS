@@ -56,6 +56,13 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 let _ = item.controllerInteraction.displayImportedMessageTooltip(sourceNode)
             }
         }
+        
+        self.interactiveFileNode.dateAndStatusNode.reactionSelected = { [weak self] value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.updateMessageReaction(item.message, value)
+        }
     }
     
     override func accessibilityActivate() -> Bool {
@@ -161,9 +168,16 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         self.interactiveFileNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+        if self.interactiveFileNode.dateAndStatusNode.supernode != nil, let _ = self.interactiveFileNode.dateAndStatusNode.hitTest(self.view.convert(point, to: self.interactiveFileNode.dateAndStatusNode.view), with: nil) {
+            return .ignore
+        }
+        return super.tapActionAtPoint(point, gesture: gesture, isEstimating: isEstimating)
+    }
+    
+    override func reactionTargetView(value: String) -> UIView? {
         if !self.interactiveFileNode.dateAndStatusNode.isHidden {
-            return self.interactiveFileNode.dateAndStatusNode.reactionNode(value: value)
+            return self.interactiveFileNode.dateAndStatusNode.reactionView(value: value)
         }
         return nil
     }
