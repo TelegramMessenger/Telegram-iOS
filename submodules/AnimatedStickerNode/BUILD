@@ -1,5 +1,19 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+config_setting(
+    name = "debug_build",
+    values = {
+        "compilation_mode": "dbg",
+    },
+)
+
+optimization_flags = select({
+    ":debug_build": [
+        "-O",
+    ],
+    "//conditions:default": [],
+})
+
 swift_library(
     name = "AnimatedStickerNode",
     module_name = "AnimatedStickerNode",
@@ -8,7 +22,7 @@ swift_library(
     ]),
     copts = [
         "-warnings-as-errors",
-    ],
+    ] + optimization_flags,
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",

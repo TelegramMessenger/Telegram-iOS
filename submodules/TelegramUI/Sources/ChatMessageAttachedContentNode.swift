@@ -508,7 +508,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             if let (media, flags) = mediaAndFlags {
                 if let file = media as? TelegramMediaFile {
                     if file.mimeType == "application/x-tgtheme-ios", let size = file.size, size < 16 * 1024 {
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, attributes, file, imageDateAndStatus, .full, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, associatedData, attributes, file, imageDateAndStatus, .full, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else if file.isInstantVideo {
@@ -540,12 +540,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                         }
 
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, attributes, file, imageDateAndStatus, automaticDownload, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, associatedData, attributes, file, imageDateAndStatus, automaticDownload, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else if file.isSticker || file.isAnimatedSticker {
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: file)
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, attributes, file, imageDateAndStatus, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, associatedData, attributes, file, imageDateAndStatus, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else {
@@ -570,7 +570,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 } else if let image = media as? TelegramMediaImage {
                     if !flags.contains(.preferMediaInline) {
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: image)
-                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, attributes, image, imageDateAndStatus, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, associatedData, attributes, image, imageDateAndStatus, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                         initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                         refineContentImageLayout = refineLayout
                     } else if let dimensions = largestImageRepresentation(image.representations)?.dimensions {
@@ -582,11 +582,11 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 } else if let image = media as? TelegramMediaWebFile {
                     let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: image)
-                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, attributes, image, imageDateAndStatus, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, associatedData, attributes, image, imageDateAndStatus, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout
                 } else if let wallpaper = media as? WallpaperPreviewMedia {
-                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, attributes, wallpaper, imageDateAndStatus, .full, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                    let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData, presentationData.dateTimeFormat, message, associatedData, attributes, wallpaper, imageDateAndStatus, .full, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout
                     if case let .file(_, _, _, _, isTheme, _) = wallpaper.content, isTheme {
@@ -613,52 +613,39 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     default:
                         break
                 }
-                
-                var statusSizeAndApply: (CGSize, (Bool) -> Void)?
 
                 let textConstrainedSize = CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height - insets.top - insets.bottom)
-
-                if let textStatusType = textStatusType {
-                    statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, textStatusType, textConstrainedSize, dateReactions, dateReplies, message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread, message.isSelfExpiring)
-                }
                 
                 var updatedAdditionalImageBadge: ChatMessageInteractiveMediaBadge?
                 if let _ = additionalImageBadgeContent {
                     updatedAdditionalImageBadge = currentAdditionalImageBadgeNode ?? ChatMessageInteractiveMediaBadge()
                 }
                 
-                var upatedTextCutout = textCutout
-                if statusInText, let (statusSize, _) = statusSizeAndApply {
-                    upatedTextCutout.bottomRight = statusSize
-                }
+                let upatedTextCutout = textCutout
                 
                 let (textLayout, textApply) = textAsyncLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 12, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: upatedTextCutout, insets: UIEdgeInsets()))
                 
-                var textFrame = CGRect(origin: CGPoint(), size: textLayout.size)
-                
-                var statusFrame: CGRect?
-                
-                if statusInText, let (statusSize, _) = statusSizeAndApply {
-                    var frame = CGRect(origin: CGPoint(x: textFrame.maxX - statusSize.width, y: textFrame.maxY - statusSize.height), size: statusSize)
-                    
-                    /*let trailingLineWidth = textLayout.trailingLineWidth
-                    if textLayout.size.width - trailingLineWidth >= statusSize.width {
-                        frame.origin = CGPoint(x: textFrame.maxX - statusSize.width, y: textFrame.maxY - statusSize.height)
-                    } else if trailingLineWidth + statusSize.width < textConstrainedSize.width {
-                        frame.origin = CGPoint(x: textFrame.minX + trailingLineWidth, y: textFrame.maxY - statusSize.height)
-                    } else {
-                        frame.origin = CGPoint(x: textFrame.maxX - statusSize.width, y: textFrame.maxY)
-                    }*/
-                    
-                    if let inlineImageSize = inlineImageSize {
-                        if frame.origin.y < inlineImageSize.height + 4.0 {
-                            frame.origin.y = inlineImageSize.height + 4.0
-                        }
-                    }
-                    
-                    frame = frame.offsetBy(dx: insets.left, dy: insets.top)
-                    statusFrame = frame
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))?
+                if statusInText, let textStatusType = textStatusType {
+                    statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
+                        context: context,
+                        presentationData: presentationData,
+                        edited: edited,
+                        impressionCount: viewCount,
+                        dateText: dateText,
+                        type: textStatusType,
+                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, preferAdditionalInset: false),
+                        constrainedSize: textConstrainedSize,
+                        availableReactions: associatedData.availableReactions,
+                        reactions: dateReactions,
+                        replyCount: dateReplies,
+                        isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
+                        hasAutoremove: message.isSelfExpiring
+                    ))
                 }
+                let _ = statusSuggestedWidthAndContinue
+                
+                var textFrame = CGRect(origin: CGPoint(), size: textLayout.size)
                 
                 textFrame = textFrame.offsetBy(dx: insets.left, dy: insets.top)
                 
@@ -666,12 +653,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 
                 var boundingSize = textFrame.size
                 var lineHeight = textLayout.rawTextSize.height
-                if let statusFrame = statusFrame {
-                    boundingSize = textFrame.union(statusFrame).size
-                    if let _ = actionTitle {
-                        lineHeight = boundingSize.height
-                    }
-                }
                 if let inlineImageSize = inlineImageSize {
                     if boundingSize.height < inlineImageSize.height {
                         boundingSize.height = inlineImageSize.height
@@ -679,6 +660,10 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     if lineHeight < inlineImageSize.height {
                         lineHeight = inlineImageSize.height
                     }
+                }
+                
+                if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                    boundingSize.width = max(boundingSize.width, statusSuggestedWidthAndContinue.0)
                 }
                 
                 var finalizeContentImageLayout: ((CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))?
@@ -767,10 +752,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         
                         adjustedBoundingSize.height += imageHeightAddition + 5.0
                         adjustedLineHeight += imageHeightAddition + 4.0
-                        
-                        if !statusInText, let (statusSize, _) = statusSizeAndApply {
-                            statusFrame = CGRect(origin: CGPoint(), size: statusSize)
-                        }
                     }
                     
                     var contentFileSizeAndApply: (CGSize, (Bool) -> ChatMessageInteractiveFileNode)?
@@ -807,10 +788,18 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         adjustedBoundingSize.height += 7.0 + size.height
                     }
                     
-                    var adjustedStatusFrame: CGRect?
+                    var statusSizeAndApply: ((CGSize), (Bool) -> Void)?
+                    if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                        statusSizeAndApply = statusSuggestedWidthAndContinue.1(boundingWidth - insets.left - insets.right)
+                    }
+                    if let statusSizeAndApply = statusSizeAndApply {
+                        adjustedBoundingSize.height += statusSizeAndApply.0.height
+                    }
+                    
+                    /*var adjustedStatusFrame: CGRect?
                     if statusInText, let statusFrame = statusFrame {
                         adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - insets.right, y: statusFrame.origin.y), size: statusFrame.size)
-                    }
+                    }*/
                     
                     adjustedBoundingSize.width = max(boundingWidth, adjustedBoundingSize.width)
  
@@ -830,6 +819,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     hasAnimation = true
                                     transition = .animated(duration: duration, curve: .easeInOut)
                             }
+                            let _ = hasAnimation
                             
                             strongSelf.lineNode.image = lineImage
                             strongSelf.lineNode.frame = CGRect(origin: CGPoint(x: 13.0, y: insets.top), size: CGSize(width: 2.0, height: adjustedLineHeight - insets.top - insets.bottom - 2.0))
@@ -884,10 +874,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 }
                                 
                                 contentImageNode.frame = contentImageFrame
-                                
-                                if !statusInText, let statusFrame = statusFrame {
-                                    adjustedStatusFrame = CGRect(origin: CGPoint(x: contentImageFrame.width - statusFrame.size.width - 2.0, y: contentImageFrame.height - statusFrame.size.height - 2.0), size: statusFrame.size)
-                                }
                             } else if let contentImageNode = strongSelf.contentImageNode {
                                 contentImageNode.visibility = false
                                 contentImageNode.removeFromSupernode()
@@ -958,6 +944,15 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                             
                             strongSelf.textNode.frame = textFrame.offsetBy(dx: 0.0, dy: textVerticalOffset)
+                            if let statusSizeAndApply = statusSizeAndApply {
+                                if strongSelf.statusNode.supernode == nil {
+                                    strongSelf.addSubnode(strongSelf.statusNode)
+                                }
+                                strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: strongSelf.textNode.frame.minX, y: strongSelf.textNode.frame.maxY), size: statusSizeAndApply.0)
+                                statusSizeAndApply.1(animation.isAnimated)
+                            } else if strongSelf.statusNode.supernode != nil {
+                                strongSelf.statusNode.removeFromSupernode()
+                            }
                             
                             if let (size, apply) = actionButtonSizeAndApply {
                                 let buttonNode = apply()
@@ -975,22 +970,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             } else if let buttonNode = strongSelf.buttonNode {
                                 buttonNode.removeFromSupernode()
                                 strongSelf.buttonNode = nil
-                            }
-                            
-                            if let (_, statusApply) = statusSizeAndApply, let adjustedStatusFrame = adjustedStatusFrame {
-                                strongSelf.statusNode.frame = adjustedStatusFrame.offsetBy(dx: 0.0, dy: textVerticalOffset)
-                                if statusInText {
-                                    if strongSelf.statusNode.supernode != strongSelf {
-                                        strongSelf.addSubnode(strongSelf.statusNode)
-                                    }
-                                } else if let contentImageNode = strongSelf.contentImageNode {
-                                    if strongSelf.statusNode.supernode != contentImageNode {
-                                        contentImageNode.addSubnode(strongSelf.statusNode)
-                                    }
-                                }
-                                statusApply(hasAnimation)
-                            } else if strongSelf.statusNode.supernode != nil {
-                                strongSelf.statusNode.removeFromSupernode()
                             }
                         }
                     })

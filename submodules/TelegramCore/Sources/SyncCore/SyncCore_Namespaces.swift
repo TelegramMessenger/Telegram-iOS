@@ -80,6 +80,7 @@ public struct Namespaces {
         public static let cachedPeerInvitationImporters: Int8 = 16
         public static let cachedPeerExportedInvitations: Int8 = 17
         public static let cachedSendAsPeers: Int8 = 18
+        public static let availableReactions: Int8 = 19
     }
     
     public struct UnorderedItemList {

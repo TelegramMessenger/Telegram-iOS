@@ -245,9 +245,26 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                         isReplyThread = true
                     }
                     
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
-                    statusSize = size
-                    statusApply = apply
+                    let statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
+                        context: item.context,
+                        presentationData: item.presentationData,
+                        edited: edited,
+                        impressionCount: viewCount,
+                        dateText: dateText,
+                        type: statusType,
+                        layoutInput: .standalone,
+                        constrainedSize: CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude),
+                        availableReactions: item.associatedData.availableReactions,
+                        reactions: dateReactions,
+                        replyCount: dateReplies,
+                        isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
+                        hasAutoremove: item.message.isSelfExpiring
+                    ))
+                    
+                    let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
+                    
+                    statusSize = dateAndStatusSize
+                    statusApply = dateAndStatusApply
                 }
               
                 let contentWidth: CGFloat
@@ -487,9 +504,9 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+    override func reactionTargetView(value: String) -> UIView? {
         if !self.dateAndStatusNode.isHidden {
-            return self.dateAndStatusNode.reactionNode(value: value)
+            return self.dateAndStatusNode.reactionView(value: value)
         }
         return nil
     }

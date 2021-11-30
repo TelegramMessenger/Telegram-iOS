@@ -26,8 +26,10 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let forcedResourceStatus: FileMediaResourceStatus?
     public let currentlyPlayingMessageId: EngineMessage.Index?
     public let isCopyProtectionEnabled: Bool
+    public let availableReactions: AvailableReactions?
+    public let defaultReaction: String?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
@@ -39,6 +41,17 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.forcedResourceStatus = forcedResourceStatus
         self.currentlyPlayingMessageId = currentlyPlayingMessageId
         self.isCopyProtectionEnabled = isCopyProtectionEnabled
+        self.availableReactions = availableReactions
+        
+        var defaultReaction: String?
+        if let availableReactions = availableReactions {
+            for reaction in availableReactions.reactions {
+                if reaction.title.lowercased().contains("heart") {
+                    defaultReaction = reaction.value
+                }
+            }
+        }
+        self.defaultReaction = defaultReaction
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -73,6 +86,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.isCopyProtectionEnabled != rhs.isCopyProtectionEnabled {
+            return false
+        }
+        if lhs.availableReactions != rhs.availableReactions {
             return false
         }
         return true
