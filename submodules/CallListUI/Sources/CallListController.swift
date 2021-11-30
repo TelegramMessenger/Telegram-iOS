@@ -99,6 +99,8 @@ public final class CallListController: TelegramBaseController {
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .none, locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
         
+        self.tabBarItemContextActionType = .always
+        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         if case .tab = self.mode {
@@ -394,7 +396,9 @@ public final class CallListController: TelegramBaseController {
                 })
             }
         }))
-        (self.navigationController as? NavigationController)?.pushViewController(controller)
+        if let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController {
+            navigationController.pushViewController(controller)
+        }
     }
     
     @objc func editPressed() {
@@ -463,5 +467,44 @@ public final class CallListController: TelegramBaseController {
                 })
             }
         }))
+    }
+    
+    override public func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
+        var items: [ContextMenuItem] = []
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Calls_StartNewCall, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] c, f in
+            c.dismiss(completion: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.callPressed()
+            })
+        })))
+        
+        let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(CallListTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(items: items)), recognizer: nil, gesture: gesture)
+        self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+    }
+}
+
+private final class CallListTabBarContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = true
+    let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
+    
+    private let controller: ViewController
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

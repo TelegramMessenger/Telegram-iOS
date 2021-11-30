@@ -460,7 +460,23 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             } else if let pre = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre)] as? String {
                 return .copy(pre)
             } else {
-                return .none
+                if let item = self.item, item.message.text.count == 1, !item.presentationData.largeEmoji {
+                    let (emoji, fitz) = item.message.text.basicEmoji
+                    var emojiFile: TelegramMediaFile?
+                    
+                    emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+                    if emojiFile == nil {
+                        emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
+                    }
+                    
+                    if let emojiFile = emojiFile {
+                        return .largeEmoji(emoji, fitz, emojiFile)
+                    } else {
+                        return .none
+                    }
+                } else {
+                    return .none
+                }
             }
         } else {
             if let _ = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: nil) {

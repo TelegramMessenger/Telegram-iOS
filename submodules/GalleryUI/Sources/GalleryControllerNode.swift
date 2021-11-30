@@ -7,7 +7,11 @@ import SwipeToDismissGesture
 
 open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     public var statusBar: StatusBar?
-    public var navigationBar: NavigationBar?
+    public var navigationBar: NavigationBar? {
+        didSet {
+            
+        }
+    }
     public let footerNode: GalleryFooterNode
     public var currentThumbnailContainerNode: GalleryThumbnailContainerNode?
     public var overlayNode: ASDisplayNode?
@@ -137,7 +141,6 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         self.view.addSubview(self.scrollView)
         
         self.scrollView.addSubview(self.pager.view)
-        self.addSubnode(self.footerNode)
         
         var previousIndex: Int?
         self.pager.centralItemIndexOffsetUpdated = { [weak self] itemsIndexAndProgress in
@@ -256,6 +259,9 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         
         if let navigationBar = self.navigationBar {
             transition.updateFrame(node: navigationBar, frame: CGRect(origin: CGPoint(x: 0.0, y: self.areControlsHidden ? -navigationBarHeight : 0.0), size: CGSize(width: layout.size.width, height: navigationBarHeight)))
+            if self.footerNode.supernode == nil {
+                self.addSubnode(self.footerNode)
+            }
         }
             
         var thumbnailPanelHeight: CGFloat = 0.0

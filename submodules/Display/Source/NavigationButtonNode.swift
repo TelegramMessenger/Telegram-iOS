@@ -278,7 +278,11 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
             let result = node.view.hitTest(self.view.convert(point, to: node.view), with: event)
             return result
         } else {
-            return super.hitTest(point, with: event)
+            let previousAlpha = self.alpha
+            self.alpha = 1.0
+            let result = super.hitTest(point, with: event)
+            self.alpha = previousAlpha
+            return result
         }
     }
     
@@ -300,7 +304,9 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
             }
             
             if shouldChangeHighlight {
-                self.alpha = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
+                if self.alpha > 0.0 {
+                    self.alpha = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
+                }
                 self.highlightChanged(highlighted)
             }
         }
@@ -379,6 +385,14 @@ public final class NavigationButtonNode: ASDisplayNode {
         return self.nodes.first?.text ?? ""
     }
     
+    var manualAlpha: CGFloat = 1.0 {
+        didSet {
+            for node in self.nodes {
+                node.alpha = self.manualAlpha
+            }
+        }
+    }
+    
     func updateManualText(_ text: String, isBack: Bool = true) {
         let node: NavigationButtonItemNode
         if self.nodes.count > 0 {
@@ -404,6 +418,7 @@ public final class NavigationButtonNode: ASDisplayNode {
             self.nodes.append(node)
             self.addSubnode(node)
         }
+        node.alpha = self.manualAlpha
         node.item = nil
         node.image = nil
         node.text = text
@@ -445,6 +460,7 @@ public final class NavigationButtonNode: ASDisplayNode {
                 self.nodes.append(node)
                 self.addSubnode(node)
             }
+            node.alpha = self.manualAlpha
             node.item = items[i]
             node.image = items[i].image
             node.text = items[i].title ?? ""

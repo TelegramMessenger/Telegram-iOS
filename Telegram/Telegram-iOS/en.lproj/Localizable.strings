@@ -7125,3 +7125,9 @@ Sorry for the inconvenience.";
 "Login.EnterMissingDigits" = "Enter the missing digits";
 
 "Channel.AdminLogFilter.EventsSentMessages" = "Sent Messages";
+
+"Contacts.AddContact" = "Add Contact";
+
+"Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in chat.";
+"Conversation.LargeEmojiEnable" = "Enable Large Emoji";
+"Conversation.LargeEmojiEnabled" = "Large emoji enabled.";

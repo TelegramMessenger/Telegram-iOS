@@ -52,6 +52,22 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
     }
 }
 
+private func generateExpandBackground(size: CGSize, color: UIColor) -> UIImage? {
+    return generateImage(size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        var locations: [CGFloat] = [0.0, 1.0]
+        let colors: [CGColor] = [color.withAlphaComponent(0.0).cgColor, color.cgColor]
+        
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 40.0, y: size.height), options: CGGradientDrawingOptions())
+        context.setFillColor(color.cgColor)
+        context.fill(CGRect(origin: CGPoint(x: 40.0, y: 0.0), size: CGSize(width: size.width - 40.0, height: size.height)))
+    })
+}
+
 private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     private let selectionNode: PeerInfoScreenSelectableBackgroundNode
     private let maskNode: ASImageNode
@@ -59,6 +75,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     private let textNode: ImmediateTextNode
     private let bottomSeparatorNode: ASDisplayNode
     
+    private let expandBackgroundNode: ASImageNode
     private let expandNode: ImmediateTextNode
     private let expandButonNode: HighlightTrackingButtonNode
     
@@ -90,6 +107,9 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.bottomSeparatorNode = ASDisplayNode()
         self.bottomSeparatorNode.isLayerBacked = true
         
+        self.expandBackgroundNode = ASImageNode()
+        self.expandBackgroundNode.displaysAsynchronously = false
+        
         self.expandNode = ImmediateTextNode()
         self.expandNode.displaysAsynchronously = false
         self.expandNode.isUserInteractionEnabled = false
@@ -110,6 +130,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.labelNode)
         self.addSubnode(self.textNode)
         
+        self.addSubnode(self.expandBackgroundNode)
         self.addSubnode(self.expandNode)
         self.addSubnode(self.expandButonNode)
         
@@ -211,7 +232,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             textColorValue = presentationData.theme.list.itemAccentColor
         }
         
-        self.expandNode.attributedText = NSAttributedString(string: presentationData.strings.PeerInfo_BioExpand, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.expandNode.attributedText = NSAttributedString(string: presentationData.strings.PeerInfo_BioExpand.uppercased(), font: Font.medium(16.0), textColor: presentationData.theme.list.itemAccentColor)
         let expandSize = self.expandNode.updateLayout(CGSize(width: width, height: 100.0))
         
         self.labelNode.attributedText = NSAttributedString(string: item.label, font: Font.regular(14.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
@@ -223,7 +244,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
         case let .multiLine(maxLines, enabledEntities):
             self.textNode.maximumNumberOfLines = self.isExpanded ? maxLines : 3
-            self.textNode.cutout = self.isExpanded ? nil : TextNodeCutout(bottomRight: CGSize(width: expandSize.width + 4.0, height: expandSize.height))
+//            self.textNode.cutout = self.isExpanded ? nil : TextNodeCutout(bottomRight: CGSize(width: expandSize.width + 4.0, height: expandSize.height))
             if enabledEntities.isEmpty {
                 self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
             } else {
@@ -246,9 +267,11 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         let textSize = textLayout.size
         
         if case .multiLine = item.textBehavior, textLayout.truncated, !self.isExpanded {
+            self.expandBackgroundNode.isHidden = false
             self.expandNode.isHidden = false
             self.expandButonNode.isHidden = false
         } else {
+            self.expandBackgroundNode.isHidden = true
             self.expandNode.isHidden = true
             self.expandButonNode.isHidden = true
         }
@@ -259,6 +282,12 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         let expandFrame = CGRect(origin: CGPoint(x: textFrame.minX + max(self.textNode.trailingLineWidth ?? 0.0, textFrame.width) - expandSize.width, y: textFrame.maxY - expandSize.height), size: expandSize)
         self.expandNode.frame = expandFrame
         self.expandButonNode.frame = expandFrame.insetBy(dx: -8.0, dy: -8.0)
+        
+        var expandBackgroundFrame = expandFrame
+        expandBackgroundFrame.origin.x -= 50.0
+        expandBackgroundFrame.size.width += 50.0
+        self.expandBackgroundNode.frame = expandBackgroundFrame
+        self.expandBackgroundNode.image = generateExpandBackground(size: expandBackgroundFrame.size, color: presentationData.theme.list.itemBlocksBackgroundColor)
         
         transition.updateFrame(node: self.labelNode, frame: labelFrame)
         transition.updateFrame(node: self.textNode, frame: textFrame)

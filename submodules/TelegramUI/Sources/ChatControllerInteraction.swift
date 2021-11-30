@@ -122,6 +122,7 @@ public final class ChatControllerInteraction {
     let getMessageTransitionNode: () -> ChatMessageTransitionNode?
     let updateChoosingSticker: (Bool) -> Void
     let commitEmojiInteraction: (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void
+    let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -218,6 +219,7 @@ public final class ChatControllerInteraction {
         getMessageTransitionNode: @escaping () -> ChatMessageTransitionNode?,
         updateChoosingSticker: @escaping (Bool) -> Void,
         commitEmojiInteraction: @escaping (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void,
+        openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -300,6 +302,7 @@ public final class ChatControllerInteraction {
         self.getMessageTransitionNode = getMessageTransitionNode
         self.updateChoosingSticker = updateChoosingSticker
         self.commitEmojiInteraction = commitEmojiInteraction
+        self.openLargeEmojiInfo = openLargeEmojiInfo
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         
@@ -356,6 +359,7 @@ public final class ChatControllerInteraction {
             return nil
         }, updateChoosingSticker: { _ in
         }, commitEmojiInteraction: { _, _, _, _ in  
+        }, openLargeEmojiInfo: { _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
