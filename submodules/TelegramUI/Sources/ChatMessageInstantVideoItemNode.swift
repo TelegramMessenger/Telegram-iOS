@@ -1248,9 +1248,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
     
-    override func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+    override func targetReactionView(value: String) -> UIView? {
         if !self.interactiveVideoNode.dateAndStatusNode.isHidden {
-            return self.interactiveVideoNode.dateAndStatusNode.reactionNode(value: value)
+            return self.interactiveVideoNode.dateAndStatusNode.reactionView(value: value)
         }
         return nil
     }

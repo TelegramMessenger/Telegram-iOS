@@ -1126,7 +1126,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
-    func animateOutToReaction(value: String, targetEmptyNode: ASDisplayNode, targetFilledNode: ASDisplayNode, hideNode: Bool, completion: @escaping () -> Void) {
+    func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, completion: @escaping () -> Void) {
         guard let reactionContextNode = self.reactionContextNode else {
             self.animateOut(result: .default, completion: completion)
             return
@@ -1141,7 +1141,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.reactionContextNodeIsAnimatingOut = true
         reactionContextNode.willAnimateOutToReaction(value: value)
-        reactionContextNode.animateOutToReaction(value: value, targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: hideNode, completion: { [weak self] in
+        reactionContextNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, completion: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -2154,10 +2154,10 @@ public final class ContextController: ViewController, StandalonePresentableContr
         self.dismiss(result: .default, completion: completion)
     }
     
-    public func dismissWithReaction(value: String, targetEmptyNode: ASDisplayNode, targetFilledNode: ASDisplayNode, hideNode: Bool, completion: (() -> Void)?) {
+    public func dismissWithReaction(value: String, targetView: UIView, hideNode: Bool, completion: (() -> Void)?) {
         if !self.wasDismissed {
             self.wasDismissed = true
-            self.controllerNode.animateOutToReaction(value: value, targetEmptyNode: targetEmptyNode, targetFilledNode: targetFilledNode, hideNode: hideNode, completion: { [weak self] in
+            self.controllerNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, completion: { [weak self] in
                 self?.presentingViewController?.dismiss(animated: false, completion: nil)
                 completion?()
             })

@@ -280,9 +280,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions, isGlobalSearch: false)
                 }
                 
-                var statusSize: CGSize?
-                var statusApply: ((Bool) -> Void)?
-                
                 var consumableContentIcon: UIImage?
                 for attribute in message.attributes {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
@@ -296,36 +293,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                         break
                     }
-                }
-                
-                if let statusType = dateAndStatusType {
-                    var edited = false
-                    if attributes.updatingMedia != nil {
-                        edited = true
-                    }
-                    var viewCount: Int?
-                    var dateReplies = 0
-                    let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
-                    for attribute in message.attributes {
-                        if let attribute = attribute as? EditedMessageAttribute {
-                            edited = !attribute.isHidden
-                        } else if let attribute = attribute as? ViewCountMessageAttribute {
-                            viewCount = attribute.count
-                        } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = chatLocation {
-                            if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
-                                dateReplies = Int(attribute.count)
-                            }
-                        }
-                    }
-                    if forcedIsEdited {
-                        edited = true
-                    }
-                    
-                    let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
-                    
-                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies, isPinned && !associatedData.isInPinnedListMode, message.isSelfExpiring)
-                    statusSize = size
-                    statusApply = apply
                 }
                 
                 var candidateTitleString: NSAttributedString?
@@ -430,14 +397,80 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let maxVoiceLength: CGFloat = 30.0
                 let minVoiceLength: CGFloat = 2.0
                 
+                let progressDiameter: CGFloat = 44.0
+                
+                var iconFrame: CGRect?
+                let progressFrame: CGRect
+                let controlAreaWidth: CGFloat
+                
+                if hasThumbnail {
+                    let currentIconFrame = CGRect(origin: CGPoint(x: -1.0, y: -7.0), size: CGSize(width: 74.0, height: 74.0))
+                    iconFrame = currentIconFrame
+                    progressFrame = CGRect(
+                        origin: CGPoint(
+                            x: currentIconFrame.minX + floor((currentIconFrame.size.width - progressDiameter) / 2.0),
+                            y: currentIconFrame.minY + floor((currentIconFrame.size.height - progressDiameter) / 2.0)
+                        ),
+                        size: CGSize(width: progressDiameter, height: progressDiameter)
+                    )
+                    controlAreaWidth = 86.0
+                } else {
+                    progressFrame = CGRect(
+                        origin: CGPoint(x: 3.0, y: isVoice ? -3.0 : 0.0),
+                        size: CGSize(width: progressDiameter, height: progressDiameter)
+                    )
+                    controlAreaWidth = progressFrame.maxX + 8.0
+                }
+                
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))?
+                if let statusType = dateAndStatusType {
+                    var edited = false
+                    if attributes.updatingMedia != nil {
+                        edited = true
+                    }
+                    var viewCount: Int?
+                    var dateReplies = 0
+                    let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? EditedMessageAttribute {
+                            edited = !attribute.isHidden
+                        } else if let attribute = attribute as? ViewCountMessageAttribute {
+                            viewCount = attribute.count
+                        } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = chatLocation {
+                            if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                                dateReplies = Int(attribute.count)
+                            }
+                        }
+                    }
+                    if forcedIsEdited {
+                        edited = true
+                    }
+                    
+                    let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
+                    
+                    statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
+                        context: context,
+                        presentationData: presentationData,
+                        edited: edited,
+                        impressionCount: viewCount,
+                        dateText: dateText,
+                        type: statusType,
+                        layoutInput: .trailingContent(contentWidth: iconFrame == nil ? 1000.0 : controlAreaWidth, preferAdditionalInset: true),
+                        constrainedSize: constrainedSize,
+                        availableReactions: associatedData.availableReactions,
+                        reactions: dateReactions,
+                        replyCount: dateReplies,
+                        isPinned: isPinned && !associatedData.isInPinnedListMode,
+                        hasAutoremove: message.isSelfExpiring
+                    ))
+                }
+                
                 var minLayoutWidth: CGFloat
                 if hasThumbnail {
                     minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 86.0
                 } else if isVoice {
-                    var descriptionAndStatusWidth = descriptionLayout.size.width
-                    if let statusSize = statusSize {
-                        descriptionAndStatusWidth += 6 + statusSize.width
-                    }
+                    let descriptionAndStatusWidth = descriptionLayout.size.width
+                    
                     let calcDuration = max(minVoiceLength, min(maxVoiceLength, CGFloat(audioDuration)))
                     minLayoutWidth = minVoiceWidth + (maxVoiceWidth - minVoiceWidth) * (calcDuration - minVoiceLength) / (maxVoiceLength - minVoiceLength)
                     minLayoutWidth = max(descriptionAndStatusWidth + 56, minLayoutWidth)
@@ -445,8 +478,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 44.0 + 8.0
                 }
                 
-                if let statusSize = statusSize {
-                    minLayoutWidth = max(minLayoutWidth, statusSize.width)
+                if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                    minLayoutWidth = max(minLayoutWidth, statusSuggestedWidthAndContinue.0)
                 }
                                 
                 let fileIconImage: UIImage?
@@ -459,32 +492,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
                 
                 return (minLayoutWidth, { boundingWidth in
-                    let progressDiameter: CGFloat = 44.0
-                    
-                    var iconFrame: CGRect?
-                    let progressFrame: CGRect
-                    let streamingCacheStatusFrame: CGRect
-                    let controlAreaWidth: CGFloat
-                    
-                    if hasThumbnail {
-                        let currentIconFrame = CGRect(origin: CGPoint(x: -1.0, y: -7.0), size: CGSize(width: 74.0, height: 74.0))
-                        iconFrame = currentIconFrame
-                        progressFrame = CGRect(
-                            origin: CGPoint(
-                                x: currentIconFrame.minX + floor((currentIconFrame.size.width - progressDiameter) / 2.0),
-                                y: currentIconFrame.minY + floor((currentIconFrame.size.height - progressDiameter) / 2.0)
-                            ),
-                            size: CGSize(width: progressDiameter, height: progressDiameter)
-                        )
-                        controlAreaWidth = 86.0
-                    } else {
-                        progressFrame = CGRect(
-                            origin: CGPoint(x: 3.0, y: isVoice ? -3.0 : 0.0),
-                            size: CGSize(width: progressDiameter, height: progressDiameter)
-                        )
-                        controlAreaWidth = progressFrame.maxX + 8.0
-                    }
-                    
                     let titleAndDescriptionHeight = titleLayout.size.height - 1.0 + descriptionLayout.size.height
                     
                     let normHeight: CGFloat
@@ -513,29 +520,21 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         fittedLayoutSize = CGSize(width: unionSize.width, height: unionSize.height)
                     }
                     
-                    var statusFrame: CGRect?
-                    if let statusSize = statusSize {
-                        fittedLayoutSize.width = max(fittedLayoutSize.width, statusSize.width)
-                        statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width, y: fittedLayoutSize.height - statusSize.height + 10.0), size: statusSize)
+                    var statusSizeAndApply: (CGSize, (Bool) -> Void)?
+                    if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                        statusSizeAndApply = statusSuggestedWidthAndContinue.1(boundingWidth)
                     }
-                    
-                    if let statusFrameValue = statusFrame, descriptionFrame.intersects(statusFrameValue)  {
-                        let intersection = descriptionFrame.intersection(statusFrameValue)
-                        let addedWidth = intersection.width + 20
-                        fittedLayoutSize.width += addedWidth
-                    }
-                    if let statusFrameValue = statusFrame, let iconFrame = iconFrame {
-                        if iconFrame.intersects(statusFrameValue) {
-                            fittedLayoutSize.height += 15.0
-                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
-                        }
-                    } else if let statusFrameValue = statusFrame {
-                        if progressFrame.intersects(statusFrameValue) {
-                            fittedLayoutSize.height += 10.0
-                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 10.0)
+                    var statusOffset: CGFloat = 0.0
+                    if let statusSizeAndApply = statusSizeAndApply {
+                        fittedLayoutSize.width = max(fittedLayoutSize.width, statusSizeAndApply.0.width)
+                        fittedLayoutSize.height += statusSizeAndApply.0.height
+                        if !statusSizeAndApply.0.height.isZero && iconFrame == nil {
+                            statusOffset = -10.0
+                            fittedLayoutSize.height += statusOffset
                         }
                     }
                     
+                    let streamingCacheStatusFrame: CGRect
                     if (isAudio && !isVoice) || file.previewRepresentations.isEmpty {
                         streamingCacheStatusFrame = CGRect(origin: CGPoint(x: progressFrame.maxX - streamingProgressDiameter + 2.0, y: progressFrame.maxY - streamingProgressDiameter + 2.0), size: CGSize(width: streamingProgressDiameter, height: streamingProgressDiameter))
                     } else {
@@ -569,13 +568,18 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 strongSelf.consumableContentNode.removeFromSupernode()
                             }
                             
-                            if let statusApply = statusApply, let statusFrame = statusFrame {
+                            let statusReferenceFrame: CGRect
+                            if let iconFrame = iconFrame {
+                                statusReferenceFrame = iconFrame
+                            } else {
+                                statusReferenceFrame = progressFrame.offsetBy(dx: 0.0, dy: 8.0)
+                            }
+                            if let statusSizeAndApply = statusSizeAndApply {
                                 if strongSelf.dateAndStatusNode.supernode == nil {
                                    strongSelf.addSubnode(strongSelf.dateAndStatusNode)
                                 }
-                                
-                                strongSelf.dateAndStatusNode.frame = statusFrame
-                                statusApply(false)
+                                strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: statusReferenceFrame.minX, y: statusReferenceFrame.maxY + statusOffset), size: statusSizeAndApply.0)
+                                statusSizeAndApply.1(false)
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
                             }
@@ -1122,6 +1126,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private func stopTimer() {
         self.playerUpdateTimer?.invalidate()
         self.playerUpdateTimer = nil
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.dateAndStatusNode.supernode != nil, let result = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) {
+            return result
+        }
+        return super.hitTest(point, with: event)
     }
 }
 

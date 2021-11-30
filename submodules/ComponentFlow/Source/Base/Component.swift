@@ -104,6 +104,10 @@ public protocol _TypeErasedComponent {
     func _isEqual(to other: _TypeErasedComponent) -> Bool
 }
 
+public protocol ComponentTaggedView: UIView {
+    func matches(tag: Any) -> Bool
+}
+
 public protocol Component: _TypeErasedComponent, Equatable {
     associatedtype EnvironmentType = Empty
     associatedtype View: UIView = UIView

@@ -65,6 +65,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.textAccessibilityOverlayNode.openUrl = { [weak self] url in
             self?.item?.controllerInteraction.openUrl(url, false, false, nil)
         }
+        
+        self.statusNode.reactionSelected = { [weak self] value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.updateMessageReaction(item.message, value)
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -155,20 +162,6 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else {
                     statusType = nil
-                }
-                
-                var statusSize: CGSize?
-                var statusApply: ((Bool) -> Void)?
-                
-                if let statusType = statusType {
-                    var isReplyThread = false
-                    if case .replyThread = item.chatLocation {
-                        isReplyThread = true
-                    }
-                    
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
-                    statusSize = size
-                    statusApply = apply
                 }
                 
                 let rawText: String
@@ -265,7 +258,6 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
                 let textFont = item.presentationData.messageFont
-                let forceStatusNewline = false
                 
                 if let entities = entities {
                     attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont)
@@ -275,65 +267,61 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
-                var cutout: TextNodeCutout?
-                if let statusSize = statusSize, !forceStatusNewline {
-                    cutout = TextNodeCutout(bottomRight: statusSize)
-                }
+                let cutout: TextNodeCutout? = nil
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 5.0, right: 2.0)
                 
                 let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
                 
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))?
+                if let statusType = statusType {
+                    var isReplyThread = false
+                    if case .replyThread = item.chatLocation {
+                        isReplyThread = true
+                    }
+                    
+                    statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
+                        context: item.context,
+                        presentationData: item.presentationData,
+                        edited: edited,
+                        impressionCount: viewCount,
+                        dateText: dateText,
+                        type: statusType,
+                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, preferAdditionalInset: false),
+                        constrainedSize: textConstrainedSize,
+                        availableReactions: item.associatedData.availableReactions,
+                        reactions: dateReactions,
+                        replyCount: dateReplies,
+                        isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
+                        hasAutoremove: item.message.isSelfExpiring
+                    ))
+                }
+                
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
                 
-                var statusFrame: CGRect?
-                if let statusSize = statusSize {
-                    statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSize.width, y: textFrameWithoutInsets.maxY - statusSize.height), size: statusSize)
-                }
-                
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 textFrameWithoutInsets = textFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
-                statusFrame = statusFrame?.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
 
-                var suggestedBoundingWidth: CGFloat
-                if let statusFrame = statusFrame {
-                    suggestedBoundingWidth = textFrameWithoutInsets.union(statusFrame).width
-                } else {
-                    suggestedBoundingWidth = textFrameWithoutInsets.width
+                var suggestedBoundingWidth: CGFloat = textFrameWithoutInsets.width
+                if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                    suggestedBoundingWidth = max(suggestedBoundingWidth, statusSuggestedWidthAndContinue.0)
                 }
-                suggestedBoundingWidth += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
+                let sideInsets = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
+                suggestedBoundingWidth += sideInsets
                 
                 return (suggestedBoundingWidth, { boundingWidth in
                     var boundingSize: CGSize
-                    var adjustedStatusFrame: CGRect?
                     
-                    if let statusFrame = statusFrame {
-                        let centeredTextFrame = CGRect(origin: CGPoint(x: floor((boundingWidth - textFrame.size.width) / 2.0), y: 0.0), size: textFrame.size)
-                        let statusOverlapsCenteredText = CGRect(origin: CGPoint(), size: statusFrame.size).intersects(centeredTextFrame)
-                        
-                        if !forceStatusNewline || statusOverlapsCenteredText {
-                            boundingSize = textFrameWithoutInsets.union(statusFrame).size
-                            boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                            boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
-                            adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: statusFrame.origin.y), size: statusFrame.size)
-                        } else {
-                            boundingSize = textFrameWithoutInsets.size
-                            boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                            boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
-                            adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: boundingSize.height - statusFrame.height - layoutConstants.text.bubbleInsets.bottom), size: statusFrame.size)
-                        }
-                    } else {
-                        boundingSize = textFrameWithoutInsets.size
-                        boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                        boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
+                    let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)
+                    
+                    boundingSize = textFrameWithoutInsets.size
+                    if let statusSizeAndApply = statusSizeAndApply {
+                        boundingSize.height += statusSizeAndApply.0.height
                     }
                     
-                    if attributedText.string.isEmpty, var adjustedStatusFrameValue = adjustedStatusFrame {
-                        adjustedStatusFrameValue.origin.y = 1.0
-                        boundingSize.height = adjustedStatusFrameValue.maxY + 5.0
-                        adjustedStatusFrame = adjustedStatusFrameValue
-                    }
+                    boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
+                    boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
                     
                     return (boundingSize, { [weak self] animation, _ in
                         if let strongSelf = self {
@@ -366,43 +354,29 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textNode.displaysAsynchronously = !item.presentationData.isPreview && !item.presentationData.theme.theme.forceSync
                             let _ = textApply()
                             
-                            if let statusApply = statusApply, let adjustedStatusFrame = adjustedStatusFrame {
-                                let previousStatusFrame = strongSelf.statusNode.frame
-                                strongSelf.statusNode.frame = adjustedStatusFrame
-                                var hasAnimation = true
-                                if case .None = animation {
-                                    hasAnimation = false
-                                }
-                                statusApply(hasAnimation)
-                                if strongSelf.statusNode.supernode == nil {
-                                    strongSelf.addSubnode(strongSelf.statusNode)
-                                } else {
-                                    if case let .System(duration) = animation {
-                                        let delta = CGPoint(x: previousStatusFrame.maxX - adjustedStatusFrame.maxX, y: previousStatusFrame.minY - adjustedStatusFrame.minY)
-                                        let statusPosition = strongSelf.statusNode.layer.position
-                                        let previousPosition = CGPoint(x: statusPosition.x + delta.x, y: statusPosition.y + delta.y)
-                                        strongSelf.statusNode.layer.animatePosition(from: previousPosition, to: statusPosition, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
-                                    }
-                                }
-                            } else if strongSelf.statusNode.supernode != nil {
-                                strongSelf.statusNode.removeFromSupernode()
-                            }
-                            
-                            var adjustedTextFrame = textFrame
-                            if forceStatusNewline {
-                                adjustedTextFrame.origin.x = floor((boundingWidth - adjustedTextFrame.width) / 2.0)
-                            }
-                            strongSelf.textNode.frame = adjustedTextFrame
+                            strongSelf.textNode.frame = textFrame
                             if let textSelectionNode = strongSelf.textSelectionNode {
-                                let shouldUpdateLayout = textSelectionNode.frame.size != adjustedTextFrame.size
-                                textSelectionNode.frame = adjustedTextFrame
-                                textSelectionNode.highlightAreaNode.frame = adjustedTextFrame
+                                let shouldUpdateLayout = textSelectionNode.frame.size != textFrame.size
+                                textSelectionNode.frame = textFrame
+                                textSelectionNode.highlightAreaNode.frame = textFrame
                                 if shouldUpdateLayout {
                                     textSelectionNode.updateLayout()
                                 }
                             }
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
+                            
+                            if let statusSizeAndApply = statusSizeAndApply {
+                                strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0)
+                                if strongSelf.statusNode.supernode == nil {
+                                    strongSelf.addSubnode(strongSelf.statusNode)
+                                    statusSizeAndApply.1(false)
+                                } else {
+                                    statusSizeAndApply.1(animation.isAnimated)
+                                }
+                            } else if strongSelf.statusNode.supernode != nil {
+                                strongSelf.statusNode.removeFromSupernode()
+                            }
                             
                             if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                                 strongSelf.statusNode.pressed = {
@@ -484,6 +458,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             }
             return .none
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.statusNode.supernode != nil, let result = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: event) {
+            return result
+        }
+        return super.hitTest(point, with: event)
     }
     
     override func updateTouchesAtPoint(_ point: CGPoint?) {
@@ -634,9 +615,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+    override func reactionTargetView(value: String) -> UIView? {
         if !self.statusNode.isHidden {
-            return self.statusNode.reactionNode(value: value)
+            return self.statusNode.reactionView(value: value)
         }
         return nil
     }

@@ -95,5 +95,9 @@ public extension TelegramEngine {
                 )
             }
         }
+        
+        public func availableReactions() -> Signal<AvailableReactions?, NoError> {
+            return _internal_cachedAvailableReactions(postbox: self.account.postbox)
+        }
     }
 }

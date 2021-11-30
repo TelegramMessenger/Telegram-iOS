@@ -869,7 +869,7 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+    func targetReactionView(value: String) -> UIView? {
         return nil
     }
     

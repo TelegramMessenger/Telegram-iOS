@@ -32,8 +32,7 @@ private enum RequestUpdateMessageReactionError {
 }
 
 private func requestUpdateMessageReaction(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Never, RequestUpdateMessageReactionError> {
-    return .never()
-    /*return postbox.transaction { transaction -> (Peer, String?)? in
+    return postbox.transaction { transaction -> (Peer, String?)? in
         guard let peer = transaction.getPeer(messageId.peerId) else {
             return nil
         }
@@ -89,7 +88,7 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
             |> castError(RequestUpdateMessageReactionError.self)
             |> ignoreValues
         }
-    }*/
+    }
 }
 
 private final class ManagedApplyPendingMessageReactionsActionsHelper {

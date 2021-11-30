@@ -813,7 +813,7 @@ public final class AccountViewTracker {
     }
     
     public func updateReactionsForMessageIds(messageIds: Set<MessageId>) {
-        /*self.queue.async {
+        self.queue.async {
             var addedMessageIds: [MessageId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
@@ -870,7 +870,7 @@ public final class AccountViewTracker {
                                                             break loop
                                                         }
                                                     }
-                                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                                 })
                                             default:
                                                 break
@@ -892,7 +892,7 @@ public final class AccountViewTracker {
                     }
                 }
             }
-        }*/
+        }
     }
     
     public func updateSeenLiveLocationForMessageIds(messageIds: Set<MessageId>) {

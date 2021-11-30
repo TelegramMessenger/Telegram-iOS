@@ -460,7 +460,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.shadowNode = ChatMessageShadowNode()
 
         self.clippingNode = ChatMessageBubbleClippingNode()
-        self.clippingNode.clipsToBounds = true
+        self.clippingNode.clipsToBounds = false
 
         self.messageAccessibilityArea = AccessibilityAreaNode()
         
@@ -689,7 +689,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let widthDifference = self.backgroundNode.frame.width - textInput.backgroundView.frame.width
         let heightDifference = self.backgroundNode.frame.height - textInput.backgroundView.frame.height
 
-        transition.animateFrame(layer: self.clippingNode.layer, from: CGRect(origin: CGPoint(x: self.clippingNode.frame.minX, y: textInput.backgroundView.frame.minY), size: textInput.backgroundView.frame.size))
+        if let type = self.backgroundNode.type {
+            if case .none = type {
+            } else {
+                self.clippingNode.clipsToBounds = true
+            }
+        }
+        transition.animateFrame(layer: self.clippingNode.layer, from: CGRect(origin: CGPoint(x: self.clippingNode.frame.minX, y: textInput.backgroundView.frame.minY), size: textInput.backgroundView.frame.size), completion: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.clippingNode.clipsToBounds = false
+        })
 
         transition.vertical.animateOffsetAdditive(layer: self.clippingNode.layer, offset: textInput.backgroundView.frame.minY - self.clippingNode.frame.minY)
 
@@ -909,7 +920,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
-        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, [MessageReaction], Int, Bool, Bool) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
+        mosaicStatusLayout: (ChatMessageDateAndStatusNode.Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode)),
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
         currentForwardInfo: (Peer?, String?)?,
@@ -1513,7 +1524,23 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     isReplyThread = true
                 }
                 
-                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, message.isSelfExpiring)
+                let statusSuggestedWidthAndContinue = mosaicStatusLayout(ChatMessageDateAndStatusNode.Arguments(
+                    context: item.context,
+                    presentationData: item.presentationData,
+                    edited: edited,
+                    impressionCount: viewCount,
+                    dateText: dateText,
+                    type: statusType,
+                    layoutInput: .standalone,
+                    constrainedSize: CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude),
+                    availableReactions: item.associatedData.availableReactions,
+                    reactions: dateReactions,
+                    replyCount: dateReplies,
+                    isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
+                    hasAutoremove: message.isSelfExpiring
+                ))
+                
+                mosaicStatusSizeAndApply = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
             }
         }
         
@@ -2128,11 +2155,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.backgroundMaskMode, hasWallpaper: hasWallpaper, transition: transition, backgroundNode: presentationContext.backgroundNode)
         strongSelf.backgroundWallpaperNode.setType(type: backgroundType, theme: item.presentationData.theme, essentialGraphics: graphics, maskMode: strongSelf.backgroundMaskMode, backgroundNode: presentationContext.backgroundNode)
         strongSelf.shadowNode.setType(type: backgroundType, hasWallpaper: hasWallpaper, graphics: graphics)
-        if case .none = backgroundType {
-            strongSelf.clippingNode.clipsToBounds = false
-        } else {
-            strongSelf.clippingNode.clipsToBounds = true
-        }
         
         strongSelf.backgroundType = backgroundType
         
@@ -2606,6 +2628,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if case .System = animation, !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
                 strongSelf.backgroundFrameTransition = (strongSelf.backgroundNode.frame, backgroundFrame)
+                if let type = strongSelf.backgroundNode.type {
+                    if case .none = type {
+                    } else {
+                        strongSelf.clippingNode.clipsToBounds = true
+                    }
+                }
             }
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let currentBackgroundFrame = strongSelf.backgroundNode.frame
@@ -2694,41 +2722,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         strongSelf.updateSearchTextHighlightState()
         
         if let (_, f) = strongSelf.awaitingAppliedReaction {
-            /*var bounds = strongSelf.bounds
-            let offset = bounds.origin.x
-            bounds.origin.x = 0.0
-            strongSelf.bounds = bounds
-            var shadowBounds = strongSelf.shadowNode.bounds
-            let shadowOffset = shadowBounds.origin.x
-            shadowBounds.origin.x = 0.0
-            strongSelf.shadowNode.bounds = shadowBounds
-            if !offset.isZero {
-                strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-            }
-            if !shadowOffset.isZero {
-                strongSelf.shadowNode.layer.animateBoundsOriginXAdditive(from: shadowOffset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
-            }
-            if let swipeToReplyNode = strongSelf.swipeToReplyNode {
-                strongSelf.swipeToReplyNode = nil
-                swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in
-                    swipeToReplyNode?.removeFromSupernode()
-                })
-                swipeToReplyNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-            }
-            */
             strongSelf.awaitingAppliedReaction = nil
-            /*var targetNode: ASDisplayNode?
-            var hideTarget = false
-            if let awaitingAppliedReaction = awaitingAppliedReaction {
-                for contentNode in strongSelf.contentNodes {
-                    if let (reactionNode, count) = contentNode.reactionTargetNode(value: awaitingAppliedReaction) {
-                        targetNode = reactionNode
-                        hideTarget = count == 1
-                        break
-                    }
-                }
-            }
-            strongSelf.reactionRecognizer?.complete(into: targetNode, hideTarget: hideTarget)*/
+            
             f()
         }
 
@@ -2821,6 +2816,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             
             if CGFloat(1.0).isLessThanOrEqualTo(progress) {
                 self.backgroundFrameTransition = nil
+                
+                self.clippingNode.clipsToBounds = false
             }
         }
     }
@@ -2828,7 +2825,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, let item = self.item {
                 if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil) {
                     if case .doubleTap = gesture {
                         self.mainContainerNode.cancelGesture()
@@ -2839,14 +2836,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     case let .optionalAction(f):
                         f()
                     case let .openContextMenu(tapMessage, selectAll, subFrame):
-                        if canAddMessageReactions(message: tapMessage) {
-                            self.item?.controllerInteraction.updateMessageReaction(tapMessage)
+                        if canAddMessageReactions(message: tapMessage), let defaultReaction = item.associatedData.defaultReaction {
+                            item.controllerInteraction.updateMessageReaction(tapMessage, defaultReaction)
                         } else {
-                            self.item?.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
+                            item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
                         }
                     }
                 } else if case .tap = gesture {
-                    self.item?.controllerInteraction.clickThroughMessage()
+                    item.controllerInteraction.clickThroughMessage()
                 }
             }
         default:
@@ -3675,10 +3672,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         return self.mainContextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
     }
     
-    override func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+    override func targetReactionView(value: String) -> UIView? {
         for contentNode in self.contentNodes {
-            if let (emptyNode, filledNode) = contentNode.reactionTargetNode(value: value) {
-                return (emptyNode, filledNode)
+            if let result = contentNode.reactionTargetView(value: value) {
+                return result
             }
         }
         return nil
