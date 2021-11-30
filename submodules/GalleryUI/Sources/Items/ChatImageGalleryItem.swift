@@ -215,8 +215,6 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let recognitionDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
     
-    private var textCopiedTooltipController: UndoOverlayController?
-    
     private let pagingEnabledPromise = ValuePromise<Bool>(true)
     
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
@@ -260,8 +258,11 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 if let recognizedContentNode = strongSelf.recognizedContentNode {
                     strongSelf.imageNode.isUserInteractionEnabled = active
                     transition.updateAlpha(node: recognizedContentNode, alpha: active ? 1.0 : 0.0)
-                    if !active {
+                    if active {
+                        strongSelf.updateControlsVisibility(false)
+                    } else {
                         recognizedContentNode.dismissSelection()
+                        strongSelf.updateControlsVisibility(true)
                     }
                     strongSelf.pagingEnabledPromise.set(!active)
                 }
@@ -333,7 +334,6 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                         if let controller = strongSelf.baseNavigationController()?.topViewController as? ViewController {
                                                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with({ $0 })
                                                             let tooltipController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false })
-                                                            strongSelf.textCopiedTooltipController = tooltipController
                                                             controller.present(tooltipController, in: .window(.root))
                                                         }
                                                     case .share:
@@ -626,7 +626,19 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
-        self.textCopiedTooltipController?.dismiss()
+        if let controller = self.baseNavigationController()?.topViewController as? ViewController {
+            controller.window?.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismissWithCommitAction()
+                }
+            })
+            controller.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismissWithCommitAction()
+                }
+                return true
+            })
+        }
         
         self.fetchDisposable.set(nil)
         
@@ -1098,6 +1110,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
     private let backgroundNode: ASImageNode
     private let selectedBackgroundNode: ASImageNode
     private let iconNode: ASImageNode
+    private let selectedIconNode: ASImageNode
     private let buttonNode: HighlightTrackingButtonNode
     
     var action: ((Bool) -> Void)?
@@ -1106,12 +1119,11 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
     init(theme: PresentationTheme) {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.image = generateFilledCircleImage(diameter: 32.0, color: UIColor(white: 0.0, alpha: 0.6))
-    
+        
         self.selectedBackgroundNode = ASImageNode()
         self.selectedBackgroundNode.displaysAsynchronously = false
         self.selectedBackgroundNode.isHidden = true
-        self.selectedBackgroundNode.image = generateFilledCircleImage(diameter: 32.0, color: theme.list.itemAccentColor)
+        self.selectedBackgroundNode.image = generateFilledCircleImage(diameter: 32.0, color: .white)
         
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.alpha = 0.0
@@ -1121,6 +1133,12 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
         self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/LiveTextIcon"), color: .white)
         self.iconNode.contentMode = .center
         
+        self.selectedIconNode = ASImageNode()
+        self.selectedIconNode.displaysAsynchronously = false
+        self.selectedIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/LiveTextIcon"), color: .black)
+        self.selectedIconNode.contentMode = .center
+        self.selectedIconNode.isHidden = true
+        
         super.init()
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
@@ -1128,13 +1146,16 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
         self.buttonNode.addSubnode(self.backgroundNode)
         self.buttonNode.addSubnode(self.selectedBackgroundNode)
         self.buttonNode.addSubnode(self.iconNode)
+        self.buttonNode.addSubnode(self.selectedIconNode)
     }
     
     @objc private func buttonPressed() {
         let newValue = !self.buttonNode.isSelected
-        self.action?(newValue)
         self.buttonNode.isSelected = newValue
         self.selectedBackgroundNode.isHidden = !newValue
+        self.selectedIconNode.isHidden = !newValue
+        
+        self.action?(newValue)
         
         if self.interfaceIsHidden && !newValue {
             let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
@@ -1159,6 +1180,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
         self.backgroundNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: buttonSize)
         self.selectedBackgroundNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: buttonSize)
         self.iconNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: buttonSize)
+        self.selectedIconNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: buttonSize)
         
         if self.appeared {
             if !self.buttonNode.isSelected && isHidden {
@@ -1168,7 +1190,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
             }
         }
         
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - rightInset - buttonSize.width - 24.0, y: size.height - bottomInset - buttonSize.height - 24.0, width: buttonSize.width + 24.0, height: buttonSize.height + 24.0))
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - rightInset - buttonSize.width - 24.0, y: 41.0, width: buttonSize.width + 24.0, height: buttonSize.height + 24.0))
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {

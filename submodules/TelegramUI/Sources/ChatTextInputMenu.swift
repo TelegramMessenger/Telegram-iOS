@@ -89,4 +89,14 @@ final class ChatTextInputMenu {
             self.state = .general
         }
     }
+    
+    func hide() {
+        self.back()
+        if #available(iOS 13.0, *) {
+            UIMenuController.shared.hideMenu()
+        } else {
+            UIMenuController.shared.isMenuVisible = false
+        }
+        UIMenuController.shared.update()
+    }
 }

@@ -500,19 +500,24 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         transition.updateAlpha(node: self.textNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.errorTextNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.torchButtonNode, alpha: controlsAlpha)
+        for view in self.highlightViews {
+            transition.updateAlpha(layer: view.layer, alpha: controlsAlpha)
+        }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
         let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
         let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
-        let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: min(dimHeight - textSize.height - titleSpacing, navigationHeight + floorToScreenPixels((dimHeight - navigationHeight - textSize.height) / 2.0) + 5.0)), size: textSize)
+        var textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: max(dimHeight - textSize.height - titleSpacing, navigationHeight + floorToScreenPixels((dimHeight - navigationHeight - textSize.height) / 2.0) + 5.0)), size: textSize)
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: textFrame.minY - 18.0 - titleSize.height), size: titleSize)
-        var errorTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - errorTextSize.width) / 2.0), y: dimHeight + frameSide + 48.0), size: errorTextSize)
-        errorTextFrame.origin.y += floor(additionalTorchOffset / 2.0)
         if titleFrame.minY < navigationHeight {
             transition.updateAlpha(node: self.titleNode, alpha: 0.0)
+            textFrame = textFrame.offsetBy(dx: 0.0, dy: -5.0)
         } else {
             transition.updateAlpha(node: self.titleNode, alpha: controlsAlpha)
         }
+        var errorTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - errorTextSize.width) / 2.0), y: dimHeight + frameSide + 48.0), size: errorTextSize)
+        errorTextFrame.origin.y += floor(additionalTorchOffset / 2.0)
+
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
         transition.updateFrameAdditive(node: self.errorTextNode, frame: errorTextFrame)

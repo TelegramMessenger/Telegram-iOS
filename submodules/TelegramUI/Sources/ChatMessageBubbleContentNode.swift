@@ -97,6 +97,7 @@ enum ChatMessageBubbleContentTapAction {
     case ignore
     case openPollResults(Data)
     case copy(String)
+    case largeEmoji(String, String?, TelegramMediaFile)
 }
 
 final class ChatMessageBubbleContentItem {
