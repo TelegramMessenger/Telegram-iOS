@@ -500,6 +500,9 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         transition.updateAlpha(node: self.textNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.errorTextNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.torchButtonNode, alpha: controlsAlpha)
+        for view in self.highlightViews {
+            transition.updateAlpha(layer: view.layer, alpha: controlsAlpha)
+        }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
         let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))

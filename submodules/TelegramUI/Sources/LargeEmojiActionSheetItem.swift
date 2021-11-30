@@ -59,11 +59,11 @@ private final class LargeEmojiActionSheetItemNode: ActionSheetItemNode {
         self.imageNode = TransformImageNode()
         self.imageNode.displaysAsynchronously = false
         
-        self.animationNode = AnimatedStickerNode()
         var fitzModifier: EmojiFitzModifier?
         if let fitz = fitz {
             fitzModifier = EmojiFitzModifier(emoji: fitz)
         }
+        self.animationNode = AnimatedStickerNode()
         self.animationNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: fitzModifier), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
         
