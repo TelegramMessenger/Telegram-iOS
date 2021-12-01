@@ -31,7 +31,7 @@ public final class NavigationBarBadgeNode: ASDisplayNode {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 18.0, color: fillColor, backgroundColor: nil)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: fillColor, backgroundColor: nil)
         
         super.init()
         
@@ -43,7 +43,7 @@ public final class NavigationBarBadgeNode: ASDisplayNode {
         self.fillColor = fillColor
         self.strokeColor = strokeColor
         self.textColor = textColor
-        self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 18.0, color: fillColor, backgroundColor: nil)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: fillColor, backgroundColor: nil)
         self.textNode.attributedText = NSAttributedString(string: self.text, font: self.font, textColor: self.textColor)
         self.textNode.redrawIfPossible()
     }
