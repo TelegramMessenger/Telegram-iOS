@@ -19,11 +19,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     
     private var emitter: CAEmitterCell?
     private var emitterLayer: CAEmitterLayer?
-    
-    public override init() {
-        super.init()
-    }
-    
+        
     public var isRevealedUpdated: (Bool) -> Void = { _ in }
     
     public override func didLoad() {
@@ -31,7 +27,6 @@ public class InvisibleInkDustNode: ASDisplayNode {
         
         let emitter = CAEmitterCell()
         emitter.contents = UIImage(bundleImageName: "Components/TextSpeckle")?.cgImage
-        emitter.birthRate = 1600.0
         emitter.setValue(1.8, forKey: "contentsScale")
         emitter.emissionRange = .pi * 2.0
         emitter.setValue(3.0, forKey: "mass")
@@ -41,7 +36,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         emitter.velocityRange = 20.0
         emitter.name = "dustCell"
         emitter.setValue("point", forKey: "particleType")
-        emitter.color = UIColor.white.cgColor //?alpha
+        emitter.color = UIColor.white.withAlphaComponent(0.0).cgColor
         emitter.alphaRange = 1.0
         self.emitter = emitter
 
@@ -51,8 +46,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
         let alphaBehavior = createEmitterBehavior(type: "valueOverLife")
         alphaBehavior.setValue("alphaBehavior", forKey: "name")
         alphaBehavior.setValue("color.alpha", forKey: "keyPath")
-        alphaBehavior.setValue([1.0, 0.0], forKey: "values")
-//        alphaBehavior.setValue(true, forKey: "additive")
+        alphaBehavior.setValue([0.0, 0.0, 1.0, 0.0, -1.0], forKey: "values")
+        alphaBehavior.setValue(true, forKey: "additive")
         
         let behaviors = [fingerAttractor, alphaBehavior]
     
@@ -68,7 +63,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         emitterLayer.emitterSize = CGSize(width: 1, height: 1)
         emitterLayer.setValue(0.0322, forKey: "updateInterval")
         
-//        layer.setValue(-100, forKeyPath: "emitterBehaviors.fingerAttractor.stiffness")
+        emitterLayer.setValue(4.0, forKeyPath: "emitterBehaviors.fingerAttractor.stiffness")
         emitterLayer.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
         
         self.emitterLayer = emitterLayer
@@ -77,13 +72,27 @@ public class InvisibleInkDustNode: ASDisplayNode {
         
         self.updateEmitter()
         
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap)))
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap(_:))))
     }
     
-    @objc private func tap() {
-        self.isRevealedUpdated(true)
+    private var revealed = false
+    @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
+        guard !self.revealed else {
+            return
+        }
+        self.revealed = true
+        
+        let position = gestureRecognizer.location(in: self.view)
+        self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+        self.emitterLayer?.setValue(position, forKeyPath: "emitterBehaviors.fingerAttractor.position")
+        
+        Queue.mainQueue().after(0.2) {
+            self.isRevealedUpdated(true)
+        }
         
         Queue.mainQueue().after(4.0) {
+            self.revealed = false
+            self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
             self.isRevealedUpdated(false)
         }
     }
@@ -96,6 +105,17 @@ public class InvisibleInkDustNode: ASDisplayNode {
         self.emitter?.color = color.cgColor
         self.emitterLayer?.setValue(rects, forKey: "emitterRects")
         self.emitterLayer?.frame = CGRect(origin: CGPoint(), size: size)
+        
+        let radius = max(size.width, size.height)
+        self.emitterLayer?.setValue(max(size.width, size.height), forKeyPath: "emitterBehaviors.fingerAttractor.radius")
+        self.emitterLayer?.setValue(radius * -0.5, forKeyPath: "emitterBehaviors.fingerAttractor.falloff")
+        
+        var square: Float = 0.0
+        for rect in rects {
+            square += Float(rect.width * rect.height)
+        }
+        
+        self.emitter?.birthRate = square * 0.3
     }
     
     public func update(size: CGSize, color: UIColor, rects: [CGRect]) {
