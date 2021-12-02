@@ -1022,10 +1022,26 @@ public class TextNode: ASDisplayNode {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                             
-                            let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
-                            let x = lowerX < upperX ? lowerX : upperX
-                            spoilers.append(TextNodeSpoiler(range: range, frame: CGRect(x: x, y: -descent, width: abs(upperX - lowerX), height: ascent + descent)))
+                            (attributedString.string as NSString).enumerateSubstrings(in: range, options: .byWords) { _, range, _, _ in
+                                let startIndex = range.location
+                                let endIndex = range.location + range.length
+                                                 
+                                var secondaryLeftOffset: CGFloat = 0.0
+                                let rawLeftOffset = CTLineGetOffsetForStringIndex(coreTextLine, startIndex, &secondaryLeftOffset)
+                                var leftOffset = ceil(rawLeftOffset)
+                                if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+                                    leftOffset = ceil(secondaryLeftOffset)
+                                }
+                                
+                                var secondaryRightOffset: CGFloat = 0.0
+                                let rawRighOffset = CTLineGetOffsetForStringIndex(coreTextLine, endIndex, &secondaryRightOffset)
+                                var rightOffset = ceil(rawRighOffset)
+                                if !rawRighOffset.isEqual(to: secondaryRightOffset) {
+                                    rightOffset = ceil(secondaryRightOffset)
+                                }
+                                
+                                spoilers.append(TextNodeSpoiler(range: range, frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset), height: ascent + descent)))
+                            }
                         } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
                             let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
