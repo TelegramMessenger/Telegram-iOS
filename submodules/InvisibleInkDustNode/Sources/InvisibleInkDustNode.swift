@@ -17,10 +17,27 @@ private func createEmitterBehavior(type: String) -> NSObject {
 public class InvisibleInkDustNode: ASDisplayNode {
     private var currentParams: (size: CGSize, color: UIColor, rects: [CGRect])?
     
+    private weak var textNode: TextNode?
+    
+    private let maskNode: ASDisplayNode
+    private let spotNode: ASImageNode
+    
     private var emitter: CAEmitterCell?
     private var emitterLayer: CAEmitterLayer?
         
     public var isRevealedUpdated: (Bool) -> Void = { _ in }
+    
+    public init(textNode: TextNode) {
+        self.textNode = textNode
+        
+        self.maskNode = ASDisplayNode()
+        self.spotNode = ASImageNode()
+        self.spotNode.image = UIImage(bundleImageName: "Components/TextSpot")
+                
+        super.init()
+        
+        self.maskNode.addSubnode(self.spotNode)
+    }
     
     public override func didLoad() {
         super.didLoad()
@@ -77,23 +94,48 @@ public class InvisibleInkDustNode: ASDisplayNode {
     
     private var revealed = false
     @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard !self.revealed else {
+        guard let (size, _, _) = self.currentParams, !self.revealed else {
             return
         }
+        
         self.revealed = true
         
         let position = gestureRecognizer.location(in: self.view)
         self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
         self.emitterLayer?.setValue(position, forKeyPath: "emitterBehaviors.fingerAttractor.position")
         
+        self.textNode?.view.mask = self.maskNode.view
+        self.textNode?.alpha = 1.0
+        
+        let radius = max(size.width, size.height)
+        self.spotNode.frame = CGRect(x: position.x - radius / 2.0, y: position.y - radius / 2.0, width: radius, height: radius)
+        
+        self.spotNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        self.spotNode.layer.animateScale(from: 0.0, to: 3.5, duration: 0.61, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.textNode?.view.mask = nil
+        })
+                
         Queue.mainQueue().after(0.2) {
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
+            transition.updateAlpha(node: self, alpha: 0.0)
+                        
             self.isRevealedUpdated(true)
+        }
+        
+        Queue.mainQueue().after(0.7) {
+            self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+            self.spotNode.layer.removeAllAnimations()
         }
         
         Queue.mainQueue().after(4.0) {
             self.revealed = false
-            self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
             self.isRevealedUpdated(false)
+            
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
+            transition.updateAlpha(node: self, alpha: 1.0)
+            if let textNode = self.textNode {
+                transition.updateAlpha(node: textNode, alpha: 0.0)
+            }
         }
     }
     
@@ -120,6 +162,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
     
     public func update(size: CGSize, color: UIColor, rects: [CGRect]) {
         self.currentParams = (size, color, rects)
+                
+        self.maskNode.frame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: size)
         
         if self.isNodeLoaded {
             self.updateEmitter()

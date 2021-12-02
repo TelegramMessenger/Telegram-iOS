@@ -387,18 +387,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 if let current = strongSelf.dustNode {
                                     dustNode = current
                                 } else {
-                                    dustNode = InvisibleInkDustNode()
-                                    dustNode.isRevealedUpdated = { [weak self] revealed in
-                                        if let strongSelf = self {
-                                            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
-                                            if let dustNode = strongSelf.dustNode {
-                                                transition.updateAlpha(node: dustNode, alpha: revealed ? 0.0 : 1.0)
-                                            }
-                                            if let spoilerTextNode = strongSelf.spoilerTextNode {
-                                                transition.updateAlpha(node: spoilerTextNode, alpha: revealed ? 1.0 : 0.0)
-                                            }
-                                        }
-                                    }
+                                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode)
                                     strongSelf.dustNode = dustNode
                                     strongSelf.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
                                 }
