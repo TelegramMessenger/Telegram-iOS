@@ -8,6 +8,7 @@ import TextFormat
 import UrlEscaping
 import TelegramUniversalVideoContent
 import TextSelectionNode
+import InvisibleInkDustNode
 
 private final class CachedChatMessageText {
     let text: String
@@ -37,6 +38,9 @@ private final class CachedChatMessageText {
 
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
+    private var spoilerTextNode: TextNode?
+    private var dustNode: InvisibleInkDustNode?
+    
     private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var linkHighlightingNode: LinkHighlightingNode?
@@ -80,6 +84,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let textLayout = TextNode.asyncLayout(self.textNode)
+        let spoilerTextLayout = TextNode.asyncLayout(self.spoilerTextNode)
         let statusLayout = self.statusNode.asyncLayout()
         
         let currentCachedChatMessageText = self.cachedChatMessageText
@@ -273,6 +278,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
                 
+                let spoilerTextLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+                if !textLayout.spoilers.isEmpty {
+                    spoilerTextLayoutAndApply = spoilerTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor, displaySpoilers: true))
+                } else {
+                    spoilerTextLayoutAndApply = nil
+                }
+                
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))?
                 if let statusType = statusType {
                     var isReplyThread = false
@@ -353,8 +365,50 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.textNode.displaysAsynchronously = !item.presentationData.isPreview && !item.presentationData.theme.theme.forceSync
                             let _ = textApply()
-                            
                             strongSelf.textNode.frame = textFrame
+                            
+                            if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
+                                let spoilerTextNode = spoilerTextApply()
+                                if strongSelf.spoilerTextNode == nil {
+                                    spoilerTextNode.isUserInteractionEnabled = false
+                                    spoilerTextNode.contentMode = .topLeft
+                                    spoilerTextNode.contentsScale = UIScreenScale
+                                    spoilerTextNode.displaysAsynchronously = false
+                                    strongSelf.insertSubnode(spoilerTextNode, aboveSubnode: strongSelf.textAccessibilityOverlayNode)
+                                    
+                                    strongSelf.spoilerTextNode = spoilerTextNode
+                                }
+                                
+                                strongSelf.spoilerTextNode?.frame = textFrame
+                                strongSelf.spoilerTextNode?.isHidden = false
+                                strongSelf.spoilerTextNode?.alpha = 0.0
+                                
+                                let dustNode: InvisibleInkDustNode
+                                if let current = strongSelf.dustNode {
+                                    dustNode = current
+                                } else {
+                                    dustNode = InvisibleInkDustNode()
+                                    dustNode.isRevealedUpdated = { [weak self] revealed in
+                                        if let strongSelf = self {
+                                            let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+                                            if let dustNode = strongSelf.dustNode {
+                                                transition.updateAlpha(node: dustNode, alpha: revealed ? 0.0 : 1.0)
+                                            }
+                                            if let spoilerTextNode = strongSelf.spoilerTextNode {
+                                                transition.updateAlpha(node: spoilerTextNode, alpha: revealed ? 1.0 : 0.0)
+                                            }
+                                        }
+                                    }
+                                    strongSelf.dustNode = dustNode
+                                    strongSelf.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
+                                }
+                                dustNode.update(size: textFrame.size, color: messageTheme.primaryTextColor, rects: textLayout.spoilers.map { $0.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: -2.0, dy: 0.0) })
+                                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+                            } else if let spoilerTextNode = strongSelf.spoilerTextNode {
+                                strongSelf.spoilerTextNode = nil
+                                spoilerTextNode.removeFromSupernode()
+                            }
+                            
                             if let textSelectionNode = strongSelf.textSelectionNode {
                                 let shouldUpdateLayout = textSelectionNode.frame.size != textFrame.size
                                 textSelectionNode.frame = textFrame
