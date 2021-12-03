@@ -213,7 +213,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ chatLocation: ChatLocation, _ attributes: ChatMessageEntryAttributes, _ isPinned: Bool, _ forcedIsEdited: Bool, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?,  _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))) {
+    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ topMessage: Message, _ associatedData: ChatMessageItemAssociatedData, _ chatLocation: ChatLocation, _ attributes: ChatMessageEntryAttributes, _ isPinned: Bool, _ forcedIsEdited: Bool, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?,  _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation) -> Void))) {
         let currentFile = self.file
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
@@ -223,7 +223,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let currentMessage = self.message
         
-        return { context, presentationData, message, associatedData, chatLocation, attributes, isPinned, forcedIsEdited, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, messageSelection, constrainedSize in
+        return { context, presentationData, message, topMessage, associatedData, chatLocation, attributes, isPinned, forcedIsEdited, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, messageSelection, constrainedSize in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 let titleFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 16.0 / 17.0))
                 let descriptionFont = Font.with(size: floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
@@ -422,7 +422,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     controlAreaWidth = progressFrame.maxX + 8.0
                 }
                 
-                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))?
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 if let statusType = dateAndStatusType {
                     var edited = false
                     if attributes.updatingMedia != nil {
@@ -430,7 +430,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     var viewCount: Int?
                     var dateReplies = 0
-                    let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+                    let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: topMessage.attributes)?.reactions ?? []
                     for attribute in message.attributes {
                         if let attribute = attribute as? EditedMessageAttribute {
                             edited = !attribute.isHidden
@@ -455,7 +455,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: iconFrame == nil ? 1000.0 : controlAreaWidth, preferAdditionalInset: true),
+                        layoutInput: .trailingContent(contentWidth: iconFrame == nil ? 1000.0 : controlAreaWidth, reactionSettings: ChatMessageDateAndStatusNode.ReactionSettings(preferAdditionalInset: true)),
                         constrainedSize: constrainedSize,
                         availableReactions: associatedData.availableReactions,
                         reactions: dateReactions,
@@ -520,7 +520,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         fittedLayoutSize = CGSize(width: unionSize.width, height: unionSize.height)
                     }
                     
-                    var statusSizeAndApply: (CGSize, (Bool) -> Void)?
+                    var statusSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> Void)?
                     if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
                         statusSizeAndApply = statusSuggestedWidthAndContinue.1(boundingWidth)
                     }
@@ -541,7 +541,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         streamingCacheStatusFrame = CGRect()
                     }
                     
-                    return (fittedLayoutSize, { [weak self] synchronousLoads in
+                    return (fittedLayoutSize, { [weak self] synchronousLoads, animation in
                         if let strongSelf = self {
                             strongSelf.context = context
                             strongSelf.presentationData = presentationData
@@ -575,11 +575,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 statusReferenceFrame = progressFrame.offsetBy(dx: 0.0, dy: 8.0)
                             }
                             if let statusSizeAndApply = statusSizeAndApply {
+                                let statusFrame = CGRect(origin: CGPoint(x: statusReferenceFrame.minX, y: statusReferenceFrame.maxY + statusOffset), size: statusSizeAndApply.0)
                                 if strongSelf.dateAndStatusNode.supernode == nil {
-                                   strongSelf.addSubnode(strongSelf.dateAndStatusNode)
+                                    strongSelf.dateAndStatusNode.frame = statusFrame
+                                    strongSelf.addSubnode(strongSelf.dateAndStatusNode)
+                                } else {
+                                    animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: statusFrame, completion: nil)
                                 }
-                                strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: statusReferenceFrame.minX, y: statusReferenceFrame.maxY + statusOffset), size: statusSizeAndApply.0)
-                                statusSizeAndApply.1(false)
+                                statusSizeAndApply.1(animation)
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
                             }
@@ -1057,12 +1060,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.fetchingCompactTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingCompactSize)
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ chatLocation: ChatLocation, _ attributes: ChatMessageEntryAttributes, _ isPinned: Bool, _ forcedIsEdited: Bool, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> ChatMessageInteractiveFileNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ topMessage: Message, _ associatedData: ChatMessageItemAssociatedData, _ chatLocation: ChatLocation, _ attributes: ChatMessageEntryAttributes, _ isPinned: Bool, _ forcedIsEdited: Bool, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation) -> ChatMessageInteractiveFileNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { context, presentationData, message, associatedData, chatLocation, attributes, isPinned, forcedIsEdited, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, messageSelection, constrainedSize in
+        return { context, presentationData, message, topMessage, associatedData, chatLocation, attributes, isPinned, forcedIsEdited, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, messageSelection, constrainedSize in
             var fileNode: ChatMessageInteractiveFileNode
-            var fileLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ chatLocation: ChatLocation, _ attributes: ChatMessageEntryAttributes, _ isPinned: Bool, _ forcedIsEdited: Bool, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void)))
+            var fileLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ topMessage: Message, _ associatedData: ChatMessageItemAssociatedData, _ chatLocation: ChatLocation, _ attributes: ChatMessageEntryAttributes, _ isPinned: Bool, _ forcedIsEdited: Bool, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 fileNode = node
@@ -1072,7 +1075,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 fileLayout = fileNode.asyncLayout()
             }
             
-            let (initialWidth, continueLayout) = fileLayout(context, presentationData, message, associatedData, chatLocation, attributes, isPinned, forcedIsEdited, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, messageSelection, constrainedSize)
+            let (initialWidth, continueLayout) = fileLayout(context, presentationData, message, topMessage, associatedData, chatLocation, attributes, isPinned, forcedIsEdited, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, messageSelection, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize)
@@ -1080,8 +1083,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 return (finalWidth, { boundingWidth in
                     let (finalSize, apply) = finalLayout(boundingWidth)
                     
-                    return (finalSize, { synchronousLoads in
-                        apply(synchronousLoads)
+                    return (finalSize, { synchronousLoads, animation in
+                        apply(synchronousLoads, animation)
                         return fileNode
                     })
                 })

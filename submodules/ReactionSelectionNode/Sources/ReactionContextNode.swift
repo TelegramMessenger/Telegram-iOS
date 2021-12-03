@@ -503,7 +503,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.9, removeOnCompletion: false)
         targetSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.8)
-        targetSnapshotView.layer.animateScale(from: itemNode.bounds.width / targetSnapshotView.bounds.width, to: 0.5, duration: duration, removeOnCompletion: false, completion: { [weak self, weak targetSnapshotView] _ in
+        targetSnapshotView.layer.animateScale(from: itemNode.bounds.width / targetSnapshotView.bounds.width, to: 1.0, duration: duration, removeOnCompletion: false, completion: { [weak self, weak targetSnapshotView] _ in
             if let strongSelf = self {
                 strongSelf.hapticFeedback.tap()
             }
@@ -514,18 +514,18 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             if hideNode {
                 targetView.isHidden = false
-                targetView.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, initialVelocity: 0.0, damping: 90.0, completion: { _ in
+                /*targetView.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, initialVelocity: 0.0, damping: 90.0, completion: { _ in*/
                     targetSnapshotView?.isHidden = true
                     targetScaleCompleted = true
                     intermediateCompletion()
-                })
+                //})
             } else {
                 targetScaleCompleted = true
                 intermediateCompletion()
             }
         })
         
-        itemNode.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 0.5) / itemNode.bounds.width, duration: duration, removeOnCompletion: false)
+        itemNode.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 1.0) / itemNode.bounds.width, duration: duration, removeOnCompletion: false)
     }
     
     public func willAnimateOutToReaction(value: String) {
@@ -668,7 +668,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
     }
     
     public func animateReactionSelection(targetView: UIView, hideNode: Bool, completion: @escaping () -> Void) {
-        guard let targetSnapshotView = targetView.snapshotContentTree() else {
+        guard let sourceSnapshotView = targetView.snapshotContentTree(), let targetSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return
         }
@@ -685,12 +685,20 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         
         let expandedFrame = CGRect(origin: CGPoint(x: floor(selfTargetRect.midX - expandedSize.width / 2.0), y: floor(selfTargetRect.midY - expandedSize.height / 2.0)), size: expandedSize)
         
+        sourceSnapshotView.frame = selfTargetRect
+        self.view.addSubview(sourceSnapshotView)
+        sourceSnapshotView.alpha = 0.0
+        sourceSnapshotView.layer.animateSpring(from: 1.0 as NSNumber, to: (expandedFrame.width / selfTargetRect.width) as NSNumber, keyPath: "transform.scale", duration: 0.4)
+        sourceSnapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.08, completion: { [weak sourceSnapshotView] _ in
+            sourceSnapshotView?.removeFromSuperview()
+        })
+        
         self.addSubnode(itemNode)
         itemNode.frame = expandedFrame
         itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, transition: .immediate)
         
-        itemNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.18)
-        itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+        itemNode.layer.animateSpring(from: (selfTargetRect.width / expandedFrame.width) as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+        itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.04)
         
         let additionalAnimationNode = AnimatedStickerNode()
         let incomingMessage: Bool = expandedFrame.midX < self.bounds.width / 2.0
@@ -724,7 +732,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             additionalAnimationNode.visibility = true
         })
         
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0 * UIView.animationDurationFactor(), execute: {
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
             self.animateFromItemNodeToReaction(itemNode: self.itemNode, targetView: targetView, targetSnapshotView: targetSnapshotView, hideNode: hideNode, completion: {
                 mainAnimationCompleted = true
                 intermediateCompletion()
@@ -755,7 +763,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         
         itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.9, removeOnCompletion: false)
         targetSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.8)
-        targetSnapshotView.layer.animateScale(from: itemNode.bounds.width / targetSnapshotView.bounds.width, to: 0.5, duration: duration, removeOnCompletion: false, completion: { [weak self, weak targetSnapshotView] _ in
+        targetSnapshotView.layer.animateScale(from: itemNode.bounds.width / targetSnapshotView.bounds.width, to: 1.0, duration: duration, removeOnCompletion: false, completion: { [weak self, weak targetSnapshotView] _ in
             if let strongSelf = self {
                 strongSelf.hapticFeedback.tap()
             }
@@ -766,18 +774,18 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             
             if hideNode {
                 targetView.isHidden = false
-                targetView.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, initialVelocity: 0.0, damping: 90.0, completion: { _ in
+                /*targetView.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, initialVelocity: 0.0, damping: 90.0, completion: { _ in*/
                     targetSnapshotView?.isHidden = true
                     targetScaleCompleted = true
                     intermediateCompletion()
-                })
+                //})
             } else {
                 targetScaleCompleted = true
                 intermediateCompletion()
             }
         })
         
-        itemNode.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 0.5) / itemNode.bounds.width, duration: duration, removeOnCompletion: false)
+        itemNode.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 1.0) / itemNode.bounds.width, duration: duration, removeOnCompletion: false)
     }
     
     public func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {

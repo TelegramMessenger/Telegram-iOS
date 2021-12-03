@@ -6,6 +6,12 @@ public struct MessageReaction: Equatable, PostboxCoding {
     public var isSelected: Bool
     
     public init(value: String, count: Int32, isSelected: Bool) {
+        var value = value
+        
+        if value == "❤️" {
+            value = "❤"
+        }
+        
         self.value = value
         self.count = count
         self.isSelected = isSelected
@@ -24,19 +30,53 @@ public struct MessageReaction: Equatable, PostboxCoding {
     }
 }
 
-public final class ReactionsMessageAttribute: MessageAttribute {
-    public let reactions: [MessageReaction]
+public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
+    public struct RecentPeer: Equatable, PostboxCoding {
+        public var value: String
+        public var peerId: PeerId
+        
+        public init(value: String, peerId: PeerId) {
+            self.value = value
+            self.peerId = peerId
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            self.value = decoder.decodeStringForKey("v", orElse: "")
+            self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            encoder.encodeString(self.value, forKey: "v")
+            encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
+        }
+    }
     
-    public init(reactions: [MessageReaction]) {
+    public let reactions: [MessageReaction]
+    public let recentPeers: [RecentPeer]
+    
+    public init(reactions: [MessageReaction], recentPeers: [RecentPeer]) {
         self.reactions = reactions
+        self.recentPeers = recentPeers
     }
     
     required public init(decoder: PostboxDecoder) {
         self.reactions = decoder.decodeObjectArrayWithDecoderForKey("r")
+        self.recentPeers = decoder.decodeObjectArrayWithDecoderForKey("rp")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.reactions, forKey: "r")
+        encoder.encodeObjectArray(self.recentPeers, forKey: "rp")
+    }
+    
+    public static func ==(lhs: ReactionsMessageAttribute, rhs: ReactionsMessageAttribute) -> Bool {
+        if lhs.reactions != rhs.reactions {
+            return false
+        }
+        if lhs.recentPeers != rhs.recentPeers {
+            return false
+        }
+        return true
     }
 }
 

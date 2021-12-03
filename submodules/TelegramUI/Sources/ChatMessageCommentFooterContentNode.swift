@@ -417,7 +417,3 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         return nil
     }
 }
-
-
-
-

@@ -237,7 +237,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 var statusSize = CGSize()
-                var statusApply: ((Bool) -> Void)?
+                var statusApply: ((ListViewItemUpdateAnimation) -> Void)?
                 
                 if let statusType = statusType {
                     var isReplyThread = false
@@ -308,7 +308,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.imageNode.frame = imageFrame
                             
                             var transition: ContainedViewLayoutTransition = .immediate
-                            if case let .System(duration) = animation {
+                            if case let .System(duration, _) = animation {
                                 transition = .animated(duration: duration, curve: .spring)
                             }
                             
@@ -336,11 +336,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                                 if strongSelf.dateAndStatusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.dateAndStatusNode)
                                 }
-                                var hasAnimation = true
-                                if case .None = animation {
-                                    hasAnimation = false
-                                }
-                                statusApply(hasAnimation)
+                                statusApply(animation)
                                 strongSelf.dateAndStatusNode.frame = statusFrame.offsetBy(dx: imageFrame.minX, dy: imageFrame.minY)
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()

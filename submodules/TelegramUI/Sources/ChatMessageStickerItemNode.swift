@@ -701,7 +701,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, _ in
                 if let strongSelf = self {
                     var transition: ContainedViewLayoutTransition = .immediate
-                    if case let .System(duration) = animation {
+                    if case let .System(duration, _) = animation {
                         transition = .animated(duration: duration, curve: .spring)
                     }
                     
@@ -740,7 +740,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     strongSelf.contextSourceNode.contentRect = strongSelf.imageNode.frame
                     strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
                     
-                    dateAndStatusApply(false)
+                    dateAndStatusApply(.None)
                     
                     transition.updateFrame(node: strongSelf.dateAndStatusNode, frame: dateAndStatusFrame)
                     
@@ -926,7 +926,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             }
                             strongSelf.addSubnode(actionButtonsNode)
                         } else {
-                            if case let .System(duration) = animation {
+                            if case let .System(duration, _) = animation {
                                 actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
                             }
                         }

@@ -945,6 +945,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
+                guard let topMessage = messages.first else {
+                    return
+                }
+                
                 let _ = combineLatest(queue: .mainQueue(),
                     contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction),
                     strongSelf.context.engine.stickers.availableReactions(),
@@ -991,7 +995,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     actions.context = strongSelf.context
                     
-                    if canAddMessageReactions(message: message), let availableReactions = availableReactions {
+                    if canAddMessageReactions(message: topMessage), let availableReactions = availableReactions {
                         for reaction in availableReactions.reactions {
                             actions.reactionItems.append(ReactionContextItem(
                                 reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
@@ -1006,12 +1010,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.currentContextController = controller
                     
                     controller.reactionSelected = { [weak controller] value in
-                        guard let strongSelf = self, let message = updatedMessages.first else {
+                        guard let strongSelf = self, let message = messages.first else {
                             return
                         }
                         
                         var updatedReaction: String? = value.reaction.rawValue
-                        for attribute in messages[0].attributes {
+                        for attribute in topMessage.attributes {
                             if let attribute = attribute as? ReactionsMessageAttribute {
                                 for reaction in attribute.reactions {
                                     if reaction.value == value.reaction.rawValue {
@@ -1047,32 +1051,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     let _ = strongSelf
                                                     let _ = itemNode
                                                     let _ = targetView
-                                                    
-                                                    /*let targetFrame = targetFilledNode.view.convert(targetFilledNode.bounds, to: itemNode.view).offsetBy(dx: 0.0, dy: itemNode.insets.top)
-                                                    
-                                                    if #available(iOS 13.0, *), let meshAnimation = strongSelf.context.meshAnimationCache.get(bundleName: "Hearts") {
-                                                        if let animationView = MeshRenderer() {
-                                                            let animationFrame = CGRect(origin: CGPoint(x: targetFrame.midX - 200.0 / 2.0, y: targetFrame.midY - 200.0 / 2.0), size: CGSize(width: 200.0, height: 200.0)).offsetBy(dx: -50.0, dy: 0.0)
-                                                            animationView.frame = animationFrame
-                                                            
-                                                            var removeNode: (() -> Void)?
-
-                                                            animationView.allAnimationsCompleted = {
-                                                                removeNode?()
-                                                            }
-
-                                                            let overlayMeshAnimationNode = strongSelf.chatDisplayNode.messageTransitionNode.add(decorationView: animationView, itemNode: itemNode)
-                                                            
-                                                            removeNode = { [weak overlayMeshAnimationNode] in
-                                                                guard let strongSelf = self, let overlayMeshAnimationNode = overlayMeshAnimationNode else {
-                                                                    return
-                                                                }
-                                                                strongSelf.chatDisplayNode.messageTransitionNode.remove(decorationNode: overlayMeshAnimationNode)
-                                                            }
-                                                            
-                                                            animationView.add(mesh: meshAnimation, offset: CGPoint())
-                                                        }
-                                                    }*/
                                                 })
                                             }
                                         })
@@ -1096,11 +1074,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             }
-        }, updateMessageReaction: { [weak self] message, value in
+        }, updateMessageReaction: { [weak self] initialMessage, value in
             guard let strongSelf = self else {
                 return
             }
-            
+            guard let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(initialMessage.id) else {
+                return
+            }
+            guard let message = messages.first else {
+                return
+            }
             if !canAddMessageReactions(message: message) {
                 return
             }

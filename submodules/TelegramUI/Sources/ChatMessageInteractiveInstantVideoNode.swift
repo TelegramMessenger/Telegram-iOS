@@ -362,7 +362,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                     }
                                         
-                    dateAndStatusApply(false)
+                    dateAndStatusApply(.None)
                     switch layoutData {
                         case let .unconstrained(width):
                             let dateAndStatusOrigin: CGPoint

@@ -1049,7 +1049,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     
                     var transition: ContainedViewLayoutTransition = .immediate
-                    if case let .System(duration) = animation {
+                    if case let .System(duration, _) = animation {
                         if let subject = item.associatedData.subject, case .forwardedMessages = subject {
                             transition = .animated(duration: duration, curve: .linear)
                         } else {
@@ -1122,7 +1122,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         strongSelf.shareButtonNode = nil
                     }
                     
-                    dateAndStatusApply(false)
+                    dateAndStatusApply(.None)
                     strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0), size: dateAndStatusSize)
 
                     if needsReplyBackground {
@@ -1296,7 +1296,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                             strongSelf.addSubnode(actionButtonsNode)
                         } else {
-                            if case let .System(duration) = animation {
+                            if case let .System(duration, _) = animation {
                                 actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
                             }
                         }

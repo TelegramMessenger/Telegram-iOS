@@ -62,7 +62,6 @@ public extension ContainedViewLayoutTransitionCurve {
         }
     }
     
-    #if os(iOS)
     var viewAnimationOptions: UIView.AnimationOptions {
         switch self {
             case .linear:
@@ -77,7 +76,6 @@ public extension ContainedViewLayoutTransitionCurve {
                 return []
         }
     }
-    #endif
 }
 
 public enum ContainedViewLayoutTransition {
@@ -1414,6 +1412,405 @@ public extension ContainedViewLayoutTransition {
             UIView.animate(withDuration: duration, delay: 0.0, options: curve.viewAnimationOptions, animations: {
                 f()
             }, completion: completion)
+        }
+    }
+}
+
+public protocol ControlledTransitionAnimator: AnyObject {
+    var duration: Double { get }
+    
+    func startAnimation()
+    func setAnimationProgress(_ progress: CGFloat)
+    func finishAnimation()
+    
+    func updateAlpha(layer: CALayer, alpha: CGFloat, completion: ((Bool) -> Void)?)
+    func updatePosition(layer: CALayer, position: CGPoint, completion: ((Bool) -> Void)?)
+    func updateBounds(layer: CALayer, bounds: CGRect, completion: ((Bool) -> Void)?)
+    func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)?)
+}
+
+protocol AnyValueProviding {
+    var anyValue: ControlledTransitionProperty.AnyValue { get }
+}
+
+extension CGFloat: AnyValueProviding {
+    func interpolate(with other: CGFloat, fraction: CGFloat) -> CGFloat {
+        let invT = 1.0 - fraction
+        let result = other * fraction + self * invT
+        return result
+    }
+    
+    var anyValue: ControlledTransitionProperty.AnyValue {
+        return ControlledTransitionProperty.AnyValue(
+            value: self,
+            stringValue: { "\(self)" },
+            isEqual: { other in
+                if let otherValue = other.value as? CGFloat {
+                    return self == otherValue
+                } else {
+                    return false
+                }
+            },
+            interpolate: { other, fraction in
+                guard let otherValue = other.value as? CGFloat else {
+                    preconditionFailure()
+                }
+                return self.interpolate(with: otherValue, fraction: fraction).anyValue
+            }
+        )
+    }
+}
+
+extension Float: AnyValueProviding {
+    func interpolate(with other: Float, fraction: CGFloat) -> Float {
+        let invT = 1.0 - Float(fraction)
+        let result = other * Float(fraction) + self * invT
+        return result
+    }
+    
+    var anyValue: ControlledTransitionProperty.AnyValue {
+        return ControlledTransitionProperty.AnyValue(
+            value: self,
+            stringValue: { "\(self)" },
+            isEqual: { other in
+                if let otherValue = other.value as? Float {
+                    return self == otherValue
+                } else {
+                    return false
+                }
+            },
+            interpolate: { other, fraction in
+                guard let otherValue = other.value as? Float else {
+                    preconditionFailure()
+                }
+                return self.interpolate(with: otherValue, fraction: fraction).anyValue
+            }
+        )
+    }
+}
+
+extension CGPoint: AnyValueProviding {
+    func interpolate(with other: CGPoint, fraction: CGFloat) -> CGPoint {
+        return CGPoint(x: self.x.interpolate(with: other.x, fraction: fraction), y: self.y.interpolate(with: other.y, fraction: fraction))
+    }
+    
+    var anyValue: ControlledTransitionProperty.AnyValue {
+        return ControlledTransitionProperty.AnyValue(
+            value: self,
+            stringValue: { "\(self)" },
+            isEqual: { other in
+                if let otherValue = other.value as? CGPoint {
+                    return self == otherValue
+                } else {
+                    return false
+                }
+            },
+            interpolate: { other, fraction in
+                guard let otherValue = other.value as? CGPoint else {
+                    preconditionFailure()
+                }
+                return self.interpolate(with: otherValue, fraction: fraction).anyValue
+            }
+        )
+    }
+}
+
+extension CGSize: AnyValueProviding {
+    func interpolate(with other: CGSize, fraction: CGFloat) -> CGSize {
+        return CGSize(width: self.width.interpolate(with: other.width, fraction: fraction), height: self.height.interpolate(with: other.height, fraction: fraction))
+    }
+    
+    var anyValue: ControlledTransitionProperty.AnyValue {
+        return ControlledTransitionProperty.AnyValue(
+            value: self,
+            stringValue: { "\(self)" },
+            isEqual: { other in
+                if let otherValue = other.value as? CGSize {
+                    return self == otherValue
+                } else {
+                    return false
+                }
+            },
+            interpolate: { other, fraction in
+                guard let otherValue = other.value as? CGSize else {
+                    preconditionFailure()
+                }
+                return self.interpolate(with: otherValue, fraction: fraction).anyValue
+            }
+        )
+    }
+}
+
+extension CGRect: AnyValueProviding {
+    func interpolate(with other: CGRect, fraction: CGFloat) -> CGRect {
+        return CGRect(origin: self.origin.interpolate(with: other.origin, fraction: fraction), size: self.size.interpolate(with: other.size, fraction: fraction))
+    }
+    
+    var anyValue: ControlledTransitionProperty.AnyValue {
+        return ControlledTransitionProperty.AnyValue(
+            value: self,
+            stringValue: { "\(self)" },
+            isEqual: { other in
+                if let otherValue = other.value as? CGRect {
+                    return self == otherValue
+                } else {
+                    return false
+                }
+            },
+            interpolate: { other, fraction in
+                guard let otherValue = other.value as? CGRect else {
+                    preconditionFailure()
+                }
+                return self.interpolate(with: otherValue, fraction: fraction).anyValue
+            }
+        )
+    }
+}
+
+final class ControlledTransitionProperty {
+    final class AnyValue: Equatable, CustomStringConvertible {
+        let value: Any
+        let stringValue: () -> String
+        let isEqual: (AnyValue) -> Bool
+        let interpolate: (AnyValue, CGFloat) -> AnyValue
+        
+        init(
+            value: Any,
+            stringValue: @escaping () -> String,
+            isEqual: @escaping (AnyValue) -> Bool,
+            interpolate: @escaping (AnyValue, CGFloat) -> AnyValue
+        ) {
+            self.value = value
+            self.stringValue = stringValue
+            self.isEqual = isEqual
+            self.interpolate = interpolate
+        }
+        
+        var description: String {
+            return self.stringValue()
+        }
+        
+        static func ==(lhs: AnyValue, rhs: AnyValue) -> Bool {
+            if lhs.isEqual(rhs) {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    let layer: CALayer
+    let keyPath: AnyKeyPath
+    private let write: (CALayer, AnyValue) -> Void
+    var fromValue: AnyValue
+    let toValue: AnyValue
+    private(set) var lastValue: AnyValue
+    private let completion: ((Bool) -> Void)?
+    
+    init<T: Equatable>(layer: CALayer, keyPath: ReferenceWritableKeyPath<CALayer, T>, fromValue: T, toValue: T, completion: ((Bool) -> Void)?) where T: AnyValueProviding {
+        self.layer = layer
+        self.keyPath = keyPath
+        self.write = { layer, value in
+            layer[keyPath: keyPath] = value.value as! T
+        }
+        self.fromValue = fromValue.anyValue
+        self.toValue = toValue.anyValue
+        self.lastValue = self.fromValue
+        self.completion = completion
+    }
+    
+    func update(at fraction: CGFloat) {
+        let value = self.fromValue.interpolate(toValue, fraction)
+        self.lastValue = value
+        self.write(self.layer, value)
+    }
+    
+    func complete(atEnd: Bool) {
+        self.completion?(atEnd)
+    }
+}
+
+public final class ControlledTransition {
+    @available(iOS 10.0, *)
+    public final class NativeAnimator: ControlledTransitionAnimator {
+        public let duration: Double
+        private let curve: ContainedViewLayoutTransitionCurve
+        
+        private var animations: [ControlledTransitionProperty] = []
+        
+        init(
+            duration: Double,
+            curve: ContainedViewLayoutTransitionCurve
+        ) {
+            self.duration = duration
+            self.curve = curve
+        }
+        
+        func merge(with other: NativeAnimator) {
+            var removeAnimationIndices: [Int] = []
+            for i in 0 ..< self.animations.count {
+                let animation = self.animations[i]
+                
+                var removeOtherAnimationIndices: [Int] = []
+                for j in 0 ..< other.animations.count {
+                    let otherAnimation = other.animations[j]
+                    
+                    if animation.layer === otherAnimation.layer && animation.keyPath == otherAnimation.keyPath {
+                        if animation.toValue == otherAnimation.toValue {
+                            removeAnimationIndices.append(i)
+                        } else {
+                            removeOtherAnimationIndices.append(j)
+                        }
+                    }
+                }
+                
+                for j in removeOtherAnimationIndices.reversed() {
+                    other.animations.remove(at: j).complete(atEnd: false)
+                }
+            }
+            
+            for i in removeAnimationIndices.reversed() {
+                self.animations.remove(at: i).complete(atEnd: false)
+            }
+        }
+        
+        public func startAnimation() {
+        }
+        
+        public func setAnimationProgress(_ progress: CGFloat) {
+            let mappedFraction: CGFloat
+            switch self.curve {
+            case .spring:
+                mappedFraction = springAnimationSolver(progress)
+            case let .custom(c1x, c1y, c2x, c2y):
+                mappedFraction = bezierPoint(CGFloat(c1x), CGFloat(c1y), CGFloat(c2x), CGFloat(c2y), progress)
+            default:
+                mappedFraction = progress
+            }
+            
+            for animation in self.animations {
+                animation.update(at: mappedFraction)
+            }
+        }
+        
+        public func finishAnimation() {
+            for animation in self.animations {
+                animation.update(at: 1.0)
+                animation.complete(atEnd: true)
+            }
+            self.animations.removeAll()
+        }
+        
+        public func updateAlpha(layer: CALayer, alpha: CGFloat, completion: ((Bool) -> Void)?) {
+            self.animations.append(ControlledTransitionProperty(
+                layer: layer,
+                keyPath: \.opacity,
+                fromValue: layer.opacity,
+                toValue: Float(alpha),
+                completion: completion
+            ))
+        }
+        
+        public func updatePosition(layer: CALayer, position: CGPoint, completion: ((Bool) -> Void)?) {
+            self.animations.append(ControlledTransitionProperty(
+                layer: layer,
+                keyPath: \.position,
+                fromValue: layer.position,
+                toValue: position,
+                completion: completion
+            ))
+        }
+        
+        public func updateBounds(layer: CALayer, bounds: CGRect, completion: ((Bool) -> Void)?) {
+            self.animations.append(ControlledTransitionProperty(
+                layer: layer,
+                keyPath: \.bounds,
+                fromValue: layer.bounds,
+                toValue: bounds,
+                completion: completion
+            ))
+        }
+        
+        public func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)?) {
+            self.animations.append(ControlledTransitionProperty(
+                layer: layer,
+                keyPath: \.frame,
+                fromValue: layer.frame,
+                toValue: frame,
+                completion: completion
+            ))
+        }
+    }
+
+    public final class LegacyAnimator: ControlledTransitionAnimator {
+        public let duration: Double
+        public let transition: ContainedViewLayoutTransition
+        
+        init(
+            duration: Double,
+            curve: ContainedViewLayoutTransitionCurve
+        ) {
+            self.duration = duration
+            
+            if duration.isZero {
+                self.transition = .immediate
+            } else {
+                self.transition = .animated(duration: duration, curve: curve)
+            }
+        }
+        
+        public func startAnimation() {
+        }
+        
+        public func setAnimationProgress(_ progress: CGFloat) {
+        }
+        
+        public func finishAnimation() {
+        }
+        
+        public func updateAlpha(layer: CALayer, alpha: CGFloat, completion: ((Bool) -> Void)?) {
+            self.transition.updateAlpha(layer: layer, alpha: alpha, completion: completion)
+        }
+        
+        public func updatePosition(layer: CALayer, position: CGPoint, completion: ((Bool) -> Void)?) {
+            self.transition.updatePosition(layer: layer, position: position, completion: completion)
+        }
+        
+        public func updateBounds(layer: CALayer, bounds: CGRect, completion: ((Bool) -> Void)?) {
+            self.transition.updateBounds(layer: layer, bounds: bounds, completion: completion)
+        }
+        
+        public func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)?) {
+            self.transition.updateFrame(layer: layer, frame: frame, completion: completion)
+        }
+    }
+    
+    public let animator: ControlledTransitionAnimator
+    public let legacyAnimator: LegacyAnimator
+    
+    public init(
+        duration: Double,
+        curve: ContainedViewLayoutTransitionCurve
+    ) {
+        self.legacyAnimator = LegacyAnimator(
+            duration: duration,
+            curve: curve
+        )
+        if #available(iOS 10.0, *) {
+            self.animator = NativeAnimator(
+                duration: duration,
+                curve: curve
+            )
+        } else {
+            self.animator = self.legacyAnimator
+        }
+    }
+    
+    public func merge(with other: ControlledTransition) {
+        if #available(iOS 10.0, *) {
+            if let animator = self.animator as? NativeAnimator, let otherAnimator = other.animator as? NativeAnimator {
+                animator.merge(with: otherAnimator)
+            }
         }
     }
 }

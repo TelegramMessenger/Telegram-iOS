@@ -941,7 +941,7 @@ private final class ItemView: UIView, SparseItemGridView {
         let messageItemNode: ListViewItemNode
         if let current = self.messageItemNode {
             messageItemNode = current
-            messageItem.updateNode(async: { f in f() }, node: { return current }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2), completion: { layout, apply in
+            messageItem.updateNode(async: { f in f() }, node: { return current }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring)), completion: { layout, apply in
                 current.contentSize = layout.contentSize
                 current.insets = layout.insets
 
@@ -972,7 +972,7 @@ private final class ItemView: UIView, SparseItemGridView {
 
     func update(size: CGSize, insets: UIEdgeInsets) {
         if let messageItem = self.messageItem, let messageItemNode = self.messageItemNode {
-            messageItem.updateNode(async: { f in f() }, node: { return messageItemNode }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2), completion: { layout, apply in
+            messageItem.updateNode(async: { f in f() }, node: { return messageItemNode }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring)), completion: { layout, apply in
                 messageItemNode.contentSize = layout.contentSize
                 messageItemNode.insets = layout.insets
 
