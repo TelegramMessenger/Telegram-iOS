@@ -1544,7 +1544,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         callKitIntegration.reportIncomingCall(
             uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId),
             stableId: callUpdate.callId,
-            handle: "\(callUpdate.peer.id.id)",
+            handle: "\(callUpdate.peer.id.id._internalGetInt64Value())",
             isVideo: false,
             displayTitle: callUpdate.peer.debugDisplayTitle,
             completion: { error in

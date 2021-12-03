@@ -613,7 +613,7 @@ public final class PresentationCallImpl: PresentationCall {
                         self.callKitIntegration?.reportIncomingCall(
                             uuid: self.internalId,
                             stableId: stableId,
-                            handle: "\(self.peerId.id)",
+                            handle: "\(self.peerId.id._internalGetInt64Value())",
                             isVideo: sessionState.type == .video,
                             displayTitle: self.peer?.debugDisplayTitle ?? "Unknown",
                             completion: { [weak self] error in
