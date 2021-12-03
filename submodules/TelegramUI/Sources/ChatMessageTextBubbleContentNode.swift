@@ -285,7 +285,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     spoilerTextLayoutAndApply = nil
                 }
                 
-                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation) -> Void))?
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 if let statusType = statusType {
                     var isReplyThread = false
                     if case .replyThread = item.chatLocation {
