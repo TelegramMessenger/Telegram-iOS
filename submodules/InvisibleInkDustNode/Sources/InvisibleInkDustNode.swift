@@ -14,29 +14,78 @@ private func createEmitterBehavior(type: String) -> NSObject {
     return castedBehaviorWithType(behaviorClass, NSSelectorFromString(selector), type)
 }
 
+private let textMaskImage: UIImage = {
+    return generateImage(CGSize(width: 60.0, height: 60.0), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        var locations: [CGFloat] = [0.0, 0.7, 0.95, 1.0]
+        let colors: [CGColor] = [UIColor(rgb: 0xffffff, alpha: 1.0).cgColor, UIColor(rgb: 0xffffff, alpha: 1.0).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        
+        let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+        context.drawRadialGradient(gradient, startCenter: center, startRadius: 0.0, endCenter: center, endRadius: size.width / 2.0, options: .drawsAfterEndLocation)
+    })!
+}()
+
+private let emitterMaskImage: UIImage = {
+    return generateImage(CGSize(width: 120.0, height: 120.0), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+                
+        var locations: [CGFloat] = [0.0, 0.7, 0.95, 1.0]
+        let colors: [CGColor] = [UIColor(rgb: 0xffffff, alpha: 0.0).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor, UIColor(rgb: 0xffffff, alpha: 1.0).cgColor, UIColor(rgb: 0xffffff, alpha: 1.0).cgColor]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        
+        let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+        context.drawRadialGradient(gradient, startCenter: center, startRadius: 0.0, endCenter: center, endRadius: size.width / 10.0, options: .drawsAfterEndLocation)
+    })!
+}()
+
 public class InvisibleInkDustNode: ASDisplayNode {
     private var currentParams: (size: CGSize, color: UIColor, rects: [CGRect])?
     
     private weak var textNode: TextNode?
+    private let textMaskNode: ASDisplayNode
+    private let textSpotNode: ASImageNode
     
-    private let maskNode: ASDisplayNode
-    private let spotNode: ASImageNode
-    
+    private var emitterNode: ASDisplayNode
     private var emitter: CAEmitterCell?
     private var emitterLayer: CAEmitterLayer?
-        
+    private let emitterMaskNode: ASDisplayNode
+    private let emitterSpotNode: ASImageNode
+    private let emitterMaskFillNode: ASDisplayNode
+    
     public var isRevealedUpdated: (Bool) -> Void = { _ in }
     
     public init(textNode: TextNode) {
         self.textNode = textNode
         
-        self.maskNode = ASDisplayNode()
-        self.spotNode = ASImageNode()
-        self.spotNode.image = UIImage(bundleImageName: "Components/TextSpot")
+        self.emitterNode = ASDisplayNode()
+        self.emitterNode.clipsToBounds = true
+        
+        self.textMaskNode = ASDisplayNode()
+        self.textSpotNode = ASImageNode()
+        let img = textMaskImage
+        self.textSpotNode.image = img
                 
+        self.emitterMaskNode = ASDisplayNode()
+        self.emitterSpotNode = ASImageNode()
+        let simg = emitterMaskImage
+        self.emitterSpotNode.image = simg
+        
+        self.emitterMaskFillNode = ASDisplayNode()
+        self.emitterMaskFillNode.backgroundColor = .white
+        
         super.init()
         
-        self.maskNode.addSubnode(self.spotNode)
+        self.addSubnode(self.emitterNode)
+        
+        self.textMaskNode.addSubnode(self.textSpotNode)
+        self.emitterMaskNode.addSubnode(self.emitterSpotNode)
+        self.emitterMaskNode.addSubnode(self.emitterMaskFillNode)
     }
     
     public override func didLoad() {
@@ -85,7 +134,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         
         self.emitterLayer = emitterLayer
         
-        self.layer.addSublayer(emitterLayer)
+        self.emitterNode.layer.addSublayer(emitterLayer)
         
         self.updateEmitter()
         
@@ -103,31 +152,43 @@ public class InvisibleInkDustNode: ASDisplayNode {
         let position = gestureRecognizer.location(in: self.view)
         self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
         self.emitterLayer?.setValue(position, forKeyPath: "emitterBehaviors.fingerAttractor.position")
-        
-        self.textNode?.view.mask = self.maskNode.view
-        self.textNode?.alpha = 1.0
-        
-        let radius = max(size.width, size.height)
-        self.spotNode.frame = CGRect(x: position.x - radius / 2.0, y: position.y - radius / 2.0, width: radius, height: radius)
-        
-        self.spotNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-        self.spotNode.layer.animateScale(from: 0.0, to: 3.5, duration: 0.61, removeOnCompletion: false, completion: { [weak self] _ in
-            self?.textNode?.view.mask = nil
-        })
-                
-        Queue.mainQueue().after(0.2) {
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
-            transition.updateAlpha(node: self, alpha: 0.0)
+           
+        Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) {
+            self.textNode?.view.mask = self.textMaskNode.view
+            self.textNode?.alpha = 1.0
+                    
+            let radius = max(size.width, size.height)
+            self.textSpotNode.frame = CGRect(x: position.x - radius / 2.0, y: position.y - radius / 2.0, width: radius, height: radius)
+                    
+            self.textSpotNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            self.textSpotNode.layer.animateScale(from: 0.1, to: 3.5, duration: 0.71, removeOnCompletion: false, completion: { [weak self] _ in
+                self?.textNode?.view.mask = nil
+            })
+            
+            self.emitterNode.view.mask = self.emitterMaskNode.view
+            let emitterSide = radius * 5.0
+            self.emitterSpotNode.frame =  CGRect(x: position.x - emitterSide / 2.0, y: position.y - emitterSide / 2.0, width: emitterSide, height: emitterSide)
+            self.emitterSpotNode.layer.animateScale(from: 0.1, to: 3.0, duration: 0.71, removeOnCompletion: false, completion: { [weak self] _ in
+                self?.alpha = 0.0
+                self?.emitterNode.view.mask = nil
+            })
+            self.emitterMaskFillNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+            
+//            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
+//            transition.updateAlpha(node: self, alpha: 0.0)
                         
             self.isRevealedUpdated(true)
         }
         
-        Queue.mainQueue().after(0.7) {
+        Queue.mainQueue().after(0.8 * UIView.animationDurationFactor()) {
             self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
-            self.spotNode.layer.removeAllAnimations()
+            self.textSpotNode.layer.removeAllAnimations()
+            
+            self.emitterSpotNode.layer.removeAllAnimations()
+            self.emitterMaskFillNode.layer.removeAllAnimations()
         }
         
-        Queue.mainQueue().after(4.0) {
+        Queue.mainQueue().after(4.0 * UIView.animationDurationFactor()) {
             self.revealed = false
             self.isRevealedUpdated(false)
             
@@ -163,7 +224,10 @@ public class InvisibleInkDustNode: ASDisplayNode {
     public func update(size: CGSize, color: UIColor, rects: [CGRect]) {
         self.currentParams = (size, color, rects)
                 
-        self.maskNode.frame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: size)
+        self.emitterNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.emitterMaskNode.frame = self.emitterNode.bounds
+        self.emitterMaskFillNode.frame = self.emitterNode.bounds
+        self.textMaskNode.frame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: size)
         
         if self.isNodeLoaded {
             self.updateEmitter()
