@@ -444,7 +444,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         self.presentationData = presentationData
         self.presentationDataValue.set(.single(presentationData))
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
-        self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
+        self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.list.blocksBackgroundColor, direction: true)
         self.searchDisplayController?.updatePresentationData(presentationData)
         self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
