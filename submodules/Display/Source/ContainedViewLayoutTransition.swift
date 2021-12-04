@@ -1669,7 +1669,7 @@ public final class ControlledTransition {
                 }
             }
             
-            for i in removeAnimationIndices.reversed() {
+            for i in Set(removeAnimationIndices).sorted().reversed() {
                 self.animations.remove(at: i).complete(atEnd: false)
             }
         }
@@ -1701,8 +1701,19 @@ public final class ControlledTransition {
             self.animations.removeAll()
         }
         
+        private func add(animation: ControlledTransitionProperty) {
+            for i in 0 ..< self.animations.count {
+                let otherAnimation = self.animations[i]
+                if otherAnimation.layer === animation.layer && otherAnimation.keyPath == animation.keyPath {
+                    self.animations.remove(at: i)
+                    break
+                }
+            }
+            self.animations.append(animation)
+        }
+        
         public func updateAlpha(layer: CALayer, alpha: CGFloat, completion: ((Bool) -> Void)?) {
-            self.animations.append(ControlledTransitionProperty(
+            self.add(animation: ControlledTransitionProperty(
                 layer: layer,
                 keyPath: \.opacity,
                 fromValue: layer.opacity,
@@ -1712,7 +1723,7 @@ public final class ControlledTransition {
         }
         
         public func updatePosition(layer: CALayer, position: CGPoint, completion: ((Bool) -> Void)?) {
-            self.animations.append(ControlledTransitionProperty(
+            self.add(animation: ControlledTransitionProperty(
                 layer: layer,
                 keyPath: \.position,
                 fromValue: layer.position,
@@ -1722,7 +1733,7 @@ public final class ControlledTransition {
         }
         
         public func updateBounds(layer: CALayer, bounds: CGRect, completion: ((Bool) -> Void)?) {
-            self.animations.append(ControlledTransitionProperty(
+            self.add(animation: ControlledTransitionProperty(
                 layer: layer,
                 keyPath: \.bounds,
                 fromValue: layer.bounds,
@@ -1732,7 +1743,7 @@ public final class ControlledTransition {
         }
         
         public func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)?) {
-            self.animations.append(ControlledTransitionProperty(
+            self.add(animation: ControlledTransitionProperty(
                 layer: layer,
                 keyPath: \.frame,
                 fromValue: layer.frame,
