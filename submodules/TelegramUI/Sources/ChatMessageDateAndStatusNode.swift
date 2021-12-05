@@ -786,11 +786,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             blurredBackgroundNode.removeFromSupernode()
                         }
                         
-                        strongSelf.dateNode.displaysAsynchronously = !arguments.presentationData.isPreview
                         let _ = dateApply()
                         
                         if let currentImpressionIcon = currentImpressionIcon {
-                            currentImpressionIcon.displaysAsynchronously = !arguments.presentationData.isPreview
+                            currentImpressionIcon.displaysAsynchronously = false
                             if currentImpressionIcon.image !== impressionImage {
                                 currentImpressionIcon.image = impressionImage
                             }
@@ -807,14 +806,19 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         animation.animator.updateFrame(layer: strongSelf.dateNode.layer, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + backgroundInsets.left + impressionWidth, y: backgroundInsets.top + 1.0 + offset + verticalInset), size: date.size), completion: nil)
                         
                         if let clockFrameNode = clockFrameNode {
+                            let clockPosition = CGPoint(x: leftOffset + backgroundInsets.left + clockPosition.x + reactionInset, y: backgroundInsets.top + clockPosition.y + verticalInset)
                             if strongSelf.clockFrameNode == nil {
                                 strongSelf.clockFrameNode = clockFrameNode
                                 clockFrameNode.image = clockFrameImage
                                 strongSelf.addSubnode(clockFrameNode)
-                            } else if themeUpdated {
-                                clockFrameNode.image = clockFrameImage
+                                
+                                clockFrameNode.position = clockPosition
+                            } else {
+                                if themeUpdated {
+                                    clockFrameNode.image = clockFrameImage
+                                }
+                                animation.animator.updatePosition(layer: clockFrameNode.layer, position: clockPosition, completion: nil)
                             }
-                            animation.animator.updatePosition(layer: clockFrameNode.layer, position: CGPoint(x: leftOffset + backgroundInsets.left + clockPosition.x + reactionInset, y: backgroundInsets.top + clockPosition.y + verticalInset), completion: nil)
                             if let clockFrameNode = strongSelf.clockFrameNode {
                                 maybeAddRotationAnimation(clockFrameNode.layer, duration: 6.0)
                             }
@@ -824,14 +828,19 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                         
                         if let clockMinNode = clockMinNode {
+                            let clockMinPosition = CGPoint(x: leftOffset + backgroundInsets.left + clockPosition.x + reactionInset, y: backgroundInsets.top + clockPosition.y + verticalInset)
                             if strongSelf.clockMinNode == nil {
                                 strongSelf.clockMinNode = clockMinNode
                                 clockMinNode.image = clockMinImage
                                 strongSelf.addSubnode(clockMinNode)
-                            } else if themeUpdated {
-                                clockMinNode.image = clockMinImage
+                                
+                                clockMinNode.position = clockMinPosition
+                            } else {
+                                if themeUpdated {
+                                    clockMinNode.image = clockMinImage
+                                }
+                                animation.animator.updatePosition(layer: clockMinNode.layer, position: clockMinPosition, completion: nil)
                             }
-                            animation.animator.updatePosition(layer: clockMinNode.layer, position: CGPoint(x: leftOffset + backgroundInsets.left + clockPosition.x + reactionInset, y: backgroundInsets.top + clockPosition.y + verticalInset), completion: nil)
                             if let clockMinNode = strongSelf.clockMinNode {
                                 maybeAddRotationAnimation(clockMinNode.layer, duration: 1.0)
                             }
@@ -852,13 +861,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             }
                             
                             if let checkSentFrame = checkSentFrame {
+                                let actualCheckSentFrame = checkSentFrame.offsetBy(dx: leftOffset + backgroundInsets.left + reactionInset, dy: backgroundInsets.top + verticalInset)
+                                
                                 if checkSentNode.isHidden {
                                     animateSentNode = animation.isAnimated
-                                    checkSentNode.frame = checkSentFrame.offsetBy(dx: leftOffset + backgroundInsets.left + reactionInset, dy: backgroundInsets.top + verticalInset)
-                                } else {
-                                    animation.animator.updateFrame(layer: checkSentNode.layer, frame: checkSentFrame.offsetBy(dx: leftOffset + backgroundInsets.left + reactionInset, dy: backgroundInsets.top + verticalInset), completion: nil)
                                 }
                                 checkSentNode.isHidden = false
+                                animation.animator.updateFrame(layer: checkSentNode.layer, frame: actualCheckSentFrame, completion: nil)
                             } else {
                                 checkSentNode.isHidden = true
                             }
@@ -980,7 +989,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                         
                         if let currentRepliesIcon = currentRepliesIcon {
-                            currentRepliesIcon.displaysAsynchronously = !arguments.presentationData.isPreview
+                            currentRepliesIcon.displaysAsynchronously = false
                             if currentRepliesIcon.image !== repliesImage {
                                 currentRepliesIcon.image = repliesImage
                             }

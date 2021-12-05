@@ -363,7 +363,6 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
-                            strongSelf.textNode.displaysAsynchronously = !item.presentationData.isPreview && !item.presentationData.theme.theme.forceSync
                             let _ = textApply()
                             animation.animator.updateFrame(layer: strongSelf.textNode.layer, frame: textFrame, completion: nil)
                             
