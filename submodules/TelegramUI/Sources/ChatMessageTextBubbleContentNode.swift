@@ -365,6 +365,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let _ = textApply()
                             animation.animator.updateFrame(layer: strongSelf.textNode.layer, frame: textFrame, completion: nil)
+                            //strongSelf.textNode.frame = textFrame
                             
                             if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
                                 let spoilerTextNode = spoilerTextApply()

@@ -1443,6 +1443,7 @@ extension CGFloat: AnyValueProviding {
     var anyValue: ControlledTransitionProperty.AnyValue {
         return ControlledTransitionProperty.AnyValue(
             value: self,
+            nsValue: self as NSNumber,
             stringValue: { "\(self)" },
             isEqual: { other in
                 if let otherValue = other.value as? CGFloat {
@@ -1471,6 +1472,7 @@ extension Float: AnyValueProviding {
     var anyValue: ControlledTransitionProperty.AnyValue {
         return ControlledTransitionProperty.AnyValue(
             value: self,
+            nsValue: self as NSNumber,
             stringValue: { "\(self)" },
             isEqual: { other in
                 if let otherValue = other.value as? Float {
@@ -1497,6 +1499,7 @@ extension CGPoint: AnyValueProviding {
     var anyValue: ControlledTransitionProperty.AnyValue {
         return ControlledTransitionProperty.AnyValue(
             value: self,
+            nsValue: NSValue(cgPoint: self),
             stringValue: { "\(self)" },
             isEqual: { other in
                 if let otherValue = other.value as? CGPoint {
@@ -1523,6 +1526,7 @@ extension CGSize: AnyValueProviding {
     var anyValue: ControlledTransitionProperty.AnyValue {
         return ControlledTransitionProperty.AnyValue(
             value: self,
+            nsValue: NSValue(cgSize: self),
             stringValue: { "\(self)" },
             isEqual: { other in
                 if let otherValue = other.value as? CGSize {
@@ -1549,6 +1553,7 @@ extension CGRect: AnyValueProviding {
     var anyValue: ControlledTransitionProperty.AnyValue {
         return ControlledTransitionProperty.AnyValue(
             value: self,
+            nsValue: NSValue(cgRect: self),
             stringValue: { "\(self)" },
             isEqual: { other in
                 if let otherValue = other.value as? CGRect {
@@ -1570,17 +1575,20 @@ extension CGRect: AnyValueProviding {
 final class ControlledTransitionProperty {
     final class AnyValue: Equatable, CustomStringConvertible {
         let value: Any
+        let nsValue: NSValue
         let stringValue: () -> String
         let isEqual: (AnyValue) -> Bool
         let interpolate: (AnyValue, CGFloat) -> AnyValue
         
         init(
             value: Any,
+            nsValue: NSValue,
             stringValue: @escaping () -> String,
             isEqual: @escaping (AnyValue) -> Bool,
             interpolate: @escaping (AnyValue, CGFloat) -> AnyValue
         ) {
             self.value = value
+            self.nsValue = nsValue
             self.stringValue = stringValue
             self.isEqual = isEqual
             self.interpolate = interpolate
@@ -1600,32 +1608,82 @@ final class ControlledTransitionProperty {
     }
     
     let layer: CALayer
+    let path: String
     let keyPath: AnyKeyPath
-    private let write: (CALayer, AnyValue) -> Void
     var fromValue: AnyValue
     let toValue: AnyValue
     private(set) var lastValue: AnyValue
     private let completion: ((Bool) -> Void)?
     
-    init<T: Equatable>(layer: CALayer, keyPath: ReferenceWritableKeyPath<CALayer, T>, fromValue: T, toValue: T, completion: ((Bool) -> Void)?) where T: AnyValueProviding {
+    private var animator: AnyObject?
+    
+    init<T: Equatable>(layer: CALayer, path: String, keyPath: ReferenceWritableKeyPath<CALayer, T>, fromValue: T, toValue: T, completion: ((Bool) -> Void)?) where T: AnyValueProviding {
         self.layer = layer
+        self.path = path
         self.keyPath = keyPath
-        self.write = { layer, value in
-            layer[keyPath: keyPath] = value.value as! T
-        }
         self.fromValue = fromValue.anyValue
         self.toValue = toValue.anyValue
         self.lastValue = self.fromValue
         self.completion = completion
+        
+        if #available(iOS 10.0, *) {
+            layer[keyPath: keyPath] = fromValue
+            let animator = UIViewPropertyAnimator(duration: 1.0, curve: .linear, animations: {
+                layer[keyPath: keyPath] = toValue
+            })
+            self.animator = animator
+            animator.pauseAnimation()
+            layer[keyPath: keyPath] = toValue
+        }
+        
+        self.update(at: 0.0)
+    }
+    
+    deinit {
+        if #available(iOS 10.0, *) {
+            if let animator = self.animator as? UIViewPropertyAnimator {
+                animator.stopAnimation(true)
+                self.animator = nil
+            }
+        }
     }
     
     func update(at fraction: CGFloat) {
         let value = self.fromValue.interpolate(toValue, fraction)
         self.lastValue = value
-        self.write(self.layer, value)
+        //self.write(self.layer, value)
+        
+        if #available(iOS 10.0, *) {
+            if let animator = self.animator as? UIViewPropertyAnimator {
+                animator.fractionComplete = fraction
+            }
+        }
+        
+        /*let animation = CABasicAnimation()
+        animation.speed = 0.0
+        animation.duration = 1.0
+        animation.fillMode = .both
+        animation.fromValue = value.nsValue
+        animation.toValue = self.toValue.nsValue
+        animation.keyPath = self.path
+        if let previousAnimation = self.layer.animation(forKey: self.animationKey) {
+            self.layer.removeAnimation(forKey: self.animationKey)
+            let _ = previousAnimation
+        }
+        self.layer.add(animation, forKey: self.animationKey)*/
     }
     
     func complete(atEnd: Bool) {
+        if #available(iOS 10.0, *) {
+            if let animator = self.animator as? UIViewPropertyAnimator {
+                animator.stopAnimation(true)
+                /*if atEnd {
+                    animator.finishAnimation(at: .current)
+                }*/
+                self.animator = nil
+            }
+        }
+        
         self.completion?(atEnd)
     }
 }
@@ -1713,40 +1771,58 @@ public final class ControlledTransition {
         }
         
         public func updateAlpha(layer: CALayer, alpha: CGFloat, completion: ((Bool) -> Void)?) {
+            let fromValue = layer.presentation()?.opacity ?? layer.opacity
+            //layer.opacity = Float(alpha)
             self.add(animation: ControlledTransitionProperty(
                 layer: layer,
+                path: "opacity",
                 keyPath: \.opacity,
-                fromValue: layer.opacity,
+                fromValue: fromValue,
                 toValue: Float(alpha),
                 completion: completion
             ))
         }
         
         public func updatePosition(layer: CALayer, position: CGPoint, completion: ((Bool) -> Void)?) {
+            let fromValue = layer.presentation()?.position ?? layer.position
+            //layer.position = position
             self.add(animation: ControlledTransitionProperty(
                 layer: layer,
+                path: "position",
                 keyPath: \.position,
-                fromValue: layer.position,
+                fromValue: fromValue,
                 toValue: position,
                 completion: completion
             ))
         }
         
         public func updateBounds(layer: CALayer, bounds: CGRect, completion: ((Bool) -> Void)?) {
+            let fromValue = layer.presentation()?.bounds ?? layer.bounds
+            //layer.bounds = bounds
             self.add(animation: ControlledTransitionProperty(
                 layer: layer,
+                path: "bounds",
                 keyPath: \.bounds,
-                fromValue: layer.bounds,
+                fromValue: fromValue,
                 toValue: bounds,
                 completion: completion
             ))
         }
         
         public func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)?) {
+            if layer.frame == frame {
+                return
+            }
+            let fromValue = layer.presentation()?.frame ?? layer.frame
+            if let presentation = layer.presentation(), presentation.frame != layer.frame {
+                assert(true)
+            }
+            //layer.frame = frame
             self.add(animation: ControlledTransitionProperty(
                 layer: layer,
+                path: "frame",
                 keyPath: \.frame,
-                fromValue: layer.frame,
+                fromValue: fromValue,
                 toValue: frame,
                 completion: completion
             ))
