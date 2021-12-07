@@ -74,7 +74,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, value)
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
         }
     }
 
@@ -292,6 +292,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         isReplyThread = true
                     }
                     
+                    let dateLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
+                    dateLayoutInput = .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message), preferAdditionalInset: false))
+                    
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: item.context,
                         presentationData: item.presentationData,
@@ -299,7 +302,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: ChatMessageDateAndStatusNode.ReactionSettings(preferAdditionalInset: false)),
+                        layoutInput: dateLayoutInput,
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
                         reactions: dateReactions,

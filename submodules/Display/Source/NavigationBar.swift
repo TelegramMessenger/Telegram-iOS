@@ -251,6 +251,27 @@ public final class NavigationBackgroundNode: ASDisplayNode {
             effectView.clipsToBounds = !cornerRadius.isZero
         }
     }
+    
+    public func update(size: CGSize, cornerRadius: CGFloat = 0.0, animator: ControlledTransitionAnimator) {
+        self.validLayout = (size, cornerRadius)
+
+        let contentFrame = CGRect(origin: CGPoint(), size: size)
+        animator.updateFrame(layer: self.backgroundNode.layer, frame: contentFrame, completion: nil)
+        if let effectView = self.effectView, effectView.frame != contentFrame {
+            animator.updateFrame(layer: effectView.layer, frame: contentFrame, completion: nil)
+            if let sublayers = effectView.layer.sublayers {
+                for sublayer in sublayers {
+                    animator.updateFrame(layer: sublayer, frame: contentFrame, completion: nil)
+                }
+            }
+        }
+
+        animator.updateCornerRadius(layer: self.backgroundNode.layer, cornerRadius: cornerRadius, completion: nil)
+        if let effectView = self.effectView {
+            animator.updateCornerRadius(layer: effectView.layer, cornerRadius: cornerRadius, completion: nil)
+            effectView.clipsToBounds = !cornerRadius.isZero
+        }
+    }
 }
 
 open class NavigationBar: ASDisplayNode {

@@ -46,7 +46,7 @@ private final class ChatMessageBubbleClippingNode: ASDisplayNode {
     }
 }
 
-private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)], Bool) {
+private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)], Bool, Bool) {
     var result: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)] = []
     var skipText = false
     var messageWithCaptionToAdd: (Message, ChatMessageEntryAttributes)?
@@ -56,10 +56,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     var previousItemIsFile = false
     var hasFiles = false
     
+    var needReactions = true
+    
     outer: for (message, itemAttributes) in item.content {
         for attribute in message.attributes {
             if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
                 result.append((message, ChatMessageRestrictedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                needReactions = false
                 break outer
             }
         }
@@ -86,6 +89,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     isFile = true
                     hasFiles = true
                     result.append((message, ChatMessageFileBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: neighborSpacing)))
+                    needReactions = false
                 }
             } else if let action = media as? TelegramMediaAction {
                 isAction = true
@@ -94,26 +98,33 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 } else {
                     result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 }
+                needReactions = false
             } else if let _ = media as? TelegramMediaMap {
                 result.append((message, ChatMessageMapBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
             } else if let _ = media as? TelegramMediaGame {
                 skipText = true
                 result.append((message, ChatMessageGameBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                needReactions = false
                 break inner
             } else if let _ = media as? TelegramMediaInvoice {
                 skipText = true
                 result.append((message, ChatMessageInvoiceBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                needReactions = false
                 break inner
             } else if let _ = media as? TelegramMediaContact {
                 result.append((message, ChatMessageContactBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                needReactions = false
             } else if let _ = media as? TelegramMediaExpiredContent {
                 result.removeAll()
                 result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
-                return (result, false)
+                needReactions = false
+                return (result, false, false)
             } else if let _ = media as? TelegramMediaPoll {
                 result.append((message, ChatMessagePollBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                needReactions = false
             } else if let _ = media as? TelegramMediaUnsupported {
                 isUnsupportedMedia = true
+                needReactions = false
             }
             previousItemIsFile = isFile
         }
@@ -130,6 +141,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     skipText = true
                 } else {
                     result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: isFile ? .condensed : .default)))
+                    needReactions = false
                 }
             } else {
                 if case .group = item.content {
@@ -142,6 +154,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             if let webpage = media as? TelegramMediaWebpage {
                 if case .Loaded = webpage.content {
                     result.append((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                    needReactions = false
                 }
                 break inner
             }
@@ -151,34 +164,39 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             result.removeAll()
 
             result.append((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+            needReactions = false
         }
         
         if isUnsupportedMedia {
             result.append((message, ChatMessageUnsupportedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+            needReactions = false
         }
     }
     
     if let (messageWithCaptionToAdd, itemAttributes) = messageWithCaptionToAdd {
         result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+        needReactions = false
     }
     
     if let additionalContent = item.additionalContent {
         switch additionalContent {
             case let .eventLogPreviousMessage(previousMessage):
                 result.append((previousMessage, ChatMessageEventLogPreviousMessageContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                needReactions = false
             case let .eventLogPreviousDescription(previousMessage):
                 result.append((previousMessage, ChatMessageEventLogPreviousDescriptionContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                needReactions = false
             case let .eventLogPreviousLink(previousMessage):
                 result.append((previousMessage, ChatMessageEventLogPreviousLinkContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                needReactions = false
         }
     }
     
     let firstMessage = item.content.firstMessage
     
-    if let reactionsAttribute = mergedMessageReactions(attributes: firstMessage.attributes), !reactionsAttribute.reactions.isEmpty {
-        if result.last?.1 == ChatMessageWebpageBubbleContentNode.self || result.last?.1 == ChatMessagePollBubbleContentNode.self || result.last?.1 == ChatMessageContactBubbleContentNode.self {
-            result.append((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
-        }
+    let reactionsAreInline = shouldDisplayInlineDateReactions(message: firstMessage)
+    if reactionsAreInline {
+        needReactions = false
     }
     
     if !isAction && !Namespaces.Message.allScheduled.contains(firstMessage.id.namespace) {
@@ -222,12 +240,25 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         }
     }
     
+    if !reactionsAreInline, let reactionsAttribute = mergedMessageReactions(attributes: firstMessage.attributes), !reactionsAttribute.reactions.isEmpty {
+        if result.last?.1 == ChatMessageWebpageBubbleContentNode.self ||
+           result.last?.1 == ChatMessagePollBubbleContentNode.self ||
+           result.last?.1 == ChatMessageContactBubbleContentNode.self {
+            result.append((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
+            needReactions = false
+        } else if result.last?.1 == ChatMessageCommentFooterContentNode.self {
+            result.insert((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)), at: result.count - 1)
+            needReactions = false
+        }
+    }
+    
     var needSeparateContainers = false
     if case .group = item.content, hasFiles {
         needSeparateContainers = true
+        needReactions = false
     }
     
-    return (result, needSeparateContainers)
+    return (result, needSeparateContainers, needReactions)
 }
 
 private let chatMessagePeerIdColors: [UIColor] = [
@@ -428,6 +459,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     private(set) var contentNodes: [ChatMessageBubbleContentNode] = []
     private var mosaicStatusNode: ChatMessageDateAndStatusNode?
     private var actionButtonsNode: ChatMessageActionButtonsNode?
+    private var reactionButtonsNode: ChatMessageReactionButtonsNode?
     
     private var shareButtonNode: ChatMessageShareButton?
     
@@ -890,6 +922,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let forwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         let replyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
+        let reactionButtonsLayout = ChatMessageReactionButtonsNode.asyncLayout(self.reactionButtonsNode)
         
         let mosaicStatusLayout = ChatMessageDateAndStatusNode.asyncLayout(self.mosaicStatusNode)
         
@@ -911,6 +944,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 forwardInfoLayout: forwardInfoLayout,
                 replyInfoLayout: replyInfoLayout,
                 actionButtonsLayout: actionButtonsLayout,
+                reactionButtonsLayout: reactionButtonsLayout,
                 mosaicStatusLayout: mosaicStatusLayout,
                 layoutConstants: layoutConstants,
                 currentItem: currentItem,
@@ -926,7 +960,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
-        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
+        actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
+        reactionButtonsLayout: (ChatMessageReactionButtonsNode.Arguments) -> (minWidth: CGFloat, layout: (CGFloat) -> (size: CGSize, apply: (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)),
         mosaicStatusLayout: (ChatMessageDateAndStatusNode.Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)),
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
@@ -1160,7 +1195,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var contentPropertiesAndPrepareLayouts: [(Message, Bool, ChatMessageEntryAttributes, BubbleItemAttributes, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))))] = []
         var addedContentNodes: [(Message, Bool, ChatMessageBubbleContentNode)]?
         
-        let (contentNodeMessagesAndClasses, needSeparateContainers) = contentNodeMessagesAndClassesForItem(item)
+        let (contentNodeMessagesAndClasses, needSeparateContainers, needReactions) = contentNodeMessagesAndClassesForItem(item)
         for contentNodeItemValue in contentNodeMessagesAndClasses {
             let contentNodeItem = contentNodeItemValue as (message: Message, type: AnyClass, attributes: ChatMessageEntryAttributes, bubbleAttributes: BubbleItemAttributes)
 
@@ -1238,9 +1273,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         var contentPropertiesAndLayouts: [(CGSize?, ChatMessageBubbleContentProperties, ChatMessageBubblePreparePosition, BubbleItemAttributes, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void)), UInt32?, Bool?)] = []
-        
-        let topNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedTop.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
-        let bottomNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedBottom.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
         
         var backgroundHiding: ChatMessageBubbleContentBackgroundHiding?
         var hasSolidWallpaper = false
@@ -1381,6 +1413,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             
             index += 1
+        }
+        
+        let topNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedTop.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
+        var bottomNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedBottom.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
+        
+        let bubbleReactions: ReactionsMessageAttribute
+        if needReactions {
+            bubbleReactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(reactions: [], recentPeers: [])
+        } else {
+            bubbleReactions = ReactionsMessageAttribute(reactions: [], recentPeers: [])
+        }
+        if !bubbleReactions.reactions.isEmpty {
+            bottomNodeMergeStatus = .Both
         }
         
         var currentCredibilityIconImage: UIImage?
@@ -1538,7 +1583,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     impressionCount: viewCount,
                     dateText: dateText,
                     type: statusType,
-                    layoutInput: .standalone,
+                    layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                     constrainedSize: CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude),
                     availableReactions: item.associatedData.availableReactions,
                     reactions: dateReactions,
@@ -1714,11 +1759,25 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         var maxContentWidth: CGFloat = headerSize.width
         
-        var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
+        var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode))?
         if let replyMarkup = replyMarkup {
             let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, replyMarkup, item.message, maximumNodeWidth)
             maxContentWidth = max(maxContentWidth, minWidth)
             actionButtonsFinalize = buttonsLayout
+        }
+        
+        var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?
+        if !bubbleReactions.reactions.isEmpty {
+            let (minWidth, buttonsLayout) = reactionButtonsLayout(ChatMessageReactionButtonsNode.Arguments(
+                context: item.context,
+                presentationData: item.presentationData,
+                availableReactions: item.associatedData.availableReactions,
+                reactions: bubbleReactions,
+                isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
+                constrainedWidth: maximumNodeWidth
+            ))
+            maxContentWidth = max(maxContentWidth, minWidth)
+            reactionButtonsFinalize = buttonsLayout
         }
         
         for i in 0 ..< contentPropertiesAndLayouts.count {
@@ -1744,7 +1803,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     case let .None(status):
                         if position.contains(.top) && position.contains(.left) {
                             switch status {
-                            case .Left:
+                            case .Left, .Both:
                                 topLeft = .mergedBubble
                             case .Right:
                                 topLeft = .none(tail: false)
@@ -1759,7 +1818,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             switch status {
                             case .Left:
                                 topRight = .none(tail: false)
-                            case .Right:
+                            case .Right, .Both:
                                 topRight = .mergedBubble
                             case .None:
                                 topRight = .none(tail: false)
@@ -1795,7 +1854,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         case let .None(status):
                             if position.contains(.bottom) && position.contains(.left) {
                                 switch status {
-                                case .Left:
+                                case .Left, .Both:
                                     bottomLeft = .mergedBubble
                                 case .Right:
                                     bottomLeft = .none(tail: false)
@@ -1814,7 +1873,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                 switch status {
                                 case .Left:
                                     bottomRight = .none(tail: false)
-                                case .Right:
+                                case .Right, .Both:
                                     bottomRight = .mergedBubble
                                 case let .None(tailStatus):
                                     if case .Outgoing = tailStatus {
@@ -1970,9 +2029,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         contentSize.height += totalContentNodesHeight
         
-        var actionButtonsSizeAndApply: (CGSize, (Bool) -> ChatMessageActionButtonsNode)?
+        var actionButtonsSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)?
         if let actionButtonsFinalize = actionButtonsFinalize {
             actionButtonsSizeAndApply = actionButtonsFinalize(maxContentWidth)
+        }
+        
+        var reactionButtonsSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)?
+        if let reactionButtonsFinalize = reactionButtonsFinalize {
+            reactionButtonsSizeAndApply = reactionButtonsFinalize(maxContentWidth)
         }
         
         let minimalContentSize: CGSize
@@ -2007,6 +2071,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let bubbleContentWidth = maxContentWidth - layoutConstants.bubble.edgeInset * 2.0 - (layoutConstants.bubble.contentInsets.right + layoutConstants.bubble.contentInsets.left)
 
         var layoutSize = CGSize(width: params.width, height: layoutBubbleSize.height)
+        if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
+            layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height
+        }
         if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
             layoutSize.height += actionButtonsSizeAndApply.0.height
         }
@@ -2032,7 +2099,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if headerSize.height.isZero && contentNodePropertiesAndFinalize.first?.0.forceFullCorners ?? false {
                 updatedMergedBottom = .none
             }
-            if actionButtonsSizeAndApply != nil {
+            if actionButtonsSizeAndApply != nil || reactionButtonsSizeAndApply != nil {
                 updatedMergedTop = .fullyMerged
             }
         }
@@ -2047,6 +2114,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 forwardAuthorSignature: forwardAuthorSignature,
                 accessibilityData: accessibilityData,
                 actionButtonsSizeAndApply: actionButtonsSizeAndApply,
+                reactionButtonsSizeAndApply: reactionButtonsSizeAndApply,
                 updatedMergedTop: updatedMergedTop,
                 updatedMergedBottom: updatedMergedBottom,
                 hideBackground: hideBackground,
@@ -2087,7 +2155,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         forwardSource: Peer?,
         forwardAuthorSignature: String?,
         accessibilityData: ChatMessageAccessibilityData,
-        actionButtonsSizeAndApply: (CGSize, (Bool) -> ChatMessageActionButtonsNode)?,
+        actionButtonsSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)?,
+        reactionButtonsSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)?,
         updatedMergedTop: ChatMessageMerge,
         updatedMergedBottom: ChatMessageMerge,
         hideBackground: Bool,
@@ -2141,7 +2210,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         var forceBackgroundSide = false
-        if actionButtonsSizeAndApply != nil {
+        if actionButtonsSizeAndApply != nil || reactionButtonsSizeAndApply != nil {
             forceBackgroundSide = true
         } else if case .semanticallyMerged = updatedMergedTop {
             forceBackgroundSide = true
@@ -2632,14 +2701,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         if case .System = animation, !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
-                /*strongSelf.backgroundFrameTransition = (strongSelf.backgroundNode.frame, backgroundFrame)
-                if let type = strongSelf.backgroundNode.type {
-                    if case .none = type {
-                    } else {
-                        strongSelf.clippingNode.clipsToBounds = true
-                    }
-                }*/
-                
                 animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
                 animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
                 strongSelf.clippingNode.clipsToBounds = true
@@ -2651,6 +2712,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
                 animation.animator.updateFrame(layer: strongSelf.backgroundWallpaperNode.layer, frame: backgroundFrame, completion: nil)
                 strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: animation.transition)
+                strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: animation.transition)
                 
                 if let type = strongSelf.backgroundNode.type {
                     var incomingOffset: CGFloat = 0.0
@@ -2669,11 +2731,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 strongSelf.messageAccessibilityArea.frame = backgroundFrame
-                
-                /*if let item = strongSelf.item, let shareButtonNode = strongSelf.shareButtonNode {
-                    let buttonSize = shareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
-                    animation.animator.updateFrame(layer: shareButtonNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize), completion: nil)
-                }*/
             }
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let currentBackgroundFrame = strongSelf.backgroundNode.frame
@@ -2681,10 +2738,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 animation.animator.updateFrame(layer: shareButtonNode.layer, frame: CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize), completion: nil)
             }
         } else {
-            if let _ = strongSelf.backgroundFrameTransition {
+            /*if let _ = strongSelf.backgroundFrameTransition {
                 strongSelf.animateFrameTransition(1.0, backgroundFrame.size.height)
                 strongSelf.backgroundFrameTransition = nil
-            }
+            }*/
             strongSelf.messageAccessibilityArea.frame = backgroundFrame
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
@@ -2717,17 +2774,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         strongSelf.selectionNode?.frame = selectionFrame
         strongSelf.selectionNode?.updateLayout(size: selectionFrame.size, leftInset: params.leftInset)
         
+        var reactionButtonsOffset: CGFloat = 0.0
+        
         if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
-            var animated = false
-            if let _ = strongSelf.actionButtonsNode {
-                if case .System = animation {
-                    animated = true
-                }
-            }
-            let actionButtonsNode = actionButtonsSizeAndApply.1(animated)
-            let previousFrame = actionButtonsNode.frame
+            let actionButtonsNode = actionButtonsSizeAndApply.1(animation)
             let actionButtonsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.maxY), size: actionButtonsSizeAndApply.0)
-            actionButtonsNode.frame = actionButtonsFrame
             if actionButtonsNode !== strongSelf.actionButtonsNode {
                 strongSelf.actionButtonsNode = actionButtonsNode
                 actionButtonsNode.buttonPressed = { [weak strongSelf] button in
@@ -2741,14 +2792,45 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 strongSelf.insertSubnode(actionButtonsNode, belowSubnode: strongSelf.messageAccessibilityArea)
+                actionButtonsNode.frame = actionButtonsFrame
             } else {
-                if case let .System(duration, _) = animation {
-                    actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: timingFunction)
-                }
+                animation.animator.updateFrame(layer: actionButtonsNode.layer, frame: actionButtonsFrame, completion: nil)
             }
+            
+            reactionButtonsOffset += actionButtonsSizeAndApply.0.height
         } else if let actionButtonsNode = strongSelf.actionButtonsNode {
             actionButtonsNode.removeFromSupernode()
             strongSelf.actionButtonsNode = nil
+        }
+        
+        if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
+            let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
+            let reactionButtonsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.maxY + reactionButtonsOffset + 4.0), size: reactionButtonsSizeAndApply.0)
+            if reactionButtonsNode !== strongSelf.reactionButtonsNode {
+                strongSelf.reactionButtonsNode = reactionButtonsNode
+                reactionButtonsNode.reactionSelected = { [weak strongSelf] value in
+                    guard let strongSelf = strongSelf, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                }
+                reactionButtonsNode.frame = reactionButtonsFrame
+                strongSelf.addSubnode(reactionButtonsNode)
+                if animation.isAnimated {
+                    reactionButtonsNode.animateIn(animation: animation)
+                }
+            } else {
+                animation.animator.updateFrame(layer: reactionButtonsNode.layer, frame: reactionButtonsFrame, completion: nil)
+            }
+        } else if let reactionButtonsNode = strongSelf.reactionButtonsNode {
+            strongSelf.reactionButtonsNode = nil
+            if animation.isAnimated {
+                reactionButtonsNode.animateOut(animation: animation, completion: { [weak reactionButtonsNode] in
+                    reactionButtonsNode?.removeFromSupernode()
+                })
+            } else {
+                reactionButtonsNode.removeFromSupernode()
+            }
         }
         
         let previousContextContentFrame = strongSelf.mainContextSourceNode.contentRect
@@ -2876,8 +2958,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     case let .optionalAction(f):
                         f()
                     case let .openContextMenu(tapMessage, selectAll, subFrame):
-                        if canAddMessageReactions(message: tapMessage), let defaultReaction = item.associatedData.defaultReaction {
-                            item.controllerInteraction.updateMessageReaction(tapMessage, defaultReaction)
+                        if canAddMessageReactions(message: tapMessage) {
+                            item.controllerInteraction.updateMessageReaction(tapMessage, .default)
                         } else {
                             item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
                         }
@@ -3713,6 +3795,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     }
     
     override func targetReactionView(value: String) -> UIView? {
+        if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
+            return result
+        }
         for contentNode in self.contentNodes {
             if let result = contentNode.reactionTargetView(value: value) {
                 return result

@@ -51,6 +51,13 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
         }
+        
+        self.interactiveImageNode.updateMessageReaction = { [weak self] message, value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.updateMessageReaction(message, value)
+        }
 
         self.interactiveImageNode.activatePinch = { [weak self] sourceNode in
             guard let strongSelf = self, let _ = strongSelf.item else {

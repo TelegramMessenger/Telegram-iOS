@@ -37,6 +37,7 @@ enum ChatMessageBubbleMergeStatus {
     case None(ChatMessageBubbleNoneMergeStatus)
     case Left
     case Right
+    case Both
 }
 
 enum ChatMessageBubbleRelativePosition {

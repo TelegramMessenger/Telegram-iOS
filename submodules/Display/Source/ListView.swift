@@ -1585,7 +1585,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if updateAnimationIsCrossfade {
                 updateAnimation = .Crossfade
             } else if updateAnimationIsAnimated {
-                let transition = ControlledTransition(duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: .spring)
+                let transition = ControlledTransition(duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: .spring, interactive: true)
                 controlledTransition = transition
                 updateAnimation = .System(duration: insertionAnimationDuration * UIView.animationDurationFactor(), transition: transition)
             } else {
@@ -2048,7 +2048,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         var controlledTransition: ControlledTransition?
                         let updateAnimation: ListViewItemUpdateAnimation
                         if animated {
-                            let transition = ControlledTransition(duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: .spring)
+                            let transition = ControlledTransition(duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: .spring, interactive: true)
                             controlledTransition = transition
                             updateAnimation = .System(duration: insertionAnimationDuration * UIView.animationDurationFactor(), transition: transition)
                         } else {

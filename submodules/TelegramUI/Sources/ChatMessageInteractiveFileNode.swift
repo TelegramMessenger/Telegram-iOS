@@ -455,7 +455,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: iconFrame == nil ? 1000.0 : controlAreaWidth, reactionSettings: ChatMessageDateAndStatusNode.ReactionSettings(preferAdditionalInset: true)),
+                        layoutInput: .trailingContent(contentWidth: iconFrame == nil ? 1000.0 : controlAreaWidth, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: message), preferAdditionalInset: !shouldDisplayInlineDateReactions(message: message))),
                         constrainedSize: constrainedSize,
                         availableReactions: associatedData.availableReactions,
                         reactions: dateReactions,
@@ -1132,8 +1132,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.dateAndStatusNode.supernode != nil, let result = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) {
-            return result
+        if self.dateAndStatusNode.supernode != nil {
+            if let result = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) {
+                return result
+            }
+            if !self.dateAndStatusNode.frame.height.isZero {
+                if self.dateAndStatusNode.frame.contains(point) {
+                    return nil
+                }
+            }
         }
         return super.hitTest(point, with: event)
     }

@@ -27,6 +27,9 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                         case .Right:
                             topLeftCorner = .Corner(normalRadius)
                             topRightCorner = .Corner(mergedRadius)
+                        case .Both:
+                            topLeftCorner = .Corner(mergedRadius)
+                            topRightCorner = .Corner(mergedRadius)
                     }
             }
         case let .mosaic(position, _):
@@ -65,6 +68,9 @@ func chatMessageBubbleImageContentCorners(relativeContentPosition position: Chat
                         case .Left:
                             bottomLeftCorner = .Corner(mergedRadius)
                             bottomRightCorner = .Corner(normalRadius)
+                        case .Both:
+                            bottomLeftCorner = .Corner(mergedRadius)
+                            bottomRightCorner = .Corner(mergedRadius)
                         case let .None(status):
                             let bubbleInsets: UIEdgeInsets
                             if case .color = chatPresentationData.theme.wallpaper {

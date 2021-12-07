@@ -1074,7 +1074,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             }
-        }, updateMessageReaction: { [weak self] initialMessage, value in
+        }, updateMessageReaction: { [weak self] initialMessage, reaction in
             guard let strongSelf = self else {
                 return
             }
@@ -1088,70 +1088,111 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            var updatedReaction: String? = value
-            for attribute in message.attributes {
-                if let attribute = attribute as? ReactionsMessageAttribute {
-                    for reaction in attribute.reactions {
-                        if reaction.value == updatedReaction {
-                            if reaction.isSelected {
+            strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                guard let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item else {
+                    return
+                }
+                guard item.message.id == message.id else {
+                    return
+                }
+                
+                var updatedReaction: String?
+                switch reaction {
+                case .default:
+                    updatedReaction = item.associatedData.defaultReaction
+                case let .reaction(value):
+                    updatedReaction = value
+                }
+                
+                var removedReaction: String?
+                
+                for attribute in message.attributes {
+                    if let attribute = attribute as? ReactionsMessageAttribute {
+                        for listReaction in attribute.reactions {
+                            switch reaction {
+                            case .default:
+                                if listReaction.isSelected {
+                                    updatedReaction = nil
+                                    removedReaction = listReaction.value
+                                }
+                            case let .reaction(value):
+                                if listReaction.value == value && listReaction.isSelected {
+                                    updatedReaction = nil
+                                    removedReaction = value
+                                }
+                            }
+                        }
+                    } else if let attribute = attribute as? PendingReactionsMessageAttribute {
+                        if attribute.value != nil {
+                            switch reaction {
+                            case .default:
                                 updatedReaction = nil
+                                removedReaction = attribute.value
+                            case let .reaction(value):
+                                if attribute.value == value {
+                                    updatedReaction = nil
+                                    removedReaction = value
+                                }
                             }
                         }
                     }
-                } else if let attribute = attribute as? PendingReactionsMessageAttribute {
-                    if let current = attribute.value, current == updatedReaction {
-                        updatedReaction = nil
-                    }
                 }
-            }
-            
-            if updatedReaction != nil {
-                strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
-                    if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
-                        if item.message.id == message.id {
-                            itemNode.awaitingAppliedReaction = (updatedReaction, { [weak itemNode] in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                if let updatedReaction = updatedReaction, let itemNode = itemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) {
-                                    for reaction in availableReactions.reactions {
-                                        if reaction.value == updatedReaction {
-                                            let standaloneReactionAnimation = StandaloneReactionAnimation(context: strongSelf.context, theme: strongSelf.presentationData.theme, reaction: ReactionContextItem(
-                                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
-                                                stillAnimation: reaction.selectAnimation,
-                                                listAnimation: reaction.activateAnimation,
-                                                applicationAnimation: reaction.effectAnimation
-                                            ))
-                                            
-                                            strongSelf.currentStandaloneReactionAnimation = standaloneReactionAnimation
-                                            strongSelf.currentStandaloneReactionItemNode = itemNode
-                                            
-                                            strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                                            standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
-                                            standaloneReactionAnimation.animateReactionSelection(targetView: targetView, hideNode: true, completion: { [weak standaloneReactionAnimation] in
-                                                standaloneReactionAnimation?.removeFromSupernode()
-                                            })
-                                            
-                                            break
-                                        }
-                                    }
+                
+                if let updatedReaction = updatedReaction {
+                    if strongSelf.selectPollOptionFeedback == nil {
+                        strongSelf.selectPollOptionFeedback = HapticFeedback()
+                    }
+                    strongSelf.selectPollOptionFeedback?.tap()
+                    
+                    itemNode.awaitingAppliedReaction = (updatedReaction, { [weak itemNode] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let itemNode = itemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) {
+                            for reaction in availableReactions.reactions {
+                                if reaction.value == updatedReaction {
+                                    let standaloneReactionAnimation = StandaloneReactionAnimation(context: strongSelf.context, theme: strongSelf.presentationData.theme, reaction: ReactionContextItem(
+                                        reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                        stillAnimation: reaction.selectAnimation,
+                                        listAnimation: reaction.activateAnimation,
+                                        applicationAnimation: reaction.effectAnimation
+                                    ))
                                     
-                                    /*targetView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, damping: 90.0)
+                                    strongSelf.currentStandaloneReactionAnimation = standaloneReactionAnimation
+                                    strongSelf.currentStandaloneReactionItemNode = itemNode
                                     
-                                    if let strongSelf = self {
-                                        if strongSelf.selectPollOptionFeedback == nil {
-                                            strongSelf.selectPollOptionFeedback = HapticFeedback()
-                                        }
-                                        strongSelf.selectPollOptionFeedback?.tap()
-                                    }*/
+                                    strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                    standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
+                                    standaloneReactionAnimation.animateReactionSelection(targetView: targetView, hideNode: true, completion: { [weak standaloneReactionAnimation] in
+                                        standaloneReactionAnimation?.removeFromSupernode()
+                                    })
+                                    
+                                    break
                                 }
-                            })
+                            }
+                        }
+                    })
+                } else if let removedReaction = removedReaction, let targetView = itemNode.targetReactionView(value: removedReaction), shouldDisplayInlineDateReactions(message: message) {
+                    var hideRemovedReaction: Bool = false
+                    if let reactions = mergedMessageReactions(attributes: message.attributes) {
+                        for reaction in reactions.reactions {
+                            if reaction.value == removedReaction {
+                                hideRemovedReaction = reaction.count == 1
+                                break
+                            }
                         }
                     }
+                    
+                    let standaloneDismissAnimation = StandaloneDismissReactionAnimation()
+                    standaloneDismissAnimation.frame = strongSelf.chatDisplayNode.bounds
+                    strongSelf.chatDisplayNode.addSubnode(standaloneDismissAnimation)
+                    standaloneDismissAnimation.animateReactionDismiss(sourceView: targetView, hideNode: hideRemovedReaction, completion: { [weak standaloneDismissAnimation] in
+                        standaloneDismissAnimation?.removeFromSupernode()
+                    })
                 }
+                
+                let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: updatedReaction).start()
             }
-            
-            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: updatedReaction).start()
         }, activateMessagePinch: { [weak self] sourceNode in
             guard let strongSelf = self else {
                 return

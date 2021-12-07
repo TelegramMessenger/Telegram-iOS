@@ -363,7 +363,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             var refineContentImageLayout: ((CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> ChatMessageInteractiveMediaNode)))?
             var refineContentFileLayout: ((CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation) -> ChatMessageInteractiveFileNode)))?
 
-            var contentInstantVideoSizeAndApply: (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> ChatMessageInteractiveInstantVideoNode)?
+            var contentInstantVideoSizeAndApply: (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ListViewItemUpdateAnimation) -> ChatMessageInteractiveInstantVideoNode)?
             
             let string = NSMutableAttributedString()
             var notEmpty = false
@@ -634,7 +634,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: textStatusType,
-                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: nil),
+                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: shouldDisplayInlineDateReactions(message: message) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
                         constrainedSize: textConstrainedSize,
                         availableReactions: associatedData.availableReactions,
                         reactions: dateReactions,
@@ -797,11 +797,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         adjustedLineHeight += statusSizeAndApply.0.height
                     }
                     
-                    /*var adjustedStatusFrame: CGRect?
-                    if statusInText, let statusFrame = statusFrame {
-                        adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - insets.right, y: statusFrame.origin.y), size: statusFrame.size)
-                    }*/
-                    
                     adjustedBoundingSize.width = max(boundingWidth, adjustedBoundingSize.width)
  
                     return (adjustedBoundingSize, { [weak self] animation, synchronousLoads in
@@ -810,17 +805,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             strongSelf.message = message
                             strongSelf.media = mediaAndFlags?.0
                             strongSelf.theme = presentationData.theme
-                            
-                            var hasAnimation = true
-                            var transition: ContainedViewLayoutTransition = .immediate
-                            switch animation {
-                                case .None, .Crossfade:
-                                    hasAnimation = false
-                                case let .System(duration, _):
-                                    hasAnimation = true
-                                    transition = .animated(duration: duration, curve: .easeInOut)
-                            }
-                            let _ = hasAnimation
                             
                             strongSelf.lineNode.image = lineImage
                             strongSelf.lineNode.frame = CGRect(origin: CGPoint(x: 13.0, y: insets.top), size: CGSize(width: 2.0, height: adjustedLineHeight - insets.top - insets.bottom - 2.0))
@@ -863,6 +847,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                         if let strongSelf = strongSelf {
                                             strongSelf.openMedia?(mode)
                                         }
+                                    }
+                                    contentImageNode.updateMessageReaction = { [weak controllerInteraction] message, value in
+                                        guard let controllerInteraction = controllerInteraction else {
+                                            return
+                                        }
+                                        controllerInteraction.updateMessageReaction(message, value)
                                     }
                                     contentImageNode.visibility = strongSelf.visibility != .none
                                 }
@@ -924,7 +914,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             
                             if let (videoLayout, apply) = contentInstantVideoSizeAndApply {
                                 contentMediaHeight = videoLayout.contentSize.height
-                                let contentInstantVideoNode = apply(.unconstrained(width: boundingWidth - insets.left - insets.right), transition)
+                                let contentInstantVideoNode = apply(.unconstrained(width: boundingWidth - insets.left - insets.right), animation)
                                 if strongSelf.contentInstantVideoNode !== contentInstantVideoNode {
                                     strongSelf.contentInstantVideoNode = contentInstantVideoNode
                                     strongSelf.addSubnode(contentInstantVideoNode)
@@ -1088,6 +1078,24 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 })
             }
         }
+    }
+    
+    func reactionTargetView(value: String) -> UIView? {
+        if !self.statusNode.isHidden {
+            if let result = self.statusNode.reactionView(value: value) {
+                return result
+            }
+        }
+        if let result = self.contentFileNode?.dateAndStatusNode.reactionView(value: value) {
+            return result
+        }
+        if let result = self.contentImageNode?.dateAndStatusNode.reactionView(value: value) {
+            return result
+        }
+        if let result = self.contentInstantVideoNode?.dateAndStatusNode.reactionView(value: value) {
+            return result
+        }
+        return nil
     }
     
     func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {

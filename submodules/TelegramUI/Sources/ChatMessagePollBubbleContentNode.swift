@@ -1072,7 +1072,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: 100.0, reactionSettings: ChatMessageDateAndStatusNode.ReactionSettings(preferAdditionalInset: true)),
+                        layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
                         reactions: dateReactions,
