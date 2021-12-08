@@ -2339,7 +2339,13 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             let itemFrame = self.view.convert(self.itemGrid.frameForItem(layer: itemLayer), from: self.itemGrid.view)
             let proxyNode = ASDisplayNode()
             proxyNode.frame = itemFrame
-            proxyNode.contents = itemLayer.contents
+            if let contents = itemLayer.getContents() {
+                if let image = contents as? UIImage {
+                    proxyNode.contents = image.cgImage
+                } else {
+                    proxyNode.contents = contents
+                }
+            }
             proxyNode.isHidden = true
             self.addSubnode(proxyNode)
 
