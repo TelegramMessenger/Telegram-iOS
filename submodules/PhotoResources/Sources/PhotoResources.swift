@@ -2536,7 +2536,7 @@ public func albumArtThumbnailData(engine: TelegramEngine, thumbnail: ExternalMus
 
 private func albumArtFullSizeDatas(engine: TelegramEngine, thumbnail: ExternalMusicAlbumArtResource, fullSize: ExternalMusicAlbumArtResource, autoFetchFullSize: Bool = true) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
     return engine.resources.custom(
-        id: thumbnail.id.stringRepresentation,
+        id: fullSize.id.stringRepresentation,
         fetch: nil,
         attemptSynchronously: false
     )
