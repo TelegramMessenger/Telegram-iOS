@@ -315,7 +315,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             strongSelf.statusNodeContainer.isHidden = true
                             
                             Queue.concurrentDefaultQueue().async {
-                                if let message = strongSelf.message, !message.isCopyProtected() {
+                                if let message = strongSelf.message, !message.isCopyProtected() && !imageReference.media.flags.contains(.hasStickers) {
                                     strongSelf.recognitionDisposable.set((recognizedContent(postbox: strongSelf.context.account.postbox, image: { return generate(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))?.generateImage() }, messageId: message.id)
                                     |> deliverOnMainQueue).start(next: { [weak self] results in
                                         if let strongSelf = self {
