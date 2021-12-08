@@ -173,10 +173,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
                 self?.emitterNode.view.mask = nil
             })
             self.emitterMaskFillNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
-            
-//            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
-//            transition.updateAlpha(node: self, alpha: 0.0)
-                        
+                                    
             self.isRevealedUpdated(true)
         }
         

@@ -305,7 +305,7 @@
     
     PGPhotoEditorValues *editorValues = (PGPhotoEditorValues *)[item.editingContext adjustmentsForItem:item.editableMediaItem];
     
-    NSString *caption = [item.editingContext captionForItem:item.editableMediaItem];
+    NSAttributedString *caption = [item.editingContext captionForItem:item.editableMediaItem];
     
     CGRect refFrame = CGRectZero;
     UIView *editorReferenceView = [self referenceViewForItem:item frame:&refFrame];
