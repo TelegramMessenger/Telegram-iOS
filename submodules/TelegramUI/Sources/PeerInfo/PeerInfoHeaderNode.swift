@@ -935,6 +935,10 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
     var isWhite: Bool = false {
         didSet {
             if self.isWhite != oldValue {
+                if case .qrCode = self.key, let theme = self.theme {
+                    self.iconNode.image = self.isWhite ? generateTintedImage(image: PresentationResourcesRootController.navigationQrCodeIcon(theme), color: .white) : PresentationResourcesRootController.navigationQrCodeIcon(theme)
+                }
+                
                 self.regularTextNode.isHidden = self.isWhite
                 self.whiteTextNode.isHidden = !self.isWhite
             }
@@ -1011,6 +1015,9 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                     text = ""
                     icon = PresentationResourcesRootController.navigationMoreCircledIcon(presentationData.theme)
                     isGestureEnabled = true
+                case .qrCode:
+                    text = ""
+                    icon = PresentationResourcesRootController.navigationQrCodeIcon(presentationData.theme)
             }
             self.accessibilityLabel = text
             self.containerNode.isGestureEnabled = isGestureEnabled
@@ -1059,6 +1066,7 @@ enum PeerInfoHeaderNavigationButtonKey {
     case editPhoto
     case editVideo
     case more
+    case qrCode
 }
 
 struct PeerInfoHeaderNavigationButtonSpec: Equatable {
@@ -1068,14 +1076,19 @@ struct PeerInfoHeaderNavigationButtonSpec: Equatable {
 
 final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
     private var presentationData: PresentationData?
-    private(set) var buttonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
+    private(set) var leftButtonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
+    private(set) var rightButtonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
     
-    private var currentButtons: [PeerInfoHeaderNavigationButtonSpec] = []
+    private var currentLeftButtons: [PeerInfoHeaderNavigationButtonSpec] = []
+    private var currentRightButtons: [PeerInfoHeaderNavigationButtonSpec] = []
     
     var isWhite: Bool = false {
         didSet {
             if self.isWhite != oldValue {
-                for (_, buttonNode) in self.buttonNodes {
+                for (_, buttonNode) in self.leftButtonNodes {
+                    buttonNode.isWhite = self.isWhite
+                }
+                for (_, buttonNode) in self.rightButtonNodes {
                     buttonNode.isWhite = self.isWhite
                 }
             }
@@ -1084,27 +1097,107 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
     
     var performAction: ((PeerInfoHeaderNavigationButtonKey, ContextReferenceContentNode?, ContextGesture?) -> Void)?
     
-    func update(size: CGSize, presentationData: PresentationData, buttons: [PeerInfoHeaderNavigationButtonSpec], expandFraction: CGFloat, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, presentationData: PresentationData, leftButtons: [PeerInfoHeaderNavigationButtonSpec], rightButtons: [PeerInfoHeaderNavigationButtonSpec], expandFraction: CGFloat, transition: ContainedViewLayoutTransition) {
         let maximumExpandOffset: CGFloat = 14.0
         let expandOffset: CGFloat = -expandFraction * maximumExpandOffset
-        if self.currentButtons != buttons || presentationData.strings !== self.presentationData?.strings {
-            self.currentButtons = buttons
+        
+        if self.currentLeftButtons != leftButtons || presentationData.strings !== self.presentationData?.strings {
+            self.currentLeftButtons = leftButtons
             
-            var nextRegularButtonOrigin = size.width - 16.0
-            var nextExpandedButtonOrigin = size.width - 16.0
-            for spec in buttons.reversed() {
+            var nextRegularButtonOrigin = 16.0
+            var nextExpandedButtonOrigin = 16.0
+            for spec in leftButtons.reversed() {
                 let buttonNode: PeerInfoHeaderNavigationButton
                 var wasAdded = false
-                if let current = self.buttonNodes[spec.key] {
+                if let current = self.leftButtonNodes[spec.key] {
                     buttonNode = current
                 } else {
                     wasAdded = true
                     buttonNode = PeerInfoHeaderNavigationButton()
-                    self.buttonNodes[spec.key] = buttonNode
+                    self.leftButtonNodes[spec.key] = buttonNode
                     self.addSubnode(buttonNode)
                     buttonNode.isWhite = self.isWhite
                     buttonNode.action = { [weak self] _, gesture in
-                        guard let strongSelf = self, let buttonNode = strongSelf.buttonNodes[spec.key] else {
+                        guard let strongSelf = self, let buttonNode = strongSelf.leftButtonNodes[spec.key] else {
+                            return
+                        }
+                        strongSelf.performAction?(spec.key, buttonNode.contextSourceNode, gesture)
+                    }
+                }
+                let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)
+                var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
+                let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
+                nextButtonOrigin += buttonSize.width + 4.0
+                if spec.isForExpandedView {
+                    nextExpandedButtonOrigin = nextButtonOrigin
+                } else {
+                    nextRegularButtonOrigin = nextButtonOrigin
+                }
+                let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
+                if wasAdded {
+                    buttonNode.frame = buttonFrame
+                    buttonNode.alpha = 0.0
+                    transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
+                } else {
+                    transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
+                    transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
+                }
+            }
+            var removeKeys: [PeerInfoHeaderNavigationButtonKey] = []
+            for (key, _) in self.leftButtonNodes {
+                if !leftButtons.contains(where: { $0.key == key }) {
+                    removeKeys.append(key)
+                }
+            }
+            for key in removeKeys {
+                if let buttonNode = self.leftButtonNodes.removeValue(forKey: key) {
+                    buttonNode.removeFromSupernode()
+                }
+            }
+        } else {
+            var nextRegularButtonOrigin = 16.0
+            var nextExpandedButtonOrigin = 16.0
+            for spec in leftButtons.reversed() {
+                if let buttonNode = self.leftButtonNodes[spec.key] {
+                    let buttonSize = buttonNode.bounds.size
+                    var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
+                    let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
+                    nextButtonOrigin += buttonSize.width + 4.0
+                    if spec.isForExpandedView {
+                        nextExpandedButtonOrigin = nextButtonOrigin
+                    } else {
+                        nextRegularButtonOrigin = nextButtonOrigin
+                    }
+                    transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
+                    let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
+                    
+                    var buttonTransition = transition
+                    if case let .animated(duration, curve) = buttonTransition, alphaFactor == 0.0 {
+                        buttonTransition = .animated(duration: duration * 0.25, curve: curve)
+                    }
+                    buttonTransition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
+                }
+            }
+        }
+        
+        if self.currentRightButtons != rightButtons || presentationData.strings !== self.presentationData?.strings {
+            self.currentRightButtons = rightButtons
+            
+            var nextRegularButtonOrigin = size.width - 16.0
+            var nextExpandedButtonOrigin = size.width - 16.0
+            for spec in rightButtons.reversed() {
+                let buttonNode: PeerInfoHeaderNavigationButton
+                var wasAdded = false
+                if let current = self.rightButtonNodes[spec.key] {
+                    buttonNode = current
+                } else {
+                    wasAdded = true
+                    buttonNode = PeerInfoHeaderNavigationButton()
+                    self.rightButtonNodes[spec.key] = buttonNode
+                    self.addSubnode(buttonNode)
+                    buttonNode.isWhite = self.isWhite
+                    buttonNode.action = { [weak self] _, gesture in
+                        guard let strongSelf = self, let buttonNode = strongSelf.rightButtonNodes[spec.key] else {
                             return
                         }
                         strongSelf.performAction?(spec.key, buttonNode.contextSourceNode, gesture)
@@ -1130,21 +1223,21 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
                 }
             }
             var removeKeys: [PeerInfoHeaderNavigationButtonKey] = []
-            for (key, _) in self.buttonNodes {
-                if !buttons.contains(where: { $0.key == key }) {
+            for (key, _) in self.rightButtonNodes {
+                if !rightButtons.contains(where: { $0.key == key }) {
                     removeKeys.append(key)
                 }
             }
             for key in removeKeys {
-                if let buttonNode = self.buttonNodes.removeValue(forKey: key) {
+                if let buttonNode = self.rightButtonNodes.removeValue(forKey: key) {
                     buttonNode.removeFromSupernode()
                 }
             }
         } else {
             var nextRegularButtonOrigin = size.width - 16.0
             var nextExpandedButtonOrigin = size.width - 16.0
-            for spec in buttons.reversed() {
-                if let buttonNode = self.buttonNodes[spec.key] {
+            for spec in rightButtons.reversed() {
+                if let buttonNode = self.rightButtonNodes[spec.key] {
                     let buttonSize = buttonNode.bounds.size
                     var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
                     let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)

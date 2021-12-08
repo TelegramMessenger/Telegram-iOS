@@ -20,6 +20,7 @@ import ItemListPeerActionItem
 import ItemListPeerItem
 import ShareController
 import UndoUI
+import QrCodeUI
 
 private final class InviteLinkListControllerArguments {
     let context: AccountContext
@@ -511,8 +512,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                 } else {
                     isGroup = true
                 }
-                let controller = InviteLinkQRCodeController(context: context, updatedPresentationData: updatedPresentationData, invite: invite, isGroup: isGroup)
-                presentControllerImpl?(controller, nil)
+                presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), nil)
             })
         })))
         
@@ -685,8 +685,7 @@ public func inviteLinkListController(context: AccountContext, updatedPresentatio
                             isGroup = true
                         }
                         Queue.mainQueue().after(0.2) {
-                            let controller = InviteLinkQRCodeController(context: context, updatedPresentationData: updatedPresentationData, invite: invite, isGroup: isGroup)
-                            presentControllerImpl?(controller, nil)
+                            presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), nil)
                         }
                     })
                 })))

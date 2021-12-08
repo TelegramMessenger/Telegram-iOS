@@ -15,6 +15,9 @@ private let nullAction = NullActionClass()
 public protocol SparseItemGridLayer: CALayer {
     func update(size: CGSize)
     func needsShimmer() -> Bool
+    
+    func getContents() -> Any?
+    func setContents(_ contents: Any?)
 }
 
 public protocol SparseItemGridView: UIView {

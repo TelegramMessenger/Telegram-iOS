@@ -98,6 +98,12 @@ public struct PresentationResourcesRootController {
             generateTintedImage(image: UIImage(bundleImageName: "Chat List/NavigationMore"), color: theme.rootController.navigationBar.accentTextColor)
         })
     }
+
+    public static func navigationQrCodeIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationQrCodeIcon.rawValue, { theme in
+            generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.rootController.navigationBar.accentTextColor)
+        })
+    }
     
     public static func navigationAddIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationAddIcon.rawValue, { theme in

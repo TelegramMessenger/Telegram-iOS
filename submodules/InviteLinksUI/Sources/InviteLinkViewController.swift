@@ -20,6 +20,7 @@ import OverlayStatusController
 import PresentationDataUtils
 import DirectionalPanGesture
 import UndoUI
+import QrCodeUI
 
 class InviteLinkViewInteraction {
     let context: AccountContext
@@ -597,8 +598,7 @@ public final class InviteLinkViewController: ViewController {
                                     isGroup = true
                                 }
                                 let updatedPresentationData = (strongSelf.presentationData, parentController.presentationDataPromise.get())
-                                let controller = InviteLinkQRCodeController(context: context, updatedPresentationData: updatedPresentationData, invite: invite, isGroup: isGroup)
-                                strongSelf.controller?.present(controller, in: .window(.root))
+                                strongSelf.controller?.present(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), in: .window(.root))
                             })
                         })))
                     }

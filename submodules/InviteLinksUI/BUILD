@@ -56,6 +56,7 @@ swift_library(
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/LocalizedPeerData:LocalizedPeerData",
         "//submodules/PeerInfoAvatarListNode:PeerInfoAvatarListNode",
+        "//submodules/QrCodeUI:QrCodeUI",
     ],
     visibility = [
         "//visibility:public",

@@ -62,4 +62,13 @@
     return _impl;
 }
 
+- (FFMpegAVFramePixelFormat)pixelFormat {
+    switch (_impl->format) {
+        case AV_PIX_FMT_YUVA420P:
+            return FFMpegAVFramePixelFormatYUVA;
+        default:
+            return FFMpegAVFramePixelFormatYUV;
+    }
+}
+
 @end

@@ -380,6 +380,10 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         loop: for media in self.message.media {
             if let telegramFile = media as? TelegramMediaFile {
+                if let fileName = telegramFile.fileName, fileName.hasSuffix(".webm") {
+                    viewClassName = ChatMessageAnimatedStickerItemNode.self
+                    break loop
+                }
                 if telegramFile.isAnimatedSticker, let size = telegramFile.size, size > 0 && size <= 128 * 1024 {
                     if self.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                         if telegramFile.fileId.namespace == Namespaces.Media.CloudFile {
