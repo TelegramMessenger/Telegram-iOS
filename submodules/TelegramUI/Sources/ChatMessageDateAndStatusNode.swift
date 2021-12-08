@@ -222,6 +222,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         self.dateNode = TextNode()
         self.dateNode.isUserInteractionEnabled = false
         self.dateNode.displaysAsynchronously = false
+        self.dateNode.contentsScale = UIScreenScale
+        self.dateNode.contentMode = .topLeft
         
         super.init()
         
@@ -907,9 +909,11 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 
                                 if checkSentNode.isHidden {
                                     animateSentNode = animation.isAnimated
+                                    checkSentNode.isHidden = false
+                                    checkSentNode.frame = actualCheckSentFrame
+                                } else {
+                                    animation.animator.updateFrame(layer: checkSentNode.layer, frame: actualCheckSentFrame, completion: nil)
                                 }
-                                checkSentNode.isHidden = false
-                                animation.animator.updateFrame(layer: checkSentNode.layer, frame: actualCheckSentFrame, completion: nil)
                             } else {
                                 checkSentNode.isHidden = true
                             }

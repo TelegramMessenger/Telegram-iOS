@@ -91,7 +91,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     }
     let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var badgeNode: ChatMessageInteractiveMediaBadge?
-    private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
+    //private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
     private var context: AccountContext?
     private var message: Message?
@@ -268,8 +268,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     override func didLoad() {
         super.didLoad()
         
-        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.imageTap(_:)))
-        recognizer.tapActionAtPoint = { [weak self] point in
+        let recognizer = UITapGestureRecognizer(target: self, action: #selector(self.imageTap(_:)))
+        /*recognizer.tapActionAtPoint = { [weak self] point in
             guard let strongSelf = self else {
                 return .fail
             }
@@ -277,9 +277,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 return .fail
             }
             return .waitForDoubleTap
-        }
+        }*/
         self.imageNode.view.addGestureRecognizer(recognizer)
-        self.tapRecognizer = recognizer
+        //self.tapRecognizer = recognizer
     }
     
     private func progressPressed(canActivate: Bool) {
@@ -330,8 +330,30 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    @objc func imageTap(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+    @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
+            let point = recognizer.location(in: self.imageNode.view)
+            if let _ = self.attributes?.updatingMedia {
+                if let statusNode = self.statusNode, statusNode.frame.contains(point) {
+                    self.progressPressed(canActivate: true)
+                }
+            } else if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
+                var videoContentMatch = true
+                if let content = self.videoContent, case let .message(stableId, mediaId) = content.nativeId {
+                    videoContentMatch = self.message?.stableId == stableId && self.media?.id == mediaId
+                }
+                self.activateLocalContent((self.automaticPlayback ?? false) && videoContentMatch ? .automaticPlayback : .default)
+            } else {
+                if let message = self.message, message.flags.isSending {
+                    if let statusNode = self.statusNode, statusNode.frame.contains(point) {
+                        self.progressPressed(canActivate: true)
+                    }
+                } else {
+                    self.progressPressed(canActivate: true)
+                }
+            }
+        }
+        /*if case .ended = recognizer.state {
             if let (gesture, point) = recognizer.lastRecognizedGestureAndLocation, let message = self.message {
                 if case .doubleTap = gesture {
                     if canAddMessageReactions(message: message) {
@@ -359,7 +381,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     }
                 }
             }
-        }
+        }*/
     }
     
     func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData,  _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {

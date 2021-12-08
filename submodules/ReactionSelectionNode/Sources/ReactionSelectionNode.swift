@@ -84,7 +84,7 @@ final class ReactionNode: ASDisplayNode {
     func updateLayout(size: CGSize, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
         let intrinsicSize = size
         
-        let animationSize = self.item.listAnimation.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+        let animationSize = self.item.stillAnimation.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         var animationDisplaySize = animationSize.aspectFitted(intrinsicSize)
         
         let scalingFactor: CGFloat = 1.0

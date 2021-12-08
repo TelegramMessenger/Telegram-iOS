@@ -562,7 +562,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 additionalAnimationNode.visibility = true
             })
             
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0 * UIView.animationDurationFactor(), execute: {
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
                 self.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: hideNode, completion: {
                     mainAnimationCompleted = true
                     intermediateCompletion()
