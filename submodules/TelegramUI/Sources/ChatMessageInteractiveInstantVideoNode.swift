@@ -132,7 +132,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    func asyncLayout() -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ maximumDisplaySize: CGSize, _ scaleProgress: CGFloat, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> Void) {
+    func asyncLayout() -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ maximumDisplaySize: CGSize, _ scaleProgress: CGFloat, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ListViewItemUpdateAnimation) -> Void) {
         let previousFile = self.media
         
         let currentItem = self.item
@@ -296,7 +296,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 impressionCount: viewCount,
                 dateText: dateText,
                 type: statusType,
-                layoutInput: .standalone,
+                layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                 constrainedSize: CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude),
                 availableReactions: item.associatedData.availableReactions,
                 reactions: dateReactions,
@@ -321,7 +321,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             let result = ChatMessageInstantVideoItemLayoutResult(contentSize: contentSize, overflowLeft: 0.0, overflowRight: dateAndStatusOverflow ? 0.0 : (max(0.0, floorToScreenPixels(videoFrame.midX) + 55.0 + dateAndStatusSize.width - videoFrame.width)))
             
-            return (result, { [weak self] layoutData, transition in
+            return (result, { [weak self] layoutData, animation in
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.videoFrame = displayVideoFrame
@@ -362,18 +362,18 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                     }
                                         
-                    dateAndStatusApply(false)
+                    dateAndStatusApply(animation)
                     switch layoutData {
-                        case let .unconstrained(width):
-                            let dateAndStatusOrigin: CGPoint
-                            if dateAndStatusOverflow {
-                                dateAndStatusOrigin = CGPoint(x: displayVideoFrame.minX - 4.0, y: displayVideoFrame.maxY + 2.0)
-                            } else {
-                                dateAndStatusOrigin = CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, width - dateAndStatusSize.width - 4.0), y: displayVideoFrame.height - dateAndStatusSize.height)
-                            }
-                            strongSelf.dateAndStatusNode.frame = CGRect(origin: dateAndStatusOrigin, size: dateAndStatusSize)
-                        case let .constrained(_, right):
-                            strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, displayVideoFrame.maxX + right - dateAndStatusSize.width - 4.0), y: displayVideoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
+                    case let .unconstrained(width):
+                        let dateAndStatusOrigin: CGPoint
+                        if dateAndStatusOverflow {
+                            dateAndStatusOrigin = CGPoint(x: displayVideoFrame.minX - 4.0, y: displayVideoFrame.maxY + 2.0)
+                        } else {
+                            dateAndStatusOrigin = CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, width - dateAndStatusSize.width - 4.0), y: displayVideoFrame.height - dateAndStatusSize.height)
+                        }
+                        animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: CGRect(origin: dateAndStatusOrigin, size: dateAndStatusSize), completion: nil)
+                    case let .constrained(_, right):
+                        animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: CGRect(origin: CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, displayVideoFrame.maxX + right - dateAndStatusSize.width - 4.0), y: displayVideoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize), completion: nil)
                     }
                                         
                     var updatedPlayerStatusSignal: Signal<MediaPlayerStatus?, NoError>?
@@ -847,11 +847,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         return nil
     }
 
-    static func asyncLayout(_ node: ChatMessageInteractiveInstantVideoNode?) -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ maximumDisplaySize: CGSize, _ scaleProgress: CGFloat, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> ChatMessageInteractiveInstantVideoNode) {
+    static func asyncLayout(_ node: ChatMessageInteractiveInstantVideoNode?) -> (_ item: ChatMessageBubbleContentItem, _ width: CGFloat, _ displaySize: CGSize, _ maximumDisplaySize: CGSize, _ scaleProgress: CGFloat, _ statusType: ChatMessageInteractiveInstantVideoNodeStatusType, _ automaticDownload: Bool) -> (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ListViewItemUpdateAnimation) -> ChatMessageInteractiveInstantVideoNode) {
         let makeLayout = node?.asyncLayout()
         return { item, width, displaySize, maximumDisplaySize, scaleProgress, statusType, automaticDownload in
             var createdNode: ChatMessageInteractiveInstantVideoNode?
-            let sizeAndApplyLayout: (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ContainedViewLayoutTransition) -> Void)
+            let sizeAndApplyLayout: (ChatMessageInstantVideoItemLayoutResult, (ChatMessageInstantVideoItemLayoutData, ListViewItemUpdateAnimation) -> Void)
             if let makeLayout = makeLayout {
                 sizeAndApplyLayout = makeLayout(item, width, displaySize, maximumDisplaySize, scaleProgress, statusType, automaticDownload)
             } else {

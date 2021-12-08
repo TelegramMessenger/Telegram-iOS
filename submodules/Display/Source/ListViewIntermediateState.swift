@@ -807,13 +807,12 @@ struct ListViewState {
         }
     }
     
-    mutating func updateNodeAtItemIndex(_ itemIndex: Int, layout: ListViewItemNodeLayout, direction: ListViewItemOperationDirectionHint?, animation: ListViewItemUpdateAnimation, apply: @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void), operations: inout [ListViewStateOperation]) {
+    mutating func updateNodeAtItemIndex(_ itemIndex: Int, layout: ListViewItemNodeLayout, direction: ListViewItemOperationDirectionHint?, isAnimated: Bool, apply: @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void), operations: inout [ListViewStateOperation]) {
         var i = -1
         for node in self.nodes {
             i += 1
             if node.index == itemIndex {
-                switch animation {
-                case .None, .Crossfade:
+                if isAnimated {
                     let offsetDirection: ListViewInsertionOffsetDirection
                     if let direction = direction {
                         offsetDirection = ListViewInsertionOffsetDirection(direction)
@@ -852,7 +851,7 @@ struct ListViewState {
                     }
                     
                     operations.append(.UpdateLayout(index: i, layout: layout, apply: apply))
-                case .System:
+                } else {
                     operations.append(.UpdateLayout(index: i, layout: layout, apply: apply))
                 }
                 

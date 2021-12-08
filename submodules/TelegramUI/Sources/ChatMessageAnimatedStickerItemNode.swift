@@ -231,6 +231,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var replyBackgroundNode: NavigationBackgroundNode?
     
     private var actionButtonsNode: ChatMessageActionButtonsNode?
+    private var reactionButtonsNode: ChatMessageReactionButtonsNode?
     
     private let messageAccessibilityArea: AccessibilityAreaNode
     
@@ -373,7 +374,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
             }
-            return .waitForSingleTap
+            return .waitForDoubleTap
         }
         recognizer.longTap = { [weak self] point, recognizer in
             guard let strongSelf = self else {
@@ -754,6 +755,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let imageLayout = self.imageNode.asyncLayout()
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
+        let reactionButtonsLayout = ChatMessageReactionButtonsNode.asyncLayout(self.reactionButtonsNode)
         
         let makeForwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         
@@ -951,7 +953,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 impressionCount: viewCount,
                 dateText: dateText,
                 type: statusType,
-                layoutInput: .standalone,
+                layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                 constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude),
                 availableReactions: item.associatedData.availableReactions,
                 reactions: dateReactions,
@@ -1076,21 +1078,52 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             var maxContentWidth = imageSize.width
-            var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode))?
+            var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode))?
             if let replyMarkup = replyMarkup {
                 let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, replyMarkup, item.message, maxContentWidth)
                 maxContentWidth = max(maxContentWidth, minWidth)
                 actionButtonsFinalize = buttonsLayout
             }
             
-            var actionButtonsSizeAndApply: (CGSize, (Bool) -> ChatMessageActionButtonsNode)?
+            var actionButtonsSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)?
             if let actionButtonsFinalize = actionButtonsFinalize {
                 actionButtonsSizeAndApply = actionButtonsFinalize(maxContentWidth)
+            }
+            
+            let reactions: ReactionsMessageAttribute
+            if shouldDisplayInlineDateReactions(message: item.message) {
+                reactions = ReactionsMessageAttribute(reactions: [], recentPeers: [])
+            } else {
+                reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(reactions: [], recentPeers: [])
+            }
+            var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?
+            if !reactions.reactions.isEmpty {
+                let totalInset = params.leftInset + layoutConstants.bubble.edgeInset * 2.0 + avatarInset + layoutConstants.bubble.contentInsets.left + params.rightInset + layoutConstants.bubble.contentInsets.right
+                
+                let maxReactionsWidth = params.width - totalInset
+                let (minWidth, buttonsLayout) = reactionButtonsLayout(ChatMessageReactionButtonsNode.Arguments(
+                    context: item.context,
+                    presentationData: item.presentationData,
+                    availableReactions: item.associatedData.availableReactions,
+                    reactions: reactions,
+                    isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
+                    constrainedWidth: maxReactionsWidth
+                ))
+                maxContentWidth = max(maxContentWidth, minWidth)
+                reactionButtonsFinalize = buttonsLayout
+            }
+            
+            var reactionButtonsSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)?
+            if let reactionButtonsFinalize = reactionButtonsFinalize {
+                reactionButtonsSizeAndApply = reactionButtonsFinalize(maxContentWidth)
             }
             
             var layoutSize = CGSize(width: params.width, height: contentHeight)
             if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
                 layoutSize.height += actionButtonsSizeAndApply.0.height
+            }
+            if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
+                layoutSize.height += reactionButtonsSizeAndApply.0.height
             }
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, _ in
@@ -1104,7 +1137,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     
                     var transition: ContainedViewLayoutTransition = .immediate
-                    if case let .System(duration) = animation {
+                    if case let .System(duration, _) = animation {
                         if let subject = item.associatedData.subject, case .forwardedMessages = subject {
                             transition = .animated(duration: duration, curve: .linear)
                         } else {
@@ -1177,8 +1210,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         strongSelf.shareButtonNode = nil
                     }
                     
-                    dateAndStatusApply(false)
-                    strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0), size: dateAndStatusSize)
+                    let dateAndStatusFrame = CGRect(origin: CGPoint(x: max(displayLeftInset, updatedImageFrame.maxX - dateAndStatusSize.width - 4.0), y: updatedImageFrame.maxY - dateAndStatusSize.height - 4.0), size: dateAndStatusSize)
+                    animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
+                    dateAndStatusApply(animation)
 
                     if needsReplyBackground {
                         if let replyBackgroundNode = strongSelf.replyBackgroundNode {
@@ -1327,13 +1361,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
-                        var animated = false
-                        if let _ = strongSelf.actionButtonsNode {
-                            if case .System = animation {
-                                animated = true
-                            }
-                        }
-                        let actionButtonsNode = actionButtonsSizeAndApply.1(animated)
+                        let actionButtonsNode = actionButtonsSizeAndApply.1(animation)
                         let previousFrame = actionButtonsNode.frame
                         let actionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY), size: actionButtonsSizeAndApply.0)
                         actionButtonsNode.frame = actionButtonsFrame
@@ -1351,13 +1379,43 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             }
                             strongSelf.addSubnode(actionButtonsNode)
                         } else {
-                            if case let .System(duration) = animation {
+                            if case let .System(duration, _) = animation {
                                 actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
                             }
                         }
                     } else if let actionButtonsNode = strongSelf.actionButtonsNode {
                         actionButtonsNode.removeFromSupernode()
                         strongSelf.actionButtonsNode = nil
+                    }
+                    
+                    if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
+                        let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
+                        let reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY), size: reactionButtonsSizeAndApply.0)
+                        if reactionButtonsNode !== strongSelf.reactionButtonsNode {
+                            strongSelf.reactionButtonsNode = reactionButtonsNode
+                            reactionButtonsNode.reactionSelected = { value in
+                                guard let strongSelf = self, let item = strongSelf.item else {
+                                    return
+                                }
+                                item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                            }
+                            reactionButtonsNode.frame = reactionButtonsFrame
+                            strongSelf.addSubnode(reactionButtonsNode)
+                            if animation.isAnimated {
+                                reactionButtonsNode.animateIn(animation: animation)
+                            }
+                        } else {
+                            animation.animator.updateFrame(layer: reactionButtonsNode.layer, frame: reactionButtonsFrame, completion: nil)
+                        }
+                    } else if let reactionButtonsNode = strongSelf.reactionButtonsNode {
+                        strongSelf.reactionButtonsNode = nil
+                        if animation.isAnimated {
+                            reactionButtonsNode.animateOut(animation: animation, completion: { [weak reactionButtonsNode] in
+                                reactionButtonsNode?.removeFromSupernode()
+                            })
+                        } else {
+                            reactionButtonsNode.removeFromSupernode()
+                        }
                     }
                     
                     if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
@@ -1384,7 +1442,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+            if let item = self.item, let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                 if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: recognizer) {
                     if case .doubleTap = gesture {
                         self.containerNode.cancelGesture()
@@ -1395,10 +1453,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     case let .optionalAction(f):
                         f()
                     case let .openContextMenu(tapMessage, selectAll, subFrame):
-                        self.item?.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
+                        if canAddMessageReactions(message: item.message) {
+                            item.controllerInteraction.updateMessageReaction(item.message, .default)
+                        } else {
+                            item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
+                        }
                     }
                 } else if case .tap = gesture {
-                    self.item?.controllerInteraction.clickThroughMessage()
+                    item.controllerInteraction.clickThroughMessage()
                 }
             }
         default:
@@ -1971,6 +2033,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return shareButtonNode.view
         }
         
+        if let reactionButtonsNode = self.reactionButtonsNode {
+            if let result = reactionButtonsNode.hitTest(self.view.convert(point, to: reactionButtonsNode.view), with: event) {
+                return result
+            }
+        }
+        
         return super.hitTest(point, with: event)
     }
     
@@ -2280,6 +2348,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     override func targetReactionView(value: String) -> UIView? {
+        if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
+            return result
+        }
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionView(value: value)
         }

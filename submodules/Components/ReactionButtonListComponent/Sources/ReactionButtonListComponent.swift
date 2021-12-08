@@ -39,18 +39,21 @@ public final class ReactionButtonComponent: Component {
     }
     
     public struct Colors: Equatable {
-        public var background: UInt32
-        public var foreground: UInt32
-        public var stroke: UInt32
+        public var deselectedBackground: UInt32
+        public var selectedBackground: UInt32
+        public var deselectedForeground: UInt32
+        public var selectedForeground: UInt32
         
         public init(
-            background: UInt32,
-            foreground: UInt32,
-            stroke: UInt32
+            deselectedBackground: UInt32,
+            selectedBackground: UInt32,
+            deselectedForeground: UInt32,
+            selectedForeground: UInt32
         ) {
-            self.background = background
-            self.foreground = foreground
-            self.stroke = stroke
+            self.deselectedBackground = deselectedBackground
+            self.selectedBackground = selectedBackground
+            self.deselectedForeground = deselectedForeground
+            self.selectedForeground = selectedForeground
         }
     }
     
@@ -99,6 +102,7 @@ public final class ReactionButtonComponent: Component {
     public final class View: UIButton, ComponentTaggedView {
         public let iconView: UIImageView
         private let textView: ComponentHostView<Empty>
+        private let measureTextView: ComponentHostView<Empty>
         
         private var currentComponent: ReactionButtonComponent?
         
@@ -110,6 +114,9 @@ public final class ReactionButtonComponent: Component {
             
             self.textView = ComponentHostView<Empty>()
             self.textView.isUserInteractionEnabled = false
+            
+            self.measureTextView = ComponentHostView<Empty>()
+            self.measureTextView.isUserInteractionEnabled = false
             
             super.init(frame: CGRect())
             
@@ -148,11 +155,11 @@ public final class ReactionButtonComponent: Component {
         }
 
         func update(component: ReactionButtonComponent, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let sideInsets: CGFloat = 10.0
+            let sideInsets: CGFloat = 8.0
             let height: CGFloat = 30.0
-            let spacing: CGFloat = 2.0
+            let spacing: CGFloat = 4.0
             
-            let defaultImageSize = CGSize(width: 20.0, height: 20.0)
+            let defaultImageSize = CGSize(width: 22.0, height: 22.0)
             
             let imageSize: CGSize
             if self.currentComponent?.reaction != component.reaction {
@@ -179,43 +186,55 @@ public final class ReactionButtonComponent: Component {
             
             self.iconView.frame = CGRect(origin: CGPoint(x: sideInsets, y: floorToScreenPixels((height - imageSize.height) / 2.0)), size: imageSize)
             
-            let textSize: CGSize
-            if self.currentComponent?.count != component.count || self.currentComponent?.colors != component.colors {
-                textSize = self.textView.update(
+            let text = "\(component.count)"
+            var measureText = ""
+            for _ in 0 ..< text.count {
+                measureText.append("0")
+            }
+            
+            let minTextWidth = self.measureTextView.update(
+                transition: .immediate,
+                component: AnyComponent(Text(
+                    text: measureText,
+                    font: Font.regular(11.0),
+                    color: .black
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            ).width + 2.0
+            
+            let actualTextSize: CGSize
+            if self.currentComponent?.count != component.count || self.currentComponent?.colors != component.colors || self.currentComponent?.isSelected != component.isSelected {
+                actualTextSize = self.textView.update(
                     transition: .immediate,
                     component: AnyComponent(Text(
-                        text: "\(component.count)",
-                        font: Font.regular(13.0),
-                        color: UIColor(argb: component.colors.foreground)
+                        text: text,
+                        font: Font.regular(11.0),
+                        color: UIColor(argb: component.isSelected ? component.colors.selectedForeground : component.colors.deselectedForeground)
                     )),
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0)
                 )
             } else {
-                textSize = self.textView.bounds.size
+                actualTextSize = self.textView.bounds.size
             }
-            
-            if self.currentComponent?.colors != component.colors {
-                self.backgroundColor = UIColor(argb: component.colors.background)
-            }
+            let layoutTextSize = CGSize(width: max(actualTextSize.width, minTextWidth), height: actualTextSize.height)
             
             if self.currentComponent?.colors != component.colors || self.currentComponent?.isSelected != component.isSelected {
                 if component.isSelected {
-                    self.layer.borderColor = UIColor(argb: component.colors.stroke).cgColor
-                    self.layer.borderWidth = 1.5
+                    self.backgroundColor = UIColor(argb: component.colors.selectedBackground)
                 } else {
-                    self.layer.borderColor = nil
-                    self.layer.borderWidth = 0.0
+                    self.backgroundColor = UIColor(argb: component.colors.deselectedBackground)
                 }
             }
             
             self.layer.cornerRadius = height / 2.0
             
-            self.textView.frame = CGRect(origin: CGPoint(x: sideInsets + imageSize.width + spacing, y: floorToScreenPixels((height - textSize.height) / 2.0)), size: textSize)
+            self.textView.frame = CGRect(origin: CGPoint(x: sideInsets + imageSize.width + spacing, y: floorToScreenPixels((height - actualTextSize.height) / 2.0)), size: actualTextSize)
             
             self.currentComponent = component
             
-            return CGSize(width: imageSize.width + spacing + textSize.width + sideInsets * 2.0, height: height)
+            return CGSize(width: imageSize.width + spacing + layoutTextSize.width + sideInsets * 2.0, height: height)
         }
     }
 
@@ -272,7 +291,20 @@ public final class ReactionButtonsLayoutContainer {
         var removedViews: [ComponentHostView<Empty>] = []
         
         var validIds = Set<String>()
-        for reaction in reactions {
+        for reaction in reactions.sorted(by: { lhs, rhs in
+            var lhsCount = lhs.count
+            if lhs.isSelected {
+                lhsCount -= 1
+            }
+            var rhsCount = rhs.count
+            if rhs.isSelected {
+                rhsCount -= 1
+            }
+            if lhsCount != rhsCount {
+                return lhsCount > rhsCount
+            }
+            return lhs.reaction.value < rhs.reaction.value
+        }) {
             validIds.insert(reaction.reaction.value)
             
             let view: ComponentHostView<Empty>

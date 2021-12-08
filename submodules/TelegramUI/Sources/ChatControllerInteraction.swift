@@ -46,12 +46,17 @@ public enum ChatControllerInteractionSwipeAction {
     case reply
 }
 
+public enum ChatControllerInteractionReaction {
+    case `default`
+    case reaction(String)
+}
+
 public final class ChatControllerInteraction {
     let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
     let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void
     let openPeerMention: (String) -> Void
     let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
-    let updateMessageReaction: (Message, String) -> Void
+    let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
     let activateMessagePinch: (PinchSourceContainerNode) -> Void
     let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
@@ -148,7 +153,7 @@ public final class ChatControllerInteraction {
         openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void,
         openPeerMention: @escaping (String) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void,
-        updateMessageReaction: @escaping (Message, String) -> Void,
+        updateMessageReaction: @escaping (Message, ChatControllerInteractionReaction) -> Void,
         activateMessagePinch: @escaping (PinchSourceContainerNode) -> Void,
         openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         navigateToMessage: @escaping (MessageId, MessageId) -> Void,

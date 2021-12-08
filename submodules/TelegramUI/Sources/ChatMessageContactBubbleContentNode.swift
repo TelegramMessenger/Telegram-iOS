@@ -46,7 +46,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, value)
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
         }
     }
     
@@ -196,7 +196,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         statusType = nil
                 }
                 
-                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))?
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 if let statusType = statusType {
                     var isReplyThread = false
                     if case .replyThread = item.chatLocation {
@@ -210,7 +210,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: 1000.0, preferAdditionalInset: true),
+                        layoutInput: .trailingContent(contentWidth: 1000.0, reactionSettings: nil),
                         constrainedSize: CGSize(width: constrainedSize.width - sideInsets, height: .greatestFiniteMagnitude),
                         availableReactions: item.associatedData.availableReactions,
                         reactions: dateReactions,
@@ -305,9 +305,9 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.left, y: strongSelf.textNode.frame.maxY + 2.0), size: statusSizeAndApply.0)
                                 if strongSelf.dateAndStatusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.dateAndStatusNode)
-                                    statusSizeAndApply.1(false)
+                                    statusSizeAndApply.1(.None)
                                 } else {
-                                    statusSizeAndApply.1(animation.isAnimated)
+                                    statusSizeAndApply.1(animation)
                                 }
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()

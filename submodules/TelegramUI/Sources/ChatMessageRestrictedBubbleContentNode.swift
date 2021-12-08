@@ -106,7 +106,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 textFrameWithoutInsets = textFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 
-                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))?
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 if let statusType = statusType {
                     var isReplyThread = false
                     if case .replyThread = item.chatLocation {
@@ -120,7 +120,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, preferAdditionalInset: false),
+                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: message), preferAdditionalInset: false)),
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
                         reactions: dateReactions,
@@ -182,9 +182,9 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0)
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)
-                                    statusSizeAndApply.1(false)
+                                    statusSizeAndApply.1(.None)
                                 } else {
-                                    statusSizeAndApply.1(animation.isAnimated)
+                                    statusSizeAndApply.1(animation)
                                 }
                             } else if strongSelf.statusNode.supernode != nil {
                                 strongSelf.statusNode.removeFromSupernode()

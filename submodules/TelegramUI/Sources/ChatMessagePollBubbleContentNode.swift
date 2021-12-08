@@ -1057,7 +1057,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         statusType = nil
                 }
                 
-                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))?
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 
                 if let statusType = statusType {
                     var isReplyThread = false
@@ -1072,7 +1072,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: 100.0, preferAdditionalInset: true),
+                        layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
                         reactions: dateReactions,

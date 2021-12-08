@@ -51,6 +51,13 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
         }
+        
+        self.interactiveImageNode.updateMessageReaction = { [weak self] message, value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.updateMessageReaction(message, value)
+        }
 
         self.interactiveImageNode.activatePinch = { [weak self] sourceNode in
             guard let strongSelf = self, let _ = strongSelf.item else {
@@ -246,14 +253,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.automaticPlayback = automaticPlayback
                             
                             let imageFrame = CGRect(origin: CGPoint(x: bubbleInsets.left, y: bubbleInsets.top), size: imageSize)
-                            var transition: ContainedViewLayoutTransition = .immediate
-                            if case let .System(duration) = animation {
-                                transition = .animated(duration: duration, curve: .spring)
-                            }
                             
-                            transition.updateFrame(node: strongSelf.interactiveImageNode, frame: imageFrame)
+                            animation.animator.updateFrame(layer: strongSelf.interactiveImageNode.layer, frame: imageFrame, completion: nil)
                             
-                            imageApply(transition, synchronousLoads)
+                            imageApply(animation, synchronousLoads)
                             
                             if let selection = selection {
                                 if let selectionNode = strongSelf.selectionNode {

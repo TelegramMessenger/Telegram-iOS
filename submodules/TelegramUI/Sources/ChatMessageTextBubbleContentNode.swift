@@ -74,7 +74,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.updateMessageReaction(item.message, value)
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
         }
     }
 
@@ -285,12 +285,15 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     spoilerTextLayoutAndApply = nil
                 }
                 
-                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))?
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 if let statusType = statusType {
                     var isReplyThread = false
                     if case .replyThread = item.chatLocation {
                         isReplyThread = true
                     }
+                    
+                    let dateLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
+                    dateLayoutInput = .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message), preferAdditionalInset: false))
                     
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: item.context,
@@ -299,7 +302,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, preferAdditionalInset: false),
+                        layoutInput: dateLayoutInput,
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
                         reactions: dateReactions,
@@ -363,9 +366,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
-                            strongSelf.textNode.displaysAsynchronously = !item.presentationData.isPreview && !item.presentationData.theme.theme.forceSync
                             let _ = textApply()
-                            strongSelf.textNode.frame = textFrame
+                            animation.animator.updateFrame(layer: strongSelf.textNode.layer, frame: textFrame, completion: nil)
+                            //strongSelf.textNode.frame = textFrame
                             
                             if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
                                 let spoilerTextNode = spoilerTextApply()
@@ -410,12 +413,12 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                             
                             if let statusSizeAndApply = statusSizeAndApply {
-                                strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0)
+                                animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0), completion: nil)
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)
-                                    statusSizeAndApply.1(false)
+                                    statusSizeAndApply.1(.None)
                                 } else {
-                                    statusSizeAndApply.1(animation.isAnimated)
+                                    statusSizeAndApply.1(animation)
                                 }
                             } else if strongSelf.statusNode.supernode != nil {
                                 strongSelf.statusNode.removeFromSupernode()

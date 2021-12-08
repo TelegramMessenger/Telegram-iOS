@@ -60,8 +60,6 @@ final class ReactionNode: ASDisplayNode {
         
         super.init()
         
-        //self.backgroundColor = UIColor(white: 0.0, alpha: 0.1)
-        
         self.addSubnode(self.staticImageNode)
         
         self.addSubnode(self.stillAnimationNode)
@@ -120,11 +118,14 @@ final class ReactionNode: ASDisplayNode {
             animationNode.visibility = true
             
             self.stillAnimationNode.alpha = 0.0
-            self.stillAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
-                self?.stillAnimationNode.visibility = false
-            })
-            
-            animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            if transition.isAnimated {
+                self.stillAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                    self?.stillAnimationNode.visibility = false
+                })
+                animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+            } else {
+                self.stillAnimationNode.visibility = false
+            }
         }
         
         if self.validSize != size {
@@ -137,13 +138,15 @@ final class ReactionNode: ASDisplayNode {
         }
         
         if !self.didSetupStillAnimation {
-            self.didSetupStillAnimation = true
-            
-            self.stillAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .loop, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
-            self.stillAnimationNode.position = animationFrame.center
-            self.stillAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
-            self.stillAnimationNode.updateLayout(size: animationFrame.size)
-            self.stillAnimationNode.visibility = true
+            if self.animationNode == nil {
+                self.didSetupStillAnimation = true
+                
+                self.stillAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .loop, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
+                self.stillAnimationNode.position = animationFrame.center
+                self.stillAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
+                self.stillAnimationNode.updateLayout(size: animationFrame.size)
+                self.stillAnimationNode.visibility = true
+            }
         } else {
             transition.updatePosition(node: self.stillAnimationNode, position: animationFrame.center)
             transition.updateTransformScale(node: self.stillAnimationNode, scale: animationFrame.size.width / self.stillAnimationNode.bounds.width)

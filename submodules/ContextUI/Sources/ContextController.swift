@@ -360,6 +360,15 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                                 strongSelf.hapticFeedback.tap()
                             }
                         }
+                        
+                        if let reactionContextNode = strongSelf.reactionContextNode {
+                            let reactionPoint = strongSelf.view.convert(localPoint, to: reactionContextNode.view)
+                            let highlightedReaction = reactionContextNode.reaction(at: reactionPoint)?.reaction
+                            if strongSelf.highlightedReaction?.rawValue != highlightedReaction?.rawValue {
+                                strongSelf.highlightedReaction = highlightedReaction
+                                strongSelf.hapticFeedback.tap()
+                            }
+                        }
                     }
                 }
             }
@@ -373,6 +382,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         if let highlightedActionNode = strongSelf.highlightedActionNode {
                             strongSelf.highlightedActionNode = nil
                             highlightedActionNode.performAction()
+                        }
+                        if let highlightedReaction = strongSelf.highlightedReaction {
+                            strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction)
                         }
                     } else {
                         if let highlightedActionNode = strongSelf.highlightedActionNode {
@@ -417,6 +429,15 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                                 strongSelf.hapticFeedback.tap()
                             }
                         }
+                        
+                        if let reactionContextNode = strongSelf.reactionContextNode {
+                            let reactionPoint = strongSelf.view.convert(localPoint, to: reactionContextNode.view)
+                            let highlightedReaction = reactionContextNode.reaction(at: reactionPoint)?.reaction
+                            if strongSelf.highlightedReaction?.rawValue != highlightedReaction?.rawValue {
+                                strongSelf.highlightedReaction = highlightedReaction
+                                strongSelf.hapticFeedback.tap()
+                            }
+                        }
                     }
                 }
             }
@@ -430,6 +451,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         if let highlightedActionNode = strongSelf.highlightedActionNode {
                             strongSelf.highlightedActionNode = nil
                             highlightedActionNode.performAction()
+                        }
+                        
+                        if let highlightedReaction = strongSelf.highlightedReaction {
+                            strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction)
                         }
                     } else {
                         if let highlightedActionNode = strongSelf.highlightedActionNode {
