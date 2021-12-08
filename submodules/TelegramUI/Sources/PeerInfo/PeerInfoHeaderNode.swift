@@ -935,6 +935,10 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
     var isWhite: Bool = false {
         didSet {
             if self.isWhite != oldValue {
+                if case .qrCode = self.key, let theme = self.theme {
+                    self.iconNode.image = self.isWhite ? generateTintedImage(image: PresentationResourcesRootController.navigationQrCodeIcon(theme), color: .white) : PresentationResourcesRootController.navigationQrCodeIcon(theme)
+                }
+                
                 self.regularTextNode.isHidden = self.isWhite
                 self.whiteTextNode.isHidden = !self.isWhite
             }
@@ -1141,7 +1145,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
             }
             var removeKeys: [PeerInfoHeaderNavigationButtonKey] = []
             for (key, _) in self.leftButtonNodes {
-                if !rightButtons.contains(where: { $0.key == key }) {
+                if !leftButtons.contains(where: { $0.key == key }) {
                     removeKeys.append(key)
                 }
             }
@@ -1153,7 +1157,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
         } else {
             var nextRegularButtonOrigin = 16.0
             var nextExpandedButtonOrigin = 16.0
-            for spec in rightButtons.reversed() {
+            for spec in leftButtons.reversed() {
                 if let buttonNode = self.leftButtonNodes[spec.key] {
                     let buttonSize = buttonNode.bounds.size
                     var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin

@@ -100,7 +100,7 @@ public struct PresentationResourcesRootController {
     }
 
     public static func navigationQrCodeIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationMoreCircledIcon.rawValue, { theme in
+        return theme.image(PresentationResourceKey.navigationQrCodeIcon.rawValue, { theme in
             generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.rootController.navigationBar.accentTextColor)
         })
     }

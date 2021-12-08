@@ -218,8 +218,31 @@ public final class QrCodeScreen: ViewController {
             self.contentBackgroundNode = ASDisplayNode()
             self.contentBackgroundNode.backgroundColor = backgroundColor
             
+            let title: String
+            let text: String
+            switch subject {
+                case let .peer(peer):
+                    title = self.presentationData.strings.PeerInfo_QRCode_Title
+                    if case let .user(user) = peer {
+                        if user.id == context.account.peerId {
+                            text = self.presentationData.strings.UserInfo_QRCode_InfoYou
+                        } else if user.botInfo != nil {
+                            text = self.presentationData.strings.UserInfo_QRCode_InfoBot
+                        } else {
+                            text = self.presentationData.strings.UserInfo_QRCode_InfoOther(peer.compactDisplayTitle).string
+                        }
+                    } else if case let .channel(channel) = peer, case .broadcast = channel.info {
+                        text = self.presentationData.strings.GroupInfo_QRCode_Info
+                    } else {
+                        text = self.presentationData.strings.ChannelInfo_QRCode_Info
+                    }
+                case let .invite(_, isGroup):
+                    title = self.presentationData.strings.InviteLink_QRCode_Title
+                    text = isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel
+            }
+            
             self.titleNode = ASTextNode()
-            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_QRCode_Title, font: Font.bold(17.0), textColor: textColor)
+            self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
             
             self.cancelButton = HighlightableButtonNode()
             self.cancelButton.setTitle(self.presentationData.strings.Common_Done, with: Font.bold(17.0), with: accentColor, for: .normal)
@@ -264,27 +287,7 @@ public final class QrCodeScreen: ViewController {
             self.contentContainerNode.addSubnode(self.qrIconNode)
             self.contentContainerNode.addSubnode(self.qrButtonNode)
                         
-            let text: String
-            switch subject {
-                case let .peer(peer):
-                    if case let .user(user) = peer {
-                        if user.id == context.account.peerId {
-                            text = self.presentationData.strings.UserInfo_QRCode_InfoYou
-                        } else if user.botInfo != nil {
-                            text = self.presentationData.strings.UserInfo_QRCode_InfoBot
-                        } else {
-                            text = self.presentationData.strings.UserInfo_QRCode_InfoOther(peer.compactDisplayTitle).string
-                        }
-                    } else if case let .channel(channel) = peer, case .broadcast = channel.info {
-                        text = self.presentationData.strings.GroupInfo_QRCode_Info
-                    } else {
-                        text = self.presentationData.strings.ChannelInfo_QRCode_Info
-                    }
-                case let .invite(_, isGroup):
-                    text = isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel
-            }
-            
-            self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(13.0), textColor: secondaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: secondaryTextColor)
             self.buttonNode.title = self.presentationData.strings.InviteLink_QRCode_Share
             
             self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
@@ -439,7 +442,7 @@ public final class QrCodeScreen: ViewController {
             }
             
             let inset: CGFloat = 32.0
-            var textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            var textSize = self.textNode.updateLayout(CGSize(width: width - inset * 3.0, height: CGFloat.greatestFiniteMagnitude))
             let textFrame = CGRect(origin: CGPoint(x: floor((width - textSize.width) / 2.0), y: imageFrame.maxY + 20.0), size: textSize)
             transition.updateFrame(node: self.textNode, frame: textFrame)
             
@@ -482,7 +485,7 @@ public final class QrCodeScreen: ViewController {
             transition.updateFrame(node: self.titleNode, frame: titleFrame)
             
             let cancelSize = self.cancelButton.measure(CGSize(width: width, height: titleHeight))
-            let cancelFrame = CGRect(origin: CGPoint(x: width - cancelSize.width - 16.0, y: 18.0), size: cancelSize)
+            let cancelFrame = CGRect(origin: CGPoint(x: width - cancelSize.width - 16.0, y: 16.0), size: cancelSize)
             transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
             
             let buttonInset: CGFloat = 16.0

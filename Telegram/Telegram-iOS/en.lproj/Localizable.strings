@@ -7137,3 +7137,5 @@ Sorry for the inconvenience.";
 "UserInfo.QRCode.InfoYou" = "Everyone on Telegram can scan this code to message you.";
 "UserInfo.QRCode.InfoBot" = "Everyone on Telegram can scan this code to use this bot.";
 "UserInfo.QRCode.InfoOther" = "Everyone on Telegram can scan this code to message %@.";
+
+"PeerInfo.QRCode.Title" = "QR Code";
