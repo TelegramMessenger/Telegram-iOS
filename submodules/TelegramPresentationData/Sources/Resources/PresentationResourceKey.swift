@@ -25,6 +25,7 @@ public enum PresentationResourceKey: Int32 {
     case navigationMoreCircledIcon
     case navigationAddIcon
     case navigationPlayerCloseButton
+    case navigationQrCodeIcon
     
     case navigationLiveLocationIcon
     

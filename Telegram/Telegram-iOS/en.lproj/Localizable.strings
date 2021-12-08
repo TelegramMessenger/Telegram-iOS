@@ -7131,3 +7131,9 @@ Sorry for the inconvenience.";
 "Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in chat.";
 "Conversation.LargeEmojiEnable" = "Enable Large Emoji";
 "Conversation.LargeEmojiEnabled" = "Large emoji enabled.";
+
+"GroupInfo.QRCode.Info" = "Everyone on Telegram can scan this code to join this group.";
+"ChannelInfo.QRCode.Info" = "Everyone on Telegram can scan this code to join this channel.";
+"UserInfo.QRCode.InfoYou" = "Everyone on Telegram can scan this code to message you.";
+"UserInfo.QRCode.InfoBot" = "Everyone on Telegram can scan this code to use this bot.";
+"UserInfo.QRCode.InfoOther" = "Everyone on Telegram can scan this code to message %@.";

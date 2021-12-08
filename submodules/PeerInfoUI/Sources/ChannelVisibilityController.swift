@@ -21,6 +21,7 @@ import AccountContext
 import InviteLinksUI
 import ContextUI
 import UndoUI
+import QrCodeUI
 
 private final class ChannelVisibilityControllerArguments {
     let context: AccountContext
@@ -1086,8 +1087,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                         } else {
                             isGroup = true
                         }
-                        let controller = InviteLinkQRCodeController(context: context, updatedPresentationData: updatedPresentationData, invite: invite, isGroup: isGroup)
-                        presentControllerImpl?(controller, nil)
+                        presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), nil)
                     })
                 }
             })
