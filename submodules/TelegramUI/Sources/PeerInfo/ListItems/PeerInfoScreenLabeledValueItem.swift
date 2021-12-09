@@ -279,7 +279,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         let labelFrame = CGRect(origin: CGPoint(x: sideInset, y: 11.0), size: labelSize)
         let textFrame = CGRect(origin: CGPoint(x: sideInset, y: labelFrame.maxY + 3.0), size: textSize)
         
-        let expandFrame = CGRect(origin: CGPoint(x: textFrame.minX + max(self.textNode.trailingLineWidth ?? 0.0, textFrame.width) - expandSize.width, y: textFrame.maxY - expandSize.height), size: expandSize)
+        let expandFrame = CGRect(origin: CGPoint(x: width - safeInsets.right - expandSize.width - 14.0 - UIScreenPixel, y: textFrame.maxY - expandSize.height - 1.0), size: expandSize)
         self.expandNode.frame = expandFrame
         self.expandButonNode.frame = expandFrame.insetBy(dx: -8.0, dy: -8.0)
         

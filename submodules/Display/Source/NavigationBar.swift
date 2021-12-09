@@ -1236,6 +1236,7 @@ open class NavigationBar: ASDisplayNode {
     public func makeTransitionBackButtonNode(accentColor: UIColor) -> NavigationButtonNode? {
         if self.backButtonNode.supernode != nil {
             let node = NavigationButtonNode()
+            node.manualAlpha = self.backButtonNode.manualAlpha
             node.updateManualText(self.backButtonNode.manualText)
             node.color = accentColor
             if let validLayout = self.validLayout {

@@ -94,7 +94,6 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     case existingLinkPeerItem(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Peer, ItemListPeerItemEditing, Bool)
     
     case forwardingHeader(PresentationTheme, String)
-    case forwardingEnabled(PresentationTheme, String, Bool)
     case forwardingDisabled(PresentationTheme, String, Bool)
     case forwardingInfo(PresentationTheme, String)
     
@@ -108,7 +107,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return ChannelVisibilitySection.linkActions.rawValue
             case .existingLinksInfo, .existingLinkPeerItem:
                 return ChannelVisibilitySection.link.rawValue
-            case .forwardingHeader, .forwardingEnabled, .forwardingDisabled, .forwardingInfo:
+            case .forwardingHeader, .forwardingDisabled, .forwardingInfo:
                 return ChannelVisibilitySection.forwarding.rawValue
         }
     }
@@ -149,12 +148,10 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return 1001
             case .forwardingHeader:
                 return 1002
-            case .forwardingEnabled:
-                return 1003
             case .forwardingDisabled:
-                return 1004
+                return 1003
             case .forwardingInfo:
-                return 1005
+                return 1004
         }
     }
     
@@ -286,12 +283,6 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .forwardingEnabled(lhsTheme, lhsText, lhsValue):
-                if case let .forwardingEnabled(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
             case let .forwardingDisabled(lhsTheme, lhsText, lhsValue):
                 if case let .forwardingDisabled(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
@@ -403,13 +394,9 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 })
             case let .forwardingHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
-            case let .forwardingEnabled(_, text, selected):
-                return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.toggleForwarding(true)
-                })
             case let .forwardingDisabled(_, text, selected):
-                return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.toggleForwarding(false)
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: selected, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleForwarding(!value)
                 })
             case let .forwardingInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -710,7 +697,6 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         }
         
         entries.append(.forwardingHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased() : presentationData.strings.Group_Setup_ForwardingChannelTitle.uppercased()))
-        entries.append(.forwardingEnabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingEnabled, forwardingEnabled))
         entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
         entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingChannelInfo) : (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled : presentationData.strings.Group_Setup_ForwardingChannelInfoDisabled)))
         
@@ -842,7 +828,6 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         }
         
         entries.append(.forwardingHeader(presentationData.theme, presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased()))
-        entries.append(.forwardingEnabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingEnabled, forwardingEnabled))
         entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
         entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled))
     }

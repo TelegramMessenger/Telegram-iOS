@@ -1,4 +1,5 @@
 import AsyncDisplayKit
+import AVFoundation
 import Display
 import TelegramCore
 import SwiftSignalKit
@@ -770,7 +771,23 @@ private final class DurationLayer: CALayer {
     }
 }
 
-private final class ItemLayer: CALayer, SparseItemGridLayer {
+private protocol ItemLayer: SparseItemGridLayer {
+    var item: VisualMediaItem? { get set }
+    var durationLayer: DurationLayer? { get set }
+    var minFactor: CGFloat { get set }
+    var selectionLayer: GridMessageSelectionLayer? { get set }
+    var disposable: Disposable? { get set }
+
+    var hasContents: Bool { get set }
+    
+    func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat)
+    func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool)
+    
+    func bind(item: VisualMediaItem)
+    func unbind()
+}
+
+private final class GenericItemLayer: CALayer, ItemLayer {
     var item: VisualMediaItem?
     var durationLayer: DurationLayer?
     var minFactor: CGFloat = 1.0
@@ -792,6 +809,16 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
     deinit {
         self.disposable?.dispose()
     }
+    
+    func getContents() -> Any? {
+        return self.contents
+    }
+    
+    func setContents(_ contents: Any?) {
+        if let image = contents as? UIImage {
+            self.contents = image.cgImage
+        }
+    }
 
     override func action(forKey event: String) -> CAAction? {
         return nullAction
@@ -801,6 +828,117 @@ private final class ItemLayer: CALayer, SparseItemGridLayer {
         self.item = item
     }
 
+    func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat) {
+        self.minFactor = minFactor
+
+        if let duration = duration {
+            if let durationLayer = self.durationLayer {
+                durationLayer.update(duration: duration, isMin: isMin)
+            } else {
+                let durationLayer = DurationLayer()
+                durationLayer.update(duration: duration, isMin: isMin)
+                self.addSublayer(durationLayer)
+                durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 3.0), size: CGSize())
+                durationLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
+                self.durationLayer = durationLayer
+            }
+        } else if let durationLayer = self.durationLayer {
+            self.durationLayer = nil
+            durationLayer.removeFromSuperlayer()
+        }
+    }
+
+    func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool) {
+        if let isSelected = isSelected {
+            if let selectionLayer = self.selectionLayer {
+                selectionLayer.updateSelected(isSelected, animated: animated)
+            } else {
+                let selectionLayer = GridMessageSelectionLayer(theme: theme)
+                selectionLayer.updateSelected(isSelected, animated: false)
+                self.selectionLayer = selectionLayer
+                self.addSublayer(selectionLayer)
+                if !self.bounds.isEmpty {
+                    selectionLayer.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+                    selectionLayer.updateLayout(size: self.bounds.size)
+                    if animated {
+                        selectionLayer.animateIn()
+                    }
+                }
+            }
+        } else if let selectionLayer = self.selectionLayer {
+            self.selectionLayer = nil
+            if animated {
+                selectionLayer.animateOut { [weak selectionLayer] in
+                    selectionLayer?.removeFromSuperlayer()
+                }
+            } else {
+                selectionLayer.removeFromSuperlayer()
+            }
+        }
+    }
+
+    func unbind() {
+        self.item = nil
+    }
+
+    func needsShimmer() -> Bool {
+        return !self.hasContents
+    }
+
+    func update(size: CGSize) {
+        /*if let durationLayer = self.durationLayer {
+            durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
+        }*/
+    }
+}
+
+private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemLayer {
+    var item: VisualMediaItem?
+    var durationLayer: DurationLayer?
+    var minFactor: CGFloat = 1.0
+    var selectionLayer: GridMessageSelectionLayer?
+    var disposable: Disposable?
+
+    var hasContents: Bool = false
+
+    override init() {
+        super.init()
+        
+        self.contentsGravity = .resize
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        self.disposable?.dispose()
+    }
+
+    override func action(forKey event: String) -> CAAction? {
+        return nullAction
+    }
+    
+    private var layerContents: Any?
+    func getContents() -> Any? {
+        return self.layerContents
+    }
+    
+    func setContents(_ contents: Any?) {
+        self.layerContents = contents
+        
+        if let image = contents as? UIImage {
+            self.layerContents = image.cgImage
+            if let cmSampleBuffer = image.cmSampleBuffer {
+                self.enqueue(cmSampleBuffer)
+            }
+        }
+    }
+
+    func bind(item: VisualMediaItem) {
+        self.item = item
+    }
+    
     func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat) {
         self.minFactor = minFactor
 
@@ -1037,6 +1175,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     let context: AccountContext
     let chatLocation: ChatLocation
     let directMediaImageCache: DirectMediaImageCache
+    let captureProtected: Bool
     var strings: PresentationStrings
     let useListItems: Bool
     let listItemInteraction: ListMessageItemInteraction
@@ -1055,13 +1194,14 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
 
     private var shimmerImages: [CGFloat: UIImage] = [:]
 
-    init(context: AccountContext, chatLocation: ChatLocation, useListItems: Bool, listItemInteraction: ListMessageItemInteraction, chatControllerInteraction: ChatControllerInteraction, directMediaImageCache: DirectMediaImageCache) {
+    init(context: AccountContext, chatLocation: ChatLocation, useListItems: Bool, listItemInteraction: ListMessageItemInteraction, chatControllerInteraction: ChatControllerInteraction, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool) {
         self.context = context
         self.chatLocation = chatLocation
         self.useListItems = useListItems
         self.listItemInteraction = listItemInteraction
         self.chatControllerInteraction = chatControllerInteraction
         self.directMediaImageCache = directMediaImageCache
+        self.captureProtected = captureProtected
 
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         self.strings = presentationData.strings
@@ -1174,7 +1314,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         if self.useListItems {
             return nil
         }
-        return ItemLayer()
+        if self.captureProtected {
+            return CaptureProtectedItemLayer()
+        } else {
+            return GenericItemLayer()
+        }
     }
 
     func createView() -> SparseItemGridView? {
@@ -1256,7 +1400,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 if let selectedMedia = selectedMedia {
                     if let result = directMediaImageCache.getImage(message: message, media: selectedMedia, width: imageWidthSpec, possibleWidths: SparseItemGridBindingImpl.widthSpecs.1, synchronous: synchronous == .full) {
                         if let image = result.image {
-                            layer.contents = image.cgImage
+                            layer.setContents(image)
                             switch synchronous {
                             case .none:
                                 layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self, weak layer, weak displayItem] _ in
@@ -1286,9 +1430,9 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                                     synchronousValue = deltaTime < 0.1
                                 }
 
-                                if layer.contents != nil && !synchronousValue {
-                                    let copyLayer = ItemLayer()
-                                    copyLayer.contents = layer.contents
+                                if let contents = layer.getContents(), !synchronousValue {
+                                    let copyLayer = GenericItemLayer()
+                                    copyLayer.contents = contents
                                     copyLayer.contentsRect = layer.contentsRect
                                     copyLayer.frame = layer.bounds
                                     if let durationLayer = layer.durationLayer {
@@ -1300,14 +1444,13 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                                         copyLayer?.removeFromSuperlayer()
                                     })
 
-                                    layer.contents = image?.cgImage
-
+                                    layer.setContents(image)
                                     layer.hasContents = true
                                     if let displayItem = displayItem {
                                         self?.updateShimmerLayersImpl?(displayItem)
                                     }
                                 } else {
-                                    layer.contents = image?.cgImage
+                                    layer.setContents(image)
 
                                     if !synchronousValue {
                                         layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak layer] _ in
@@ -1510,7 +1653,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType) {
+    init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType, captureProtected: Bool) {
         self.context = context
         self.peerId = peerId
         self.chatControllerInteraction = chatControllerInteraction
@@ -1562,7 +1705,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             useListItems: useListItems,
             listItemInteraction: listItemInteraction,
             chatControllerInteraction: chatControllerInteraction,
-            directMediaImageCache: self.directMediaImageCache
+            directMediaImageCache: self.directMediaImageCache,
+            captureProtected: captureProtected
         )
 
         self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, tag: tagMaskForType(self.contentType))
@@ -1786,20 +1930,6 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                 return
             }
             let rect = strongSelf.itemGrid.frameForItem(layer: itemLayer)
-
-            /*let proxyNode = ASDisplayNode()
-            proxyNode.frame = rect
-            proxyNode.contents = itemLayer.contents
-            proxyNode.isHidden = true
-            strongSelf.addSubnode(proxyNode)
-
-            let escapeNotification = EscapeNotification {
-                proxyNode.removeFromSupernode()
-            }
-
-            Queue.mainQueue().after(1.0, {
-                escapeNotification.keep()
-            })*/
 
             strongSelf.chatControllerInteraction.openMessageContextActions(message, strongSelf, rect, gesture)
 
@@ -2209,7 +2339,13 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             let itemFrame = self.view.convert(self.itemGrid.frameForItem(layer: itemLayer), from: self.itemGrid.view)
             let proxyNode = ASDisplayNode()
             proxyNode.frame = itemFrame
-            proxyNode.contents = itemLayer.contents
+            if let contents = itemLayer.getContents() {
+                if let image = contents as? UIImage {
+                    proxyNode.contents = image.cgImage
+                } else {
+                    proxyNode.contents = contents
+                }
+            }
             proxyNode.isHidden = true
             self.addSubnode(proxyNode)
 

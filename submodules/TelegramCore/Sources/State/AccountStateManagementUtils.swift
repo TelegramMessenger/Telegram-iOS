@@ -2576,35 +2576,39 @@ func replayFinalState(
                         }
                         
                         if !message.flags.contains(.Incoming), message.forwardInfo == nil {
-                            inner: for media in message.media {
-                                if let file = media as? TelegramMediaFile {
-                                    for attribute in file.attributes {
-                                        switch attribute {
-                                            case let .Sticker(_, packReference, _):
-                                                if let index = message.index, packReference != nil {
-                                                    if let (currentIndex, _) = recentlyUsedStickers[file.fileId] {
-                                                        if currentIndex < index {
+                            if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace), let peer = transaction.getPeer(message.id.peerId), peer.isCopyProtectionEnabled {
+                                
+                            } else {
+                                inner: for media in message.media {
+                                    if let file = media as? TelegramMediaFile {
+                                        for attribute in file.attributes {
+                                            switch attribute {
+                                                case let .Sticker(_, packReference, _):
+                                                    if let index = message.index, packReference != nil {
+                                                        if let (currentIndex, _) = recentlyUsedStickers[file.fileId] {
+                                                            if currentIndex < index {
+                                                                recentlyUsedStickers[file.fileId] = (index, file)
+                                                            }
+                                                        } else {
                                                             recentlyUsedStickers[file.fileId] = (index, file)
                                                         }
-                                                    } else {
-                                                        recentlyUsedStickers[file.fileId] = (index, file)
                                                     }
-                                                }
-                                            case .Animated:
-                                                if let index = message.index {
-                                                    if let (currentIndex, _) = recentlyUsedGifs[file.fileId] {
-                                                        if currentIndex < index {
+                                                case .Animated:
+                                                    if let index = message.index {
+                                                        if let (currentIndex, _) = recentlyUsedGifs[file.fileId] {
+                                                            if currentIndex < index {
+                                                                recentlyUsedGifs[file.fileId] = (index, file)
+                                                            }
+                                                        } else {
                                                             recentlyUsedGifs[file.fileId] = (index, file)
                                                         }
-                                                    } else {
-                                                        recentlyUsedGifs[file.fileId] = (index, file)
                                                     }
-                                                }
-                                            default:
-                                                break
+                                                default:
+                                                    break
+                                            }
                                         }
+                                        break inner
                                     }
-                                    break inner
                                 }
                             }
                         }

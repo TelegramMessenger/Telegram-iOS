@@ -35,6 +35,8 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     public var areControlsHidden = false
     public var controlsVisibilityChanged: ((Bool) -> Void)?
     
+    public var animateAlpha = true
+    
     public var updateOrientation: ((UIInterfaceOrientation) -> Void)?
     
     public var isBackgroundExtendedOverNavigationBar = true {
@@ -397,7 +399,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
                 contentAnimationCompleted = true
                 intermediateCompletion()
             })
-        } else {
+        } else if self.animateAlpha {
             self.scrollView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                 contentAnimationCompleted = true
                 intermediateCompletion()
