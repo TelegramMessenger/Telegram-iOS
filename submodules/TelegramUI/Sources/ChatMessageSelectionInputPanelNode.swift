@@ -132,6 +132,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func forwardButtonPressed() {
+        if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
+            return
+        }
         if let actions = self.actions, actions.isCopyProtected {
             self.interfaceInteraction?.displayCopyProtectionTip(self.forwardButton, false)
         } else {
@@ -140,6 +143,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func shareButtonPressed() {
+        if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
+            return
+        }
         if let actions = self.actions, actions.isCopyProtected {
             self.interfaceInteraction?.displayCopyProtectionTip(self.shareButton, true)
         } else {
