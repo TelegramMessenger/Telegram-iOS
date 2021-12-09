@@ -209,7 +209,7 @@ public final class ReactionButtonComponent: Component {
                     transition: .immediate,
                     component: AnyComponent(Text(
                         text: text,
-                        font: Font.regular(11.0),
+                        font: Font.medium(11.0),
                         color: UIColor(argb: component.isSelected ? component.colors.selectedForeground : component.colors.deselectedForeground)
                     )),
                     environment: {},

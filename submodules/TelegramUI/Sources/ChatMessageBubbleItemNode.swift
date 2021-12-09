@@ -241,14 +241,20 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     }
     
     if !reactionsAreInline, let reactionsAttribute = mergedMessageReactions(attributes: firstMessage.attributes), !reactionsAttribute.reactions.isEmpty {
-        if result.last?.1 == ChatMessageWebpageBubbleContentNode.self ||
-           result.last?.1 == ChatMessagePollBubbleContentNode.self ||
-           result.last?.1 == ChatMessageContactBubbleContentNode.self {
-            result.append((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
-            needReactions = false
-        } else if result.last?.1 == ChatMessageCommentFooterContentNode.self {
-            result.insert((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)), at: result.count - 1)
-            needReactions = false
+        if result.last?.1 == ChatMessageTextBubbleContentNode.self {
+        } else {
+            if result.last?.1 == ChatMessageWebpageBubbleContentNode.self ||
+               result.last?.1 == ChatMessagePollBubbleContentNode.self ||
+               result.last?.1 == ChatMessageContactBubbleContentNode.self {
+                result.append((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
+                needReactions = false
+            } else if result.last?.1 == ChatMessageCommentFooterContentNode.self {
+                if result[result.count - 2].1 == ChatMessageTextBubbleContentNode.self {
+                } else {
+                    result.insert((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)), at: result.count - 1)
+                    needReactions = false
+                }
+            }
         }
     }
     
@@ -2189,6 +2195,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         guard let strongSelf = selfReference.value else {
             return
         }
+        
         let previousContextFrame = strongSelf.mainContainerNode.frame
         strongSelf.mainContainerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
         strongSelf.mainContextSourceNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
@@ -2699,7 +2706,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             shareButtonNode.removeFromSupernode()
         }
         
-        if case .System = animation, !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
+        if case .System = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
                 animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
                 animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
