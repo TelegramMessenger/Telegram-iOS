@@ -1209,7 +1209,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             controllerInteraction.openPeer(stats.peers[0].id, .default, nil)
                         })
                     } else if !stats.peers.isEmpty || reactionCount != 0 {
-                        if reactionCount != 0 {
+                        if reactionCount != 0, !"".isEmpty {
                             let minHeight = c.getActionsMinHeight()
                             c.setItems(.single(ContextController.Items(content: .custom(ReactionListContextMenuContent()), tip: nil)), minHeight: minHeight, previousActionsTransition: .slide(forward: true))
                         } else {
