@@ -7910,10 +7910,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             self.sentMessageEventsDisposable.set((self.context.account.pendingMessageManager.deliveredMessageEvents(peerId: peerId)
-            |> deliverOnMainQueue).start(next: { [weak self] namespace in
+            |> deliverOnMainQueue).start(next: { [weak self] namespace, silent in
                 if let strongSelf = self {
                     let inAppNotificationSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                    if inAppNotificationSettings.playSounds {
+                    if inAppNotificationSettings.playSounds && !silent {
                         serviceSoundManager.playMessageDeliveredSound()
                     }
                     if strongSelf.presentationInterfaceState.subject != .scheduledMessages && namespace == Namespaces.Message.ScheduledCloud {
