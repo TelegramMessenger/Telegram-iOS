@@ -528,7 +528,7 @@ class StickerPaneTrendingListGridItemNode: GridItemNode {
         
         let titleFrame = CGRect(origin: CGPoint(x: params.leftInset + leftInset, y: topOffset), size: titleLayout.size)
         let dismissButtonSize = CGSize(width: 12.0, height: 12.0)
-        self.dismissButtonNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - dismissButtonSize.width, y: topOffset - 1.0), size: dismissButtonSize)
+        self.dismissButtonNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - dismissButtonSize.width + 1.0, y: topOffset - 1.0), size: dismissButtonSize)
         self.dismissButtonNode.isHidden = item.dismiss == nil
         self.titleNode.frame = titleFrame
     }
