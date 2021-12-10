@@ -46,6 +46,25 @@ extension ReactionsMessageAttribute {
     }
 }
 
+public func mergedMessageReactionsAndPeers(message: Message) -> (reactions: [MessageReaction], peers: [(String, EnginePeer)]) {
+    guard let attribute = mergedMessageReactions(attributes: message.attributes) else {
+        return ([], [])
+    }
+    
+    var recentPeers = attribute.recentPeers.compactMap { recentPeer -> (String, EnginePeer)? in
+        if let peer = message.peers[recentPeer.peerId] {
+            return (recentPeer.value, EnginePeer(peer))
+        } else {
+            return nil
+        }
+    }
+    if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+        recentPeers.removeAll()
+    }
+    
+    return (attribute.reactions, recentPeers)
+}
+
 public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsMessageAttribute? {
     var current: ReactionsMessageAttribute?
     var pending: PendingReactionsMessageAttribute?
@@ -59,7 +78,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
     
     if let pending = pending {
         var reactions = current?.reactions ?? []
-        let recentPeers = current?.recentPeers ?? []
+        var recentPeers = current?.recentPeers ?? []
         if let value = pending.value {
             var found = false
             for i in 0 ..< reactions.count {
@@ -73,6 +92,17 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
             }
             if !found {
                 reactions.append(MessageReaction(value: value, count: 1, isSelected: true))
+            }
+        }
+        if let accountPeerId = pending.accountPeerId {
+            for i in 0 ..< recentPeers.count {
+                if recentPeers[i].peerId == accountPeerId {
+                    recentPeers.remove(at: i)
+                    break
+                }
+            }
+            if let value = pending.value {
+                recentPeers.append(ReactionsMessageAttribute.RecentPeer(value: value, peerId: accountPeerId))
             }
         }
         for i in (0 ..< reactions.count).reversed() {

@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ReactionButtonListComponent",
-    module_name = "ReactionButtonListComponent",
+    name = "ReactionListContextMenuContent",
+    module_name = "ReactionListContextMenuContent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -19,6 +19,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
+        "//submodules/ContextUI:ContextUI",
     ],
     visibility = [
         "//visibility:public",

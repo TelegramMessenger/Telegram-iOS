@@ -69,6 +69,7 @@ struct ChatMessageDateAndStatus {
     var edited: Bool
     var viewCount: Int?
     var dateReactions: [MessageReaction]
+    var dateReactionPeers: [(String, EnginePeer)]
     var dateReplies: Int
     var isPinned: Bool
     var dateText: String
@@ -518,6 +519,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     constrainedSize: CGSize(width: nativeSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude),
                     availableReactions: associatedData.availableReactions,
                     reactions: dateAndStatus.dateReactions,
+                    reactionPeers: dateAndStatus.dateReactionPeers,
                     replyCount: dateAndStatus.dateReplies,
                     isPinned: dateAndStatus.isPinned,
                     hasAutoremove: message.isSelfExpiring

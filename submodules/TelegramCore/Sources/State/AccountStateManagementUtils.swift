@@ -3240,7 +3240,7 @@ func replayFinalState(
                             added = true
                             updatedReactions = attribute.withUpdatedResults(reactions)
                             
-                            if updatedReactions.reactions == attribute.reactions {
+                            if updatedReactions == attribute {
                                 return .skip
                             }
                             attributes[j] = updatedReactions

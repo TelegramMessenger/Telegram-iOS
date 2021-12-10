@@ -1826,7 +1826,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }
                             }
                             
-                            return ContextController.Items(items: items)
+                            return ContextController.Items(content: .list(items))
                         }, minHeight: nil)
                     })))
                 }
@@ -1843,7 +1843,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     })))
                 }
                 
-                let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(MessageContextExtractedContentSource(sourceNode: node)), items: .single(ContextController.Items(items: items)), recognizer: nil, gesture: gesture)
+                let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(MessageContextExtractedContentSource(sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
                 strongSelf.controller?.window?.presentInGlobalOverlay(controller)
             })
         }, updateMessageReaction: { _, _ in
@@ -1963,7 +1963,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                         }
                                     }
                                     
-                                    return ContextController.Items(items: items)
+                                    return ContextController.Items(content: .list(items))
                                 }, minHeight: nil)
                             })))
                         }
@@ -1986,7 +1986,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     switch previewData {
                     case let .gallery(gallery):
                         gallery.setHintWillBePresentedInPreviewingContext(true)
-                        let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: node, sourceRect: rect)), items: items |> map { ContextController.Items(items: $0) }, gesture: gesture)
+                        let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: gallery, sourceNode: node, sourceRect: rect)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                         strongSelf.controller?.presentInGlobalOverlay(contextController)
                     case .instantPage:
                         break
@@ -2213,7 +2213,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     self?.chatInterfaceInteraction.openPeer(peer.id, .default, nil)
                 }))
             ]
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             controller.presentInGlobalOverlay(contextController)
         }
         
@@ -2845,7 +2845,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }, synchronousLoad: true)
                 galleryController.setHintWillBePresentedInPreviewingContext(true)
                 
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }
             
@@ -3491,7 +3491,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 self.view.endEditing(true)
                 
                 if let sourceNode = self.headerNode.buttonNodes[.mute]?.referenceNode {
-                    let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+                    let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                     contextController.dismissed = { [weak self] in
                         if let strongSelf = self {
                             strongSelf.state = strongSelf.state.withHighlightedButton(nil)
@@ -3717,7 +3717,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }, action: { [weak self] c, f in
                             self?.openReport(user: false, contextController: c, backAction: { c in
                                 if let mainItemsImpl = mainItemsImpl {
-                                    c.setItems(mainItemsImpl() |> map { ContextController.Items(items: $0) }, minHeight: nil)
+                                    c.setItems(mainItemsImpl() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
                                 }
                             })
                         })))
@@ -3773,7 +3773,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             
             if let sourceNode = self.headerNode.buttonNodes[.more]?.referenceNode {
                 let items = mainItemsImpl?() ?? .single([])
-                let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: items |> map { ContextController.Items(items: $0) }, gesture: gesture)
+                let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 contextController.dismissed = { [weak self] in
                     if let strongSelf = self {
                         strongSelf.state = strongSelf.state.withHighlightedButton(nil)
@@ -4434,7 +4434,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             })))
             
             if let contextController = contextController {
-                contextController.setItems(.single(ContextController.Items(items: items)), minHeight: nil)
+                contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil)
             } else {
                 strongSelf.state = strongSelf.state.withHighlightedButton(.voiceChat)
                 if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -4442,7 +4442,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 
                 if let sourceNode = strongSelf.headerNode.buttonNodes[.voiceChat]?.referenceNode, let controller = strongSelf.controller {
-                    let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+                    let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                     contextController.dismissed = { [weak self] in
                         if let strongSelf = self {
                             strongSelf.state = strongSelf.state.withHighlightedButton(nil)
@@ -4530,7 +4530,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 
                 if let contextController = contextController {
-                    contextController.setItems(.single(ContextController.Items(items: items)), minHeight: nil)
+                    contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil)
                 } else {
                     strongSelf.state = strongSelf.state.withHighlightedButton(.voiceChat)
                     if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -4538,7 +4538,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                     
                     if let sourceNode = strongSelf.headerNode.buttonNodes[.voiceChat]?.referenceNode, let controller = strongSelf.controller {
-                        let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+                        let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                         contextController.dismissed = { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.state = strongSelf.state.withHighlightedButton(nil)
@@ -5620,7 +5620,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     
             let contextController = ContextController(account: accountContext.account, presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node)), items: accountContextMenuItems(context: accountContext, logout: { [weak self] in
                 self?.logoutAccount(id: id)
-            }) |> map { ContextController.Items(items: $0) }, gesture: gesture)
+            }) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
             self.controller?.presentInGlobalOverlay(contextController)
         } else {
             gesture?.cancel()
@@ -6108,7 +6108,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 })))
             }
 
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             contextController.passthroughTouchEvent = { sourceView, point in
                 guard let strongSelf = self else {
                     return .ignore
@@ -6223,7 +6223,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
                 let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: .id(index.id), highlight: false, timecode: nil), botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, sourceRect: sourceRect, passthroughTouches: true)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, sourceRect: sourceRect, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
             }
         )
@@ -7307,7 +7307,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
             })))
         }
         
-        let controller = ContextController(account: primary.0.account, presentationData: self.presentationData, source: .extracted(SettingsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(items: items)), recognizer: nil, gesture: gesture)
+        let controller = ContextController(account: primary.0.account, presentationData: self.presentationData, source: .extracted(SettingsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
     }
 }
