@@ -31,6 +31,7 @@ import UndoUI
 import TextFormat
 
 private enum ChatListTokenId: Int32 {
+    case archive
     case filter
     case peer
     case date
@@ -457,13 +458,17 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private func updateSearchOptions(_ options: ChatListSearchOptions?, clearQuery: Bool = false) {
         var options = options
+        var tokens: [SearchBarToken] = []
+        if self.groupId == .archive {
+            tokens.append(SearchBarToken(id: ChatListTokenId.archive.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Archive"), title: self.presentationData.strings.ChatList_Archive, permanent: true))
+        }
+        
         if options?.isEmpty ?? true {
             options = nil
         }
         self.searchOptionsValue = options
         self.searchOptions.set(.single(options))
         
-        var tokens: [SearchBarToken] = []
         if let (peerId, isGroup, peerName) = options?.peer {
             let image: UIImage?
             if isGroup {
@@ -473,11 +478,11 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             } else {
                 image = UIImage(bundleImageName: "Chat List/Search/User")
             }
-            tokens.append(SearchBarToken(id: ChatListTokenId.peer.rawValue, icon:image, title: peerName))
+            tokens.append(SearchBarToken(id: ChatListTokenId.peer.rawValue, icon: image, title: peerName, permanent: false))
         }
         
         if let (_, _, dateTitle) = options?.date {
-            tokens.append(SearchBarToken(id: ChatListTokenId.date.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Calendar"), title: dateTitle))
+            tokens.append(SearchBarToken(id: ChatListTokenId.date.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Calendar"), title: dateTitle, permanent: false))
             
             self.suggestedDates.set(.single([]))
         }
@@ -524,7 +529,12 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.paneContainerNode.requestSelectPane(key)
         self.updateSearchOptions(nil)
         self.searchTextUpdated(text: query ?? "")
-        self.setQuery?(nil, [], query ?? "")
+        
+        var tokens: [SearchBarToken] = []
+        if self.groupId == .archive {
+            tokens.append(SearchBarToken(id: ChatListTokenId.archive.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Archive"), title: self.presentationData.strings.ChatList_Archive, permanent: true))
+        }
+        self.setQuery?(nil, tokens, query ?? "")
     }
 
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

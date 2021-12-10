@@ -302,6 +302,7 @@ private func recognizeContent(in image: UIImage) -> Signal<[RecognizedContent], 
                 let _ = barcodeResult.swap(mappedResults)
                 completion()
             }
+            barcodeRequest.preferBackgroundProcessing = true
             requests.append(barcodeRequest)
             
             if #available(iOS 13.0, *) {
@@ -310,6 +311,7 @@ private func recognizeContent(in image: UIImage) -> Signal<[RecognizedContent], 
                     let _ = textResult.swap(mappedResults)
                     completion()
                 }
+                textRequest.preferBackgroundProcessing = true
                 textRequest.usesLanguageCorrection = true
                 requests.append(textRequest)
             } else {
@@ -320,7 +322,11 @@ private func recognizeContent(in image: UIImage) -> Signal<[RecognizedContent], 
             try? handler.perform(requests)
             
             return ActionDisposable {
-                
+                if #available(iOS 13.0, *) {
+                    for request in requests {
+                        request.cancel()
+                    }
+                }
             }
         }
     } else {

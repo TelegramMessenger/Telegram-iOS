@@ -7139,3 +7139,5 @@ Sorry for the inconvenience.";
 "UserInfo.QRCode.InfoOther" = "Everyone on Telegram can scan this code to message %@.";
 
 "PeerInfo.QRCode.Title" = "QR Code";
+
+"ChatList.Archive" = "Archive";

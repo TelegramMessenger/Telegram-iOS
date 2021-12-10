@@ -56,30 +56,17 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
     
     private var delayedFrames: [MediaTrackFrame] = []
     
+    private var dstPlane: (UnsafeMutablePointer<UInt8>, Int)?
+    
     public init(codecContext: FFMpegAVCodecContext) {
         self.codecContext = codecContext
         self.videoFrame = FFMpegAVFrame()
-        
-        /*var sourcePixelBufferOptions: [String: Any] = [:]
-        sourcePixelBufferOptions[kCVPixelBufferPixelFormatTypeKey as String] = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange as NSNumber
-        
-        sourcePixelBufferOptions[kCVPixelBufferWidthKey as String] = codecContext.pointee.width as NSNumber
-        sourcePixelBufferOptions[kCVPixelBufferHeightKey as String] = codecContext.pointee.height as NSNumber
-        sourcePixelBufferOptions[kCVPixelBufferBytesPerRowAlignmentKey as String] = 128 as NSNumber
-        sourcePixelBufferOptions[kCVPixelBufferPlaneAlignmentKey as String] = 128 as NSNumber
-        
-        let ioSurfaceProperties = NSMutableDictionary()
-        ioSurfaceProperties["IOSurfaceIsGlobal"] = true as NSNumber
-        
-        sourcePixelBufferOptions[kCVPixelBufferIOSurfacePropertiesKey as String] = ioSurfaceProperties
-        
-        var pixelBufferPoolOptions: [String: Any] = [:]
-        pixelBufferPoolOptions[kCVPixelBufferPoolMinimumBufferCountKey as String] = bufferCount as NSNumber
-        
-        var pixelBufferPool: CVPixelBufferPool?
-        CVPixelBufferPoolCreate(kCFAllocatorDefault, pixelBufferPoolOptions as CFDictionary, sourcePixelBufferOptions as CFDictionary, &pixelBufferPool)
-        
-        self.pixelBufferPool = pixelBufferPool*/
+    }
+    
+    deinit {
+        if let (dstPlane, _) = self.dstPlane {
+            free(dstPlane)
+        }
     }
     
     func decodeInternal(frame: MediaTrackDecodableFrame) {
@@ -298,15 +285,18 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         let srcPlaneSize = Int(frame.lineSize[1]) * Int(frame.height / 2)
         let dstPlaneSize = srcPlaneSize * 2
 
-        let dstPlane = malloc(dstPlaneSize)!.assumingMemoryBound(to: UInt8.self)
-        defer {
-            free(dstPlane)
+        let dstPlane: UnsafeMutablePointer<UInt8>
+        if let (existingDstPlane, existingDstPlaneSize) = self.dstPlane, existingDstPlaneSize == dstPlaneSize {
+            dstPlane = existingDstPlane
+        } else {
+            if let (existingDstPlane, _) = self.dstPlane {
+                free(existingDstPlane)
+            }
+            dstPlane = malloc(dstPlaneSize)!.assumingMemoryBound(to: UInt8.self)
+            self.dstPlane = (dstPlane, dstPlaneSize)
         }
-
-        for i in 0 ..< srcPlaneSize {
-            dstPlane[2 * i] = frame.data[1]![i]
-            dstPlane[2 * i + 1] = frame.data[2]![i]
-        }
+        
+        fillDstPlane(dstPlane, frame.data[1]!, frame.data[2]!, srcPlaneSize)
 
         let status = CVPixelBufferLockBaseAddress(pixelBuffer, [])
         if status != kCVReturnSuccess {

@@ -79,7 +79,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, pres
         }
         
         titleString = NSAttributedString(string: titleText, font: titleFont, textColor: presentationData.theme.list.itemPrimaryTextColor)
-        descriptionString = NSAttributedString(string: subtitleText, font: descriptionFont, textColor: presentationData.theme.list.itemSecondaryTextColor)
+        descriptionString = NSAttributedString(string: subtitleText, font: descriptionFont, textColor: hasArtist ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
     }
     
     return (titleString, descriptionString, hasArtist)
