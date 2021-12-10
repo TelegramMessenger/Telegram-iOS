@@ -48,8 +48,10 @@ public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, 
             switch nextType {
             case .sms:
                 return (NSAttributedString(string: strings.Login_SendCodeViaSms, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
-            case .call, .flashCall, .missedCall:
+            case .call:
                 return (NSAttributedString(string: strings.Login_SendCodeViaCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            case .flashCall, .missedCall:
+                return (NSAttributedString(string: strings.Login_SendCodeViaFlashCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             case .none:
                 return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             }
@@ -57,8 +59,10 @@ public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, 
             switch nextType {
             case .sms:
                 return (NSAttributedString(string: strings.Login_SendCodeViaSms, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
-            case .call, .flashCall, .missedCall:
+            case .call:
                 return (NSAttributedString(string: strings.Login_SendCodeViaCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            case .flashCall, .missedCall:
+                return (NSAttributedString(string: strings.Login_SendCodeViaFlashCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             case .none:
                 return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             }
