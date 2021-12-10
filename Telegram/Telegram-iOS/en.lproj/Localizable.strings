@@ -7121,6 +7121,7 @@ Sorry for the inconvenience.";
 "ForcedPasswordSetup.Intro.DismissActionCancel" = "No, let me set a password";
 "ForcedPasswordSetup.Intro.DismissActionOK" = "Yes, I’m sure";
 
+"Login.ShortCallTitle" = "Within a few seconds you should\nreceive a short call from:";
 "Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the missed call number.";
 "Login.EnterMissingDigits" = "Enter the missing digits";
 
