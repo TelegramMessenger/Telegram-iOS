@@ -322,8 +322,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                             strongSelf.recognizedContentNode?.removeFromSupernode()
                                             if !results.isEmpty {
                                                 let size = strongSelf.imageNode.bounds.size
-                                                let recognizedContentNode = RecognizedContentContainer(size: size, recognitions: results, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, present: { c, a in
-                                                    strongSelf.galleryController()?.presentInGlobalOverlay(c, with: a)
+                                                let recognizedContentNode = RecognizedContentContainer(size: size, recognitions: results, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
+                                                    if let strongSelf = self {
+                                                        strongSelf.galleryController()?.presentInGlobalOverlay(c, with: a)
+                                                    }
                                                 }, performAction: { [weak self] string, action in
                                                     guard let strongSelf = self else {
                                                         return
