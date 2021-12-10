@@ -4859,6 +4859,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     allPeers?.insert(currentAccountPeer, at: 0)
                 }
             }
+            if allPeers?.count == 1 {
+                allPeers = nil
+            }
             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                 return $0.updatedSendAsPeers(allPeers)
             })

@@ -7131,3 +7131,5 @@ Sorry for the inconvenience.";
 "Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in chat.";
 "Conversation.LargeEmojiEnable" = "Enable Large Emoji";
 "Conversation.LargeEmojiEnabled" = "Large emoji enabled.";
+
+"ChatList.Archive" = "Archive";

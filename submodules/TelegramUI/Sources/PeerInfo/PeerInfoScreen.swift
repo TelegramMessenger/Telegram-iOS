@@ -6424,7 +6424,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                     strongSelf.deleteMessages(messageIds: nil)
                 }, shareMessages: { [weak self] in
-                    guard let strongSelf = self, let messageIds = strongSelf.state.selectedMessageIds, !messageIds.isEmpty else {
+                    guard let strongSelf = self, let messageIds = strongSelf.state.selectedMessageIds, !messageIds.isEmpty, strongSelf.peerId.namespace != Namespaces.Peer.SecretChat else {
                         return
                     }
                     let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Message] in
@@ -6448,7 +6448,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                     })
                 }, forwardMessages: { [weak self] in
-                    guard let strongSelf = self else {
+                    guard let strongSelf = self, strongSelf.peerId.namespace != Namespaces.Peer.SecretChat else {
                         return
                     }
                     strongSelf.forwardMessages(messageIds: nil)
