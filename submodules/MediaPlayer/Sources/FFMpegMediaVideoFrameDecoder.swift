@@ -295,7 +295,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
             dstPlane = malloc(dstPlaneSize)!.assumingMemoryBound(to: UInt8.self)
             self.dstPlane = (dstPlane, dstPlaneSize)
         }
-        
+                
         fillDstPlane(dstPlane, frame.data[1]!, frame.data[2]!, srcPlaneSize)
 
         let status = CVPixelBufferLockBaseAddress(pixelBuffer, [])
