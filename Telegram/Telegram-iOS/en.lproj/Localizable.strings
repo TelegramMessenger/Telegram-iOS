@@ -364,7 +364,7 @@
 "Login.HaveNotReceivedCodeInternal" = "Haven't received the code?";
 "Login.CodeSentSms" = "We have sent you an SMS with the code";
 "Login.Code" = "Code";
-"Login.WillCallYou" = "Telegram will call you in %@";
+"Login.WillCallYou" = "You can request a voice call in %@";
 "Login.CallRequestState2" = "Requesting a call from Telegram...";
 "Login.CallRequestState3" = "Telegram dialed your number\n[Didn't get the code?]";
 "Login.EmailNotConfiguredError" = "Please set up an email account.";
@@ -2073,7 +2073,7 @@
 
 "Login.CodeSentCall" = "We are calling your phone to dictate a code.";
 
-"Login.WillSendSms" = "Telegram will send you an SMS in %@";
+"Login.WillSendSms" = "You can request an SMS in %@";
 "Login.SmsRequestState2" = "Requesting an SMS from Telegram...";
 "Login.SmsRequestState3" = "Telegram sent you an SMS\n[Didn't get the code?]";
 
@@ -3764,8 +3764,9 @@ Unused sets are archived when you add more.";
 
 "AuthCode.Alert" = "Your login code is %@. Enter it in the Telegram app where you are trying to log in.\n\nDo not give this code to anyone.";
 "Login.CheckOtherSessionMessages" = "Check your Telegram messages";
-"Login.SendCodeViaSms" = "Send the code as an SMS";
-"Login.SendCodeViaCall" = "Get code on my phone";
+"Login.SendCodeViaSms" = "Get the code via SMS";
+"Login.SendCodeViaCall" = "Call me to dictate the code";
+"Login.SendCodeViaFlashCall" = "Get the code via phone call";
 "Login.CancelPhoneVerification" = "Do you want to stop the phone number verification process?";
 "Login.CancelPhoneVerificationStop" = "Stop";
 "Login.CancelPhoneVerificationContinue" = "Continue";
@@ -7121,6 +7122,7 @@ Sorry for the inconvenience.";
 "ForcedPasswordSetup.Intro.DismissActionCancel" = "No, let me set a password";
 "ForcedPasswordSetup.Intro.DismissActionOK" = "Yes, I’m sure";
 
+"Login.ShortCallTitle" = "Within a few seconds you should\nreceive a short call from:";
 "Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the missed call number.";
 "Login.EnterMissingDigits" = "Enter the missing digits";
 
@@ -7139,3 +7141,7 @@ Sorry for the inconvenience.";
 "UserInfo.QRCode.InfoOther" = "Everyone on Telegram can scan this code to message %@.";
 
 "PeerInfo.QRCode.Title" = "QR Code";
+
+"ChatList.Archive" = "Archive";
+
+"ChatList.Archive" = "Archive";

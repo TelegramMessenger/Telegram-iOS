@@ -73,7 +73,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         var feedbackTapImpl: (() -> Void)?
         var activatedActionImpl: (() -> Void)?
         var requestLayoutImpl: (() -> Void)?
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(items: content.menuItems()), getController: { [weak controller] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(content: .list(content.menuItems())), getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             activatedActionImpl?()
@@ -158,7 +158,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         }
         
         let actionsSideInset: CGFloat = layout.safeInsets.left + 11.0
-        let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: .immediate)
+        let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, bottomInset: 0.0, transition: .immediate)
         
         let containerFrame: CGRect
         let actionsFrame: CGRect
@@ -341,7 +341,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.contentNodeHasValidLayout = false
         
         let previousActionsContainerNode = self.actionsContainerNode
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: ContextController.Items(items: content.menuItems()), getController: { [weak self] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: ContextController.Items(content: .list(content.menuItems())), getController: { [weak self] in
             return self?.controller
         }, actionSelected: { [weak self] result in
             self?.requestDismiss()

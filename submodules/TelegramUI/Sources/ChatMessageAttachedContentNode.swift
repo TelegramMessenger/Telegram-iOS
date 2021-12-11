@@ -322,7 +322,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             var viewCount: Int?
             var dateReplies = 0
-            let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: message)
             for attribute in message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                     edited = !attribute.isHidden
@@ -498,7 +498,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     type: statusType,
                     edited: edited,
                     viewCount: viewCount,
-                    dateReactions: dateReactions,
+                    dateReactions: dateReactionsAndPeers.reactions,
+                    dateReactionPeers: dateReactionsAndPeers.peers,
                     dateReplies: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                     dateText: dateText
@@ -637,7 +638,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: shouldDisplayInlineDateReactions(message: message) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
                         constrainedSize: textConstrainedSize,
                         availableReactions: associatedData.availableReactions,
-                        reactions: dateReactions,
+                        reactions: dateReactionsAndPeers.reactions,
+                        reactionPeers: dateReactionsAndPeers.peers,
                         replyCount: dateReplies,
                         isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                         hasAutoremove: message.isSelfExpiring

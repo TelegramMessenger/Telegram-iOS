@@ -681,7 +681,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                             foregroundColor = .white
                             strokeColor = color.displayColor
                         }
-                        tokens = [SearchBarToken(id: 0, icon: UIImage(bundleImageName: "Settings/WallpaperSearchColorIcon"), title: color.localizedString(strings: self.presentationData.strings), style: SearchBarToken.Style(backgroundColor: backgroundColor, foregroundColor: foregroundColor, strokeColor: strokeColor))]
+                        tokens = [SearchBarToken(id: 0, icon: UIImage(bundleImageName: "Settings/WallpaperSearchColorIcon"), title: color.localizedString(strings: self.presentationData.strings), style: SearchBarToken.Style(backgroundColor: backgroundColor, foregroundColor: foregroundColor, strokeColor: strokeColor), permanent: false)]
                         text = query
                         placeholder = self.presentationData.strings.Wallpaper_SearchShort
                 }

@@ -17,14 +17,14 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, st
     case .missedCall:
         let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: primaryColor)
         let bold = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: primaryColor)
-        return parseMarkdownIntoAttributedString("Within a few seconds you should\nreceive a short call from:", attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
+        return parseMarkdownIntoAttributedString(strings.Login_ShortCallTitle, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
     case .call, .flashCall:
         return NSAttributedString(string: strings.ChangePhoneNumberCode_Called, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center)
     }
 }
 
 public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> (NSAttributedString, Bool) {
-    if let nextType = nextType, let timeout = timeout {
+    if let nextType = nextType, let timeout = timeout, timeout > 0 {
         let minutes = timeout / 60
         let seconds = timeout % 60
         switch nextType {
@@ -48,13 +48,24 @@ public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, 
             switch nextType {
             case .sms:
                 return (NSAttributedString(string: strings.Login_SendCodeViaSms, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
-            case .call, .flashCall, .missedCall:
+            case .call:
                 return (NSAttributedString(string: strings.Login_SendCodeViaCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            case .flashCall, .missedCall:
+                return (NSAttributedString(string: strings.Login_SendCodeViaFlashCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             case .none:
                 return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             }
         default:
-            return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            switch nextType {
+            case .sms:
+                return (NSAttributedString(string: strings.Login_SendCodeViaSms, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            case .call:
+                return (NSAttributedString(string: strings.Login_SendCodeViaCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            case .flashCall, .missedCall:
+                return (NSAttributedString(string: strings.Login_SendCodeViaFlashCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            case .none:
+                return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            }
         }
     }
 }

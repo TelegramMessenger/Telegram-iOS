@@ -430,7 +430,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     var viewCount: Int?
                     var dateReplies = 0
-                    let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: topMessage.attributes)?.reactions ?? []
+                    let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: topMessage)
                     for attribute in message.attributes {
                         if let attribute = attribute as? EditedMessageAttribute {
                             edited = !attribute.isHidden
@@ -458,7 +458,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         layoutInput: .trailingContent(contentWidth: iconFrame == nil ? 1000.0 : controlAreaWidth, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: message), preferAdditionalInset: !shouldDisplayInlineDateReactions(message: message))),
                         constrainedSize: constrainedSize,
                         availableReactions: associatedData.availableReactions,
-                        reactions: dateReactions,
+                        reactions: dateReactionsAndPeers.reactions,
+                        reactionPeers: dateReactionsAndPeers.peers,
                         replyCount: dateReplies,
                         isPinned: isPinned && !associatedData.isInPinnedListMode,
                         hasAutoremove: message.isSelfExpiring

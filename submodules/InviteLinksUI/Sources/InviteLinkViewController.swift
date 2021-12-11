@@ -647,7 +647,7 @@ public final class InviteLinkViewController: ViewController {
                     })))
                 }
                            
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             })
             

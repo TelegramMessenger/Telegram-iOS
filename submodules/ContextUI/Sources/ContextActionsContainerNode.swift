@@ -41,7 +41,43 @@ private enum ContextItemNode {
     case separator(ASDisplayNode)
 }
 
-private final class InnerActionsContainerNode: ASDisplayNode {
+private protocol ContextInnerActionsContainerNode: ASDisplayNode {
+    var panSelectionGestureEnabled: Bool { get set }
+    
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, bottomInset: CGFloat, minimalWidth: CGFloat?, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, visibleSize: CGSize)
+    func updateTheme(presentationData: PresentationData)
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol?
+}
+
+private final class InnerCustomActionsContainerNode: ASDisplayNode, ContextInnerActionsContainerNode {
+    private let node: ContextControllerItemsNode
+    
+    var panSelectionGestureEnabled: Bool = false
+    
+    init(content: ContextControllerItemsContent) {
+        self.node = content.node()
+        
+        super.init()
+        
+        self.addSubnode(self.node)
+    }
+    
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, bottomInset: CGFloat, minimalWidth: CGFloat?, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, visibleSize: CGSize) {
+        let nodeLayout = self.node.update(constrainedWidth: constrainedWidth, maxHeight: constrainedHeight, bottomInset: bottomInset, transition: transition)
+        transition.updateFrame(node: self.node, frame: CGRect(origin: CGPoint(), size: nodeLayout.cleanSize))
+        return (nodeLayout.cleanSize, nodeLayout.visibleSize)
+    }
+    
+    func updateTheme(presentationData: PresentationData) {
+        
+    }
+    
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol? {
+        return nil
+    }
+}
+
+private final class InnerActionsContainerNode: ASDisplayNode, ContextInnerActionsContainerNode {
     private let blurBackground: Bool
     private let presentationData: PresentationData
     private let containerNode: ASDisplayNode
@@ -189,7 +225,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         gesture.isEnabled = self.panSelectionGestureEnabled
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, minimalWidth: CGFloat?, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, bottomInset: CGFloat, minimalWidth: CGFloat?, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, visibleSize: CGSize) {
         var minActionsWidth: CGFloat = 250.0
         if let minimalWidth = minimalWidth, minimalWidth > minActionsWidth {
             minActionsWidth = minimalWidth
@@ -298,7 +334,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
         if let effectView = self.effectView {
             transition.updateFrame(view: effectView, frame: bounds)
         }
-        return size
+        return (size, size)
     }
     
     func updateTheme(presentationData: PresentationData) {
@@ -481,9 +517,12 @@ final class ContextActionsContainerNode: ASDisplayNode {
     private let shadowNode: ASImageNode
     private let additionalShadowNode: ASImageNode?
     private let additionalActionsNode: InnerActionsContainerNode?
-    private let actionsNode: InnerActionsContainerNode
+    
+    private let contentContainerNode: ASDisplayNode
+    
+    private let actionsNode: ContextInnerActionsContainerNode
     private let textSelectionTipNode: InnerTextSelectionTipContainerNode?
-    private let scrollNode: ASScrollNode
+    //private let scrollNode: ASScrollNode
     
     var panSelectionGestureEnabled: Bool = true {
         didSet {
@@ -506,8 +545,13 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.shadowNode.contentMode = .scaleToFill
         self.shadowNode.isHidden = true
         
+        self.contentContainerNode = ASDisplayNode()
+        self.contentContainerNode.clipsToBounds = true
+        self.contentContainerNode.cornerRadius = 14.0
+        self.contentContainerNode.backgroundColor = presentationData.theme.contextMenu.backgroundColor
+        
         var items = items
-        if let firstItem = items.items.first, case let .custom(_, additional) = firstItem, additional {
+        if case var .list(itemList) = items.content, let firstItem = itemList.first, case let .custom(_, additional) = firstItem, additional {
             let additionalShadowNode = ASImageNode()
             additionalShadowNode.displaysAsynchronously = false
             additionalShadowNode.displayWithoutProcessing = true
@@ -517,72 +561,81 @@ final class ContextActionsContainerNode: ASDisplayNode {
             self.additionalShadowNode = additionalShadowNode
             
             self.additionalActionsNode = InnerActionsContainerNode(presentationData: presentationData, items: [firstItem], getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
-            items.items.removeFirst()
+            itemList.removeFirst()
+            items.content = .list(itemList)
         } else {
             self.additionalShadowNode = nil
             self.additionalActionsNode = nil
         }
         
-        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items.items, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
-        if let tip = items.tip {
-            let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
-            textSelectionTipNode.isUserInteractionEnabled = false
-            self.textSelectionTipNode = textSelectionTipNode
-        } else {
+        switch items.content {
+        case let .list(itemList):
+            self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: itemList, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
+            if let tip = items.tip {
+                let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
+                textSelectionTipNode.isUserInteractionEnabled = false
+                self.textSelectionTipNode = textSelectionTipNode
+            } else {
+                self.textSelectionTipNode = nil
+            }
+        case let .custom(customContent):
+            self.actionsNode = InnerCustomActionsContainerNode(content: customContent)
             self.textSelectionTipNode = nil
         }
         
-        self.scrollNode = ASScrollNode()
+        /*self.scrollNode = ASScrollNode()
         self.scrollNode.canCancelAllTouchesInViews = true
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.view.showsVerticalScrollIndicator = false
+        self.scrollNode.clipsToBounds = false
         if #available(iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
-        }
+        }*/
         
         super.init()
         
         self.addSubnode(self.shadowNode)
         self.additionalShadowNode.flatMap(self.addSubnode)
-        self.additionalActionsNode.flatMap(self.scrollNode.addSubnode)
-        self.scrollNode.addSubnode(self.actionsNode)
-        self.textSelectionTipNode.flatMap(self.scrollNode.addSubnode)
-        self.addSubnode(self.scrollNode)
+        self.additionalActionsNode.flatMap(self.contentContainerNode.addSubnode)
+        self.contentContainerNode.addSubnode(self.actionsNode)
+        self.textSelectionTipNode.flatMap(self.addSubnode)
+        self.addSubnode(self.contentContainerNode)
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         var widthClass = widthClass
         if !self.blurBackground {
             widthClass = .regular
         }
         
         var contentSize = CGSize()
-        let actionsSize = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, constrainedHeight: constrainedHeight, minimalWidth: nil, transition: transition)
+        let actionsLayout = self.actionsNode.updateLayout(widthClass: widthClass, constrainedWidth: constrainedWidth, constrainedHeight: constrainedHeight, bottomInset: bottomInset, minimalWidth: nil, transition: transition)
             
         if let additionalActionsNode = self.additionalActionsNode, let additionalShadowNode = self.additionalShadowNode {
-            let additionalActionsSize = additionalActionsNode.updateLayout(widthClass: widthClass, constrainedWidth: actionsSize.width, constrainedHeight: constrainedHeight, minimalWidth: actionsSize.width, transition: transition)
-            contentSize = additionalActionsSize
+            let additionalActionsLayout = additionalActionsNode.updateLayout(widthClass: widthClass, constrainedWidth: actionsLayout.cleanSize.width, constrainedHeight: constrainedHeight, bottomInset: 0.0, minimalWidth: actionsLayout.cleanSize.width, transition: transition)
+            contentSize = additionalActionsLayout.cleanSize
             
-            let bounds = CGRect(origin: CGPoint(), size: additionalActionsSize)
+            let bounds = CGRect(origin: CGPoint(), size: additionalActionsLayout.cleanSize)
             transition.updateFrame(node: additionalShadowNode, frame: bounds.insetBy(dx: -30.0, dy: -30.0))
             additionalShadowNode.isHidden = widthClass == .compact
             
-            transition.updateFrame(node: additionalActionsNode, frame: CGRect(origin: CGPoint(), size: additionalActionsSize))
+            transition.updateFrame(node: additionalActionsNode, frame: CGRect(origin: CGPoint(), size: additionalActionsLayout.cleanSize))
             contentSize.height += 8.0
         }
         
-        let bounds = CGRect(origin: CGPoint(x: 0.0, y: contentSize.height), size: actionsSize)
+        let bounds = CGRect(origin: CGPoint(x: 0.0, y: contentSize.height), size: actionsLayout.visibleSize)
         transition.updateFrame(node: self.shadowNode, frame: bounds.insetBy(dx: -30.0, dy: -30.0))
         self.shadowNode.isHidden = widthClass == .compact
         
-        contentSize.width = max(contentSize.width, actionsSize.width)
-        contentSize.height += actionsSize.height
+        contentSize.width = max(contentSize.width, actionsLayout.cleanSize.width)
+        contentSize.height += actionsLayout.cleanSize.height
         
         transition.updateFrame(node: self.actionsNode, frame: bounds)
+        transition.updateFrame(node: self.contentContainerNode, frame: bounds)
         
         if let textSelectionTipNode = self.textSelectionTipNode {
             contentSize.height += 8.0
-            let textSelectionTipSize = textSelectionTipNode.updateLayout(widthClass: widthClass, width: actionsSize.width, transition: transition)
+            let textSelectionTipSize = textSelectionTipNode.updateLayout(widthClass: widthClass, width: actionsLayout.cleanSize.width, transition: transition)
             transition.updateFrame(node: textSelectionTipNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentSize.height), size: textSelectionTipSize))
             contentSize.height += textSelectionTipSize.height
         }
@@ -591,8 +644,8 @@ final class ContextActionsContainerNode: ASDisplayNode {
     }
     
     func updateSize(containerSize: CGSize, contentSize: CGSize) {
-        self.scrollNode.view.contentSize = contentSize
-        self.scrollNode.frame = CGRect(origin: CGPoint(), size: containerSize)
+        //self.scrollNode.view.contentSize = contentSize
+        //self.scrollNode.frame = CGRect(origin: CGPoint(), size: containerSize)
     }
     
     func actionNode(at point: CGPoint) -> ContextActionNodeProtocol? {

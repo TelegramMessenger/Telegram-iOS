@@ -312,7 +312,7 @@ public final class AnimatedAvatarSetView: UIView {
             self.unclippedView = UIImageView()
             self.clippedView = UIImageView()
             
-            super.init()
+            super.init(frame: CGRect())
             
             self.addSubview(self.unclippedView)
             self.addSubview(self.clippedView)
@@ -397,7 +397,7 @@ public final class AnimatedAvatarSetView: UIView {
     
     private var contentViews: [AnimatedAvatarSetContext.Content.Item.Key: ContentView] = [:]
     
-    public func update(context: AccountContext, content: AnimatedAvatarSetContext.Content, itemSize: CGSize = CGSize(width: 30.0, height: 30.0), customSpacing: CGFloat? = nil, animated: Bool, synchronousLoad: Bool) -> CGSize {
+    public func update(context: AccountContext, content: AnimatedAvatarSetContext.Content, itemSize: CGSize = CGSize(width: 30.0, height: 30.0), customSpacing: CGFloat? = nil, animation: ListViewItemUpdateAnimation, synchronousLoad: Bool) -> CGSize {
         var contentWidth: CGFloat = 0.0
         let contentHeight: CGFloat = itemSize.height
 
@@ -406,13 +406,6 @@ public final class AnimatedAvatarSetView: UIView {
             spacing = customSpacing
         } else {
             spacing = 10.0
-        }
-        
-        let transition: ContainedViewLayoutTransition
-        if animated {
-            transition = .animated(duration: 0.2, curve: .easeInOut)
-        } else {
-            transition = .immediate
         }
         
         var validKeys: [AnimatedAvatarSetContext.Content.Item.Key] = []
@@ -427,15 +420,15 @@ public final class AnimatedAvatarSetView: UIView {
             let itemView: ContentView
             if let current = self.contentViews[key] {
                 itemView = current
-                itemView.updateLayout(size: itemSize, isClipped: index != 0, animated: animated)
-                transition.updateFrame(layer: itemView.layer, frame: itemFrame)
+                itemView.updateLayout(size: itemSize, isClipped: index != 0, animated: animation.isAnimated)
+                animation.animator.updateFrame(layer: itemView.layer, frame: itemFrame, completion: nil)
             } else {
                 itemView = ContentView(context: context, peer: item.peer, placeholderColor: item.placeholderColor, synchronousLoad: synchronousLoad, size: itemSize, spacing: spacing)
                 self.addSubview(itemView)
                 self.contentViews[key] = itemView
                 itemView.updateLayout(size: itemSize, isClipped: index != 0, animated: false)
                 itemView.frame = itemFrame
-                if animated {
+                if animation.isAnimated {
                     itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     itemView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
                 }
@@ -454,10 +447,14 @@ public final class AnimatedAvatarSetView: UIView {
             guard let itemView = self.contentViews.removeValue(forKey: key) else {
                 continue
             }
-            itemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak itemView] _ in
-                itemView?.removeFromSuperview()
-            })
-            itemView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+            if animation.isAnimated {
+                itemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak itemView] _ in
+                    itemView?.removeFromSuperview()
+                })
+                itemView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+            } else {
+                itemView.removeFromSuperview()
+            }
         }
         
         return CGSize(width: contentWidth, height: contentHeight)

@@ -293,7 +293,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         self.blurBackground = blurBackground
             
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(items: []), getController: { [weak controller] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(), getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             beginDismiss(result)
@@ -1216,7 +1216,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if let reactionContextNode = self.reactionContextNode {
             self.reactionContextNode = nil
-            reactionContextNode.removeFromSupernode()
+            reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
+                reactionContextNode?.removeFromSupernode()
+            })
         }
         
         if !items.reactionItems.isEmpty, let context = items.context {
@@ -1338,7 +1340,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
-                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
+                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, bottomInset: 0.0, transition: actionsContainerTransition)
                     let adjustedActionsSize = realActionsSize
 
                     self.actionsContainerNode.updateSize(containerSize: realActionsSize, contentSize: realActionsSize)
@@ -1425,7 +1427,17 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
-                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
+                    let constrainedActionsHeight: CGFloat
+                    let constrainedActionsBottomInset: CGFloat
+                    if let currentActionsMinHeight = self.currentActionsMinHeight {
+                        constrainedActionsBottomInset = actionsBottomInset + layout.intrinsicInsets.bottom
+                        constrainedActionsHeight = layout.size.height - currentActionsMinHeight.minY - constrainedActionsBottomInset
+                    } else {
+                        constrainedActionsHeight = layout.size.height
+                        constrainedActionsBottomInset = 0.0
+                    }
+                    
+                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: constrainedActionsHeight, bottomInset: constrainedActionsBottomInset, transition: actionsContainerTransition)
                     let adjustedActionsSize = realActionsSize
 
                     self.actionsContainerNode.updateSize(containerSize: realActionsSize, contentSize: realActionsSize)
@@ -1590,7 +1602,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         constrainedWidth = floor(layout.size.width / 2.0)
                     }
                     
-                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: constrainedWidth - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
+                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: constrainedWidth - actionsSideInset * 2.0, constrainedHeight: layout.size.height, bottomInset: 0.0, transition: actionsContainerTransition)
                     let contentScale = (constrainedWidth - actionsSideInset * 2.0) / constrainedWidth
                     var contentUnscaledSize: CGSize
                     if case .compact = layout.metrics.widthClass {
@@ -1952,22 +1964,35 @@ public enum ContextContentSource {
     case controller(ContextControllerContentSource)
 }
 
+public protocol ContextControllerItemsNode: ASDisplayNode {
+    func update(constrainedWidth: CGFloat, maxHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, visibleSize: CGSize)
+}
+
+public protocol ContextControllerItemsContent: AnyObject {
+    func node() -> ContextControllerItemsNode
+}
+
 public final class ContextController: ViewController, StandalonePresentableController, ContextControllerProtocol {
     public struct Items {
-        public var items: [ContextMenuItem]
+        public enum Content {
+            case list([ContextMenuItem])
+            case custom(ContextControllerItemsContent)
+        }
+        
+        public var content: Content
         public var context: AccountContext?
         public var reactionItems: [ReactionContextItem]
         public var tip: Tip?
 
-        public init(items: [ContextMenuItem], context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], tip: Tip? = nil) {
-            self.items = items
+        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], tip: Tip? = nil) {
+            self.content = content
             self.context = context
             self.reactionItems = reactionItems
             self.tip = tip
         }
 
         public init() {
-            self.items = []
+            self.content = .list([])
             self.context = nil
             self.reactionItems = []
             self.tip = nil
