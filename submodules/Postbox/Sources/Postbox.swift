@@ -1639,7 +1639,7 @@ final class PostboxImpl {
                                 }
                             }
 
-                            if message.timestamp + 60 * 10 > timestampForAbsoluteTimeBasedOperations {
+                            if Int64(message.timestamp) + 60 * 10 > Int64(timestampForAbsoluteTimeBasedOperations) {
                                 return .skip
                             }
                             var flags = StoreMessageFlags(message.flags)
