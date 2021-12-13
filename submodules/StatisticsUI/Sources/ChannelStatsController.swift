@@ -523,7 +523,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             })
         })))
         
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(ChannelStatsContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(ChannelStatsContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         controller.presentInGlobalOverlay(contextController)
     }
     return controller

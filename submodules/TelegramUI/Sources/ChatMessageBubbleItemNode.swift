@@ -1543,7 +1543,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
+                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: message)
                 for attribute in message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -1592,7 +1592,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                     constrainedSize: CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude),
                     availableReactions: item.associatedData.availableReactions,
-                    reactions: dateReactions,
+                    reactions: dateReactionsAndPeers.reactions,
+                    reactionPeers: dateReactionsAndPeers.peers,
                     replyCount: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     hasAutoremove: message.isSelfExpiring
@@ -1777,8 +1778,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             let (minWidth, buttonsLayout) = reactionButtonsLayout(ChatMessageReactionButtonsNode.Arguments(
                 context: item.context,
                 presentationData: item.presentationData,
+                presentationContext: item.controllerInteraction.presentationContext,
                 availableReactions: item.associatedData.availableReactions,
                 reactions: bubbleReactions,
+                message: item.message,
                 isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
                 constrainedWidth: maximumNodeWidth
             ))
@@ -2826,8 +2829,30 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 if animation.isAnimated {
                     reactionButtonsNode.animateIn(animation: animation)
                 }
+                
+                if let (rect, containerSize) = strongSelf.absoluteRect {
+                    var rect = rect
+                    rect.origin.y = containerSize.height - rect.maxY + strongSelf.insets.top
+                    
+                    var reactionButtonsNodeFrame = reactionButtonsFrame
+                    reactionButtonsNodeFrame.origin.x += rect.minX
+                    reactionButtonsNodeFrame.origin.y += rect.minY
+                    
+                    reactionButtonsNode.update(rect: rect, within: containerSize, transition: .immediate)
+                }
             } else {
                 animation.animator.updateFrame(layer: reactionButtonsNode.layer, frame: reactionButtonsFrame, completion: nil)
+                
+                if let (rect, containerSize) = strongSelf.absoluteRect {
+                    var rect = rect
+                    rect.origin.y = containerSize.height - rect.maxY + strongSelf.insets.top
+                    
+                    var reactionButtonsNodeFrame = reactionButtonsFrame
+                    reactionButtonsNodeFrame.origin.x += rect.minX
+                    reactionButtonsNodeFrame.origin.y += rect.minY
+                    
+                    reactionButtonsNode.update(rect: rect, within: containerSize, transition: animation.transition)
+                }
             }
         } else if let reactionButtonsNode = strongSelf.reactionButtonsNode {
             strongSelf.reactionButtonsNode = nil
@@ -3759,6 +3784,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         for contentNode in self.contentNodes {
             contentNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + contentNode.frame.minX, y: rect.minY + contentNode.frame.minY), size: rect.size), within: containerSize)
         }
+        
+        if let reactionButtonsNode = self.reactionButtonsNode {
+            var reactionButtonsNodeFrame = reactionButtonsNode.frame
+            reactionButtonsNodeFrame.origin.x += rect.minX
+            reactionButtonsNodeFrame.origin.y += rect.minY
+            
+            reactionButtonsNode.update(rect: rect, within: containerSize, transition: .immediate)
+        }
     }
     
     override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
@@ -3773,6 +3806,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         for contentNode in self.contentNodes {
             contentNode.applyAbsoluteOffset(value: value, animationCurve: animationCurve, duration: duration)
         }
+        
+        if let reactionButtonsNode = self.reactionButtonsNode {
+            reactionButtonsNode.offset(value: value, animationCurve: animationCurve, duration: duration)
+        }
     }
     
     private func applyAbsoluteOffsetSpringInternal(value: CGFloat, duration: Double, damping: CGFloat) {
@@ -3780,6 +3817,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
 
         for contentNode in self.contentNodes {
             contentNode.applyAbsoluteOffsetSpring(value: value, duration: duration, damping: damping)
+        }
+        
+        if let reactionButtonsNode = self.reactionButtonsNode {
+            reactionButtonsNode.offsetSpring(value: value, duration: duration, damping: damping)
         }
     }
     

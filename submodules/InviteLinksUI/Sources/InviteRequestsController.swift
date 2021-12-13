@@ -268,7 +268,7 @@ public func inviteRequestsController(context: AccountContext, updatedPresentatio
     //            dismissPromise.set(true)
     //        }
             
-            let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(source), items: .single(ContextController.Items(items: items)), gesture: gesture)
+            let contextController = ContextController(account: context.account, presentationData: presentationData, source: .extracted(source), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             presentInGlobalOverlayImpl?(contextController)
         })
     })

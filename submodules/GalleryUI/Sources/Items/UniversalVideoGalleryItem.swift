@@ -2359,7 +2359,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
 
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.moreBarButton.referenceNode)), items: items |> map { ContextController.Items(items: $0) }, gesture: gesture)
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.moreBarButton.referenceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
         self.isShowingContextMenuPromise.set(true)
         controller.presentInGlobalOverlay(contextController)
 
@@ -2414,7 +2414,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     return
                 }
 
-                c.setItems(strongSelf.contextMenuSpeedItems() |> map { ContextController.Items(items: $0) }, minHeight: nil)
+                c.setItems(strongSelf.contextMenuSpeedItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
             })))
             
             if let (message, _, _) = strongSelf.contentInfo() {
@@ -2532,7 +2532,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     c.dismiss(completion: nil)
                     return
                 }
-                c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(items: $0) }, minHeight: nil)
+                c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
             })))
 
             return items

@@ -5,8 +5,8 @@ import TelegramApi
 import MtProtoKit
 
 
-public func updateMessageReactionsInteractively(postbox: Postbox, messageId: MessageId, reaction: String?) -> Signal<Never, NoError> {
-    return postbox.transaction { transaction -> Void in
+public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reaction: String?) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
         transaction.setPendingMessageAction(type: .updateReaction, id: messageId, action: UpdateMessageReactionsAction())
         transaction.updateMessage(messageId, update: { currentMessage in
             var storeForwardInfo: StoreMessageForwardInfo?
@@ -20,7 +20,7 @@ public func updateMessageReactionsInteractively(postbox: Postbox, messageId: Mes
                     break loop
                 }
             }
-            attributes.append(PendingReactionsMessageAttribute(value: reaction))
+            attributes.append(PendingReactionsMessageAttribute(accountPeerId: account.peerId, value: reaction))
             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
         })
     }

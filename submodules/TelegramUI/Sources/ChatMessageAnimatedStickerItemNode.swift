@@ -706,12 +706,24 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if let backgroundNode = self.backgroundNode {
                 backgroundNode.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize, transition: .immediate)
             }
+            
+            if let reactionButtonsNode = self.reactionButtonsNode {
+                var reactionButtonsNodeFrame = reactionButtonsNode.frame
+                reactionButtonsNodeFrame.origin.x += rect.minX
+                reactionButtonsNodeFrame.origin.y += rect.minY
+                
+                reactionButtonsNode.update(rect: rect, within: containerSize, transition: .immediate)
+            }
         }
     }
     
     override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         if let backgroundNode = self.backgroundNode {
             backgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
+        }
+        
+        if let reactionButtonsNode = self.reactionButtonsNode {
+            reactionButtonsNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
     
@@ -926,7 +938,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var edited = false
             var viewCount: Int? = nil
             var dateReplies = 0
-            let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: item.message.attributes)?.reactions ?? []
+            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
             for attribute in item.message.attributes {
                 if let _ = attribute as? EditedMessageAttribute, isEmoji {
                     edited = true
@@ -956,7 +968,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                 constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude),
                 availableReactions: item.associatedData.availableReactions,
-                reactions: dateReactions,
+                reactions: dateReactionsAndPeers.reactions,
+                reactionPeers: dateReactionsAndPeers.peers,
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                 hasAutoremove: item.message.isSelfExpiring
@@ -1098,14 +1111,16 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?
             if !reactions.reactions.isEmpty {
-                let totalInset = params.leftInset + layoutConstants.bubble.edgeInset * 2.0 + avatarInset + layoutConstants.bubble.contentInsets.left + params.rightInset + layoutConstants.bubble.contentInsets.right
+                let totalInset = params.leftInset + layoutConstants.bubble.edgeInset * 2.0 + avatarInset + layoutConstants.bubble.contentInsets.left * 2.0 + params.rightInset
                 
                 let maxReactionsWidth = params.width - totalInset
                 let (minWidth, buttonsLayout) = reactionButtonsLayout(ChatMessageReactionButtonsNode.Arguments(
                     context: item.context,
                     presentationData: item.presentationData,
+                    presentationContext: item.controllerInteraction.presentationContext,
                     availableReactions: item.associatedData.availableReactions,
                     reactions: reactions,
+                    message: item.message,
                     isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
                     constrainedWidth: maxReactionsWidth
                 ))
@@ -1400,12 +1415,32 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
                             }
                             reactionButtonsNode.frame = reactionButtonsFrame
+                            if let (rect, containerSize) = strongSelf.absoluteRect {
+                                var rect = rect
+                                rect.origin.y = containerSize.height - rect.maxY + strongSelf.insets.top
+                                
+                                var reactionButtonsNodeFrame = reactionButtonsFrame
+                                reactionButtonsNodeFrame.origin.x += rect.minX
+                                reactionButtonsNodeFrame.origin.y += rect.minY
+                                
+                                reactionButtonsNode.update(rect: rect, within: containerSize, transition: .immediate)
+                            }
                             strongSelf.addSubnode(reactionButtonsNode)
                             if animation.isAnimated {
                                 reactionButtonsNode.animateIn(animation: animation)
                             }
                         } else {
                             animation.animator.updateFrame(layer: reactionButtonsNode.layer, frame: reactionButtonsFrame, completion: nil)
+                            if let (rect, containerSize) = strongSelf.absoluteRect {
+                                var rect = rect
+                                rect.origin.y = containerSize.height - rect.maxY + strongSelf.insets.top
+                                
+                                var reactionButtonsNodeFrame = reactionButtonsFrame
+                                reactionButtonsNodeFrame.origin.x += rect.minX
+                                reactionButtonsNodeFrame.origin.y += rect.minY
+                                
+                                reactionButtonsNode.update(rect: rect, within: containerSize, transition: animation.transition)
+                            }
                         }
                     } else if let reactionButtonsNode = strongSelf.reactionButtonsNode {
                         strongSelf.reactionButtonsNode = nil

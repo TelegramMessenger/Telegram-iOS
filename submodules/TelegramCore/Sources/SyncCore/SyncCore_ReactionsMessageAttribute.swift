@@ -54,6 +54,10 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
     public let reactions: [MessageReaction]
     public let recentPeers: [RecentPeer]
     
+    public var associatedPeerIds: [PeerId] {
+        return self.recentPeers.map(\.peerId)
+    }
+    
     public init(reactions: [MessageReaction], recentPeers: [RecentPeer]) {
         self.reactions = reactions
         self.recentPeers = recentPeers
@@ -81,17 +85,33 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
 }
 
 public final class PendingReactionsMessageAttribute: MessageAttribute {
+    public let accountPeerId: PeerId?
     public let value: String?
     
-    public init(value: String?) {
+    public var associatedPeerIds: [PeerId] {
+        if let accountPeerId = self.accountPeerId {
+            return [accountPeerId]
+        } else {
+            return []
+        }
+    }
+    
+    public init(accountPeerId: PeerId?, value: String?) {
+        self.accountPeerId = accountPeerId
         self.value = value
     }
     
     required public init(decoder: PostboxDecoder) {
+        self.accountPeerId = decoder.decodeOptionalInt64ForKey("ap").flatMap(PeerId.init)
         self.value = decoder.decodeOptionalStringForKey("v")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        if let accountPeerId = self.accountPeerId {
+            encoder.encodeInt64(accountPeerId.toInt64(), forKey: "ap")
+        } else {
+            encoder.encodeNil(forKey: "ap")
+        }
         if let value = self.value {
             encoder.encodeString(value, forKey: "v")
         } else {

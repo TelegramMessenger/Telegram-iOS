@@ -144,6 +144,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         var constrainedSize: CGSize
         var availableReactions: AvailableReactions?
         var reactions: [MessageReaction]
+        var reactionPeers: [(String, EnginePeer)]
         var replyCount: Int
         var isPinned: Bool
         var hasAutoremove: Bool
@@ -159,6 +160,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             constrainedSize: CGSize,
             availableReactions: AvailableReactions?,
             reactions: [MessageReaction],
+            reactionPeers: [(String, EnginePeer)],
             replyCount: Int,
             isPinned: Bool,
             hasAutoremove: Bool
@@ -173,6 +175,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             self.availableReactions = availableReactions
             self.constrainedSize = constrainedSize
             self.reactions = reactions
+            self.reactionPeers = reactionPeers
             self.replyCount = replyCount
             self.isPinned = isPinned
             self.hasAutoremove = hasAutoremove
@@ -188,7 +191,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     private let dateNode: TextNode
     private var impressionIcon: ASImageNode?
     private var reactionNodes: [String: StatusReactionNode] = [:]
-    private let reactionButtonsContainer = ReactionButtonsLayoutContainer()
+    private let reactionButtonsContainer = ReactionButtonsAsyncLayoutContainer()
     private var reactionCountNode: TextNode?
     private var reactionButtonNode: HighlightTrackingButtonNode?
     private var repliesIcon: ASImageNode?
@@ -617,14 +620,14 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let resultingWidth: CGFloat
             let resultingHeight: CGFloat
             
-            let reactionButtons: ReactionButtonsLayoutContainer.Result
+            let reactionButtonsResult: ReactionButtonsAsyncLayoutContainer.Result
             switch arguments.layoutInput {
             case .standalone:
                 verticalReactionsInset = 0.0
                 verticalInset = 0.0
                 resultingWidth = layoutSize.width
                 resultingHeight = layoutSize.height
-                reactionButtons = reactionButtonsContainer.update(
+                reactionButtonsResult = reactionButtonsContainer.update(
                     context: arguments.context,
                     action: { value in
                         guard let strongSelf = self else {
@@ -634,12 +637,11 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     },
                     reactions: [],
                     colors: reactionColors,
-                    constrainedWidth: arguments.constrainedSize.width,
-                    transition: .immediate
+                    constrainedWidth: arguments.constrainedSize.width
                 )
             case let .trailingContent(contentWidth, reactionSettings):
                 if let reactionSettings = reactionSettings, !reactionSettings.displayInline {
-                    reactionButtons = reactionButtonsContainer.update(
+                    reactionButtonsResult = reactionButtonsContainer.update(
                         context: arguments.context,
                         action: { value in
                             guard let strongSelf = self else {
@@ -659,21 +661,31 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 }
                             }
                             
+                            var peers: [EnginePeer] = []
+                            for (value, peer) in arguments.reactionPeers {
+                                if value == reaction.value {
+                                    peers.append(peer)
+                                }
+                            }
+                            if peers.count != Int(reaction.count) {
+                                peers.removeAll()
+                            }
+                            
                             return ReactionButtonsLayoutContainer.Reaction(
                                 reaction: ReactionButtonComponent.Reaction(
                                     value: reaction.value,
                                     iconFile: iconFile
                                 ),
                                 count: Int(reaction.count),
+                                peers: peers,
                                 isSelected: reaction.isSelected
                             )
                         },
                         colors: reactionColors,
-                        constrainedWidth: arguments.constrainedSize.width,
-                        transition: .immediate
+                        constrainedWidth: arguments.constrainedSize.width
                     )
                 } else {
-                    reactionButtons = reactionButtonsContainer.update(
+                    reactionButtonsResult = reactionButtonsContainer.update(
                         context: arguments.context,
                         action: { value in
                             guard let strongSelf = self else {
@@ -683,14 +695,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         },
                         reactions: [],
                         colors: reactionColors,
-                        constrainedWidth: arguments.constrainedSize.width,
-                        transition: .immediate
+                        constrainedWidth: arguments.constrainedSize.width
                     )
                 }
                 
                 var reactionButtonsSize = CGSize()
                 var currentRowWidth: CGFloat = 0.0
-                for item in reactionButtons.items {
+                for item in reactionButtonsResult.items {
                     if currentRowWidth + item.size.width > arguments.constrainedSize.width {
                         reactionButtonsSize.width = max(reactionButtonsSize.width, currentRowWidth)
                         if !reactionButtonsSize.height.isZero {
@@ -705,12 +716,12 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     }
                     currentRowWidth += item.size.width
                 }
-                if !currentRowWidth.isZero && !reactionButtons.items.isEmpty {
+                if !currentRowWidth.isZero && !reactionButtonsResult.items.isEmpty {
                     reactionButtonsSize.width = max(reactionButtonsSize.width, currentRowWidth)
                     if !reactionButtonsSize.height.isZero {
                         reactionButtonsSize.height += 6.0
                     }
-                    reactionButtonsSize.height += reactionButtons.items[0].size.height
+                    reactionButtonsSize.height += reactionButtonsResult.items[0].size.height
                 }
                 
                 if reactionButtonsSize.width.isZero {
@@ -757,6 +768,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         strongSelf.theme = arguments.presentationData.theme
                         strongSelf.type = arguments.type
                         strongSelf.layoutSize = layoutSize
+                        
+                        let reactionButtons = reactionButtonsResult.apply(animation)
                         
                         var reactionButtonPosition = CGPoint(x: -1.0, y: verticalReactionsInset)
                         for item in reactionButtons.items {
@@ -1136,9 +1149,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 return node.iconView
             }
         }
-        for (_, button) in self.reactionButtonsContainer.buttons {
-            if let result = button.findTaggedView(tag: ReactionButtonComponent.ViewTag(value: value)) as? ReactionButtonComponent.View {
-                return result.iconView
+        for (key, button) in self.reactionButtonsContainer.buttons {
+            if key == value {
+                return button.iconView
             }
         }
         return nil

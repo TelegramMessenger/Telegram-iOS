@@ -75,7 +75,9 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
                 }
             }
             
-            self.textNode.attributedText = NSAttributedString(string: text, font: Font.monospace(21.0), textColor: UIColor(argb: textColor))
+            let fontSize: CGFloat = floor(21.0 * size.height / 28.0)
+            
+            self.textNode.attributedText = NSAttributedString(string: text, font: Font.monospace(fontSize), textColor: UIColor(argb: textColor))
             let textSize = self.textNode.updateLayout(size)
             self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
             
@@ -224,12 +226,18 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
             self.textField.keyboardAppearance = .light
         }
         
-        let height: CGFloat = 28.0
+        let height: CGFloat
+        if prefix.isEmpty {
+            height = 40.0
+        } else {
+            height = 28.0
+        }
+        
         self.prefixLabel.attributedText = NSAttributedString(string: prefix, font: Font.monospace(21.0), textColor: UIColor(argb: theme.foreground))
         let prefixSize = self.prefixLabel.updateLayout(CGSize(width: width, height: 100.0))
         let prefixSpacing: CGFloat = prefix.isEmpty ? 0.0 : 8.0
         
-        let itemSize = CGSize(width: 25.0, height: height)
+        let itemSize = CGSize(width: floor(25.0 * height / 28.0), height: height)
         let itemSpacing: CGFloat = 5.0
         let itemsWidth: CGFloat = itemSize.width * CGFloat(count) + itemSpacing * CGFloat(count - 1)
         
