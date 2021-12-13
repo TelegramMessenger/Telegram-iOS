@@ -905,6 +905,10 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
         super.init()
         
         self.contentsGravity = .resize
+        if #available(iOS 13.0, *) {
+            self.preventsCapture = true
+            self.preventsDisplaySleepDuringVideoPlayback = false
+        }
     }
 
     required init?(coder: NSCoder) {

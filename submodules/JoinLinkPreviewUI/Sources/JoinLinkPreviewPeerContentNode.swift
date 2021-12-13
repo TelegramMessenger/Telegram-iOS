@@ -127,7 +127,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), emptyColor: theme.list.mediaPlaceholderColor)
         
         self.addSubnode(self.titleNode)
-        self.titleNode.attributedText = NSAttributedString(string: content.title, font: Font.semibold(24.0), textColor: theme.actionSheet.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: content.title, font: Font.semibold(24.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
         
         self.addSubnode(self.countNode)
         let membersString: String
@@ -141,7 +141,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
             membersString = strings.Conversation_StatusSubscribers(content.memberCount)
         }
 
-        self.countNode.attributedText = NSAttributedString(string: membersString, font: Font.regular(15.0), textColor: theme.actionSheet.secondaryTextColor)
+        self.countNode.attributedText = NSAttributedString(string: membersString, font: Font.regular(15.0), textColor: theme.actionSheet.secondaryTextColor, paragraphAlignment: .center)
         
         if !self.peerNodes.isEmpty {
             for peerNode in peerNodes {
@@ -216,10 +216,11 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: floor((size.width - avatarSize) / 2.0), y: verticalOrigin + 32.0), size: CGSize(width: avatarSize, height: avatarSize)))
         
-        let titleSize = self.titleNode.measure(size)
+        let constrainSize = CGSize(width: size.width - 32.0, height: size.height)
+        let titleSize = self.titleNode.measure(constrainSize)
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: verticalOrigin + 27.0 + avatarSize + 15.0), size: titleSize))
         
-        let countSize = self.countNode.measure(size)
+        let countSize = self.countNode.measure(constrainSize)
         transition.updateFrame(node: self.countNode, frame: CGRect(origin: CGPoint(x: floor((size.width - countSize.width) / 2.0), y: verticalOrigin + 27.0 + avatarSize + 15.0 + titleSize.height + 3.0), size: countSize))
         
         var verticalOffset = verticalOrigin + 27.0 + avatarSize + 15.0 + titleSize.height + 3.0 + countSize.height + 18.0
