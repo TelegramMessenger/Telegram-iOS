@@ -46,7 +46,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         var defaultReaction: String?
         if let availableReactions = availableReactions {
             for reaction in availableReactions.reactions {
-                if reaction.title.lowercased().contains("heart") {
+                if reaction.title.lowercased().contains("thumbs up") {
                     defaultReaction = reaction.value
                 }
             }

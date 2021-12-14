@@ -543,7 +543,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         return transaction.getCombinedPeerReadState(messages[0].id.peerId)
     }
     
-    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32), NoError> = combineLatest(
+    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?), NoError> = combineLatest(
         loadLimits,
         loadStickerSaveStatusSignal,
         loadResourceStatusSignal,
@@ -552,9 +552,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         |> take(1),
         cachedData,
         readState,
-        ApplicationSpecificNotice.getMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager)
+        ApplicationSpecificNotice.getMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager),
+        context.engine.stickers.availableReactions()
     )
-    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData, readState, messageViewsPrivacyTips -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32) in
+    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData, readState, messageViewsPrivacyTips, availableReactions -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?) in
         let (limitsConfiguration, appConfig) = limitsAndAppConfig
         var canEdit = false
         if !isAction {
@@ -567,12 +568,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             isMessageRead = readState.isOutgoingMessageIndexRead(message.index)
         }
         
-        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips)
+        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions)
     }
     
     return dataSignal
     |> deliverOnMainQueue
-    |> map { data, updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips -> ContextController.Items in
+    |> map { data, updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions -> ContextController.Items in
         var actions: [ContextMenuItem] = []
         
         var isPinnedMessages = false
@@ -1209,9 +1210,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             controllerInteraction.openPeer(stats.peers[0].id, .default, nil)
                         })
                     } else if !stats.peers.isEmpty || reactionCount != 0 {
-                        if reactionCount != 0, !"".isEmpty {
-                            let minHeight = c.getActionsMinHeight()
-                            c.setItems(.single(ContextController.Items(content: .custom(ReactionListContextMenuContent()), tip: nil)), minHeight: minHeight, previousActionsTransition: .slide(forward: true))
+                        if reactionCount != 0 {
+                            c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(context: context, availableReactions: availableReactions, message: EngineMessage(message), back: { [weak c] in
+                                c?.popItems()
+                            }, openPeer: { [weak c] id in
+                                c?.dismiss(completion: {
+                                    controllerInteraction.openPeer(id, .default, nil)
+                                })
+                            })), tip: nil)))
                         } else {
                             var subActions: [ContextMenuItem] = []
 
@@ -1837,7 +1843,11 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         self.buttonNode.accessibilityLabel = presentationData.strings.VoiceChat_StopRecording
 
         self.iconNode = ASImageNode()
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Read"), color: presentationData.theme.actionSheet.primaryTextColor)
+        if let reactionsAttribute = item.message.reactionsAttribute, !reactionsAttribute.reactions.isEmpty {
+            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: presentationData.theme.actionSheet.primaryTextColor)
+        } else {
+            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Read"), color: presentationData.theme.actionSheet.primaryTextColor)
+        }
 
         self.avatarsNode = AnimatedAvatarSetNode()
         self.avatarsContext = AnimatedAvatarSetContext()
@@ -2053,7 +2063,16 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             let placeholderAvatarsContent: AnimatedAvatarSetContext.Content
 
             var avatarsPeers: [EnginePeer] = []
-            if let peers = self.currentStats?.peers {
+            if let recentPeers = self.item.message.reactionsAttribute?.recentPeers, !recentPeers.isEmpty {
+                for recentPeer in recentPeers {
+                    if let peer = self.item.message.peers[recentPeer.peerId] {
+                        avatarsPeers.append(EnginePeer(peer))
+                        if avatarsPeers.count == 3 {
+                            break
+                        }
+                    }
+                }
+            } else if let peers = self.currentStats?.peers {
                 for i in 0 ..< min(3, peers.count) {
                     avatarsPeers.append(peers[i])
                 }

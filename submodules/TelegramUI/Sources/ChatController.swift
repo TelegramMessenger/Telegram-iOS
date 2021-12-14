@@ -1064,8 +1064,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         })
                                     } else if updatedReaction == nil {
                                         itemNode.awaitingAppliedReaction = (nil, {
+                                            controller?.dismiss()
                                         })
-                                        controller?.dismiss()
                                     }
                                 }
                             }

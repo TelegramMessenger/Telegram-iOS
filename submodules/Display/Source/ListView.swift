@@ -2665,6 +2665,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         if !abs(updatedApparentHeight - previousApparentHeight).isZero {
                             let currentAnimation = node.animationForKey("apparentHeight")
                             if let currentAnimation = currentAnimation, let toFloat = currentAnimation.to as? CGFloat, toFloat.isEqual(to: updatedApparentHeight) {
+                                /*node.addApparentHeightAnimation(updatedApparentHeight, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
+                                    if let node = node {
+                                        node.animateFrameTransition(progress, currentValue)
+                                    }
+                                })
+                                node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)*/
                             } else {
                                 node.apparentHeight = previousApparentHeight
                                 node.animateFrameTransition(0.0, previousApparentHeight)
@@ -2733,7 +2739,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         for itemNode in self.itemNodes {
-            itemNode.beginPendingControlledTransitions(beginAt: timestamp)
+            itemNode.beginPendingControlledTransitions(beginAt: timestamp, forceRestart: false)
         }
         
         if hadInserts, let reorderNode = self.reorderNode, reorderNode.supernode != nil {

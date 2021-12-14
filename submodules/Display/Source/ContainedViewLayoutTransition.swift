@@ -1693,7 +1693,7 @@ public final class ControlledTransition {
             self.curve = curve
         }
         
-        func merge(with other: NativeAnimator) {
+        func merge(with other: NativeAnimator, forceRestart: Bool) {
             var removeAnimationIndices: [Int] = []
             for i in 0 ..< self.animations.count {
                 let animation = self.animations[i]
@@ -1703,7 +1703,7 @@ public final class ControlledTransition {
                     let otherAnimation = other.animations[j]
                     
                     if animation.layer === otherAnimation.layer && animation.path == otherAnimation.path {
-                        if animation.toValue == otherAnimation.toValue {
+                        if animation.toValue == otherAnimation.toValue && !forceRestart {
                             removeAnimationIndices.append(i)
                         } else {
                             removeOtherAnimationIndices.append(j)
@@ -1932,9 +1932,9 @@ public final class ControlledTransition {
         }
     }
     
-    public func merge(with other: ControlledTransition) {
+    public func merge(with other: ControlledTransition, forceRestart: Bool) {
         if let animator = self.animator as? NativeAnimator, let otherAnimator = other.animator as? NativeAnimator {
-            animator.merge(with: otherAnimator)
+            animator.merge(with: otherAnimator, forceRestart: forceRestart)
         }
     }
 }

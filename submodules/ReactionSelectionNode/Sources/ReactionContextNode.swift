@@ -523,7 +523,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             let expandedFrame = CGRect(origin: CGPoint(x: floor(selfTargetRect.midX - expandedSize.width / 2.0), y: floor(selfTargetRect.midY - expandedSize.height / 2.0)), size: expandedSize)
             
-            let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .linear)
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
             
             self.addSubnode(itemNode)
             itemNode.frame = selfSourceRect
@@ -562,7 +562,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 additionalAnimationNode.visibility = true
             })
             
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + min(5.0, 2.0 * UIView.animationDurationFactor()), execute: {
                 self.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: hideNode, completion: {
                     mainAnimationCompleted = true
                     intermediateCompletion()

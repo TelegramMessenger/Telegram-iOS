@@ -481,16 +481,16 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         self.pendingControlledTransitions.append(transition)
     }
     
-    func beginPendingControlledTransitions(beginAt: Double) {
+    func beginPendingControlledTransitions(beginAt: Double, forceRestart: Bool) {
         for transition in self.pendingControlledTransitions {
-            self.addControlledTransition(transition: transition, beginAt: beginAt)
+            self.addControlledTransition(transition: transition, beginAt: beginAt, forceRestart: forceRestart)
         }
         self.pendingControlledTransitions.removeAll()
     }
     
-    func addControlledTransition(transition: ControlledTransition, beginAt: Double) {
+    func addControlledTransition(transition: ControlledTransition, beginAt: Double, forceRestart: Bool) {
         for controlledTransition in self.controlledTransitions {
-            transition.merge(with: controlledTransition.transition)
+            transition.merge(with: controlledTransition.transition, forceRestart: forceRestart)
         }
         self.controlledTransitions.append(ControlledTransitionContext(transition: transition, beginAt: beginAt))
     }

@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-
 public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reaction: String?) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         transaction.setPendingMessageAction(type: .updateReaction, id: messageId, action: UpdateMessageReactionsAction())
@@ -59,7 +58,7 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
         if messageId.namespace != Namespaces.Message.Cloud {
             return .fail(.generic)
         }
-        return network.request(Api.functions.messages.sendReaction(flags: value == nil ? 0 : 1, peer: inputPeer, msgId: messageId.id, reaction: value))
+        let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendReaction(flags: value == nil ? 0 : 1, peer: inputPeer, msgId: messageId.id, reaction: value))
         |> mapError { _ -> RequestUpdateMessageReactionError in
             return .generic
         }
@@ -88,6 +87,11 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
             |> castError(RequestUpdateMessageReactionError.self)
             |> ignoreValues
         }
+        #if DEBUG
+        return signal |> delay(0.1, queue: .mainQueue())
+        #else
+        return signal
+        #endif
     }
 }
 
@@ -225,3 +229,234 @@ private func synchronizeMessageReactions(transaction: Transaction, postbox: Post
     }
 }
 
+public extension EngineMessageReactionListContext.State {
+    init(message: EngineMessage, reaction: String?) {
+        var totalCount: Int = 0
+        if let reactionsAttribute = message._asMessage().reactionsAttribute {
+            for messageReaction in reactionsAttribute.reactions {
+                if reaction == nil || messageReaction.value == reaction {
+                    totalCount += Int(messageReaction.count)
+                }
+            }
+        }
+        self.init(
+            totalCount: totalCount,
+            items: [],
+            canLoadMore: true
+        )
+    }
+}
+
+public final class EngineMessageReactionListContext {
+    public final class Item: Equatable {
+        public let peer: EnginePeer
+        public let reaction: String
+        
+        init(
+            peer: EnginePeer,
+            reaction: String
+        ) {
+            self.peer = peer
+            self.reaction = reaction
+        }
+        
+        public static func ==(lhs: Item, rhs: Item) -> Bool {
+            if lhs.peer != rhs.peer {
+                return false
+            }
+            if lhs.reaction != rhs.reaction {
+                return false
+            }
+            return true
+        }
+    }
+    
+    public struct State: Equatable {
+        public var totalCount: Int
+        public var items: [Item]
+        public var canLoadMore: Bool
+        
+        public init(
+            totalCount: Int,
+            items: [Item],
+            canLoadMore: Bool
+        ) {
+            self.totalCount = totalCount
+            self.items = items
+            self.canLoadMore = canLoadMore
+        }
+    }
+    
+    private final class Impl {
+        struct InternalState: Equatable {
+            var totalCount: Int
+            var items: [Item]
+            var canLoadMore: Bool
+            var nextOffset: String?
+        }
+        
+        let queue: Queue
+        
+        let account: Account
+        let message: EngineMessage
+        let reaction: String?
+        
+        let disposable = MetaDisposable()
+        
+        var state: InternalState
+        let statePromise = Promise<InternalState>()
+        
+        var isLoadingMore: Bool = false
+        
+        init(queue: Queue, account: Account, message: EngineMessage, reaction: String?) {
+            self.queue = queue
+            self.account = account
+            self.message = message
+            self.reaction = reaction
+            
+            let initialState = EngineMessageReactionListContext.State(message: message, reaction: reaction)
+            self.state = InternalState(totalCount: initialState.totalCount, items: initialState.items, canLoadMore: true, nextOffset: nil)
+            
+            self.loadMore()
+        }
+        
+        deinit {
+            assert(self.queue.isCurrent())
+            
+            self.disposable.dispose()
+        }
+        
+        func loadMore() {
+            if self.isLoadingMore {
+                return
+            }
+            self.isLoadingMore = true
+            
+            let account = self.account
+            let message = self.message
+            let reaction = self.reaction
+            let currentOffset = self.state.nextOffset
+            let limit = self.state.items.isEmpty ? 50 : 100
+            let signal: Signal<InternalState, NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                return transaction.getPeer(message.id.peerId).flatMap(apiInputPeer)
+            }
+            |> mapToSignal { inputPeer -> Signal<InternalState, NoError> in
+                if message.id.namespace != Namespaces.Message.Cloud {
+                    return .single(InternalState(totalCount: 0, items: [], canLoadMore: false, nextOffset: nil))
+                }
+                guard let inputPeer = inputPeer else {
+                    return .single(InternalState(totalCount: 0, items: [], canLoadMore: false, nextOffset: nil))
+                }
+                var flags: Int32 = 0
+                if reaction != nil {
+                    flags |= 1 << 0
+                }
+                if currentOffset != nil {
+                    flags |= 1 << 1
+                }
+                return account.network.request(Api.functions.messages.getMessageReactionsList(flags: flags, peer: inputPeer, id: message.id.id, reaction: reaction, offset: currentOffset, limit: Int32(limit)))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.MessageReactionsList?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<InternalState, NoError> in
+                    return account.postbox.transaction { transaction -> InternalState in
+                        switch result {
+                        case let .messageReactionsList(_, count, reactions, users, nextOffset):
+                            var peers: [Peer] = []
+                            var peerPresences: [PeerId: PeerPresence] = [:]
+                            
+                            for user in users {
+                                let telegramUser = TelegramUser(user: user)
+                                peers.append(telegramUser)
+                                if let presence = TelegramUserPresence(apiUser: user) {
+                                    peerPresences[telegramUser.id] = presence
+                                }
+                            }
+                            
+                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                                return updated
+                            })
+                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                            
+                            var items: [EngineMessageReactionListContext.Item] = []
+                            for reaction in reactions {
+                                switch reaction {
+                                case let .messageUserReaction(userId, reaction):
+                                    if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) {
+                                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction))
+                                    }
+                                }
+                            }
+                            
+                            return InternalState(totalCount: Int(count), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset)
+                        case .none:
+                            return InternalState(totalCount: 0, items: [], canLoadMore: false, nextOffset: nil)
+                        }
+                    }
+                }
+            }
+            self.disposable.set((signal
+            |> deliverOn(self.queue)).start(next: { [weak self] state in
+                guard let strongSelf = self else {
+                    return
+                }
+                var existingPeerIds = Set<EnginePeer.Id>()
+                for item in strongSelf.state.items {
+                    existingPeerIds.insert(item.peer.id)
+                }
+                
+                for item in state.items {
+                    if existingPeerIds.contains(item.peer.id) {
+                        continue
+                    }
+                    existingPeerIds.insert(item.peer.id)
+                    strongSelf.state.items.append(item)
+                }
+                if state.canLoadMore {
+                    strongSelf.state.totalCount = max(state.totalCount, strongSelf.state.items.count)
+                } else {
+                    strongSelf.state.totalCount = strongSelf.state.items.count
+                }
+                strongSelf.state.canLoadMore = state.canLoadMore
+                strongSelf.state.nextOffset = state.nextOffset
+                
+                strongSelf.isLoadingMore = false
+                strongSelf.statePromise.set(.single(strongSelf.state))
+            }))
+        }
+    }
+    
+    private let queue: Queue
+    private let impl: QueueLocalObject<Impl>
+    
+    public var state: Signal<State, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.statePromise.get().start(next: { state in
+                    subscriber.putNext(State(
+                        totalCount: state.totalCount,
+                        items: state.items,
+                        canLoadMore: state.canLoadMore
+                    ))
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    init(account: Account, message: EngineMessage, reaction: String?) {
+        let queue = Queue()
+        self.queue = queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return Impl(queue: queue, account: account, message: message, reaction: reaction)
+        })
+    }
+    
+    public func loadMore() {
+        self.impl.with { impl in
+            impl.loadMore()
+        }
+    }
+}

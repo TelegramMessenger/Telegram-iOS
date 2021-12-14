@@ -285,7 +285,7 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
 
                 var currentContentRect = self.contextSourceNode.contentRect
                 let contextSourceNode = self.contextSourceNode
-                self.contextSourceNode.layoutUpdated = { [weak self, weak contextSourceNode] size in
+                self.contextSourceNode.layoutUpdated = { [weak self, weak contextSourceNode] size, _ in
                     guard let strongSelf = self, let contextSourceNode = contextSourceNode, strongSelf.contextSourceNode === contextSourceNode else {
                         return
                     }

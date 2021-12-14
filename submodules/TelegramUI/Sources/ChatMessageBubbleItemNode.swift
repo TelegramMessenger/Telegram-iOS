@@ -2209,6 +2209,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
         strongSelf.updateAccessibilityData(accessibilityData)
         
+        var animation = animation
+        if strongSelf.mainContextSourceNode.isExtractedToContextPreview {
+            animation = .System(duration: 0.25, transition: ControlledTransition(duration: 0.25, curve: .easeInOut, interactive: false))
+        }
+        
         var legacyTransition: ContainedViewLayoutTransition = .immediate
         var useDisplayLinkAnimations = false
         if case let .System(duration, _) = animation {
@@ -2534,7 +2539,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             contentContainer?.containerNode.targetNodeForActivationProgressContentRect = CGRect(origin: CGPoint(x: backgroundFrame.minX + incomingOffset, y: 0.0), size: relativeFrame.size)
             
             if previousContextFrame?.size != contentContainer?.containerNode.bounds.size || previousContextContentFrame != contentContainer?.sourceNode.contentRect {
-                contentContainer?.sourceNode.layoutUpdated?(relativeFrame.size)
+                contentContainer?.sourceNode.layoutUpdated?(relativeFrame.size, animation)
             }
             
             var selectionInsets = UIEdgeInsets()
@@ -2724,16 +2729,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: animation.transition)
                 strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: animation.transition)
                 
-                if let type = strongSelf.backgroundNode.type {
-                    var incomingOffset: CGFloat = 0.0
+                if let _ = strongSelf.backgroundNode.type {
+                    /*var incomingOffset: CGFloat = 0.0
                     switch type {
                     case .incoming:
                         incomingOffset = 5.0
                     default:
                         break
-                    }
-                    strongSelf.mainContextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
-                    strongSelf.mainContainerNode.targetNodeForActivationProgressContentRect = strongSelf.mainContextSourceNode.contentRect
+                    }*/
+                    //strongSelf.mainContextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
+                    //strongSelf.mainContainerNode.targetNodeForActivationProgressContentRect = strongSelf.mainContextSourceNode.contentRect
                     if !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
                         if let (rect, size) = strongSelf.absoluteRect {
                             strongSelf.updateAbsoluteRect(rect, within: size)
@@ -2870,7 +2875,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         strongSelf.mainContainerNode.targetNodeForActivationProgressContentRect = strongSelf.mainContextSourceNode.contentRect
         
         if previousContextFrame.size != strongSelf.mainContextSourceNode.bounds.size || previousContextContentFrame != strongSelf.mainContextSourceNode.contentRect {
-            strongSelf.mainContextSourceNode.layoutUpdated?(strongSelf.mainContextSourceNode.bounds.size)
+            strongSelf.mainContextSourceNode.layoutUpdated?(strongSelf.mainContextSourceNode.bounds.size, animation)
         }
         
         strongSelf.updateSearchTextHighlightState()
@@ -2924,11 +2929,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     }
     
     override func shouldAnimateHorizontalFrameTransition() -> Bool {
-        if let _ = self.backgroundFrameTransition {
+        return false
+        /*if let _ = self.backgroundFrameTransition {
             return true
         } else {
             return false
-        }
+        }*/
     }
     
     override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {

@@ -11,13 +11,15 @@ import AccountContext
 
 private let animationDurationFactor: Double = 1.0
 
-public protocol ContextControllerProtocol {
+public protocol ContextControllerProtocol: AnyObject {
     var useComplexItemsTransitionAnimation: Bool { get set }
     var immediateItemsTransitionAnimation: Bool { get set }
 
     func getActionsMinHeight() -> ContextController.ActionsHeight?
     func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?)
     func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition)
+    func pushItems(items: Signal<ContextController.Items, NoError>)
+    func popItems()
     func dismiss(completion: (() -> Void)?)
 }
 
@@ -158,7 +160,7 @@ public enum ContextMenuItem {
     case separator
 }
 
-private func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> CGRect {
+func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> CGRect {
     let sourceWindowFrame = fromView.convert(frame, to: nil)
     var targetWindowFrame = toView.convert(sourceWindowFrame, from: nil)
     
@@ -195,6 +197,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private let withoutBlurDimNode: ASDisplayNode
     private let dismissNode: ASDisplayNode
     private let dismissAccessibilityArea: AccessibilityAreaNode
+    
+    private var presentationNode: ContextControllerPresentationNode?
+    private var currentPresentationStateTransition: ContextControllerPresentationNodeStateTransition?
     
     private let clippingNode: ASDisplayNode
     private let scrollNode: ASScrollNode
@@ -466,11 +471,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         }
         
-        self.itemsDisposable.set((items
-        |> deliverOnMainQueue).start(next: { [weak self] items in
-            self?.setItems(items: items, minHeight: nil, previousActionsTransition: .scale)
-        }))
-        
         switch source {
         case .reference, .extracted:
             self.contentReady.set(.single(true))
@@ -479,6 +479,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         self.initializeContent()
+        
+        self.itemsDisposable.set((items
+        |> deliverOnMainQueue).start(next: { [weak self] items in
+            self?.setItems(items: items, minHeight: nil, previousActionsTransition: .scale)
+        }))
         
         self.dismissAccessibilityArea.activate = { [weak self] in
             self?.dimNodeTapped()
@@ -523,7 +528,40 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
             }
         case let .extracted(source):
-            let takenViewInfo = source.takeView()
+            let presentationNode = ContextControllerExtractedPresentationNode(
+                getController: { [weak self] in
+                    return self?.getController()
+                },
+                requestUpdate: { [weak self] transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let validLayout = strongSelf.validLayout {
+                        strongSelf.updateLayout(
+                            layout: validLayout,
+                            transition: transition,
+                            previousActionsContainerNode: nil
+                        )
+                    }
+                },
+                requestDismiss: { [weak self] result in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.dismissedForCancel?()
+                    strongSelf.beginDismiss(result)
+                },
+                requestAnimateOut: { [weak self] result, completion in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.animateOut(result: result, completion: completion)
+                },
+                source: source
+            )
+            self.presentationNode = presentationNode
+            self.addSubnode(presentationNode)
+            /*let takenViewInfo = source.takeView()
             
             if let takenViewInfo = takenViewInfo, let parentSupernode = takenViewInfo.contentContainingNode.supernode {
                 self.contentContainerNode.contentNode = .extracted(node: takenViewInfo.contentContainingNode, keepInPlace: source.keepInPlace)
@@ -553,7 +591,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 takenViewInfo.contentContainingNode.isExtractedToContextPreviewUpdated?(true)
                 
                 self.originalProjectedContentViewFrame = (convertFrame(takenViewInfo.contentContainingNode.frame, from: parentSupernode.view, to: self.view), convertFrame(takenViewInfo.contentContainingNode.contentRect, from: takenViewInfo.contentContainingNode.view, to: self.view))
-            }
+            }*/
         case let .controller(source):
             let transitionInfo = source.transitionInfo()
             if let transitionInfo = transitionInfo, let (sourceNode, sourceNodeRect) = transitionInfo.sourceNode() {
@@ -574,12 +612,24 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     func animateIn() {
         self.gesture?.endPressedAppearance()
-        
         self.hapticFeedback.impact()
         
+        if let _ = self.presentationNode {
+            self.didCompleteAnimationIn = true
+            self.currentPresentationStateTransition = .animateIn
+            if let validLayout = self.validLayout {
+                self.updateLayout(
+                    layout: validLayout,
+                    transition: .animated(duration: 0.5, curve: .spring),
+                    previousActionsContainerNode: nil
+                )
+            }
+            return
+        }
+        
         switch self.source {
-            case .reference:
-                break
+        case .reference:
+            break
         case .extracted:
             if let contentAreaInScreenSpace = self.contentAreaInScreenSpace, let maybeContentNode = self.contentContainerNode.contentNode, case .extracted = maybeContentNode {
                 var updatedContentAreaInScreenSpace = contentAreaInScreenSpace
@@ -758,6 +808,18 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.isUserInteractionEnabled = false
         
         self.beganAnimatingOut()
+        
+        if let _ = self.presentationNode {
+            self.currentPresentationStateTransition = .animateOut(result: initialResult, completion: completion)
+            if let validLayout = self.validLayout {
+                self.updateLayout(
+                    layout: validLayout,
+                    transition: .animated(duration: 0.25, curve: .easeInOut),
+                    previousActionsContainerNode: nil
+                )
+            }
+            return
+        }
         
         var transitionDuration: Double = 0.2
         var transitionCurve: ContainedViewLayoutTransitionCurve = .easeInOut
@@ -1152,6 +1214,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, completion: @escaping () -> Void) {
+        if let presentationNode = self.presentationNode {
+            presentationNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, completion: completion)
+            return
+        }
+        
         guard let reactionContextNode = self.reactionContextNode else {
             self.animateOut(result: .default, completion: completion)
             return
@@ -1207,6 +1274,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     private func setItems(items: ContextController.Items, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+        if let presentationNode = self.presentationNode {
+            presentationNode.replaceItems(items: items, animated: self.didCompleteAnimationIn)
+            
+            if !self.didSetItemsReady {
+                self.didSetItemsReady = true
+                self.itemsReady.set(.single(true))
+            }
+            return
+        }
+        
         if let _ = self.currentItems, !self.didCompleteAnimationIn && self.getController()?.immediateItemsTransitionAnimation == true {
             return
         }
@@ -1248,7 +1325,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.scrollNode.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
         
         if let layout = self.validLayout {
-            self.updateLayout(layout: layout, transition: .animated(duration: 0.3, curve: .spring), previousActionsContainerNode: previousActionsContainerNode, previousActionsContainerFrame: previousActionsContainerFrame, previousActionsTransition: previousActionsTransition)
+            self.updateLayout(layout: layout, transition: self.didSetItemsReady ? .animated(duration: 0.3, curve: .spring) : .immediate, previousActionsContainerNode: previousActionsContainerNode, previousActionsContainerFrame: previousActionsContainerFrame, previousActionsTransition: previousActionsTransition)
         } else {
             previousActionsContainerNode.removeFromSupernode()
         }
@@ -1256,6 +1333,22 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         if !self.didSetItemsReady {
             self.didSetItemsReady = true
             self.itemsReady.set(.single(true))
+        }
+    }
+    
+    func pushItems(items: Signal<ContextController.Items, NoError>) {
+        self.itemsDisposable.set((items
+        |> deliverOnMainQueue).start(next: { [weak self] items in
+            guard let strongSelf = self, let presentationNode = strongSelf.presentationNode else {
+                return
+            }
+            presentationNode.pushItems(items: items)
+        }))
+    }
+    
+    func popItems() {
+        if let presentationNode = self.presentationNode {
+            presentationNode.popItems()
         }
     }
     
@@ -1282,6 +1375,20 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         self.validLayout = layout
+        
+        let presentationStateTransition = self.currentPresentationStateTransition
+        self.currentPresentationStateTransition = .none
+        
+        if let presentationNode = self.presentationNode {
+            transition.updateFrame(node: presentationNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+            presentationNode.update(
+                presentationData: self.presentationData,
+                layout: layout,
+                transition: transition,
+                stateTransition: presentationStateTransition
+            )
+            return
+        }
         
         var actionsContainerTransition = transition
         if previousActionsContainerNode != nil {
@@ -1340,7 +1447,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
-                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, bottomInset: 0.0, transition: actionsContainerTransition)
+                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
                     let adjustedActionsSize = realActionsSize
 
                     self.actionsContainerNode.updateSize(containerSize: realActionsSize, contentSize: realActionsSize)
@@ -1437,7 +1544,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         constrainedActionsBottomInset = 0.0
                     }
                     
-                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: constrainedActionsHeight, bottomInset: constrainedActionsBottomInset, transition: actionsContainerTransition)
+                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: constrainedActionsHeight, transition: actionsContainerTransition)
                     let adjustedActionsSize = realActionsSize
 
                     self.actionsContainerNode.updateSize(containerSize: realActionsSize, contentSize: realActionsSize)
@@ -1602,7 +1709,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         constrainedWidth = floor(layout.size.width / 2.0)
                     }
                     
-                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: constrainedWidth - actionsSideInset * 2.0, constrainedHeight: layout.size.height, bottomInset: 0.0, transition: actionsContainerTransition)
+                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: constrainedWidth - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
                     let contentScale = (constrainedWidth - actionsSideInset * 2.0) / constrainedWidth
                     var contentUnscaledSize: CGSize
                     if case .compact = layout.metrics.widthClass {
@@ -1800,6 +1907,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             return nil
         }
         
+        if let presentationNode = self.presentationNode {
+            return presentationNode.hitTest(self.view.convert(point, to: presentationNode.view), with: event)
+        }
+        
         if let reactionContextNode = self.reactionContextNode {
             if let result = reactionContextNode.hitTest(self.view.convert(point, to: reactionContextNode.view), with: event) {
                 return result
@@ -1965,11 +2076,16 @@ public enum ContextContentSource {
 }
 
 public protocol ContextControllerItemsNode: ASDisplayNode {
-    func update(constrainedWidth: CGFloat, maxHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, visibleSize: CGSize)
+    func update(constrainedWidth: CGFloat, maxHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, apparentHeight: CGFloat)
+    
+    var apparentHeight: CGFloat { get }
 }
 
 public protocol ContextControllerItemsContent: AnyObject {
-    func node() -> ContextControllerItemsNode
+    func node(
+        requestUpdate: @escaping (ContainedViewLayoutTransition) -> Void,
+        requestUpdateApparentHeight: @escaping (ContainedViewLayoutTransition) -> Void
+    ) -> ContextControllerItemsNode
 }
 
 public final class ContextController: ViewController, StandalonePresentableController, ContextControllerProtocol {
@@ -2180,6 +2296,20 @@ public final class ContextController: ViewController, StandalonePresentableContr
         if self.isNodeLoaded {
             self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: previousActionsTransition)
         }
+    }
+    
+    public func pushItems(items: Signal<ContextController.Items, NoError>) {
+        if !self.isNodeLoaded {
+            return
+        }
+        self.controllerNode.pushItems(items: items)
+    }
+    
+    public func popItems() {
+        if !self.isNodeLoaded {
+            return
+        }
+        self.controllerNode.popItems()
     }
     
     public func updateTheme(presentationData: PresentationData) {

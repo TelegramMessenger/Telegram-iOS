@@ -20,6 +20,7 @@ swift_library(
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/AvatarNode:AvatarNode",
     ],
     visibility = [
         "//visibility:public",
