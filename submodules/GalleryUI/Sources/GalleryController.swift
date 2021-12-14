@@ -175,7 +175,7 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                 if let result = addLocallyGeneratedEntities(text, enabledTypes: [.timecode], entities: entities, mediaDuration: file.duration.flatMap(Double.init)) {
                     entities = result
                 }
-                
+                                
                 let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities)
                 return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, displayInfoOnTop: displayInfoOnTop, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, isSecret: isSecret, landscape: landscape, timecode: timecode, playbackRate: playbackRate, configuration: configuration, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
             } else {
@@ -218,7 +218,15 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                     }
             }
             if let content = content {
-                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), displayInfoOnTop: displayInfoOnTop, fromPlayingVideo: fromPlayingVideo, isSecret: isSecret, landscape: landscape, timecode: timecode, playbackRate: playbackRate, configuration: configuration, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
+                var description: NSAttributedString?
+                if let descriptionText = webpageContent.text {
+                    var entities: [MessageTextEntity] = []
+                    if let result = addLocallyGeneratedEntities(descriptionText, enabledTypes: [.timecode], entities: entities, mediaDuration: 86400) {
+                        entities = result
+                    }
+                    description = galleryCaptionStringWithAppliedEntities(descriptionText, entities: entities)
+                }
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), description: description, displayInfoOnTop: displayInfoOnTop, fromPlayingVideo: fromPlayingVideo, isSecret: isSecret, landscape: landscape, timecode: timecode, playbackRate: playbackRate, configuration: configuration, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
             } else {
                 return nil
             }

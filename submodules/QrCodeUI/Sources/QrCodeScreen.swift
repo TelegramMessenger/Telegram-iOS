@@ -13,8 +13,8 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import PresentationDataUtils
 
-private func shareQrCode(context: AccountContext, link: String, view: UIView) {
-    let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Chat/Links/QrLogo")))
+private func shareQrCode(context: AccountContext, link: String, ecl: String, view: UIView) {
+    let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Chat/Links/QrLogo")), ecl: ecl)
     |> map { _, generator -> UIImage? in
         let imageSize = CGSize(width: 768.0, height: 768.0)
         let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), scale: 1.0))
@@ -45,6 +45,15 @@ public final class QrCodeScreen: ViewController {
                     return "https://t.me/\(peer.addressName ?? "")"
                 case let .invite(invite, _):
                     return invite.link
+            }
+        }
+        
+        var ecl: String {
+            switch self {
+                case .peer:
+                    return "Q"
+                case .invite:
+                    return "Q"
             }
         }
     }
@@ -293,11 +302,11 @@ public final class QrCodeScreen: ViewController {
             self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
             self.buttonNode.pressed = { [weak self] in
                 if let strongSelf = self{
-                    shareQrCode(context: strongSelf.context, link: subject.link, view: strongSelf.view)
+                    shareQrCode(context: strongSelf.context, link: subject.link, ecl: subject.ecl, view: strongSelf.view)
                 }
             }
             
-            self.qrImageNode.setSignal(qrCode(string: subject.link, color: .black, backgroundColor: .white, icon: .cutout) |> beforeNext { [weak self] size, _ in
+            self.qrImageNode.setSignal(qrCode(string: subject.link, color: .black, backgroundColor: .white, icon: .cutout, ecl: subject.ecl) |> beforeNext { [weak self] size, _ in
                 guard let strongSelf = self else {
                     return
                 }

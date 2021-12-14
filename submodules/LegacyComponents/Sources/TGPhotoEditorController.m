@@ -309,7 +309,7 @@
      
     TGPhotoEditorBackButton backButton = TGPhotoEditorBackButtonCancel;
     TGPhotoEditorDoneButton doneButton = TGPhotoEditorDoneButtonCheck;
-    _portraitToolbarView = [[TGPhotoToolbarView alloc] initWithBackButton:backButton doneButton:doneButton solidBackground:true];
+    _portraitToolbarView = [[TGPhotoToolbarView alloc] initWithContext:_context backButton:backButton doneButton:doneButton solidBackground:true];
     [_portraitToolbarView setToolbarTabs:_availableTabs animated:false];
     [_portraitToolbarView setActiveTab:_currentTab];
     _portraitToolbarView.cancelPressed = toolbarCancelPressed;
@@ -318,7 +318,7 @@
     _portraitToolbarView.tabPressed = toolbarTabPressed;
     [_wrapperView addSubview:_portraitToolbarView];
     
-    _landscapeToolbarView = [[TGPhotoToolbarView alloc] initWithBackButton:backButton doneButton:doneButton solidBackground:true];
+    _landscapeToolbarView = [[TGPhotoToolbarView alloc] initWithContext:_context backButton:backButton doneButton:doneButton solidBackground:true];
     [_landscapeToolbarView setToolbarTabs:_availableTabs animated:false];
     [_landscapeToolbarView setActiveTab:_currentTab];
     _landscapeToolbarView.cancelPressed = toolbarCancelPressed;
