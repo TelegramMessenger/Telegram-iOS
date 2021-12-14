@@ -309,7 +309,7 @@ public func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEnt
         }
     }
     
-    if hasDigits {
+    if hasDigits || hasColons {
         if let phoneNumberDetector = phoneNumberDetector, detectPhoneNumbers {
             let utf16 = text.utf16
             phoneNumberDetector.enumerateMatches(in: text, options: [], range: NSMakeRange(0, utf16.count), using: { result, _, _ in

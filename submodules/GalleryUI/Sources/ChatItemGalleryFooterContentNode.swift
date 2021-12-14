@@ -280,6 +280,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.scrubberView?.setCollapsed(alpha < 1.0, animated: animated)
     }
     
+    private var hasExpandedCaptionPromise = ValuePromise<Bool>(false)
+    var hasExpandedCaption: Signal<Bool, NoError> {
+        return hasExpandedCaptionPromise.get()
+    }
+    
     init(context: AccountContext, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void = { _, _ in }) {
         self.context = context
         self.presentationData = presentationData
@@ -714,6 +719,20 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         self.requestLayout?(.immediate)
+    }
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.hasExpandedCaptionPromise.set(true)
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            self.hasExpandedCaptionPromise.set(scrollView.contentOffset.y > 1.0)
+        }
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        self.hasExpandedCaptionPromise.set(scrollView.contentOffset.y > 1.0)
     }
     
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
