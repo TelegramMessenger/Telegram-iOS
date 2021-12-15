@@ -15,8 +15,9 @@ public struct ChatTextInputAttributes {
     public static let underline = NSAttributedString.Key(rawValue: "Attribute__Underline")
     public static let textMention = NSAttributedString.Key(rawValue: "Attribute__TextMention")
     public static let textUrl = NSAttributedString.Key(rawValue: "Attribute__TextUrl")
+    public static let spoiler = NSAttributedString.Key(rawValue: "Attribute__Spoiler")
     
-    public static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.textUrl]
+    public static let allAttributes = [ChatTextInputAttributes.bold, ChatTextInputAttributes.italic, ChatTextInputAttributes.monospace, ChatTextInputAttributes.strikethrough, ChatTextInputAttributes.underline, ChatTextInputAttributes.textMention, ChatTextInputAttributes.textUrl, ChatTextInputAttributes.spoiler]
 }
 
 public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedString {
@@ -83,6 +84,9 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
             } else if key == ChatTextInputAttributes.underline {
                 result.addAttribute(key, value: value, range: range)
                 result.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
+            } else if key == ChatTextInputAttributes.spoiler {
+                result.addAttribute(key, value: value, range: range)
+                result.addAttribute(NSAttributedString.Key.backgroundColor, value: textColor.withAlphaComponent(0.15), range: fullRange)
             }
         }
             
@@ -435,6 +439,7 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.strikethroughStyle, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textUrl, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.spoiler, range: fullRange)
         
         textNode.textView.textStorage.addAttribute(NSAttributedString.Key.font, value: Font.regular(baseFontSize), range: fullRange)
         textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.chat.inputPanel.primaryTextColor, range: fullRange)
@@ -465,6 +470,9 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
                 } else if key == ChatTextInputAttributes.underline {
                     textNode.textView.textStorage.addAttribute(key, value: value, range: range)
                     textNode.textView.textStorage.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
+                } else if key == ChatTextInputAttributes.spoiler {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.backgroundColor, value: theme.chat.inputPanel.primaryTextColor.withAlphaComponent(0.15), range: fullRange)
                 }
             }
                 
@@ -523,6 +531,7 @@ public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, th
         textNode.textView.textStorage.removeAttribute(NSAttributedString.Key.strikethroughStyle, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textMention, range: fullRange)
         textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.textUrl, range: fullRange)
+        textNode.textView.textStorage.removeAttribute(ChatTextInputAttributes.spoiler, range: fullRange)
         
         textNode.textView.textStorage.addAttribute(NSAttributedString.Key.font, value: Font.regular(baseFontSize), range: fullRange)
         textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: theme.chat.inputPanel.primaryTextColor, range: fullRange)
@@ -553,6 +562,9 @@ public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, th
                 } else if key == ChatTextInputAttributes.underline {
                     textNode.textView.textStorage.addAttribute(key, value: value, range: range)
                     textNode.textView.textStorage.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
+                } else if key == ChatTextInputAttributes.spoiler {
+                    textNode.textView.textStorage.addAttribute(key, value: value, range: range)
+                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.backgroundColor, value: theme.chat.inputPanel.primaryTextColor.withAlphaComponent(0.15), range: fullRange)
                 }
             }
                 
@@ -730,6 +742,8 @@ public func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttribu
                         textInputAttribute = ChatTextInputAttributes.italic
                     case "~~":
                         textInputAttribute = ChatTextInputAttributes.strikethrough
+                    case "||":
+                        textInputAttribute = ChatTextInputAttributes.spoiler
                     default:
                         textInputAttribute = nil
                 }

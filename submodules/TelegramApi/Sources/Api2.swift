@@ -23219,6 +23219,7 @@ public extension Api {
         case messageEntityStrike(offset: Int32, length: Int32)
         case messageEntityBlockquote(offset: Int32, length: Int32)
         case messageEntityBankCard(offset: Int32, length: Int32)
+        case messageEntitySpoiler(offset: Int32, length: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -23359,6 +23360,13 @@ public extension Api {
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(length, buffer: buffer, boxed: false)
                     break
+                case .messageEntitySpoiler(let offset, let length):
+                    if boxed {
+                        buffer.appendInt32(852137487)
+                    }
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(length, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -23402,6 +23410,8 @@ public extension Api {
                 return ("messageEntityBlockquote", [("offset", offset), ("length", length)])
                 case .messageEntityBankCard(let offset, let length):
                 return ("messageEntityBankCard", [("offset", offset), ("length", length)])
+                case .messageEntitySpoiler(let offset, let length):
+                return ("messageEntitySpoiler", [("offset", offset), ("length", length)])
     }
     }
     
@@ -23680,6 +23690,20 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageEntity.messageEntityBankCard(offset: _1!, length: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageEntitySpoiler(_ reader: BufferReader) -> MessageEntity? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageEntity.messageEntitySpoiler(offset: _1!, length: _2!)
             }
             else {
                 return nil

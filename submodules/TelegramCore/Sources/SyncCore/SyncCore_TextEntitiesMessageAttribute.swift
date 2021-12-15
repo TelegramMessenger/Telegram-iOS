@@ -20,6 +20,7 @@ public enum MessageTextEntityType: Equatable {
     case BlockQuote
     case Underline
     case BankCard
+    case Spoiler
     case Custom(type: CustomEntityType)
 }
 
@@ -68,6 +69,8 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
                 self.type = .Underline
             case 16:
                 self.type = .BankCard
+            case 17:
+                self.type = .Spoiler
             case Int32.max:
                 self.type = .Custom(type: decoder.decodeInt32ForKey("type", orElse: 0))
             default:
@@ -121,6 +124,8 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
                 self.type = .Underline
             case 16:
                 self.type = .BankCard
+            case 17:
+                self.type = .Spoiler
             case Int32.max:
                 let customType: Int32 = (try? container.decode(Int32.self, forKey: "type")) ?? 0
                 self.type = .Custom(type: customType)
@@ -169,6 +174,8 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
                 encoder.encodeInt32(15, forKey: "_rawValue")
             case .BankCard:
                 encoder.encodeInt32(16, forKey: "_rawValue")
+            case .Spoiler:
+                encoder.encodeInt32(17, forKey: "_rawValue")
             case let .Custom(type):
                 encoder.encodeInt32(Int32.max, forKey: "_rawValue")
                 encoder.encodeInt32(type, forKey: "type")
@@ -217,6 +224,8 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
                 try container.encode(15 as Int32, forKey: "_rawValue")
             case .BankCard:
                 try container.encode(16 as Int32, forKey: "_rawValue")
+            case .Spoiler:
+                try container.encode(17 as Int32, forKey: "_rawValue")
             case let .Custom(type):
                 try container.encode(Int32.max as Int32, forKey: "_rawValue")
                 try container.encode(type as Int32, forKey: "type")
