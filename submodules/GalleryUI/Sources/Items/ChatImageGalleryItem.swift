@@ -764,6 +764,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             }
         }
     }
+    
+    override func adjustForPreviewing() {
+        super.adjustForPreviewing()
+        
+        self.recognitionOverlayContentNode.isHidden = true
+    }
 }
 
 /*private func tileRectForImage(_ mappedImage: CGImage, rect: CGRect) -> CGRect {
