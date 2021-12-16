@@ -127,10 +127,18 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
         case let .itemsHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .item(_, value, file, text, isEnabled):
-            let _ = file
-            return ItemListSwitchItem(presentationData: presentationData, title: "\(value) \(text)", value: isEnabled, sectionId: self.section, style: .blocks, updated: { _ in
-                arguments.toggleItem(value)
-            })
+            return ItemListReactionItem(
+                context: arguments.context,
+                presentationData: presentationData,
+                file: file,
+                title: text,
+                value: isEnabled,
+                sectionId: self.section,
+                style: .blocks,
+                updated: { _ in
+                    arguments.toggleItem(value)
+                }
+            )
         }
     }
 }

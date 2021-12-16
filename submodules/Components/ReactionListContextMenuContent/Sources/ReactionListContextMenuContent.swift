@@ -12,48 +12,7 @@ import WebPBinding
 import AnimatedAvatarSetNode
 import ContextUI
 import AvatarNode
-
-private final class ReactionImageNode: ASImageNode {
-    private var disposable: Disposable?
-    let size: CGSize
-    
-    init(context: AccountContext, availableReactions: AvailableReactions?, reaction: String) {
-        var file: TelegramMediaFile?
-        if let availableReactions = availableReactions {
-            for availableReaction in availableReactions.reactions {
-                if availableReaction.value == reaction {
-                    file = availableReaction.staticIcon
-                    break
-                }
-            }
-        }
-        if let file = file {
-            self.size = file.dimensions?.cgSize ?? CGSize(width: 18.0, height: 18.0)
-            
-            super.init()
-            
-            self.disposable = (context.account.postbox.mediaBox.resourceData(file.resource)
-            |> deliverOnMainQueue).start(next: { [weak self] data in
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                if data.complete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                    if let image = WebP.convert(fromWebP: dataValue) {
-                        strongSelf.image = image
-                    }
-                }
-            })
-        } else {
-            self.size = CGSize(width: 18.0, height: 18.0)
-            super.init()
-        }
-    }
-    
-    deinit {
-        self.disposable?.dispose()
-    }
-}
+import ReactionImageComponent
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
 

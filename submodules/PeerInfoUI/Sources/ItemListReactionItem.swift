@@ -3,74 +3,47 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
-import TelegramCore
 import TelegramPresentationData
+import SwitchNode
+import TelegramCore
 import ItemListUI
-import PresentationDataUtils
-import StickerResources
-import AnimatedStickerNode
-import TelegramAnimatedStickerNode
-import ShimmerEffect
+import ReactionImageComponent
+import AccountContext
 
-public struct ItemListReactionItemEditing: Equatable {
-    public var editable: Bool
-    public var editing: Bool
-    public var revealed: Bool
-    public var reorderable: Bool
-    public var selectable: Bool
-    
-    public init(editable: Bool, editing: Bool, revealed: Bool, reorderable: Bool, selectable: Bool) {
-        self.editable = editable
-        self.editing = editing
-        self.revealed = revealed
-        self.reorderable = reorderable
-        self.selectable = selectable
-    }
-}
-
-public enum ItemListReactionItemControl: Equatable {
-    case none
-    case installation(installed: Bool)
-    case selection
-    case check(checked: Bool)
-}
-
-public final class ItemListReactionItem: ListViewItem, ItemListItem {
+public class ItemListReactionItem: ListViewItem, ItemListItem {
+    let context: AccountContext
     let presentationData: ItemListPresentationData
-    let account: Account
-    let packInfo: StickerPackCollectionInfo
-    let itemCount: String
-    let topItem: StickerPackItem?
-    let unread: Bool
-    let control: ItemListReactionItemControl
-    let editing: ItemListReactionItemEditing
+    let file: TelegramMediaFile?
+    let title: String
+    let value: Bool
     let enabled: Bool
-    let playAnimatedStickers: Bool
     public let sectionId: ItemListSectionId
-    let action: (() -> Void)?
-    let setPackIdWithRevealedOptions: (ItemCollectionId?, ItemCollectionId?) -> Void
-    let addPack: () -> Void
-    let removePack: () -> Void
-    let toggleSelected: () -> Void
+    let style: ItemListStyle
+    let updated: (Bool) -> Void
+    public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListReactionItemControl, editing: ItemListReactionItemEditing, enabled: Bool, playAnimatedStickers: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void, toggleSelected: @escaping () -> Void) {
+    public init(
+        context: AccountContext,
+        presentationData: ItemListPresentationData,
+        file: TelegramMediaFile?,
+        title: String,
+        value: Bool,
+        enabled: Bool = true,
+        sectionId: ItemListSectionId,
+        style: ItemListStyle,
+        updated: @escaping (Bool) -> Void,
+        tag: ItemListItemTag? = nil
+    ) {
+        self.context = context
         self.presentationData = presentationData
-        self.account = account
-        self.packInfo = packInfo
-        self.itemCount = itemCount
-        self.topItem = topItem
-        self.unread = unread
-        self.control = control
-        self.editing = editing
+        self.file = file
+        self.title = title
+        self.value = value
         self.enabled = enabled
-        self.playAnimatedStickers = playAnimatedStickers
         self.sectionId = sectionId
-        self.action = action
-        self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
-        self.addPack = addPack
-        self.removePack = removePack
-        self.toggleSelected = toggleSelected
+        self.style = style
+        self.updated = updated
+        self.tag = tag
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -94,15 +67,14 @@ public final class ItemListReactionItem: ListViewItem, ItemListItem {
             if let nodeValue = node() as? ItemListReactionItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
-                var animated = true
-                if case .None = animation {
-                    animated = false
-                }
-                
                 async {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
+                            var animated = true
+                            if case .None = animation {
+                                animated = false
+                            }
                             apply(animated)
                         })
                     }
@@ -110,98 +82,67 @@ public final class ItemListReactionItem: ListViewItem, ItemListItem {
             }
         }
     }
-    
-    public var selectable: Bool = true
-    
-    public func selected(listView: ListView){
-        listView.clearHighlightAnimated(true)
-        self.action?()
-    }
 }
 
-public enum StickerPackThumbnailItem: Equatable {
-    case still(TelegramMediaImageRepresentation)
-    case animated(MediaResource, PixelDimensions)
+private protocol ItemListSwitchNodeImpl {
+    var frameColor: UIColor { get set }
+    var contentColor: UIColor { get set }
+    var handleColor: UIColor { get set }
+    var positiveContentColor: UIColor { get set }
+    var negativeContentColor: UIColor { get set }
     
-    public static func ==(lhs: StickerPackThumbnailItem, rhs: StickerPackThumbnailItem) -> Bool {
-        switch lhs {
-        case let .still(representation):
-            if case .still(representation) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .animated(lhsResource, lhsDimensions):
-            if case let .animated(rhsResource, rhsDimensions) = rhs, lhsResource.isEqual(to: rhsResource), lhsDimensions == rhsDimensions {
-                return true
-            } else {
-                return false
-            }
+    var isOn: Bool { get }
+    func setOn(_ value: Bool, animated: Bool)
+}
+
+extension SwitchNode: ItemListSwitchNodeImpl {
+    var positiveContentColor: UIColor {
+        get {
+            return .white
+        } set(value) {
+            
+        }
+    }
+    var negativeContentColor: UIColor {
+        get {
+            return .white
+        } set(value) {
+            
         }
     }
 }
 
-class ItemListReactionItemNode: ItemListRevealOptionsItemNode {
-    private var currentThumbnailItem: StickerPackThumbnailItem?
-    
+extension IconSwitchNode: ItemListSwitchNodeImpl {
+}
+
+public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
-    private var disabledOverlayNode: ASDisplayNode?
     private let maskNode: ASImageNode
     
-    private let containerNode: ASDisplayNode
-    override var controlsContainer: ASDisplayNode {
-        return self.containerNode
-    }
-    
-    fileprivate let imageNode: TransformImageNode
-    private var animationNode: AnimatedStickerNode?
-    private var placeholderNode: StickerShimmerEffectNode?
-    private let unreadNode: ASImageNode
+    private let imageNode: ReactionFileImageNode
     private let titleNode: TextNode
-    private let statusNode: TextNode
-    private let installTextNode: TextNode
-    private let installationActionBackgroundNode: ASImageNode
-    private let installationActionNode: HighlightableButtonNode
-    private let selectionIconNode: ASImageNode
-    
-    private var layoutParams: (ItemListReactionItem, ListViewItemLayoutParams, ItemListNeighbors)?
-    
-    private var selectableControlNode: ItemListSelectableControlNode?
-    private var editableControlNode: ItemListEditableControlNode?
-    private var reorderControlNode: ItemListEditableReorderControlNode?
+    private var switchNode: ASDisplayNode & ItemListSwitchNodeImpl
+    private let switchGestureNode: ASDisplayNode
+    private var disabledOverlayNode: ASDisplayNode?
     
     private let activateArea: AccessibilityAreaNode
     
-    private let fetchDisposable = MetaDisposable()
+    private var item: ItemListReactionItem?
     
-    override var canBeSelected: Bool {
-        if self.selectableControlNode != nil || self.editableControlNode != nil || self.disabledOverlayNode != nil {
-            return false
-        }
-        if let item = self.layoutParams?.0, item.action != nil {
-            return super.canBeSelected
-        } else {
-            return false
-        }
+    public var tag: ItemListItemTag? {
+        return self.item?.tag
     }
     
-    override var visibility: ListViewItemNodeVisibility {
-        didSet {
-            let wasVisible = oldValue != .none
-            let isVisible = self.visibility != .none
-            
-            if wasVisible != isVisible {
-                self.animationNode?.visibility = isVisible && (self.layoutParams?.0.playAnimatedStickers ?? true)
-            }
-        }
-    }
-    
-    init() {
+    public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
+        self.backgroundNode.backgroundColor = .white
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -209,154 +150,63 @@ class ItemListReactionItemNode: ItemListRevealOptionsItemNode {
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
         
-        self.containerNode = ASDisplayNode()
-        
-        self.maskNode = ASImageNode()
-        self.maskNode.isUserInteractionEnabled = false
-        
-        self.imageNode = TransformImageNode()
-        self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
-        
-        self.placeholderNode = StickerShimmerEffectNode()
-        self.placeholderNode?.isUserInteractionEnabled = false
+        self.imageNode = ReactionFileImageNode()
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
-        self.titleNode.contentMode = .left
-        self.titleNode.contentsScale = UIScreen.main.scale
         
-        self.statusNode = TextNode()
-        self.statusNode.isUserInteractionEnabled = false
-        self.statusNode.contentMode = .left
-        self.statusNode.contentsScale = UIScreen.main.scale
-        
-        self.unreadNode = ASImageNode()
-        self.unreadNode.isLayerBacked = true
-        self.unreadNode.displaysAsynchronously = false
-        self.unreadNode.displayWithoutProcessing = true
-        
-        self.installationActionBackgroundNode = ASImageNode()
-        self.installationActionBackgroundNode.displaysAsynchronously = false
-        self.installationActionBackgroundNode.displayWithoutProcessing = true
-        self.installationActionBackgroundNode.isLayerBacked = true
-        self.installationActionNode = HighlightableButtonNode()
-        
-        self.installTextNode = TextNode()
-        self.installTextNode.isUserInteractionEnabled = false
-        self.installTextNode.contentMode = .left
-        self.installTextNode.contentsScale = UIScreen.main.scale
-        
-        self.selectionIconNode = ASImageNode()
-        self.selectionIconNode.displaysAsynchronously = false
-        self.selectionIconNode.displayWithoutProcessing = true
-        self.selectionIconNode.isLayerBacked = true
+        self.switchNode = SwitchNode()
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.switchGestureNode = ASDisplayNode()
+        
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
+        super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.containerNode)
-        
-        if let placeholderNode = self.placeholderNode {
-            self.containerNode.addSubnode(placeholderNode)
-        }
-        
-        self.containerNode.addSubnode(self.imageNode)
-        self.containerNode.addSubnode(self.titleNode)
-        self.containerNode.addSubnode(self.statusNode)
-        self.containerNode.addSubnode(self.unreadNode)
-        self.containerNode.addSubnode(self.installationActionBackgroundNode)
-        self.containerNode.addSubnode(self.installTextNode)
-        self.containerNode.addSubnode(self.installationActionNode)
-        self.containerNode.addSubnode(self.selectionIconNode)
+        self.addSubnode(self.imageNode)
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.switchNode)
+        self.addSubnode(self.switchGestureNode)
         self.addSubnode(self.activateArea)
         
-        self.installationActionNode.addTarget(self, action: #selector(self.installationActionPressed), forControlEvents: .touchUpInside)
-        self.installationActionNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.installationActionBackgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.installationActionBackgroundNode.alpha = 0.4
-                } else {
-                    strongSelf.installationActionBackgroundNode.alpha = 1.0
-                    strongSelf.installationActionBackgroundNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                }
+        self.activateArea.activate = { [weak self] in
+            guard let strongSelf = self, let item = strongSelf.item, item.enabled else {
+                return false
             }
+            let value = !strongSelf.switchNode.isOn
+            strongSelf.switchNode.setOn(value, animated: true)
+            item.updated(value)
+            return true
         }
+    }
+    
+    override public func didLoad() {
+        super.didLoad()
         
-        var firstTime = true
-        self.imageNode.imageUpdated = { [weak self] image in
-            guard let strongSelf = self else {
-                return
-            }
-            if image != nil {
-                strongSelf.removePlaceholder(animated: !firstTime)
-                if firstTime {
-                    strongSelf.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                }
-            }
-            firstTime = false
-        }
+        (self.switchNode.view as? UISwitch)?.addTarget(self, action: #selector(self.switchValueChanged(_:)), for: .valueChanged)
+        self.switchGestureNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    deinit {
-        self.fetchDisposable.dispose()
-    }
-    
-    private func removePlaceholder(animated: Bool) {
-        if let placeholderNode = self.placeholderNode {
-            self.placeholderNode = nil
-            if !animated {
-                placeholderNode.removeFromSupernode()
-            } else {
-                placeholderNode.allowsGroupOpacity = true
-                placeholderNode.alpha = 0.0
-                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
-                    placeholderNode?.removeFromSupernode()
-                    placeholderNode?.allowsGroupOpacity = false
-                })
-            }
-        }
-    }
-    
-    private var absoluteLocation: (CGRect, CGSize)?
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
-        self.absoluteLocation = (rect, containerSize)
-        if let placeholderNode = placeholderNode {
-            placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
-        }
-    }
-    
-    override func tapped() {
-        guard let item = self.layoutParams?.0, item.editing.editing && item.editing.selectable else {
-            return
-        }
-        item.toggleSelected()
-    }
-    
-    func asyncLayout() -> (_ item: ItemListReactionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: ItemListReactionItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeImageLayout = self.imageNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
-        let makeInstallLayout = TextNode.asyncLayout(self.installTextNode)
-        let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
-        let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
-        let selectableControlLayout = ItemListSelectableControlNode.asyncLayout(self.selectableControlNode)
         
-        let previousThumbnailItem = self.currentThumbnailItem
+        let currentItem = self.item
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
-        let currentItem = self.layoutParams?.0
-        
         return { item, params, neighbors in
-            let titleFont = Font.bold(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
-            let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
+            var contentSize: CGSize
+            var insets: UIEdgeInsets
+            let separatorHeight = UIScreenPixel
+            let itemBackgroundColor: UIColor
+            let itemSeparatorColor: UIColor
             
-            var titleAttributedString: NSAttributedString?
-            var statusAttributedString: NSAttributedString?
+            let sideImageInset: CGFloat = 44.0
+            
+            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
             var updatedTheme: PresentationTheme?
             
@@ -364,190 +214,51 @@ class ItemListReactionItemNode: ItemListRevealOptionsItemNode {
                 updatedTheme = item.presentationData.theme
             }
             
-            let packRevealOptions: [ItemListRevealOption]
-            if item.editing.editable && item.enabled {
-                packRevealOptions = [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]
-            } else {
-                packRevealOptions = []
+            switch item.style {
+            case .plain:
+                itemBackgroundColor = item.presentationData.theme.list.plainBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemPlainSeparatorColor
+                contentSize = CGSize(width: params.width, height: 44.0)
+                insets = itemListNeighborsPlainInsets(neighbors)
+            case .blocks:
+                itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
+                itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
+                contentSize = CGSize(width: params.width, height: 44.0)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
-            var rightInset: CGFloat = params.rightInset
+            let (imageSize, imageApply) = makeImageLayout(item.context, item.file)
             
-            var installationBackgroundImage: UIImage?
-            var installationText: String?
-            var checkImage: UIImage?
-            switch item.control {
-                case .none:
-                    break
-                case let .installation(installed):
-                    if installed {
-                        installationBackgroundImage = PresentationResourcesChat.chatInputMediaPanelAddedPackButtonImage(item.presentationData.theme)
-                        installationText = item.presentationData.strings.Stickers_Installed
-                    } else {
-                        installationBackgroundImage = PresentationResourcesChat.chatInputMediaPanelAddPackButtonImage(item.presentationData.theme)
-                        installationText = item.presentationData.strings.Stickers_Install
-                    }
-                case .selection:
-                    rightInset += 16.0
-                    checkImage = PresentationResourcesItemList.checkIconImage(item.presentationData.theme)
-                default:
-                    break
-            }
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 80.0 - sideImageInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            var unreadImage: UIImage?
-            if item.unread {
-                unreadImage = PresentationResourcesItemList.stickerUnreadDotImage(item.presentationData.theme)
-            }
-            
-            titleAttributedString = NSAttributedString(string: item.packInfo.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
-            statusAttributedString = NSAttributedString(string: item.itemCount, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-            
-            let leftInset: CGFloat = 65.0 + params.leftInset
-            
-            let verticalInset: CGFloat = 11.0
-            let titleSpacing: CGFloat = 2.0
-            
-            let insets = itemListNeighborsGroupedInsets(neighbors, params)
-            let separatorHeight = UIScreenPixel
-            
-            var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
-            var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
-            var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
-            
-            var editingOffset: CGFloat = 0.0
-            var reorderInset: CGFloat = 0.0
-            
-            if item.editing.editing {
-                if item.editing.selectable {
-                    var selected = false
-                    if case let .check(checked) = item.control {
-                        selected = checked
-                    }
-                    let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, selected, true)
-                    selectableControlSizeAndApply = sizeAndApply
-                    editingOffset = sizeAndApply.0
-                } else {
-                    let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
-                    editableControlSizeAndApply = sizeAndApply
-                    editingOffset = sizeAndApply.0
-                }
-                
-                if item.editing.reorderable {
-                    let sizeAndApply = reorderControlLayout(item.presentationData.theme)
-                    reorderControlSizeAndApply = sizeAndApply
-                    reorderInset = sizeAndApply.0
-                }
-            }
-                        
-            var installed = false
-            if case .installation(true) = item.control {
-                installed = true
-            }
-            
-            let (installLayout, installApply) = makeInstallLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: installationText ?? "", font: Font.semibold(13.0), textColor: installed ? item.presentationData.theme.list.itemCheckColors.fillColor : item.presentationData.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let installWidth: CGFloat
-            if installLayout.size.width > 0.0 {
-                installWidth = installLayout.size.width + 32.0
-            } else {
-                installWidth = 0.0
-            }
-            
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - 10.0 - reorderInset - installWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - reorderInset - installWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            
-            let contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + statusLayout.size.height)
-            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            let layoutSize = layout.size
+            contentSize.height = max(contentSize.height, titleLayout.size.height + 22.0)
             
             if !item.enabled {
                 if currentDisabledOverlayNode == nil {
                     currentDisabledOverlayNode = ASDisplayNode()
-                    currentDisabledOverlayNode?.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.5)
                 }
             } else {
                 currentDisabledOverlayNode = nil
             }
             
-            var thumbnailItem: StickerPackThumbnailItem?
-            var resourceReference: MediaResourceReference?
-            if let thumbnail = item.packInfo.thumbnail {
-                if item.packInfo.flags.contains(.isAnimated) {
-                    thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions)
-                    resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
-                } else {
-                    thumbnailItem = .still(thumbnail)
-                    resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
-                }
-            } else if let item = item.topItem {
-                if item.file.isAnimatedSticker {
-                    thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100))
-                    resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
-                } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-                    thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
-                    resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
-                }
-            }
+            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
+            let layoutSize = layout.size
             
-            var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-            var updatedFetchSignal: Signal<FetchResourceSourceType, FetchResourceError>?
-            
-            let imageBoundingSize = CGSize(width: 34.0, height: 34.0)
-            var imageApply: (() -> Void)?
-            let fileUpdated = thumbnailItem != previousThumbnailItem
-            
-            var imageSize: CGSize?
-            
-            if let thumbnailItem = thumbnailItem {
-                switch thumbnailItem {
-                    case let .still(representation):
-                        let stillImageSize = representation.dimensions.cgSize.aspectFitted(imageBoundingSize)
-                        imageSize = stillImageSize
-                        
-                        if fileUpdated {
-                            imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
-                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: representation.resource, nilIfEmpty: true)
-                        }
-                    case let .animated(resource, _):
-                        imageSize = imageBoundingSize
-                    
-                        if fileUpdated {
-                            imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageBoundingSize, boundingSize: imageBoundingSize, intrinsicInsets: UIEdgeInsets()))
-                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: resource, animated: true, nilIfEmpty: true)
-                        }
-                }
-                if fileUpdated, let resourceReference = resourceReference {
-                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, reference: resourceReference)
-                }
-            } else {
-                updatedImageSignal = .single({ _ in return nil })
-                updatedFetchSignal = .complete()
-            }
-            
-            return (layout, { [weak self] animated in
+            return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] animated in
                 if let strongSelf = self {
-                    strongSelf.layoutParams = (item, params, neighbors)
+                    strongSelf.item = item
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
-                    strongSelf.activateArea.accessibilityLabel = titleAttributedString?.string ?? ""
-                    strongSelf.activateArea.accessibilityValue = statusAttributedString?.string ?? ""
+                    
+                    strongSelf.activateArea.accessibilityLabel = item.title
+                    strongSelf.activateArea.accessibilityValue = item.value ? item.presentationData.strings.VoiceOver_Common_On : item.presentationData.strings.VoiceOver_Common_Off
+                    strongSelf.activateArea.accessibilityHint = item.presentationData.strings.VoiceOver_Common_SwitchHint
+                    var accessibilityTraits = UIAccessibilityTraits()
                     if item.enabled {
-                        strongSelf.activateArea.accessibilityTraits = []
                     } else {
-                        strongSelf.activateArea.accessibilityTraits = .notEnabled
+                        accessibilityTraits.insert(.notEnabled)
                     }
-                    
-                    if fileUpdated {
-                        strongSelf.currentThumbnailItem = thumbnailItem
-                    }
-                    
-                    if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = item.presentationData.theme.list.itemBlocksSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
-                    }
-                    
-                    let revealOffset = strongSelf.revealOffset
+                    strongSelf.activateArea.accessibilityTraits = accessibilityTraits
                     
                     let transition: ContainedViewLayoutTransition
                     if animated {
@@ -559,13 +270,14 @@ class ItemListReactionItemNode: ItemListRevealOptionsItemNode {
                     if let currentDisabledOverlayNode = currentDisabledOverlayNode {
                         if currentDisabledOverlayNode != strongSelf.disabledOverlayNode {
                             strongSelf.disabledOverlayNode = currentDisabledOverlayNode
-                            strongSelf.addSubnode(currentDisabledOverlayNode)
+                            strongSelf.insertSubnode(currentDisabledOverlayNode, belowSubnode: strongSelf.switchGestureNode)
                             currentDisabledOverlayNode.alpha = 0.0
                             transition.updateAlpha(node: currentDisabledOverlayNode, alpha: 1.0)
                             currentDisabledOverlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height - separatorHeight))
                         } else {
                             transition.updateFrame(node: currentDisabledOverlayNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height - separatorHeight)))
                         }
+                        currentDisabledOverlayNode.backgroundColor = itemBackgroundColor.withAlphaComponent(0.6)
                     } else if let disabledOverlayNode = strongSelf.disabledOverlayNode {
                         transition.updateAlpha(node: disabledOverlayNode, alpha: 0.0, completion: { [weak disabledOverlayNode] _ in
                             disabledOverlayNode?.removeFromSupernode()
@@ -573,230 +285,125 @@ class ItemListReactionItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.disabledOverlayNode = nil
                     }
                     
-                    if let editableControlSizeAndApply = editableControlSizeAndApply {
-                        let editableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: CGSize(width: editableControlSizeAndApply.0, height: layout.contentSize.height))
-                        if strongSelf.editableControlNode == nil {
-                            let editableControlNode = editableControlSizeAndApply.1(layout.contentSize.height)
-                            editableControlNode.tapped = {
-                                if let strongSelf = self {
-                                    strongSelf.setRevealOptionsOpened(true, animated: true)
-                                    strongSelf.revealOptionsInteractivelyOpened()
-                                }
-                            }
-                            strongSelf.editableControlNode = editableControlNode
-                            strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.imageNode)
-                            editableControlNode.frame = editableControlFrame
-                            transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
-                            editableControlNode.alpha = 0.0
-                            transition.updateAlpha(node: editableControlNode, alpha: 1.0)
-                        } else {
-                            strongSelf.editableControlNode?.frame = editableControlFrame
-                        }
-                        strongSelf.editableControlNode?.isHidden = !item.editing.editable
-                    } else if let editableControlNode = strongSelf.editableControlNode {
-                        var editableControlFrame = editableControlNode.frame
-                        editableControlFrame.origin.x = -editableControlFrame.size.width
-                        strongSelf.editableControlNode = nil
-                        transition.updateAlpha(node: editableControlNode, alpha: 0.0)
-                        transition.updateFrame(node: editableControlNode, frame: editableControlFrame, completion: { [weak editableControlNode] _ in
-                            editableControlNode?.removeFromSupernode()
-                        })
+                    if let _ = updatedTheme {
+                        strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
+                        strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
+                        
+                        strongSelf.switchNode.frameColor = item.presentationData.theme.list.itemSwitchColors.frameColor
+                        strongSelf.switchNode.contentColor = item.presentationData.theme.list.itemSwitchColors.contentColor
+                        strongSelf.switchNode.handleColor = item.presentationData.theme.list.itemSwitchColors.handleColor
+                        strongSelf.switchNode.positiveContentColor = item.presentationData.theme.list.itemSwitchColors.positiveColor
+                        strongSelf.switchNode.negativeContentColor = item.presentationData.theme.list.itemSwitchColors.negativeColor
+                        
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     }
-                    
-                    if let selectableControlSizeAndApply = selectableControlSizeAndApply {
-                        let selectableControlSize = CGSize(width: selectableControlSizeAndApply.0, height: layout.contentSize.height)
-                        let selectableControlFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset, y: 0.0), size: selectableControlSize)
-                        if strongSelf.selectableControlNode == nil {
-                            let selectableControlNode = selectableControlSizeAndApply.1(selectableControlSize, false)
-                            strongSelf.selectableControlNode = selectableControlNode
-                            strongSelf.addSubnode(selectableControlNode)
-                            selectableControlNode.frame = selectableControlFrame
-                            transition.animatePosition(node: selectableControlNode, from: CGPoint(x: -selectableControlFrame.size.width / 2.0, y: selectableControlFrame.midY))
-                            selectableControlNode.alpha = 0.0
-                            transition.updateAlpha(node: selectableControlNode, alpha: 1.0)
-                        } else if let selectableControlNode = strongSelf.selectableControlNode {
-                            transition.updateFrame(node: selectableControlNode, frame: selectableControlFrame)
-                            let _ = selectableControlSizeAndApply.1(selectableControlSize, transition.isAnimated)
-                        }
-                    } else if let selectableControlNode = strongSelf.selectableControlNode {
-                        var selectableControlFrame = selectableControlNode.frame
-                        selectableControlFrame.origin.x = -selectableControlFrame.size.width
-                        strongSelf.selectableControlNode = nil
-                        transition.updateAlpha(node: selectableControlNode, alpha: 0.0)
-                        transition.updateFrame(node: selectableControlNode, frame: selectableControlFrame, completion: { [weak selectableControlNode] _ in
-                            selectableControlNode?.removeFromSupernode()
-                        })
-                    }
-                    
-                    if let reorderControlSizeAndApply = reorderControlSizeAndApply {
-                        if strongSelf.reorderControlNode == nil {
-                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
-                            strongSelf.reorderControlNode = reorderControlNode
-                            strongSelf.addSubnode(reorderControlNode)
-                            reorderControlNode.alpha = 0.0
-                            transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
-                        }
-                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0, y: 0.0), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
-                        strongSelf.reorderControlNode?.frame = reorderControlFrame
-                    } else if let reorderControlNode = strongSelf.reorderControlNode {
-                        strongSelf.reorderControlNode = nil
-                        transition.updateAlpha(node: reorderControlNode, alpha: 0.0, completion: { [weak reorderControlNode] _ in
-                            reorderControlNode?.removeFromSupernode()
-                        })
-                    }
-                    
-                    imageApply?()
                     
                     let _ = titleApply()
-                    let _ = statusApply()
-                    let _ = installApply()
-                                        
-                    switch item.control {
-                        case .none:
-                            strongSelf.installationActionNode.isHidden = true
-                            strongSelf.installationActionBackgroundNode.isHidden = true
-                            strongSelf.selectionIconNode.isHidden = true
-                        case let .installation(installed):
-                            strongSelf.installationActionBackgroundNode.isHidden = false
-                            strongSelf.installationActionNode.isHidden = false
-                            strongSelf.selectionIconNode.isHidden = true
-                            strongSelf.installationActionNode.isUserInteractionEnabled = !installed
-                        
-                            if let backgroundImage = installationBackgroundImage {
-                                strongSelf.installationActionBackgroundNode.image = backgroundImage
+                    
+                    let leftInset = 16.0 + params.leftInset + sideImageInset
+                    
+                    switch item.style {
+                        case .plain:
+                            if strongSelf.backgroundNode.supernode != nil {
+                                strongSelf.backgroundNode.removeFromSupernode()
                             }
-                        
-                            let installationActionFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: 0.0), size: CGSize(width: 50.0, height: layout.contentSize.height))
-                            strongSelf.installationActionNode.frame = installationActionFrame
-                        
-                            let buttonFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: installationActionFrame.minY + floor((installationActionFrame.size.height - 28.0) / 2.0)), size: CGSize(width: installWidth, height: 28.0))
-                            strongSelf.installationActionBackgroundNode.frame = buttonFrame
-                            strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
-                        case .selection:
-                            strongSelf.installationActionNode.isHidden = true
-                            strongSelf.installationActionBackgroundNode.isHidden = true
-                            strongSelf.selectionIconNode.isHidden = false
-                            if let image = checkImage {
-                                strongSelf.selectionIconNode.image = image
-                                strongSelf.selectionIconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - image.size.width - floor((44.0 - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                            if strongSelf.topStripeNode.supernode != nil {
+                                strongSelf.topStripeNode.removeFromSupernode()
                             }
-                        case .check:
-                            strongSelf.installationActionNode.isHidden = true
-                            strongSelf.installationActionBackgroundNode.isHidden = true
-                            strongSelf.selectionIconNode.isHidden = true
-                    }
-                    
-                    if strongSelf.backgroundNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                    }
-                    if strongSelf.topStripeNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
-                    }
-                    if strongSelf.bottomStripeNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
-                    }
-                    if strongSelf.maskNode.supernode == nil {
-                        strongSelf.addSubnode(strongSelf.maskNode)
-                    }
-                    
-                    let hasCorners = itemListHasRoundedBlockLayout(params)
-                    var hasTopCorners = false
-                    var hasBottomCorners = false
-                    switch neighbors.top {
-                        case .sameSection(false):
-                            strongSelf.topStripeNode.isHidden = true
-                        default:
-                            hasTopCorners = true
-                            strongSelf.topStripeNode.isHidden = hasCorners
-                    }
-                    let bottomStripeInset: CGFloat
-                    let bottomStripeOffset: CGFloat
-                    switch neighbors.bottom {
-                        case .sameSection(false):
-                            bottomStripeInset = leftInset + editingOffset
-                            bottomStripeOffset = -separatorHeight
-                        default:
-                            bottomStripeInset = 0.0
-                            bottomStripeOffset = 0.0
-                            hasBottomCorners = true
-                            strongSelf.bottomStripeNode.isHidden = hasCorners
-                    }
-                    
-                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
-                    
-                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: strongSelf.backgroundNode.frame.size)
-                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
-                    transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
-                    transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
-                    
-                    if let unreadImage = unreadImage {
-                        strongSelf.unreadNode.image = unreadImage
-                        strongSelf.unreadNode.isHidden = false
-                        strongSelf.unreadNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 16.0), size: unreadImage.size)
-                    } else {
-                        strongSelf.unreadNode.isHidden = true
-                    }
-                    
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: (strongSelf.unreadNode.isHidden ? 0.0 : 10.0) + leftInset + revealOffset + editingOffset, y: verticalInset), size: titleLayout.size))
-                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
-                    
-                    let boundingSize = CGSize(width: 34.0, height: 34.0)
-                    if let thumbnailItem = thumbnailItem, let imageSize = imageSize {
-                        let imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: floor((layout.contentSize.height - imageSize.height) / 2.0)), size: imageSize)
-                        var thumbnailDimensions = PixelDimensions(width: 512, height: 512)
-                        switch thumbnailItem {
-                            case let .still(representation):
-                                transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
-                                thumbnailDimensions = representation.dimensions
-                            case let .animated(resource, _):
-                                transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
-                                
-                                let animationNode: AnimatedStickerNode
-                                if let current = strongSelf.animationNode {
-                                    animationNode = current
-                                } else {
-                                    animationNode = AnimatedStickerNode()
-                                    strongSelf.animationNode = animationNode
-                                    strongSelf.addSubnode(animationNode)
-                                    
-                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource), width: 80, height: 80, mode: .cached)
-                                }
-                                animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
-                                animationNode.isHidden = !item.playAnimatedStickers
-                                strongSelf.imageNode.isHidden = item.playAnimatedStickers
-                                if let animationNode = strongSelf.animationNode {
-                                    transition.updateFrame(node: animationNode, frame: imageFrame)
-                                }
-                        }
-                        
-                        if let placeholderNode = strongSelf.placeholderNode {
-                            placeholderNode.frame = imageFrame
+                            if strongSelf.bottomStripeNode.supernode == nil {
+                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
+                            }
+                            if strongSelf.maskNode.supernode != nil {
+                                strongSelf.maskNode.removeFromSupernode()
+                            }
+                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
+                        case .blocks:
+                            if strongSelf.backgroundNode.supernode == nil {
+                                strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
+                            }
+                            if strongSelf.topStripeNode.supernode == nil {
+                                strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                            }
+                            if strongSelf.bottomStripeNode.supernode == nil {
+                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                            }
+                            if strongSelf.maskNode.supernode == nil {
+                                strongSelf.insertSubnode(strongSelf.maskNode, aboveSubnode: strongSelf.switchGestureNode)
+                            }
                             
-                            placeholderNode.update(backgroundColor: nil, foregroundColor: item.presentationData.theme.list.disclosureArrowColor.blitOver(item.presentationData.theme.list.itemBlocksBackgroundColor, alpha: 0.55), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.packInfo.immediateThumbnailData, size: imageFrame.size, imageSize: thumbnailDimensions.cgSize)
+                            let hasCorners = itemListHasRoundedBlockLayout(params)
+                            var hasTopCorners = false
+                            var hasBottomCorners = false
+                            switch neighbors.top {
+                                case .sameSection(false):
+                                    strongSelf.topStripeNode.isHidden = true
+                                default:
+                                    hasTopCorners = true
+                                    strongSelf.topStripeNode.isHidden = hasCorners
+                            }
+                            let bottomStripeInset: CGFloat
+                            switch neighbors.bottom {
+                                case .sameSection(false):
+                                    bottomStripeInset = 16.0 + params.leftInset + sideImageInset
+                                default:
+                                    bottomStripeInset = 0.0
+                                    hasBottomCorners = true
+                                    strongSelf.bottomStripeNode.isHidden = hasCorners
+                            }
+                            
+                            strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                            
+                            strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                            strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
+                            strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
+                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    }
+                    
+                    let imageFitSize = imageSize.aspectFitted(CGSize(width: 30.0, height: 30.0))
+                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor(sideImageInset - imageFitSize.width), y: floor((contentSize.height - imageFitSize.height) / 2.0)), size: imageFitSize)
+                    imageApply()
+                    
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floorToScreenPixels((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
+                    if let switchView = strongSelf.switchNode.view as? UISwitch {
+                        if strongSelf.switchNode.bounds.size.width.isZero {
+                            switchView.sizeToFit()
                         }
+                        let switchSize = switchView.bounds.size
+                        
+                        strongSelf.switchNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - switchSize.width - 15.0, y: floor((contentSize.height - switchSize.height) / 2.0)), size: switchSize)
+                        strongSelf.switchGestureNode.frame = strongSelf.switchNode.frame
+                        if switchView.isOn != item.value {
+                            switchView.setOn(item.value, animated: animated)
+                        }
+                        switchView.isUserInteractionEnabled = true
                     }
+                    strongSelf.switchGestureNode.isHidden = item.enabled
                     
-                    if let updatedImageSignal = updatedImageSignal {
-                        strongSelf.imageNode.setSignal(updatedImageSignal)
-                    }
-                    
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel))
-                    
-                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
-                    
-                    strongSelf.setRevealOptions((left: [], right: packRevealOptions))
-                    strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
-                    
-                    if let updatedFetchSignal = updatedFetchSignal {
-                        strongSelf.fetchDisposable.set(updatedFetchSignal.start())
-                    }
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel + UIScreenPixel))
                 }
             })
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+    override public func accessibilityActivate() -> Bool {
+        guard let item = self.item else {
+            return false
+        }
+        if !item.enabled {
+            return false
+        }
+        if let switchNode = self.switchNode as? IconSwitchNode {
+            switchNode.isOn = !switchNode.isOn
+            item.updated(switchNode.isOn)
+        } else if let switchNode = self.switchNode as? SwitchNode {
+            switchNode.isOn = !switchNode.isOn
+            item.updated(switchNode.isOn)
+        }
+        return true
+    }
+    
+    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted {
@@ -834,82 +441,27 @@ class ItemListReactionItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    override func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
-        super.updateRevealOffset(offset: offset, transition: transition)
-        
-        guard let params = self.layoutParams?.1 else {
-            return
-        }
-        
-        let leftInset: CGFloat = 65.0 + params.leftInset
-        
-        let editingOffset: CGFloat
-        if let editableControlNode = self.editableControlNode {
-            editingOffset = editableControlNode.bounds.size.width
-            var editableControlFrame = editableControlNode.frame
-            editableControlFrame.origin.x = params.leftInset + offset
-            transition.updateFrame(node: editableControlNode, frame: editableControlFrame)
-        } else {
-            editingOffset = 0.0
-        }
-        
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + self.revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
-        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + self.revealOffset + editingOffset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
-        
-        let boundingSize = CGSize(width: 34.0, height: 34.0)
-        
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: params.leftInset + self.revealOffset + editingOffset + 15.0 + floor((boundingSize.width - self.imageNode.frame.size.width) / 2.0), y: self.imageNode.frame.minY), size: self.imageNode.frame.size))
-        if let animationNode = self.animationNode {
-            transition.updateFrame(node: animationNode, frame: CGRect(origin: CGPoint(x: params.leftInset + self.revealOffset + editingOffset + 15.0 + floor((boundingSize.width - animationNode.frame.size.width) / 2.0), y: animationNode.frame.minY), size: animationNode.frame.size))
+    @objc private func switchValueChanged(_ switchView: UISwitch) {
+        if let item = self.item {
+            let value = switchView.isOn
+            item.updated(value)
         }
     }
     
-    override func revealOptionsInteractivelyOpened() {
-        if let (item, _, _) = self.layoutParams {
-            item.setPackIdWithRevealedOptions(item.packInfo.id, nil)
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if let item = self.item, let switchView = self.switchNode.view as? UISwitch, case .ended = recognizer.state {
+            if item.enabled {
+                let value = switchView.isOn
+                item.updated(!value)
+            }
         }
-    }
-    
-    override func revealOptionsInteractivelyClosed() {
-        if let (item, _, _) = self.layoutParams {
-            item.setPackIdWithRevealedOptions(nil, item.packInfo.id)
-        }
-    }
-    
-    override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
-        self.setRevealOptionsOpened(false, animated: true)
-        self.revealOptionsInteractivelyClosed()
-        
-        if let (item, _, _) = self.layoutParams {
-            item.removePack()
-        }
-    }
-    
-    @objc func installationActionPressed() {
-        if let (item, _, _) = self.layoutParams {
-            item.addPack()
-        }
-    }
-    
-    override func isReorderable(at point: CGPoint) -> Bool {
-        if let reorderControlNode = self.reorderControlNode, reorderControlNode.frame.contains(point), !self.isDisplayingRevealedOptions {
-            return true
-        }
-        return false
-    }
-    
-    override func snapshotForReordering() -> UIView? {
-        self.backgroundNode.alpha = 0.9
-        let result = self.view.snapshotContentTree()
-        self.backgroundNode.alpha = 1.0
-        return result
     }
 }
