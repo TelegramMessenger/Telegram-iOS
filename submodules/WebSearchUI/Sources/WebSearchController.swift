@@ -155,6 +155,12 @@ public final class WebSearchController: ViewController {
         }
     }
     
+    public var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil } {
+        didSet {
+            self.controllerNode.getCaptionPanelView = self.getCaptionPanelView
+        }
+    }
+    
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode

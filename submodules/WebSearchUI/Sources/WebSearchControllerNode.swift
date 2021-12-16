@@ -170,6 +170,7 @@ class WebSearchControllerNode: ASDisplayNode {
     var dismissInput: (() -> Void)?
     
     var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?
+    var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil }
     
     init(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchControllerInteraction, peer: EnginePeer?, chatLocation: ChatLocation?, mode: WebSearchMode) {
         self.context = context
@@ -700,7 +701,7 @@ class WebSearchControllerNode: ASDisplayNode {
                             strongSelf.controllerInteraction.sendSelected(results, result)
                             strongSelf.cancel?()
                         }
-                    }, presentStickers: self.presentStickers, present: present)
+                    }, presentStickers: self.presentStickers, getCaptionPanelView: self.getCaptionPanelView, present: present)
                 }
             } else {
                 if let results = self.currentProcessedResults?.results {

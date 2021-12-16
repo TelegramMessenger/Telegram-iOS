@@ -10244,6 +10244,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     return nil
                                 }
                             }
+                            controller.getCaptionPanelView = { [weak self] in
+                                return self?.getCaptionPanelView()
+                            }
                             strongSelf.effectiveNavigationController?.pushViewController(controller)
                         }
                     }, presentSelectionLimitExceeded: {
@@ -10349,6 +10352,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         return nil
                     }
+                }
+                controller.getCaptionPanelView = { [weak self] in
+                    return self?.getCaptionPanelView()
                 }
                 strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }

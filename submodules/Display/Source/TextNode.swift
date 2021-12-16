@@ -973,13 +973,30 @@ public class TextNode: ASDisplayNode {
                 
                 let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, lastLineCharacterIndex, Double(lineConstrainedWidth))
                 
+                func addSpoiler(line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int) {
+                    var secondaryLeftOffset: CGFloat = 0.0
+                    let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
+                    var leftOffset = floor(rawLeftOffset)
+                    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+                        leftOffset = floor(secondaryLeftOffset)
+                    }
+                    
+                    var secondaryRightOffset: CGFloat = 0.0
+                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
+                    var rightOffset = ceil(rawRightOffset)
+                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+                        rightOffset = ceil(secondaryRightOffset)
+                    }
+                    
+                    spoilers.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset), height: ascent + descent)))
+                }
+                
                 var isLastLine = false
                 if maximumNumberOfLines != 0 && lines.count == maximumNumberOfLines - 1 && lineCharacterCount > 0 {
                     isLastLine = true
                 } else if layoutSize.height + (fontLineSpacing + fontLineHeight) * 2.0 > constrainedSize.height {
                     isLastLine = true
                 }
-                
                 if isLastLine {
                     if first {
                         first = false
@@ -1022,25 +1039,27 @@ public class TextNode: ASDisplayNode {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                             
-                            (attributedString.string as NSString).enumerateSubstrings(in: range, options: .byWords) { _, range, _, _ in
-                                let startIndex = range.location
-                                let endIndex = range.location + range.length
-                                                 
-                                var secondaryLeftOffset: CGFloat = 0.0
-                                let rawLeftOffset = CTLineGetOffsetForStringIndex(coreTextLine, startIndex, &secondaryLeftOffset)
-                                var leftOffset = ceil(rawLeftOffset)
-                                if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
-                                    leftOffset = ceil(secondaryLeftOffset)
+                            var startIndex: Int?
+                            var currentIndex: Int?
+                            
+                            let nsString = (attributedString.string as NSString)
+                            nsString.enumerateSubstrings(in: range, options: .byComposedCharacterSequences) { substring, range, _, _ in
+                                if let substring = substring, substring.rangeOfCharacter(from: .whitespacesAndNewlines) != nil {
+                                    if let currentStartIndex = startIndex {
+                                        startIndex = nil
+                                        let endIndex = range.location
+                                        addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
+                                    }
+                                } else if startIndex == nil {
+                                    startIndex = range.location
                                 }
-                                
-                                var secondaryRightOffset: CGFloat = 0.0
-                                let rawRighOffset = CTLineGetOffsetForStringIndex(coreTextLine, endIndex, &secondaryRightOffset)
-                                var rightOffset = ceil(rawRighOffset)
-                                if !rawRighOffset.isEqual(to: secondaryRightOffset) {
-                                    rightOffset = ceil(secondaryRightOffset)
-                                }
-                                
-                                spoilers.append(TextNodeSpoiler(range: range, frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset), height: ascent + descent)))
+                                currentIndex = range.location + range.length
+                            }
+                            
+                            if let currentStartIndex = startIndex, let currentIndex = currentIndex {
+                                startIndex = nil
+                                let endIndex = currentIndex
+                                addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
                             }
                         } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
@@ -1098,26 +1117,28 @@ public class TextNode: ASDisplayNode {
                                 var ascent: CGFloat = 0.0
                                 var descent: CGFloat = 0.0
                                 CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                                                                
+                                var startIndex: Int?
+                                var currentIndex: Int?
                                 
-                                (attributedString.string as NSString).enumerateSubstrings(in: range, options: .byWords) { _, range, _, _ in
-                                    let startIndex = range.location
-                                    let endIndex = range.location + range.length
-                                                     
-                                    var secondaryLeftOffset: CGFloat = 0.0
-                                    let rawLeftOffset = CTLineGetOffsetForStringIndex(coreTextLine, startIndex, &secondaryLeftOffset)
-                                    var leftOffset = ceil(rawLeftOffset)
-                                    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
-                                        leftOffset = ceil(secondaryLeftOffset)
+                                let nsString = (attributedString.string as NSString)
+                                nsString.enumerateSubstrings(in: range, options: .byComposedCharacterSequences) { substring, range, _, _ in
+                                    if let substring = substring, substring.rangeOfCharacter(from: .whitespacesAndNewlines) != nil {
+                                        if let currentStartIndex = startIndex {
+                                            startIndex = nil
+                                            let endIndex = range.location
+                                            addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
+                                        }
+                                    } else if startIndex == nil {
+                                        startIndex = range.location
                                     }
-                                    
-                                    var secondaryRightOffset: CGFloat = 0.0
-                                    let rawRighOffset = CTLineGetOffsetForStringIndex(coreTextLine, endIndex, &secondaryRightOffset)
-                                    var rightOffset = ceil(rawRighOffset)
-                                    if !rawRighOffset.isEqual(to: secondaryRightOffset) {
-                                        rightOffset = ceil(secondaryRightOffset)
-                                    }
-                                    
-                                    spoilers.append(TextNodeSpoiler(range: range, frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset), height: ascent + descent)))
+                                    currentIndex = range.location + range.length
+                                }
+                                
+                                if let currentStartIndex = startIndex, let currentIndex = currentIndex {
+                                    startIndex = nil
+                                    let endIndex = currentIndex
+                                    addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
                                 }
                             } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
                                 let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))

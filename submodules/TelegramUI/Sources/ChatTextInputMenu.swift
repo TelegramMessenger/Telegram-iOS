@@ -31,9 +31,9 @@ final class ChatTextInputMenu {
                             UIMenuItem(title: self.stringItalic, action: Selector(("formatAttributesItalic:"))),
                             UIMenuItem(title: self.stringMonospace, action: Selector(("formatAttributesMonospace:"))),
                             UIMenuItem(title: self.stringLink, action: Selector(("formatAttributesLink:"))),
+                            UIMenuItem(title: self.stringSpoiler, action: Selector(("formatAttributesSpoiler:"))),
                             UIMenuItem(title: self.stringStrikethrough, action: Selector(("formatAttributesStrikethrough:"))),
-                            UIMenuItem(title: self.stringUnderline, action: Selector(("formatAttributesUnderline:"))),
-                            UIMenuItem(title: self.stringSpoiler, action: Selector(("formatAttributesSpoiler:")))
+                            UIMenuItem(title: self.stringUnderline, action: Selector(("formatAttributesUnderline:")))
                         ]
                 }
                 

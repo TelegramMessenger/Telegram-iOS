@@ -60,6 +60,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
     
     public var isRevealedUpdated: (Bool) -> Void = { _ in }
     
+    public var isRevealed = false
+    
     public init(textNode: TextNode) {
         self.textNode = textNode
         
@@ -141,13 +143,12 @@ public class InvisibleInkDustNode: ASDisplayNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap(_:))))
     }
     
-    private var revealed = false
     @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard let (size, _, _) = self.currentParams, !self.revealed else {
+        guard let (size, _, _) = self.currentParams, !self.isRevealed else {
             return
         }
         
-        self.revealed = true
+        self.isRevealed = true
         
         let position = gestureRecognizer.location(in: self.view)
         self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
@@ -185,8 +186,11 @@ public class InvisibleInkDustNode: ASDisplayNode {
             self.emitterMaskFillNode.layer.removeAllAnimations()
         }
         
-        Queue.mainQueue().after(4.0 * UIView.animationDurationFactor()) {
-            self.revealed = false
+        
+        let textLength = CGFloat((self.textNode?.cachedLayout?.attributedString?.string ?? "").count)
+        let timeToRead = min(45.0, ceil(max(4.0, textLength * 0.04)))
+        Queue.mainQueue().after(timeToRead * UIView.animationDurationFactor()) {
+            self.isRevealed = false
             self.isRevealedUpdated(false)
             
             let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)

@@ -460,7 +460,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
+                return .none
+            } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
                 if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
@@ -517,6 +519,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     override func updateTouchesAtPoint(_ point: CGPoint?) {
         if let item = self.item {
             var rects: [CGRect]?
+            var spoilerRects: [CGRect]?
             if let point = point {
                 let textNodeFrame = self.textNode.frame
                 if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
@@ -535,10 +538,15 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             break
                         }
                     }
+                    if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)] {
+                        spoilerRects = self.textNode.attributeRects(name: TelegramTextAttributes.Spoiler, at: index)
+                    }
                 }
             }
             
-            if let rects = rects {
+            if let spoilerRects = spoilerRects, !spoilerRects.isEmpty, !(self.dustNode?.isRevealed ?? true) {
+                
+            } else if let rects = rects {
                 let linkHighlightingNode: LinkHighlightingNode
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
