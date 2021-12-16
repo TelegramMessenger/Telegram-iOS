@@ -322,6 +322,14 @@ public extension Message {
         }
         return nil
     }
+    var hasReactions: Bool {
+        for attribute in self.attributes {
+            if let attribute = attribute as? ReactionsMessageAttribute {
+                return !attribute.reactions.isEmpty
+            }
+        }
+        return false
+    }
 }
 
 public func _internal_parseMediaAttachment(data: Data) -> Media? {
