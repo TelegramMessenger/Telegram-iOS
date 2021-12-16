@@ -15,6 +15,7 @@ final class ChatTextInputMenu {
     private var stringLink: String = "Link"
     private var stringStrikethrough: String = "Strikethrough"
     private var stringUnderline: String = "Underline"
+    private var stringSpoiler: String = "Spoiler"
     
     private(set) var state: ChatTextInputMenuState = .inactive {
         didSet {
@@ -30,6 +31,7 @@ final class ChatTextInputMenu {
                             UIMenuItem(title: self.stringItalic, action: Selector(("formatAttributesItalic:"))),
                             UIMenuItem(title: self.stringMonospace, action: Selector(("formatAttributesMonospace:"))),
                             UIMenuItem(title: self.stringLink, action: Selector(("formatAttributesLink:"))),
+                            UIMenuItem(title: self.stringSpoiler, action: Selector(("formatAttributesSpoiler:"))),
                             UIMenuItem(title: self.stringStrikethrough, action: Selector(("formatAttributesStrikethrough:"))),
                             UIMenuItem(title: self.stringUnderline, action: Selector(("formatAttributesUnderline:")))
                         ]
@@ -60,6 +62,7 @@ final class ChatTextInputMenu {
         self.stringLink = strings.TextFormat_Link
         self.stringStrikethrough = strings.TextFormat_Strikethrough
         self.stringUnderline = strings.TextFormat_Underline
+        self.stringSpoiler = strings.TextFormat_Spoiler
     }
     
     func activate() {

@@ -925,6 +925,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1090087980] = { return Api.MessageEntity.parse_messageEntityStrike($0) }
     dict[34469328] = { return Api.MessageEntity.parse_messageEntityBlockquote($0) }
     dict[1981704948] = { return Api.MessageEntity.parse_messageEntityBankCard($0) }
+    dict[852137487] = { return Api.MessageEntity.parse_messageEntitySpoiler($0) }
     dict[483901197] = { return Api.InputPhoto.parse_inputPhotoEmpty($0) }
     dict[1001634122] = { return Api.InputPhoto.parse_inputPhoto($0) }
     dict[-567906571] = { return Api.contacts.TopPeers.parse_topPeersNotModified($0) }

@@ -38,6 +38,7 @@ swift_library(
         "//submodules/TextSelectionNode:TextSelectionNode",
         "//submodules/Speak:Speak",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
     ],
     visibility = [
         "//visibility:public",
