@@ -952,8 +952,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = combineLatest(queue: .mainQueue(),
                     contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction),
                     strongSelf.context.engine.stickers.availableReactions(),
+                    strongSelf.context.account.postbox.transaction { transaction -> Set<String>? in
+                        let cachedData = transaction.getPeerCachedData(peerId: topMessage.id.peerId)
+                        if let cachedData = cachedData as? CachedChannelData {
+                            return cachedData.allowedReactions.flatMap(Set.init)
+                        } else if let cachedData = cachedData as? CachedGroupData {
+                            return cachedData.allowedReactions.flatMap(Set.init)
+                        } else {
+                            return nil
+                        }
+                    },
                     ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
-                ).start(next: { actions, availableReactions, chatTextSelectionTips in
+                ).start(next: { actions, availableReactions, allowedReactions, chatTextSelectionTips in
                     var actions = actions
 
                     guard let strongSelf = self else {
@@ -1003,8 +1013,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     actions.context = strongSelf.context
                     
-                    if canAddMessageReactions(message: topMessage), let availableReactions = availableReactions {
+                    if canAddMessageReactions(message: topMessage), let availableReactions = availableReactions, let allowedReactions = allowedReactions {
                         for reaction in availableReactions.reactions {
+                            if !allowedReactions.contains(reaction.value) {
+                                continue
+                            }
                             actions.reactionItems.append(ReactionContextItem(
                                 reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
                                 stillAnimation: reaction.selectAnimation,

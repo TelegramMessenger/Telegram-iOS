@@ -212,12 +212,12 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 
                 let contentSize = CGSize(width: sideInset * 2.0 + titleSize.width + iconSize.width + iconSpacing, height: titleSize.height)
                 
-                self.titleLabelNode.frame = CGRect(origin: CGPoint(x: sideInset + iconSize.width + iconSpacing, y: floor((constrainedSize.height - titleSize.height) / 2.0)), size: titleSize)
+                self.titleLabelNode.frame = CGRect(origin: CGPoint(x: sideInset + iconSize.width + iconSpacing, y: floorToScreenPixels((constrainedSize.height - titleSize.height) / 2.0)), size: titleSize)
                 
                 if let reactionIconNode = self.reactionIconNode {
-                    reactionIconNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floor((constrainedSize.height - iconSize.height) / 2.0)), size: iconSize)
+                    reactionIconNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((constrainedSize.height - iconSize.height) / 2.0)), size: iconSize)
                 } else if let iconNode = self.iconNode {
-                    iconNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floor((constrainedSize.height - iconSize.height) / 2.0)), size: iconSize)
+                    iconNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((constrainedSize.height - iconSize.height) / 2.0)), size: iconSize)
                 }
                 
                 return CGSize(width: contentSize.width, height: constrainedSize.height)
@@ -264,9 +264,9 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
         
         func update(size: CGSize, presentationData: PresentationData, selectedReaction: String?, transition: ContainedViewLayoutTransition) {
-            let sideInset: CGFloat = 16.0
+            let sideInset: CGFloat = 11.0
             let spacing: CGFloat = 0.0
-            let verticalInset: CGFloat = 6.0
+            let verticalInset: CGFloat = 7.0
             
             self.selectionHighlightNode.backgroundColor = presentationData.theme.contextMenu.sectionSeparatorColor
             let highlightHeight: CGFloat = size.height - verticalInset * 2.0
@@ -354,7 +354,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
             
             func update(size: CGSize, presentationData: PresentationData, item: EngineMessageReactionListContext.Item, isLast: Bool, syncronousLoad: Bool) {
-                let avatarInset: CGFloat = 10.0
+                let avatarInset: CGFloat = 12.0
                 let avatarSpacing: CGFloat = 8.0
                 let avatarSize: CGFloat = 28.0
                 
@@ -723,7 +723,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             var topContentHeight: CGFloat = 0.0
             if let backButtonNode = self.backButtonNode {
-                let backButtonFrame = CGRect(origin: CGPoint(x: 0.0, y: topContentHeight), size: CGSize(width: constrainedSize.width, height: 44.0))
+                let backButtonFrame = CGRect(origin: CGPoint(x: 0.0, y: topContentHeight), size: CGSize(width: constrainedSize.width, height: 45.0))
                 backButtonNode.update(size: backButtonFrame.size, presentationData: self.presentationData, isLast: self.tabListNode == nil)
                 transition.updateFrame(node: backButtonNode, frame: backButtonFrame)
                 topContentHeight += backButtonFrame.height

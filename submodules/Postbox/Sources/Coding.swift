@@ -1311,6 +1311,14 @@ public final class PostboxDecoder {
             return []
         }
     }
+    
+    public func decodeOptionalStringArrayForKey(_ key: String) -> [String]? {
+        if PostboxDecoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .StringArray) {
+            return decodeStringArrayRaw()
+        } else {
+            return nil
+        }
+    }
 
     public func decodeStringArrayRaw() -> [String] {
         var length: Int32 = 0
