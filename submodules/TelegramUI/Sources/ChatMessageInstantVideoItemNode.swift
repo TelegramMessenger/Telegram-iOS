@@ -184,6 +184,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         return .fail
                     }
                 }
+                
+                if let reactionButtonsNode = strongSelf.reactionButtonsNode {
+                    if let _ = reactionButtonsNode.hitTest(strongSelf.view.convert(point, to: reactionButtonsNode.view), with: nil) {
+                        return .fail
+                    }
+                }
             }
             return .waitForSingleTap
         }
@@ -797,6 +803,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                                     }
                                     item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
                                 }
+                                reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
+                                    guard let strongSelf = self, let item = strongSelf.item else {
+                                        gesture?.cancel()
+                                        return
+                                    }
+                                    
+                                    item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+                                }
                                 reactionButtonsNode.frame = reactionButtonsFrame
                                 strongSelf.addSubnode(reactionButtonsNode)
                                 if animation.isAnimated {
@@ -1310,6 +1324,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             let actionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY), size: actionButtonsSize)
             actionButtonsNode.frame = actionButtonsFrame
         }
+    }
+    
+    override func openMessageContextMenu() {
+        guard let item = self.item else {
+            return
+        }
+        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.interactiveVideoNode.frame, nil)
     }
     
     override func targetReactionView(value: String) -> UIView? {

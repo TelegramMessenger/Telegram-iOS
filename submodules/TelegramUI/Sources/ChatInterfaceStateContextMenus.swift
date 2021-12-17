@@ -1201,6 +1201,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 if group.participantCount <= 50 {
                     hasReadReports = true
                 }
+            } else {
+                reactionCount = 0
             }
             
             var readStats = readStats
@@ -1220,7 +1222,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         })
                     } else if !stats.peers.isEmpty || reactionCount != 0 {
                         if reactionCount != 0 {
-                            c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(context: context, availableReactions: availableReactions, message: EngineMessage(message), back: { [weak c] in
+                            c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(context: context, availableReactions: availableReactions, message: EngineMessage(message), reaction: nil, back: { [weak c] in
                                 c?.popItems()
                             }, openPeer: { [weak c] id in
                                 c?.dismiss(completion: {

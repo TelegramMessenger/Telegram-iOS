@@ -173,6 +173,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     return .fail
                 }
                 
+                if let reactionButtonsNode = strongSelf.reactionButtonsNode {
+                    if let _ = reactionButtonsNode.hitTest(strongSelf.view.convert(point, to: reactionButtonsNode.view), with: nil) {
+                        return .fail
+                    }
+                }
+                
                 if let item = strongSelf.item, item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
                     if strongSelf.imageNode.frame.contains(point) {
                         return .waitForDoubleTap
@@ -511,7 +517,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 reactionPeers: dateReactionsAndPeers.peers,
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
-                hasAutoremove: item.message.isSelfExpiring
+                hasAutoremove: item.message.isSelfExpiring,
+                canViewReactionList: canViewMessageReactionList(message: item.message)
             ))
             
             let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
@@ -987,6 +994,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     return
                                 }
                                 item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                            }
+                            reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
+                                guard let strongSelf = self, let item = strongSelf.item else {
+                                    gesture?.cancel()
+                                    return
+                                }
+                                
+                                item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
                             }
                             reactionButtonsNode.frame = reactionButtonsFrame
                             strongSelf.addSubnode(reactionButtonsNode)
@@ -1597,6 +1612,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             }
         }
+    }
+    
+    override func openMessageContextMenu() {
+        guard let item = self.item else {
+            return
+        }
+        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
     }
     
     override func targetReactionView(value: String) -> UIView? {

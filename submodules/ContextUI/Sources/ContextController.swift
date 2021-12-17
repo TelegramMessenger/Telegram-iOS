@@ -2033,6 +2033,7 @@ public protocol ContextExtractedContentSource: AnyObject {
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
     var blurBackground: Bool { get }
+    var centerActionsHorizontally: Bool { get }
     var shouldBeDismissed: Signal<Bool, NoError> { get }
     
     func takeView() -> ContextControllerTakeViewInfo?
@@ -2041,6 +2042,10 @@ public protocol ContextExtractedContentSource: AnyObject {
 
 public extension ContextExtractedContentSource {
     var centerVertically: Bool {
+        return false
+    }
+    
+    var centerActionsHorizontally: Bool {
         return false
     }
 
@@ -2076,7 +2081,7 @@ public enum ContextContentSource {
 }
 
 public protocol ContextControllerItemsNode: ASDisplayNode {
-    func update(constrainedWidth: CGFloat, maxHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, apparentHeight: CGFloat)
+    func update(presentationData: PresentationData, constrainedWidth: CGFloat, maxHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, apparentHeight: CGFloat)
     
     var apparentHeight: CGFloat { get }
 }

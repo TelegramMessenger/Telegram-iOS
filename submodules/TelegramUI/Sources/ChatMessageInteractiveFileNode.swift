@@ -462,7 +462,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         reactionPeers: dateReactionsAndPeers.peers,
                         replyCount: dateReplies,
                         isPinned: isPinned && !associatedData.isInPinnedListMode,
-                        hasAutoremove: message.isSelfExpiring
+                        hasAutoremove: message.isSelfExpiring,
+                        canViewReactionList: canViewMessageReactionList(message: message)
                     ))
                 }
                 

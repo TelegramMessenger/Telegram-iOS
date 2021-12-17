@@ -460,3 +460,40 @@ public final class EngineMessageReactionListContext {
         }
     }
 }
+
+public enum UpdatePeerAllowedReactionsError {
+    case generic
+}
+
+func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allowedReactions: [String]) -> Signal<Never, UpdatePeerAllowedReactionsError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+    }
+    |> castError(UpdatePeerAllowedReactionsError.self)
+    |> mapToSignal { inputPeer -> Signal<Never, UpdatePeerAllowedReactionsError> in
+        guard let inputPeer = inputPeer else {
+            return .fail(.generic)
+        }
+        return account.network.request(Api.functions.messages.setChatAvailableReactions(peer: inputPeer, availableReactions: allowedReactions))
+        |> mapError { _ -> UpdatePeerAllowedReactionsError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, UpdatePeerAllowedReactionsError> in
+            account.stateManager.addUpdates(result)
+            
+            return account.postbox.transaction { transaction -> Void in
+                transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
+                    if let current = current as? CachedChannelData {
+                        return current.withUpdatedAllowedReactions(allowedReactions)
+                    } else if let current = current as? CachedGroupData {
+                        return current.withUpdatedAllowedReactions(allowedReactions)
+                    } else {
+                        return current
+                    }
+                })
+            }
+            |> ignoreValues
+            |> castError(UpdatePeerAllowedReactionsError.self)
+        }
+    }
+}

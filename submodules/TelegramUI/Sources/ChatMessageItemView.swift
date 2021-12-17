@@ -869,6 +869,9 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
+    func openMessageContextMenu() {
+    }
+    
     func targetReactionView(value: String) -> UIView? {
         return nil
     }

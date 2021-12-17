@@ -464,6 +464,7 @@ private final class PeerInfoInteraction {
     let openFaq: (String?) -> Void
     let openAddMember: () -> Void
     let openQrCode: () -> Void
+    let editingOpenReactionsSetup: () -> Void
     
     init(
         openUsername: @escaping (String) -> Void,
@@ -504,7 +505,8 @@ private final class PeerInfoInteraction {
         openDeletePeer: @escaping () -> Void,
         openFaq: @escaping (String?) -> Void,
         openAddMember: @escaping () -> Void,
-        openQrCode: @escaping () -> Void
+        openQrCode: @escaping () -> Void,
+        editingOpenReactionsSetup: @escaping () -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -545,6 +547,7 @@ private final class PeerInfoInteraction {
         self.openFaq = openFaq
         self.openAddMember = openAddMember
         self.openQrCode = openQrCode
+        self.editingOpenReactionsSetup = editingOpenReactionsSetup
     }
 }
 
@@ -1127,7 +1130,8 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemDiscussionGroup = 3
                 let ItemSignMessages = 4
                 let ItemSignMessagesHelp = 5
-                let ItemDeleteChannel = 5
+                let ItemDeleteChannel = 6
+                let ItemReactions = 7
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -1176,6 +1180,23 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                 
+                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                    //TODO:localize
+                    let label: String
+                    if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
+                        if allowedReactions.isEmpty {
+                            label = "Disabled"
+                        } else {
+                            label = "\(allowedReactions.count)"
+                        }
+                    } else {
+                        label = ""
+                    }
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: "Reactions", icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
+                        interaction.editingOpenReactionsSetup()
+                    }))
+                }
+                
                 if isCreator || (channel.adminRights != nil && channel.hasPermission(.sendMessages)) {
                     let messagesShouldHaveSignatures: Bool
                     switch channel.info {
@@ -1210,6 +1231,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemLocation = 112
                 let ItemLocationSetup = 113
                 let ItemDeleteGroup = 114
+                let ItemReactions = 115
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 let isPublic = channel.username != nil
@@ -1283,9 +1305,43 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             }))
                         }
                         
+                        if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                            //TODO:localize
+                            let label: String
+                            if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
+                                if allowedReactions.isEmpty {
+                                    label = "Disabled"
+                                } else {
+                                    label = "\(allowedReactions.count)"
+                                }
+                            } else {
+                                label = ""
+                            }
+                            items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: "Reactions", icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
+                                interaction.editingOpenReactionsSetup()
+                            }))
+                        }
+                        
                         if !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId {
                             items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                                 interaction.editingOpenPreHistorySetup()
+                            }))
+                        }
+                    } else {
+                        if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                            //TODO:localize
+                            let label: String
+                            if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
+                                if allowedReactions.isEmpty {
+                                    label = "Disabled"
+                                } else {
+                                    label = "\(allowedReactions.count)"
+                                }
+                            } else {
+                                label = ""
+                            }
+                            items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: "Reactions", icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
+                                interaction.editingOpenReactionsSetup()
                             }))
                         }
                     }
@@ -1353,6 +1409,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
             let ItemPermissions = 104
             let ItemAdmins = 105
             let ItemMemberRequests = 106
+            let ItemReactions = 107
             
             var canViewAdminsAndBanned = false
             
@@ -1381,6 +1438,23 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistoryShort, icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
                     interaction.editingOpenPreHistorySetup()
                 }))
+                
+                do {
+                    //TODO:localize
+                    let label: String
+                    if let cachedData = data.cachedData as? CachedGroupData, let allowedReactions = cachedData.allowedReactions {
+                        if allowedReactions.isEmpty {
+                            label = "Disabled"
+                        } else {
+                            label = "\(allowedReactions.count)"
+                        }
+                    } else {
+                        label = ""
+                    }
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: "Reactions", icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
+                        interaction.editingOpenReactionsSetup()
+                    }))
+                }
                 
                 canViewAdminsAndBanned = true
             } else if case let .admin(rights, _) = group.role {
@@ -1677,6 +1751,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             },
             openQrCode: { [weak self] in
                 self?.openQrCode()
+            },
+            editingOpenReactionsSetup: { [weak self] in
+                self?.editingOpenReactionsSetup()
             }
         )
         
@@ -1846,6 +1923,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(MessageContextExtractedContentSource(sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
                 strongSelf.controller?.window?.presentInGlobalOverlay(controller)
             })
+        }, openMessageReactionContextMenu: { _, _, _, _ in
         }, updateMessageReaction: { _, _ in
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { [weak self] message, node, rect, gesture in
@@ -4696,6 +4774,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             return
         }
         self.controller?.push(channelDiscussionGroupSetupController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id))
+    }
+    
+    private func editingOpenReactionsSetup() {
+        guard let data = self.data, let peer = data.peer else {
+            return
+        }
+        self.controller?.push(peerAllowedReactionListController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id))
     }
     
     private func editingToggleMessageSignatures(value: Bool) {

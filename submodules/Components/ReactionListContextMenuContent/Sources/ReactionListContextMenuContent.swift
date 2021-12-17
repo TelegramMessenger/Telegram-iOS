@@ -12,48 +12,7 @@ import WebPBinding
 import AnimatedAvatarSetNode
 import ContextUI
 import AvatarNode
-
-private final class ReactionImageNode: ASImageNode {
-    private var disposable: Disposable?
-    let size: CGSize
-    
-    init(context: AccountContext, availableReactions: AvailableReactions?, reaction: String) {
-        var file: TelegramMediaFile?
-        if let availableReactions = availableReactions {
-            for availableReaction in availableReactions.reactions {
-                if availableReaction.value == reaction {
-                    file = availableReaction.staticIcon
-                    break
-                }
-            }
-        }
-        if let file = file {
-            self.size = file.dimensions?.cgSize ?? CGSize(width: 18.0, height: 18.0)
-            
-            super.init()
-            
-            self.disposable = (context.account.postbox.mediaBox.resourceData(file.resource)
-            |> deliverOnMainQueue).start(next: { [weak self] data in
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                if data.complete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                    if let image = WebP.convert(fromWebP: dataValue) {
-                        strongSelf.image = image
-                    }
-                }
-            })
-        } else {
-            self.size = CGSize(width: 18.0, height: 18.0)
-            super.init()
-        }
-    }
-    
-    deinit {
-        self.disposable?.dispose()
-    }
-}
+import ReactionImageComponent
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
@@ -212,12 +171,12 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 
                 let contentSize = CGSize(width: sideInset * 2.0 + titleSize.width + iconSize.width + iconSpacing, height: titleSize.height)
                 
-                self.titleLabelNode.frame = CGRect(origin: CGPoint(x: sideInset + iconSize.width + iconSpacing, y: floor((constrainedSize.height - titleSize.height) / 2.0)), size: titleSize)
+                self.titleLabelNode.frame = CGRect(origin: CGPoint(x: sideInset + iconSize.width + iconSpacing, y: floorToScreenPixels((constrainedSize.height - titleSize.height) / 2.0)), size: titleSize)
                 
                 if let reactionIconNode = self.reactionIconNode {
-                    reactionIconNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floor((constrainedSize.height - iconSize.height) / 2.0)), size: iconSize)
+                    reactionIconNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((constrainedSize.height - iconSize.height) / 2.0)), size: iconSize)
                 } else if let iconNode = self.iconNode {
-                    iconNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floor((constrainedSize.height - iconSize.height) / 2.0)), size: iconSize)
+                    iconNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((constrainedSize.height - iconSize.height) / 2.0)), size: iconSize)
                 }
                 
                 return CGSize(width: contentSize.width, height: constrainedSize.height)
@@ -264,9 +223,9 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         }
         
         func update(size: CGSize, presentationData: PresentationData, selectedReaction: String?, transition: ContainedViewLayoutTransition) {
-            let sideInset: CGFloat = 16.0
+            let sideInset: CGFloat = 11.0
             let spacing: CGFloat = 0.0
-            let verticalInset: CGFloat = 6.0
+            let verticalInset: CGFloat = 7.0
             
             self.selectionHighlightNode.backgroundColor = presentationData.theme.contextMenu.sectionSeparatorColor
             let highlightHeight: CGFloat = size.height - verticalInset * 2.0
@@ -354,9 +313,10 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
             
             func update(size: CGSize, presentationData: PresentationData, item: EngineMessageReactionListContext.Item, isLast: Bool, syncronousLoad: Bool) {
-                let avatarInset: CGFloat = 10.0
+                let avatarInset: CGFloat = 12.0
                 let avatarSpacing: CGFloat = 8.0
                 let avatarSize: CGFloat = 28.0
+                let sideInset: CGFloat = 16.0
                 
                 let reaction: String? = item.reaction
                 if let reaction = reaction {
@@ -377,7 +337,6 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.avatarNode.frame = CGRect(origin: CGPoint(x: avatarInset, y: floor((size.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
                 self.avatarNode.setPeer(context: self.context, theme: presentationData.theme, peer: item.peer, synchronousLoad: true)
                 
-                let sideInset: CGFloat = 16.0
                 self.titleLabelNode.attributedText = NSAttributedString(string: item.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.regular(17.0), textColor: presentationData.theme.contextMenu.primaryColor)
                 var maxTextWidth: CGFloat = size.width - avatarInset - avatarSize - avatarSpacing - sideInset
                 if reactionIconNode != nil {
@@ -418,6 +377,9 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         
         private var itemNodes: [Int: ItemNode] = [:]
         
+        private var placeholderItemImage: UIImage?
+        private var placeholderLayers: [Int: SimpleLayer] = [:]
+        
         init(
             context: AccountContext,
             availableReactions: AvailableReactions?,
@@ -434,7 +396,6 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             self.requestUpdateApparentHeight = requestUpdateApparentHeight
             self.openPeer = openPeer
             
-            self.presentationData = context.sharedContext.currentPresentationData.with({ $0 })
             self.listContext = context.engine.messages.messageReactionList(message: message, reaction: reaction)
             self.state = EngineMessageReactionListContext.State(message: message, reaction: reaction)
             
@@ -464,9 +425,11 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     animateIn = true
                 }
                 strongSelf.state = state
-                strongSelf.requestUpdate(strongSelf, .immediate)
+                strongSelf.requestUpdate(strongSelf, animateIn ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
                 if animateIn {
-                    strongSelf.scrollNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    for (_, itemNode) in strongSelf.itemNodes {
+                        itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
                 }
             })
         }
@@ -479,7 +442,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             if self.ignoreScrolling {
                 return
             }
-            self.updateVisibleItems(syncronousLoad: false)
+            self.updateVisibleItems(animated: false, syncronousLoad: false)
             
             if let size = self.currentSize {
                 var apparentHeight = -self.scrollNode.view.contentOffset.y + self.scrollNode.view.contentSize.height
@@ -493,7 +456,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
         }
         
-        private func updateVisibleItems(syncronousLoad: Bool) {
+        private func updateVisibleItems(animated: Bool, syncronousLoad: Bool) {
             guard let size = self.currentSize else {
                 return
             }
@@ -504,34 +467,50 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -180.0)
             
             var validIds = Set<Int>()
+            var validPlaceholderIds = Set<Int>()
             
             let minVisibleIndex = max(0, Int(floor(visibleBounds.minY / itemHeight)))
             let maxVisibleIndex = Int(ceil(visibleBounds.maxY / itemHeight))
             
             if minVisibleIndex <= maxVisibleIndex {
                 for index in minVisibleIndex ... maxVisibleIndex {
-                    if index >= self.state.items.count {
-                        break
-                    }
-                    
-                    validIds.insert(index)
-                    
-                    let itemNode: ItemNode
-                    if let current = self.itemNodes[index] {
-                        itemNode = current
-                    } else {
-                        let openPeer = self.openPeer
-                        let peerId = self.state.items[index].peer.id
-                        itemNode = ItemNode(context: self.context, availableReactions: self.availableReactions, action: {
-                            openPeer(peerId)
-                        })
-                        self.itemNodes[index] = itemNode
-                        self.scrollNode.addSubnode(itemNode)
-                    }
-                    
                     let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: CGFloat(index) * itemHeight), size: CGSize(width: size.width, height: itemHeight))
-                    itemNode.update(size: itemFrame.size, presentationData: presentationData, item: self.state.items[index], isLast: index == self.state.items.count - 1, syncronousLoad: syncronousLoad)
-                    itemNode.frame = itemFrame
+                    
+                    if index < self.state.items.count {
+                        validIds.insert(index)
+                        
+                        let itemNode: ItemNode
+                        if let current = self.itemNodes[index] {
+                            itemNode = current
+                        } else {
+                            let openPeer = self.openPeer
+                            let peerId = self.state.items[index].peer.id
+                            itemNode = ItemNode(context: self.context, availableReactions: self.availableReactions, action: {
+                                openPeer(peerId)
+                            })
+                            self.itemNodes[index] = itemNode
+                            self.scrollNode.addSubnode(itemNode)
+                        }
+                        
+                        itemNode.update(size: itemFrame.size, presentationData: presentationData, item: self.state.items[index], isLast: index == self.state.items.count - 1, syncronousLoad: syncronousLoad)
+                        itemNode.frame = itemFrame
+                    } else {
+                        validPlaceholderIds.insert(index)
+                        
+                        let placeholderLayer: SimpleLayer
+                        if let current = self.placeholderLayers[index] {
+                            placeholderLayer = current
+                        } else {
+                            placeholderLayer = SimpleLayer()
+                            if let placeholderItemImage = self.placeholderItemImage {
+                                ASDisplayNodeSetResizableContents(placeholderLayer, placeholderItemImage)
+                            }
+                            self.placeholderLayers[index] = placeholderLayer
+                            self.scrollNode.layer.addSublayer(placeholderLayer)
+                        }
+                        
+                        placeholderLayer.frame = itemFrame
+                    }
                 }
             }
             
@@ -542,9 +521,25 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     itemNode.removeFromSupernode()
                 }
             }
-            
             for id in removeIds {
                 self.itemNodes.removeValue(forKey: id)
+            }
+            
+            var removePlaceholderIds: [Int] = []
+            for (id, placeholderLayer) in self.placeholderLayers {
+                if !validPlaceholderIds.contains(id) {
+                    removePlaceholderIds.append(id)
+                    if animated {
+                        placeholderLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak placeholderLayer] _ in
+                            placeholderLayer?.removeFromSuperlayer()
+                        })
+                    } else {
+                        placeholderLayer.removeFromSuperlayer()
+                    }
+                }
+            }
+            for id in removePlaceholderIds {
+                self.placeholderLayers.removeValue(forKey: id)
             }
             
             if self.state.canLoadMore && maxVisibleIndex >= self.state.items.count - 16 {
@@ -552,8 +547,45 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
         }
         
-        func update(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> (size: CGSize, apparentHeight: CGFloat) {
+        func update(presentationData: PresentationData, constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> (size: CGSize, apparentHeight: CGFloat) {
             let itemHeight: CGFloat = 44.0
+            
+            if self.presentationData?.theme !== presentationData.theme {
+                let sideInset: CGFloat = 40.0
+                let avatarInset: CGFloat = 12.0
+                let avatarSpacing: CGFloat = 8.0
+                let avatarSize: CGFloat = 28.0
+                let lineHeight: CGFloat = 8.0
+                
+                let shimmeringForegroundColor: UIColor
+                let shimmeringColor: UIColor
+                if presentationData.theme.overallDarkAppearance {
+                    let backgroundColor = presentationData.theme.contextMenu.backgroundColor.blitOver(presentationData.theme.list.plainBackgroundColor, alpha: 1.0)
+
+                    shimmeringForegroundColor = presentationData.theme.contextMenu.primaryColor.blitOver(backgroundColor, alpha: 0.1)
+                    shimmeringColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3)
+                } else {
+                    shimmeringForegroundColor = presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.07)
+                    shimmeringColor = presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3)
+                }
+                let _ = shimmeringColor
+                
+                self.placeholderItemImage = generateImage(CGSize(width: avatarInset + avatarSize + avatarSpacing + lineHeight + 2.0 + sideInset, height: itemHeight), rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setFillColor(shimmeringForegroundColor.cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(x: avatarInset, y: floor((size.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize)))
+                    
+                    context.fillEllipse(in: CGRect(origin: CGPoint(x: avatarInset + avatarSize + avatarSpacing, y: floor((size.height - lineHeight) / 2.0)), size: CGSize(width: lineHeight + 2.0, height: lineHeight)))
+                })?.stretchableImage(withLeftCapWidth: Int(avatarInset + avatarSize + avatarSpacing + lineHeight / 2.0 + 1.0), topCapHeight: 0)
+                
+                if let placeholderItemImage = self.placeholderItemImage {
+                    for (_, placeholderLayer) in self.placeholderLayers {
+                        ASDisplayNodeSetResizableContents(placeholderLayer, placeholderItemImage)
+                    }
+                }
+            }
+            self.presentationData = presentationData
+            
             let size = CGSize(width: constrainedSize.width, height: CGFloat(self.state.totalCount) * itemHeight)
             
             let containerSize = CGSize(width: size.width, height: min(constrainedSize.height, size.height))
@@ -569,7 +601,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
             self.ignoreScrolling = false
             
-            self.updateVisibleItems(syncronousLoad: !transition.isAnimated)
+            self.updateVisibleItems(animated: transition.isAnimated, syncronousLoad: !transition.isAnimated)
             
             var apparentHeight = -self.scrollNode.view.contentOffset.y + self.scrollNode.view.contentSize.height
             apparentHeight = max(apparentHeight, 44.0)
@@ -604,9 +636,10 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             context: AccountContext,
             availableReactions: AvailableReactions?,
             message: EngineMessage,
+            reaction: String?,
             requestUpdate: @escaping (ContainedViewLayoutTransition) -> Void,
             requestUpdateApparentHeight: @escaping (ContainedViewLayoutTransition) -> Void,
-            back: @escaping () -> Void,
+            back: (() -> Void)?,
             openPeer: @escaping (PeerId) -> Void
         ) {
             self.context = context
@@ -620,20 +653,26 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             var requestUpdateTab: ((ReactionsTabNode, ContainedViewLayoutTransition) -> Void)?
             var requestUpdateTabApparentHeight: ((ReactionsTabNode, ContainedViewLayoutTransition) -> Void)?
             
-            self.backButtonNode = BackButtonNode()
-            self.backButtonNode?.action = {
-                back()
+            if let back = back {
+                self.backButtonNode = BackButtonNode()
+                self.backButtonNode?.action = {
+                    back()
+                }
             }
             
             var reactions: [(String?, Int)] = []
             var totalCount: Int = 0
             if let reactionsAttribute = message._asMessage().reactionsAttribute {
-                for reaction in reactionsAttribute.reactions {
-                    totalCount += Int(reaction.count)
-                    reactions.append((reaction.value, Int(reaction.count)))
+                for listReaction in reactionsAttribute.reactions {
+                    if reaction == nil || listReaction.value == reaction {
+                        totalCount += Int(listReaction.count)
+                        reactions.append((listReaction.value, Int(listReaction.count)))
+                    }
                 }
             }
-            reactions.insert((nil, totalCount), at: 0)
+            if reaction == nil {
+                reactions.insert((nil, totalCount), at: 0)
+            }
             
             if reactions.count > 2 {
                 self.tabListNode = ReactionTabListNode(context: context, availableReactions: availableReactions, reactions: reactions, message: message)
@@ -641,13 +680,11 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             self.reactions = reactions
             
-            self.separatorNode = ASDisplayNode()
-            
             self.currentTabNode = ReactionsTabNode(
                 context: context,
                 availableReactions: availableReactions,
                 message: message,
-                reaction: nil,
+                reaction: reaction,
                 requestUpdate: { tab, transition in
                     requestUpdateTab?(tab, transition)
                 },
@@ -660,6 +697,10 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             )
             
             super.init()
+            
+            if self.backButtonNode != nil || self.tabListNode != nil {
+                self.separatorNode = ASDisplayNode()
+            }
             
             if let backButtonNode = self.backButtonNode {
                 self.addSubnode(backButtonNode)
@@ -718,7 +759,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
         }
         
-        func update(constrainedWidth: CGFloat, maxHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, apparentHeight: CGFloat) {
+        func update(presentationData: PresentationData, constrainedWidth: CGFloat, maxHeight: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> (cleanSize: CGSize, apparentHeight: CGFloat) {
             let constrainedSize = CGSize(width: min(260.0, constrainedWidth), height: maxHeight)
             
             var topContentHeight: CGFloat = 0.0
@@ -745,7 +786,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             if self.currentTabNode.bounds.isEmpty {
                 currentTabTransition = .immediate
             }
-            let currentTabLayout = self.currentTabNode.update(constrainedSize: CGSize(width: constrainedSize.width, height: constrainedSize.height - topContentHeight), transition: currentTabTransition)
+            let currentTabLayout = self.currentTabNode.update(presentationData: presentationData, constrainedSize: CGSize(width: constrainedSize.width, height: constrainedSize.height - topContentHeight), transition: currentTabTransition)
             currentTabTransition.updateFrame(node: self.currentTabNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topContentHeight), size: CGSize(width: currentTabLayout.size.width, height: currentTabLayout.size.height + 100.0)))
             
             if let dismissedTabNode = self.dismissedTabNode {
@@ -775,13 +816,15 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     let context: AccountContext
     let availableReactions: AvailableReactions?
     let message: EngineMessage
-    let back: () -> Void
+    let reaction: String?
+    let back: (() -> Void)?
     let openPeer: (PeerId) -> Void
     
-    public init(context: AccountContext, availableReactions: AvailableReactions?, message: EngineMessage, back: @escaping () -> Void, openPeer: @escaping (PeerId) -> Void) {
+    public init(context: AccountContext, availableReactions: AvailableReactions?, message: EngineMessage, reaction: String?, back: (() -> Void)?, openPeer: @escaping (PeerId) -> Void) {
         self.context = context
         self.availableReactions = availableReactions
         self.message = message
+        self.reaction = reaction
         self.back = back
         self.openPeer = openPeer
     }
@@ -794,6 +837,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             context: self.context,
             availableReactions: self.availableReactions,
             message: self.message,
+            reaction: self.reaction,
             requestUpdate: requestUpdate,
             requestUpdateApparentHeight: requestUpdateApparentHeight,
             back: self.back,

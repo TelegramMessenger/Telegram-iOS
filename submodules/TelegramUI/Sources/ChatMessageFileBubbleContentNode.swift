@@ -63,6 +63,15 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             }
             item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
         }
+        
+        self.interactiveFileNode.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                gesture?.cancel()
+                return
+            }
+            
+            item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+        }
     }
     
     override func accessibilityActivate() -> Bool {
