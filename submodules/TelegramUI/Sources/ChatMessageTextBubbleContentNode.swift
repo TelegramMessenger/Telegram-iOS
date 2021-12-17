@@ -374,6 +374,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
                                 let spoilerTextNode = spoilerTextApply()
                                 if strongSelf.spoilerTextNode == nil {
+                                    spoilerTextNode.alpha = 0.0
                                     spoilerTextNode.isUserInteractionEnabled = false
                                     spoilerTextNode.contentMode = .topLeft
                                     spoilerTextNode.contentsScale = UIScreenScale
@@ -384,8 +385,6 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 
                                 strongSelf.spoilerTextNode?.frame = textFrame
-                                strongSelf.spoilerTextNode?.isHidden = false
-                                strongSelf.spoilerTextNode?.alpha = 0.0
                                 
                                 let dustNode: InvisibleInkDustNode
                                 if let current = strongSelf.dustNode {
@@ -395,11 +394,16 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.dustNode = dustNode
                                     strongSelf.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
                                 }
-                                dustNode.update(size: textFrame.size, color: messageTheme.primaryTextColor, rects: textLayout.spoilers.map { $0.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) })
+                                dustNode.update(size: textFrame.size, color: messageTheme.secondaryTextColor, rects: textLayout.spoilers.map { $0.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) })
                                 dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
                             } else if let spoilerTextNode = strongSelf.spoilerTextNode {
                                 strongSelf.spoilerTextNode = nil
                                 spoilerTextNode.removeFromSupernode()
+                                
+                                if let dustNode = strongSelf.dustNode {
+                                    strongSelf.dustNode = nil
+                                    dustNode.removeFromSupernode()
+                                }
                             }
                             
                             if let textSelectionNode = strongSelf.textSelectionNode {
@@ -632,7 +636,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
-            if self.textSelectionNode == nil, let item = self.item, !item.associatedData.isCopyProtectionEnabled, let rootNode = item.controllerInteraction.chatControllerNode() {
+            if self.textSelectionNode == nil, let item = self.item, !item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected(), let rootNode = item.controllerInteraction.chatControllerNode() {
                 let selectionColor: UIColor
                 let knobColor: UIColor
                 if item.message.effectivelyIncoming(item.context.account.peerId) {

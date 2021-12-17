@@ -56,6 +56,8 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
     func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners)
     func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool
     func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode?
+    
+    func makeDimmedNode() -> ASDisplayNode?
 }
 
 final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode {
@@ -799,7 +801,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
             
-            if false, self.newYearNode == nil {
+            if self.context.sharedContext.immediateExperimentalUISettings.snow, self.newYearNode == nil {
                 let newYearNode = WallpaperNewYearNode()
                 self.addSubnode(newYearNode)
                 self.newYearNode = newYearNode
@@ -896,6 +898,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node
+    }
+    
+    func makeDimmedNode() -> ASDisplayNode? {
+        if let gradientBackgroundNode = self.gradientBackgroundNode {
+            return GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode)
+        } else {
+            return nil
+        }
     }
 }
 
@@ -1695,6 +1705,10 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
         node.updateContents()
         return node
     }
+
+    func makeDimmedNode() -> ASDisplayNode? {
+        return nil
+    }
 }
 
 private let sharedStorage = WallpaperBackgroundNodeMergedImpl.SharedStorage()
@@ -1738,7 +1752,7 @@ private class WallpaperNewYearNode: ASDisplayNode {
             cell1.scale = 0.04
             cell1.scaleRange = 0.15
             cell1.color = UIColor.white.withAlphaComponent(0.88).cgColor
-            cell1.alphaRange = -0.2
+//            cell1.alphaRange = -0.2
             
             particlesLayer.emitterCells = [cell1]
         }

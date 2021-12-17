@@ -7145,3 +7145,7 @@ Sorry for the inconvenience.";
 "ChatList.Archive" = "Archive";
 
 "TextFormat.Spoiler" = "Spoiler";
+
+"Conversation.ContextMenuTranslate" = "Translate";
+
+"ClearCache.ClearDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.";

@@ -521,6 +521,8 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                 
                 var totalSize: Int64 = 0
                 
+                items.append(ActionSheetTextItem(title: presentationData.strings.ClearCache_ClearDescription))
+                
                 for categoryId in validCategories {
                     if let (_, size) = sizeIndex[categoryId] {
                         let categorySize: Int64 = size

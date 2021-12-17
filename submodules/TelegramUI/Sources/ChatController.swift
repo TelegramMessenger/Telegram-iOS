@@ -60,6 +60,7 @@ import InviteLinksUI
 import Markdown
 import TelegramPermissionsUI
 import Speak
+import Translate
 import UniversalMediaPlayer
 import WallpaperBackgroundNode
 import ChatListUI
@@ -2759,6 +2760,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             case .speak:
                 speakText(text.string)
+            case .translate:
+                translateText(context: context, text: text.string)
             }
         }, displayImportedMessageTooltip: { [weak self] _ in
             guard let strongSelf = self else {

@@ -322,6 +322,15 @@ public extension Message {
         }
         return nil
     }
+    
+    var textEntitiesAttribute: TextEntitiesMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
 }
 
 public func _internal_parseMediaAttachment(data: Data) -> Media? {

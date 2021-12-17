@@ -893,7 +893,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 
-                if item.associatedData.isCopyProtectionEnabled {
+                if item.associatedData.isCopyProtectionEnabled || item.message.isCopyProtected() {
                     needsShareButton = false
                 }
             }

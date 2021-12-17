@@ -760,6 +760,15 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     f(.default)
                 })))
                 
+                if #available(iOS 15.0, *) {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuTranslate, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        controllerInteraction.performTextSelectionAction(0, NSAttributedString(string: message.text), .translate)
+                        f(.default)
+                    })))
+                }
+                
                 if isSpeakSelectionEnabled() && !message.text.isEmpty {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSpeak, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)

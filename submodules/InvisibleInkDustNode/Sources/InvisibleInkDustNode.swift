@@ -62,7 +62,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     
     public var isRevealed = false
     
-    public init(textNode: TextNode) {
+    public init(textNode: TextNode?) {
         self.textNode = textNode
         
         self.emitterNode = ASDisplayNode()
@@ -144,7 +144,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     }
     
     @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard let (size, _, _) = self.currentParams, !self.isRevealed else {
+        guard let (size, _, _) = self.currentParams, let textNode = self.textNode, !self.isRevealed else {
             return
         }
         
@@ -155,15 +155,15 @@ public class InvisibleInkDustNode: ASDisplayNode {
         self.emitterLayer?.setValue(position, forKeyPath: "emitterBehaviors.fingerAttractor.position")
            
         Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) {
-            self.textNode?.view.mask = self.textMaskNode.view
-            self.textNode?.alpha = 1.0
+            textNode.view.mask = self.textMaskNode.view
+            textNode.alpha = 1.0
                     
             let radius = max(size.width, size.height)
             self.textSpotNode.frame = CGRect(x: position.x - radius / 2.0, y: position.y - radius / 2.0, width: radius, height: radius)
                     
             self.textSpotNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-            self.textSpotNode.layer.animateScale(from: 0.1, to: 3.5, duration: 0.71, removeOnCompletion: false, completion: { [weak self] _ in
-                self?.textNode?.view.mask = nil
+            self.textSpotNode.layer.animateScale(from: 0.1, to: 3.5, duration: 0.71, removeOnCompletion: false, completion: { _ in
+                textNode.view.mask = nil
             })
             
             self.emitterNode.view.mask = self.emitterMaskNode.view
@@ -187,7 +187,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
         
         
-        let textLength = CGFloat((self.textNode?.cachedLayout?.attributedString?.string ?? "").count)
+        let textLength = CGFloat((textNode.cachedLayout?.attributedString?.string ?? "").count)
         let timeToRead = min(45.0, ceil(max(4.0, textLength * 0.04)))
         Queue.mainQueue().after(timeToRead * UIView.animationDurationFactor()) {
             self.isRevealed = false
@@ -195,9 +195,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
             
             let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
             transition.updateAlpha(node: self, alpha: 1.0)
-            if let textNode = self.textNode {
-                transition.updateAlpha(node: textNode, alpha: 0.0)
-            }
+            transition.updateAlpha(node: textNode, alpha: 0.0)
         }
     }
     

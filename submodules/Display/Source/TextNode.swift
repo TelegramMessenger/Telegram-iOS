@@ -1005,6 +1005,10 @@ public class TextNode: ASDisplayNode {
                     }
                     
                     let lineRange = CFRange(location: lastLineCharacterIndex, length: stringLength - lastLineCharacterIndex)
+                    var brokenLineRange = CFRange(location: lastLineCharacterIndex, length: lineCharacterCount)
+                    if brokenLineRange.location + brokenLineRange.length > attributedString.length {
+                        brokenLineRange.length = attributedString.length - brokenLineRange.location
+                    }
                     if lineRange.length == 0 {
                         break
                     }
@@ -1033,7 +1037,7 @@ public class TextNode: ASDisplayNode {
                     }
                     
                     var headIndent: CGFloat = 0.0
-                    attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
+                    attributedString.enumerateAttributes(in: NSMakeRange(brokenLineRange.location, brokenLineRange.length), options: []) { attributes, range, _ in
                         if let _ = attributes[NSAttributedString.Key.init(rawValue: "TelegramSpoiler")] {
                             var ascent: CGFloat = 0.0
                             var descent: CGFloat = 0.0

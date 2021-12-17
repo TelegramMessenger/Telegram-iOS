@@ -267,8 +267,7 @@ public final class QrCodeScreen: ViewController {
             self.qrImageNode.clipsToBounds = true
             self.qrImageNode.cornerRadius = 16.0
             
-            self.qrIconNode = AnimatedStickerNode()
-            
+            self.qrIconNode = AnimatedStickerNode()   
             self.qrIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogo"), width: 240, height: 240, mode: .direct(cachePathPrefix: nil))
             self.qrIconNode.visibility = true
             
@@ -434,7 +433,6 @@ public final class QrCodeScreen: ViewController {
             let imageSide: CGFloat = 240.0
             let imageSize = CGSize(width: imageSide, height: imageSide)
             let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))
-            
             let _ = imageApply()
             
             let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)

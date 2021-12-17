@@ -17,6 +17,8 @@ import PhotoResources
 import ChatListSearchItemNode
 import ContextUI
 import ChatInterfaceState
+import TextFormat
+import InvisibleInkDustNode
 
 public enum ChatListItemContent {
     public final class DraftState: Equatable {
@@ -427,6 +429,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let measureNode: TextNode
     private var currentItemHeight: CGFloat?
     let textNode: TextNode
+    var dustNode: InvisibleInkDustNode?
     let inputActivitiesNode: ChatListInputActivitiesNode
     let dateNode: TextNode
     let separatorNode: ASDisplayNode
@@ -1049,12 +1052,26 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         attributedText = NSAttributedString(string: foldLineBreaks(draftText.replacingOccurrences(of: "\n\n", with: " ")), font: textFont, textColor: theme.messageTextColor)
                     } else if let message = messages.last {
                         var composedString: NSMutableAttributedString
+                        
+                        let entities = (message._asMessage().textEntitiesAttribute?.entities ?? []).filter { entity in
+                            if case .Spoiler = entity.type {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
+                        let messageString: NSAttributedString
+                        if !message.text.isEmpty {
+                            messageString = stringWithAppliedEntities(message.text, entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                        } else {
+                            messageString = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
+                        }
                         if let inlineAuthorPrefix = inlineAuthorPrefix {
                             composedString = NSMutableAttributedString()
                             composedString.append(NSAttributedString(string: "\(inlineAuthorPrefix): ", font: textFont, textColor: theme.titleColor))
-                            composedString.append(NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor))
+                            composedString.append(messageString)
                         } else {
-                            composedString = NSMutableAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
+                            composedString = NSMutableAttributedString(attributedString: messageString)
                         }
                         
                         if let searchQuery = item.interaction.searchTextHighightState {
@@ -1395,7 +1412,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 textCutout = TextNodeCutout(topLeft: CGSize(width: textLeftCutout, height: 10.0), topRight: nil, bottomRight: nil)
             }
             let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
-            
+                        
             let titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
             let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
@@ -1729,6 +1746,24 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.authorNode.frame = authorNodeFrame
                     let textNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.minY + titleLayout.size.height - 1.0 + UIScreenPixel + (authorLayout.size.height.isZero ? 0.0 : (authorLayout.size.height - 3.0))), size: textLayout.size)
                     strongSelf.textNode.frame = textNodeFrame
+                    
+                    if !textLayout.spoilers.isEmpty {
+                        let dustNode: InvisibleInkDustNode
+                        if let current = strongSelf.dustNode {
+                            dustNode = current
+                        } else {
+                            dustNode = InvisibleInkDustNode(textNode: nil)
+                            dustNode.isUserInteractionEnabled = false
+                            strongSelf.dustNode = dustNode
+                            strongSelf.contextContainer.insertSubnode(dustNode, aboveSubnode: strongSelf.textNode)
+                        }
+                        dustNode.update(size: textNodeFrame.size, color: theme.messageTextColor, rects: textLayout.spoilers.map { $0.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) })
+                        dustNode.frame = textNodeFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+                     
+                    } else if let dustNode = strongSelf.dustNode {
+                        strongSelf.dustNode = nil
+                        dustNode.removeFromSupernode()
+                    }
                     
                     var animateInputActivitiesFrame = false
                     let inputActivities = inputActivities?.filter({
