@@ -299,9 +299,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             var actionsFrame = CGRect(origin: CGPoint(x: 0.0, y: contentRect.maxY + contentActionsSpacing), size: actionsSize)
             if contentRect.midX < layout.size.width / 2.0 {
-                actionsFrame.origin.x = contentRect.minX + actionsSideInset - 3.0
+                actionsFrame.origin.x = contentRect.minX + actionsSideInset - 4.0
             } else {
-                actionsFrame.origin.x = contentRect.maxX - actionsSideInset - actionsSize.width
+                actionsFrame.origin.x = contentRect.maxX - actionsSideInset - actionsSize.width - 1.0
             }
             transition.updateFrame(node: self.actionsStackNode, frame: actionsFrame)
             
