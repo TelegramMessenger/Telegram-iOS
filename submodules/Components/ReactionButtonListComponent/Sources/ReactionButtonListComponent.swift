@@ -11,32 +11,7 @@ import UIKit
 import WebPBinding
 import AnimatedAvatarSetNode
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
-private final class SimpleLayer: CALayer {
-    override func action(forKey event: String) -> CAAction? {
-        return nullAction
-    }
-    
-    override init() {
-        super.init()
-    }
-    
-    override init(layer: Any) {
-        super.init(layer: layer)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-}
-
-fileprivate final class CounterLayer: CALayer {
+fileprivate final class CounterLayer: SimpleLayer {
     fileprivate final class Layout {
         struct Spec: Equatable {
             let clippingHeight: CGFloat
@@ -106,10 +81,6 @@ fileprivate final class CounterLayer: CALayer {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func action(forKey event: String) -> CAAction? {
-        return nullAction
-    }
-    
     func apply(layout: Layout, animation: ListViewItemUpdateAnimation) {
         /*if animation.isAnimated, let previousContents = self.contents {
             self.animate(from: previousContents as! CGImage, to: layout.image.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.2)
@@ -121,7 +92,7 @@ fileprivate final class CounterLayer: CALayer {
     }
 }
 
-public final class ReactionButtonAsyncView: UIButton {
+public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
     fileprivate final class Layout {
         struct Spec: Equatable {
             var component: ReactionButtonComponent
@@ -139,6 +110,7 @@ public final class ReactionButtonAsyncView: UIButton {
         let counterFrame: CGRect?
         
         let backgroundImage: UIImage
+        let extractedBackgroundImage: UIImage
         
         let size: CGSize
         
@@ -151,6 +123,7 @@ public final class ReactionButtonAsyncView: UIButton {
             counter: CounterLayer.Layout?,
             counterFrame: CGRect?,
             backgroundImage: UIImage,
+            extractedBackgroundImage: UIImage,
             size: CGSize
         ) {
             self.spec = spec
@@ -161,6 +134,7 @@ public final class ReactionButtonAsyncView: UIButton {
             self.counter = counter
             self.counterFrame = counterFrame
             self.backgroundImage = backgroundImage
+            self.extractedBackgroundImage = extractedBackgroundImage
             self.size = size
         }
         
@@ -199,8 +173,10 @@ public final class ReactionButtonAsyncView: UIButton {
             }
             
             let backgroundImage: UIImage
+            let extractedBackgroundImage: UIImage
             if let currentLayout = currentLayout, currentLayout.spec.component.isSelected == spec.component.isSelected, currentLayout.spec.component.colors == spec.component.colors, previousDisplayCounter == currentDisplayCounter {
                 backgroundImage = currentLayout.backgroundImage
+                extractedBackgroundImage = currentLayout.extractedBackgroundImage
             } else {
                 backgroundImage = generateImage(CGSize(width: height + 18.0, height: height), rotatedContext: { size, context in
                     UIGraphicsPushContext(context)
@@ -217,6 +193,31 @@ public final class ReactionButtonAsyncView: UIButton {
                     
                     if let currentDisplayCounter = currentDisplayCounter {
                         let textColor = UIColor(argb: spec.component.isSelected ? spec.component.colors.selectedForeground : spec.component.colors.deselectedForeground)
+                        let string = NSAttributedString(string: currentDisplayCounter, font: Font.medium(11.0), textColor: textColor)
+                        let boundingRect = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                        if textColor.alpha < 1.0 {
+                            context.setBlendMode(.copy)
+                        }
+                        string.draw(at: CGPoint(x: size.width - sideInsets - boundingRect.width, y: (size.height - boundingRect.height) / 2.0))
+                    }
+                    
+                    UIGraphicsPopContext()
+                })!.stretchableImage(withLeftCapWidth: Int(height / 2.0), topCapHeight: Int(height / 2.0))
+                extractedBackgroundImage = generateImage(CGSize(width: height + 18.0, height: height), rotatedContext: { size, context in
+                    UIGraphicsPushContext(context)
+                    
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setBlendMode(.copy)
+                    
+                    context.setFillColor(UIColor(argb: spec.component.colors.extractedBackground).cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: height, height: height)))
+                    context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - height, y: 0.0), size: CGSize(width: height, height: size.height)))
+                    context.fill(CGRect(origin: CGPoint(x: height / 2.0, y: 0.0), size: CGSize(width: size.width - height, height: size.height)))
+                    
+                    context.setBlendMode(.normal)
+                    
+                    if let currentDisplayCounter = currentDisplayCounter {
+                        let textColor = UIColor(argb: spec.component.colors.extractedForeground)
                         let string = NSAttributedString(string: currentDisplayCounter, font: Font.medium(11.0), textColor: textColor)
                         let boundingRect = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
                         if textColor.alpha < 1.0 {
@@ -270,6 +271,7 @@ public final class ReactionButtonAsyncView: UIButton {
                 counter: counter,
                 counterFrame: counterFrame,
                 backgroundImage: backgroundImage,
+                extractedBackgroundImage: extractedBackgroundImage,
                 size: size
             )
         }
@@ -277,21 +279,64 @@ public final class ReactionButtonAsyncView: UIButton {
     
     private var layout: Layout?
     
+    public let containerNode: ContextExtractedContentContainingNode
+    private let buttonNode: HighlightTrackingButtonNode
     public let iconView: UIImageView
     private var counterLayer: CounterLayer?
     private var avatarsView: AnimatedAvatarSetView?
     
     private let iconImageDisposable = MetaDisposable()
     
-    override init(frame: CGRect) {
+    override init() {
+        self.containerNode = ContextExtractedContentContainingNode()
+        self.buttonNode = HighlightTrackingButtonNode()
+        
         self.iconView = UIImageView()
         self.iconView.isUserInteractionEnabled = false
         
-        super.init(frame: CGRect())
+        super.init()
         
-        self.addSubview(self.iconView)
+        self.targetNodeForActivationProgress = self.containerNode.contentNode
         
-        self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+        self.addSubnode(self.containerNode)
+        self.containerNode.contentNode.addSubnode(self.buttonNode)
+        self.buttonNode.view.addSubview(self.iconView)
+        
+        self.buttonNode.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
+        
+        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = strongSelf
+            if highlighted {
+            } else {
+            }
+        }
+        
+        self.isGestureEnabled = true
+        
+        self.containerNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, _ in
+            guard let strongSelf = self, let layout = strongSelf.layout else {
+                return
+            }
+            
+            let backgroundImage = isExtracted ? layout.extractedBackgroundImage : layout.backgroundImage
+            
+            let previousContents = strongSelf.buttonNode.layer.contents
+            
+            let backgroundCapInsets = backgroundImage.capInsets
+            if backgroundCapInsets.left.isZero && backgroundCapInsets.top.isZero {
+                strongSelf.buttonNode.layer.contentsScale = backgroundImage.scale
+                strongSelf.buttonNode.layer.contents = backgroundImage.cgImage
+            } else {
+                ASDisplayNodeSetResizableContents(strongSelf.buttonNode.layer, backgroundImage)
+            }
+            
+            if let previousContents = previousContents {
+                strongSelf.buttonNode.layer.animate(from: previousContents as! CGImage, to: backgroundImage.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.2)
+            }
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -310,12 +355,17 @@ public final class ReactionButtonAsyncView: UIButton {
     }
     
     fileprivate func apply(layout: Layout, animation: ListViewItemUpdateAnimation) {
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.containerNode.contentNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.containerNode.contentRect = CGRect(origin: CGPoint(), size: layout.size)
+        animation.animator.updateFrame(layer: self.buttonNode.layer, frame: CGRect(origin: CGPoint(), size: layout.size), completion: nil)
+        
         let backgroundCapInsets = layout.backgroundImage.capInsets
         if backgroundCapInsets.left.isZero && backgroundCapInsets.top.isZero {
-            self.layer.contentsScale = layout.backgroundImage.scale
-            self.layer.contents = layout.backgroundImage.cgImage
+            self.buttonNode.layer.contentsScale = layout.backgroundImage.scale
+            self.buttonNode.layer.contents = layout.backgroundImage.cgImage
         } else {
-            ASDisplayNodeSetResizableContents(self.layer, layout.backgroundImage)
+            ASDisplayNodeSetResizableContents(self.buttonNode.layer, layout.backgroundImage)
         }
         
         animation.animator.updateFrame(layer: self.iconView.layer, frame: layout.imageFrame, completion: nil)
@@ -372,7 +422,7 @@ public final class ReactionButtonAsyncView: UIButton {
                 avatarsView = AnimatedAvatarSetView()
                 avatarsView.isUserInteractionEnabled = false
                 self.avatarsView = avatarsView
-                self.addSubview(avatarsView)
+                self.buttonNode.view.addSubview(avatarsView)
             }
             let content = AnimatedAvatarSetContext().update(peers: layout.spec.component.avatarPeers, animated: false)
             let avatarsSize = avatarsView.update(
@@ -399,7 +449,7 @@ public final class ReactionButtonAsyncView: UIButton {
         self.layout = layout
     }
     
-    public static func asyncLayout(_ view: ReactionButtonAsyncView?) -> (ReactionButtonComponent) -> (size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation) -> ReactionButtonAsyncView) {
+    public static func asyncLayout(_ view: ReactionButtonAsyncNode?) -> (ReactionButtonComponent) -> (size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation) -> ReactionButtonAsyncNode) {
         let currentLayout = view?.layout
         
         return { component in
@@ -414,11 +464,11 @@ public final class ReactionButtonAsyncView: UIButton {
             
             return (size: layout.size, apply: { animation in
                 var animation = animation
-                let updatedView: ReactionButtonAsyncView
+                let updatedView: ReactionButtonAsyncNode
                 if let view = view {
                     updatedView = view
                 } else {
-                    updatedView = ReactionButtonAsyncView()
+                    updatedView = ReactionButtonAsyncNode()
                     animation = .None
                 }
                 
@@ -464,17 +514,23 @@ public final class ReactionButtonComponent: Component {
         public var selectedBackground: UInt32
         public var deselectedForeground: UInt32
         public var selectedForeground: UInt32
+        public var extractedBackground: UInt32
+        public var extractedForeground: UInt32
         
         public init(
             deselectedBackground: UInt32,
             selectedBackground: UInt32,
             deselectedForeground: UInt32,
-            selectedForeground: UInt32
+            selectedForeground: UInt32,
+            extractedBackground: UInt32,
+            extractedForeground: UInt32
         ) {
             self.deselectedBackground = deselectedBackground
             self.selectedBackground = selectedBackground
             self.deselectedForeground = deselectedForeground
             self.selectedForeground = selectedForeground
+            self.extractedBackground = extractedBackground
+            self.extractedForeground = extractedForeground
         }
     }
     
@@ -675,6 +731,25 @@ public final class ReactionButtonComponent: Component {
 }
 
 public final class ReactionButtonsAsyncLayoutContainer {
+    public struct Reaction {
+        public var reaction: ReactionButtonComponent.Reaction
+        public var count: Int
+        public var peers: [EnginePeer]
+        public var isSelected: Bool
+        
+        public init(
+            reaction: ReactionButtonComponent.Reaction,
+            count: Int,
+            peers: [EnginePeer],
+            isSelected: Bool
+        ) {
+            self.reaction = reaction
+            self.count = count
+            self.peers = peers
+            self.isSelected = isSelected
+        }
+    }
+    
     public struct Result {
         public struct Item {
             public var size: CGSize
@@ -687,15 +762,15 @@ public final class ReactionButtonsAsyncLayoutContainer {
     public struct ApplyResult {
         public struct Item {
             public var value: String
-            public var view: ReactionButtonAsyncView
+            public var node: ReactionButtonAsyncNode
             public var size: CGSize
         }
         
         public var items: [Item]
-        public var removedViews: [ReactionButtonAsyncView]
+        public var removedNodes: [ReactionButtonAsyncNode]
     }
     
-    public private(set) var buttons: [String: ReactionButtonAsyncView] = [:]
+    public private(set) var buttons: [String: ReactionButtonAsyncNode] = [:]
     
     public init() {
     }
@@ -703,12 +778,12 @@ public final class ReactionButtonsAsyncLayoutContainer {
     public func update(
         context: AccountContext,
         action: @escaping (String) -> Void,
-        reactions: [ReactionButtonsLayoutContainer.Reaction],
+        reactions: [ReactionButtonsAsyncLayoutContainer.Reaction],
         colors: ReactionButtonComponent.Colors,
         constrainedWidth: CGFloat
     ) -> Result {
         var items: [Result.Item] = []
-        var applyItems: [(key: String, size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation) -> ReactionButtonAsyncView)] = []
+        var applyItems: [(key: String, size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation) -> ReactionButtonAsyncNode)] = []
         
         var validIds = Set<String>()
         for reaction in reactions.sorted(by: { lhs, rhs in
@@ -737,7 +812,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
                 }
             }
             
-            let viewLayout = ReactionButtonAsyncView.asyncLayout(self.buttons[reaction.reaction.value])
+            let viewLayout = ReactionButtonAsyncNode.asyncLayout(self.buttons[reaction.reaction.value])
             let (size, apply) = viewLayout(ReactionButtonComponent(
                 context: context,
                 colors: colors,
@@ -760,10 +835,10 @@ public final class ReactionButtonsAsyncLayoutContainer {
                 removeIds.append(id)
             }
         }
-        var removedViews: [ReactionButtonAsyncView] = []
+        var removedNodes: [ReactionButtonAsyncNode] = []
         for id in removeIds {
-            if let view = self.buttons.removeValue(forKey: id) {
-                removedViews.append(view)
+            if let node = self.buttons.removeValue(forKey: id) {
+                removedNodes.append(node)
             }
         }
         
@@ -772,128 +847,18 @@ public final class ReactionButtonsAsyncLayoutContainer {
             apply: { animation in
                 var items: [ApplyResult.Item] = []
                 for (key, size, apply) in applyItems {
-                    let view = apply(animation)
-                    items.append(ApplyResult.Item(value: key, view: view, size: size))
+                    let node = apply(animation)
+                    items.append(ApplyResult.Item(value: key, node: node, size: size))
                     
                     if let current = self.buttons[key] {
-                        assert(current === view)
+                        assert(current === node)
                     } else {
-                        self.buttons[key] = view
+                        self.buttons[key] = node
                     }
                 }
                 
-                return ApplyResult(items: items, removedViews: removedViews)
+                return ApplyResult(items: items, removedNodes: removedNodes)
             }
-        )
-    }
-}
-
-public final class ReactionButtonsLayoutContainer {
-    public struct Reaction {
-        public var reaction: ReactionButtonComponent.Reaction
-        public var count: Int
-        public var peers: [EnginePeer]
-        public var isSelected: Bool
-        
-        public init(
-            reaction: ReactionButtonComponent.Reaction,
-            count: Int,
-            peers: [EnginePeer],
-            isSelected: Bool
-        ) {
-            self.reaction = reaction
-            self.count = count
-            self.peers = peers
-            self.isSelected = isSelected
-        }
-    }
-    
-    public struct Result {
-        public struct Item {
-            public var view: ComponentHostView<Empty>
-            public var size: CGSize
-        }
-        
-        public var items: [Item]
-        public var removedViews: [ComponentHostView<Empty>]
-    }
-    
-    public private(set) var buttons: [String: ComponentHostView<Empty>] = [:]
-    
-    public init() {
-    }
-    
-    public func update(
-        context: AccountContext,
-        action: @escaping (String) -> Void,
-        reactions: [Reaction],
-        colors: ReactionButtonComponent.Colors,
-        constrainedWidth: CGFloat,
-        transition: Transition
-    ) -> Result {
-        var items: [Result.Item] = []
-        var removedViews: [ComponentHostView<Empty>] = []
-        
-        var validIds = Set<String>()
-        for reaction in reactions.sorted(by: { lhs, rhs in
-            var lhsCount = lhs.count
-            if lhs.isSelected {
-                lhsCount -= 1
-            }
-            var rhsCount = rhs.count
-            if rhs.isSelected {
-                rhsCount -= 1
-            }
-            if lhsCount != rhsCount {
-                return lhsCount > rhsCount
-            }
-            return lhs.reaction.value < rhs.reaction.value
-        }) {
-            validIds.insert(reaction.reaction.value)
-            
-            let view: ComponentHostView<Empty>
-            var itemTransition = transition
-            if let current = self.buttons[reaction.reaction.value] {
-                itemTransition = .immediate
-                view = current
-            } else {
-                view = ComponentHostView<Empty>()
-                self.buttons[reaction.reaction.value] = view
-            }
-            let itemSize = view.update(
-                transition: itemTransition,
-                component: AnyComponent(ReactionButtonComponent(
-                    context: context,
-                    colors: colors,
-                    reaction: reaction.reaction,
-                    avatarPeers: reaction.peers,
-                    count: reaction.count,
-                    isSelected: reaction.isSelected,
-                    action: action
-                )),
-                environment: {},
-                containerSize: CGSize(width: constrainedWidth, height: 1000.0)
-            )
-            items.append(Result.Item(
-                view: view,
-                size: itemSize
-            ))
-        }
-        
-        var removeIds: [String] = []
-        for (id, view) in self.buttons {
-            if !validIds.contains(id) {
-                removeIds.append(id)
-                removedViews.append(view)
-            }
-        }
-        for id in removeIds {
-            self.buttons.removeValue(forKey: id)
-        }
-        
-        return Result(
-            items: items,
-            removedViews: removedViews
         )
     }
 }

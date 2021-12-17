@@ -1097,6 +1097,10 @@ extension PresentationThemeBubbleColorComponents: Codable {
         case stroke
         case shadow
         case bgList
+        case reactionInactiveBg
+        case reactionInactiveFg
+        case reactionActiveBg
+        case reactionActiveFg
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -1122,7 +1126,11 @@ extension PresentationThemeBubbleColorComponents: Codable {
             fill: fill,
             highlightedFill: try decodeColor(values, .highlightedBg),
             stroke: try decodeColor(values, .stroke),
-            shadow: try? values.decode(PresentationThemeBubbleShadow.self, forKey: .shadow)
+            shadow: try? values.decode(PresentationThemeBubbleShadow.self, forKey: .shadow),
+            reactionInactiveBackground: try decodeColor(values, .reactionInactiveBg),
+            reactionInactiveForeground: try decodeColor(values, .reactionInactiveFg),
+            reactionActiveBackground: try decodeColor(values, .reactionActiveBg),
+            reactionActiveForeground: try decodeColor(values, .reactionActiveFg)
         )
     }
     
@@ -1141,6 +1149,10 @@ extension PresentationThemeBubbleColorComponents: Codable {
         }
         try encodeColor(&values, self.highlightedFill, .highlightedBg)
         try encodeColor(&values, self.stroke, .stroke)
+        try encodeColor(&values, self.reactionInactiveBackground, .reactionInactiveBg)
+        try encodeColor(&values, self.reactionInactiveForeground, .reactionInactiveFg)
+        try encodeColor(&values, self.reactionActiveBackground, .reactionActiveBg)
+        try encodeColor(&values, self.reactionActiveForeground, .reactionActiveFg)
     }
 }
 

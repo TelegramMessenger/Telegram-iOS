@@ -1182,7 +1182,17 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 
                 if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                     //TODO:localize
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .none, text: "Reactions", icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
+                    let label: String
+                    if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
+                        if allowedReactions.isEmpty {
+                            label = "Disabled"
+                        } else {
+                            label = "\(allowedReactions.count)"
+                        }
+                    } else {
+                        label = ""
+                    }
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: "Reactions", icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
                         interaction.editingOpenReactionsSetup()
                     }))
                 }
@@ -1297,7 +1307,17 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         
                         if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                             //TODO:localize
-                            items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .none, text: "Reactions", icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
+                            let label: String
+                            if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
+                                if allowedReactions.isEmpty {
+                                    label = "Disabled"
+                                } else {
+                                    label = "\(allowedReactions.count)"
+                                }
+                            } else {
+                                label = ""
+                            }
+                            items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: "Reactions", icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
                                 interaction.editingOpenReactionsSetup()
                             }))
                         }
@@ -1310,7 +1330,17 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     } else {
                         if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
                             //TODO:localize
-                            items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .none, text: "Reactions", icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
+                            let label: String
+                            if let cachedData = data.cachedData as? CachedChannelData, let allowedReactions = cachedData.allowedReactions {
+                                if allowedReactions.isEmpty {
+                                    label = "Disabled"
+                                } else {
+                                    label = "\(allowedReactions.count)"
+                                }
+                            } else {
+                                label = ""
+                            }
+                            items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: "Reactions", icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
                                 interaction.editingOpenReactionsSetup()
                             }))
                         }
@@ -1409,10 +1439,22 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     interaction.editingOpenPreHistorySetup()
                 }))
                 
-                //TODO:localize
-                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .none, text: "Reactions", icon: UIImage(bundleImageName: "Chat/Info/GroupDiscussionIcon"), action: {
-                    interaction.editingOpenReactionsSetup()
-                }))
+                do {
+                    //TODO:localize
+                    let label: String
+                    if let cachedData = data.cachedData as? CachedGroupData, let allowedReactions = cachedData.allowedReactions {
+                        if allowedReactions.isEmpty {
+                            label = "Disabled"
+                        } else {
+                            label = "\(allowedReactions.count)"
+                        }
+                    } else {
+                        label = ""
+                    }
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: "Reactions", icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
+                        interaction.editingOpenReactionsSetup()
+                    }))
+                }
                 
                 canViewAdminsAndBanned = true
             } else if case let .admin(rights, _) = group.role {
@@ -1881,6 +1923,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(MessageContextExtractedContentSource(sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
                 strongSelf.controller?.window?.presentInGlobalOverlay(controller)
             })
+        }, openMessageReactionContextMenu: { _, _, _, _ in
         }, updateMessageReaction: { _, _ in
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { [weak self] message, node, rect, gesture in

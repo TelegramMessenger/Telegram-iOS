@@ -249,11 +249,11 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 result.append((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
                 needReactions = false
             } else if result.last?.1 == ChatMessageCommentFooterContentNode.self {
-                if result[result.count - 2].1 == ChatMessageTextBubbleContentNode.self {
+                /*if result[result.count - 2].1 == ChatMessageTextBubbleContentNode.self {
                 } else {
                     result.insert((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)), at: result.count - 1)
                     needReactions = false
-                }
+                }*/
             }
         }
     }
@@ -803,6 +803,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if let strongSelf = self {
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
+                }
+                
+                if let reactionButtonsNode = strongSelf.reactionButtonsNode {
+                    if let _ = reactionButtonsNode.hitTest(strongSelf.view.convert(point, to: reactionButtonsNode.view), with: nil) {
+                        return .fail
+                    }
                 }
                 
                 if let avatarNode = strongSelf.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
@@ -1596,7 +1602,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     reactionPeers: dateReactionsAndPeers.peers,
                     replyCount: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
-                    hasAutoremove: message.isSelfExpiring
+                    hasAutoremove: message.isSelfExpiring,
+                    canViewReactionList: canViewMessageReactionList(message: message)
                 ))
                 
                 mosaicStatusSizeAndApply = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
@@ -2829,6 +2836,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
                 }
+                reactionButtonsNode.openReactionPreview = { [weak strongSelf] gesture, sourceNode, value in
+                    guard let strongSelf = strongSelf, let item = strongSelf.item else {
+                        gesture?.cancel()
+                        return
+                    }
+                    
+                    item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+                }
                 reactionButtonsNode.frame = reactionButtonsFrame
                 strongSelf.addSubnode(reactionButtonsNode)
                 if animation.isAnimated {
@@ -3846,6 +3861,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let hasWallpaper = self.item?.presentationData.theme.wallpaper.hasWallpaper ?? false
         let isPreview = self.item?.presentationData.isPreview ?? false
         return self.mainContextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
+    }
+    
+    override func openMessageContextMenu() {
+        guard let item = self.item else {
+            return
+        }
+        let subFrame = self.backgroundNode.frame
+        item.controllerInteraction.openMessageContextMenu(item.message, true, self, subFrame, nil)
     }
     
     override func targetReactionView(value: String) -> UIView? {

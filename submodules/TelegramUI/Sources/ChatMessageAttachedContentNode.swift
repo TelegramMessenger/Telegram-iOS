@@ -642,7 +642,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         reactionPeers: dateReactionsAndPeers.peers,
                         replyCount: dateReplies,
                         isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
-                        hasAutoremove: message.isSelfExpiring
+                        hasAutoremove: message.isSelfExpiring,
+                        canViewReactionList: canViewMessageReactionList(message: message)
                     ))
                 }
                 let _ = statusSuggestedWidthAndContinue

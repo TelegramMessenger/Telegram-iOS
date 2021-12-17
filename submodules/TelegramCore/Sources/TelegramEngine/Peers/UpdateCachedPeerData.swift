@@ -366,7 +366,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         .withUpdatedCallJoinPeerId(groupCallDefaultJoinAs?.peerId)
                                         .withUpdatedThemeEmoticon(chatFullThemeEmoticon)
                                         .withUpdatedInviteRequestsPending(chatFullRequestsPending)
-                                        .withUpdatedAllowedReactions(allowedReactions)
+                                        .withUpdatedAllowedReactions(allowedReactions ?? [])
                                 })
                             case .channelFull:
                                 break
@@ -597,7 +597,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedThemeEmoticon(themeEmoticon)
                                                     .withUpdatedInviteRequestsPending(requestsPending)
                                                     .withUpdatedSendAsPeerId(sendAsPeerId)
-                                                    .withUpdatedAllowedReactions(allowedReactions)
+                                                    .withUpdatedAllowedReactions(allowedReactions ?? [])
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
