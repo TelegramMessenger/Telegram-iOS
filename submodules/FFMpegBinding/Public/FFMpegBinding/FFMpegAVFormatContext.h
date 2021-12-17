@@ -27,7 +27,6 @@ typedef struct FFMpegStreamMetrics {
 extern int FFMpegCodecIdH264;
 extern int FFMpegCodecIdHEVC;
 extern int FFMpegCodecIdMPEG4;
-extern int FFMpegCodecIdVP9;
 
 @class FFMpegAVCodecContext;
 
@@ -47,8 +46,6 @@ extern int FFMpegCodecIdVP9;
 - (bool)codecParamsAtStreamIndex:(int32_t)streamIndex toContext:(FFMpegAVCodecContext *)context;
 - (FFMpegFpsAndTimebase)fpsAndTimebaseForStreamIndex:(int32_t)streamIndex defaultTimeBase:(CMTime)defaultTimeBase;
 - (FFMpegStreamMetrics)metricsForStreamAtIndex:(int32_t)streamIndex;
-
-- (void)forceVideoCodecId:(int)videoCodecId;
 
 @end
 

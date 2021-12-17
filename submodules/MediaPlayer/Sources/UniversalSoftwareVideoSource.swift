@@ -111,7 +111,7 @@ private final class UniversalSoftwareVideoSourceImpl {
     fileprivate var currentNumberOfReads: Int = 0
     fileprivate var currentReadBytes: Int = 0
     
-    init?(mediaBox: MediaBox, fileReference: FileMediaReference, state: ValuePromise<UniversalSoftwareVideoSourceState>, cancelInitialization: Signal<Bool, NoError>, automaticallyFetchHeader: Bool, hintVP9: Bool = false) {
+    init?(mediaBox: MediaBox, fileReference: FileMediaReference, state: ValuePromise<UniversalSoftwareVideoSourceState>, cancelInitialization: Signal<Bool, NoError>, automaticallyFetchHeader: Bool) {
         guard let size = fileReference.media.size else {
             return nil
         }
@@ -134,9 +134,6 @@ private final class UniversalSoftwareVideoSourceImpl {
         self.avIoContext = avIoContext
         
         let avFormatContext = FFMpegAVFormatContext()
-        if hintVP9 {
-            avFormatContext.forceVideoCodecId(FFMpegCodecIdVP9)
-        }
         avFormatContext.setIO(avIoContext)
         
         if !avFormatContext.openInput() {
@@ -289,22 +286,19 @@ private final class UniversalSoftwareVideoSourceThreadParams: NSObject {
     let state: ValuePromise<UniversalSoftwareVideoSourceState>
     let cancelInitialization: Signal<Bool, NoError>
     let automaticallyFetchHeader: Bool
-    let hintVP9: Bool
     
     init(
         mediaBox: MediaBox,
         fileReference: FileMediaReference,
         state: ValuePromise<UniversalSoftwareVideoSourceState>,
         cancelInitialization: Signal<Bool, NoError>,
-        automaticallyFetchHeader: Bool,
-        hintVP9: Bool
+        automaticallyFetchHeader: Bool
     ) {
         self.mediaBox = mediaBox
         self.fileReference = fileReference
         self.state = state
         self.cancelInitialization = cancelInitialization
         self.automaticallyFetchHeader = automaticallyFetchHeader
-        self.hintVP9 = hintVP9
     }
 }
 
@@ -387,8 +381,8 @@ public final class UniversalSoftwareVideoSource {
         }
     }
     
-    public init(mediaBox: MediaBox, fileReference: FileMediaReference, automaticallyFetchHeader: Bool = false, hintVP9: Bool = false) {
-        self.thread = Thread(target: UniversalSoftwareVideoSourceThread.self, selector: #selector(UniversalSoftwareVideoSourceThread.entryPoint(_:)), object: UniversalSoftwareVideoSourceThreadParams(mediaBox: mediaBox, fileReference: fileReference, state: self.stateValue, cancelInitialization: self.cancelInitialization.get(), automaticallyFetchHeader: automaticallyFetchHeader, hintVP9: hintVP9))
+    public init(mediaBox: MediaBox, fileReference: FileMediaReference, automaticallyFetchHeader: Bool = false) {
+        self.thread = Thread(target: UniversalSoftwareVideoSourceThread.self, selector: #selector(UniversalSoftwareVideoSourceThread.entryPoint(_:)), object: UniversalSoftwareVideoSourceThreadParams(mediaBox: mediaBox, fileReference: fileReference, state: self.stateValue, cancelInitialization: self.cancelInitialization.get(), automaticallyFetchHeader: automaticallyFetchHeader))
         self.thread.name = "UniversalSoftwareVideoSource"
         self.thread.start()
     }

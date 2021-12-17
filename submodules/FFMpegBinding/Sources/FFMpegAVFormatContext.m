@@ -9,7 +9,6 @@
 int FFMpegCodecIdH264 = AV_CODEC_ID_H264;
 int FFMpegCodecIdHEVC = AV_CODEC_ID_HEVC;
 int FFMpegCodecIdMPEG4 = AV_CODEC_ID_MPEG4;
-int FFMpegCodecIdVP9 = AV_CODEC_ID_VP9;
 
 @interface FFMpegAVFormatContext () {
     AVFormatContext *_impl;
@@ -143,11 +142,6 @@ int FFMpegCodecIdVP9 = AV_CODEC_ID_VP9;
     }
     
     return (FFMpegStreamMetrics){ .width = _impl->streams[streamIndex]->codecpar->width, .height = _impl->streams[streamIndex]->codecpar->height, .rotationAngle = rotationAngle, .extradata = _impl->streams[streamIndex]->codecpar->extradata, .extradataSize = _impl->streams[streamIndex]->codecpar->extradata_size };
-}
-
-- (void)forceVideoCodecId:(int)videoCodecId {
-    _impl->video_codec_id = videoCodecId;
-    _impl->video_codec = avcodec_find_decoder(videoCodecId);
 }
 
 @end

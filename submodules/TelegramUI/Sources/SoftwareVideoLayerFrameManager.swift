@@ -14,7 +14,6 @@ final class SoftwareVideoLayerFrameManager {
     private let fetchDisposable: Disposable
     private var dataDisposable = MetaDisposable()
     private let source = Atomic<SoftwareVideoSource?>(value: nil)
-    private let hintVP9: Bool
     
     private var baseTimestamp: Double?
     private var frames: [MediaTrackFrame] = []
@@ -32,7 +31,7 @@ final class SoftwareVideoLayerFrameManager {
     
     private var layerRotationAngleAndAspect: (CGFloat, CGFloat)?
     
-    init(account: Account, fileReference: FileMediaReference, layerHolder: SampleBufferLayer, hintVP9: Bool = false) {
+    init(account: Account, fileReference: FileMediaReference, layerHolder: SampleBufferLayer) {
         var resource = fileReference.media.resource
         var secondaryResource: MediaResource?
         for attribute in fileReference.media.attributes {
@@ -47,7 +46,6 @@ final class SoftwareVideoLayerFrameManager {
         nextWorker += 1
         self.account = account
         self.resource = resource
-        self.hintVP9 = hintVP9
         self.secondaryResource = secondaryResource
         self.queue = ThreadPoolQueue(threadPool: workers)
         self.layerHolder = layerHolder
@@ -110,7 +108,7 @@ final class SoftwareVideoLayerFrameManager {
                 let size = fileSize(path)
                 Logger.shared.log("SoftwareVideo", "loaded video from \(stringForResource(resource)) (file size: \(String(describing: size))")
                 
-                let _ = strongSelf.source.swap(SoftwareVideoSource(path: path, hintVP9: strongSelf.hintVP9))
+                let _ = strongSelf.source.swap(SoftwareVideoSource(path: path))
             }
         }))
     }
