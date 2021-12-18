@@ -404,7 +404,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.dustNode = dustNode
                                     strongSelf.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
                                 }
-                                dustNode.update(size: textFrame.size, color: messageTheme.secondaryTextColor, rects: textLayout.spoilers.map { $0.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) })
+                                dustNode.update(size: textFrame.size, color: messageTheme.secondaryTextColor, rects: textLayout.spoilers.map { $0.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                                 dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
                             } else if let spoilerTextNode = strongSelf.spoilerTextNode {
                                 strongSelf.spoilerTextNode = nil

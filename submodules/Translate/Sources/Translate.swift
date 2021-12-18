@@ -12,15 +12,16 @@ public func translateText(context: AccountContext, text: String) {
         return
     }
     if #available(iOS 15.0, *) {
-        let textField = UITextField()
-        textField.text = text
+        let textView = UITextView()
+        textView.text = text
+        textView.isEditable = false
         if let navigationController = context.sharedContext.mainWindow?.viewController as? NavigationController, let topController = navigationController.topViewController as? ViewController {
-            topController.view.addSubview(textField)
-            textField.selectAll(nil)
-            textField.perform(NSSelectorFromString(["_", "trans", "late:"].joined(separator: "")), with: nil)
+            topController.view.addSubview(textView)
+            textView.selectAll(nil)
+            textView.perform(NSSelectorFromString(["_", "trans", "late:"].joined(separator: "")), with: nil)
             
             DispatchQueue.main.async {
-                textField.removeFromSuperview()
+                textView.removeFromSuperview()
             }
         }
     }

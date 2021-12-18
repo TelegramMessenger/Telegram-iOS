@@ -217,7 +217,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
             square += Float(rect.width * rect.height)
         }
         
-        self.emitter?.birthRate = square * 0.3
+        self.emitter?.birthRate = square * 0.4
     }
     
     public func update(size: CGSize, color: UIColor, rects: [CGRect]) {
