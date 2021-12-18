@@ -9,6 +9,8 @@
 @interface TGMediaAssetsModernLibrary () <PHPhotoLibraryChangeObserver>
 {
     SPipe *_libraryChangePipe;
+    
+    bool _registeredChangeObserver;
 }
 @end
 
@@ -20,14 +22,21 @@
     if (self != nil)
     {
         _libraryChangePipe = [[SPipe alloc] init];
-        [[PHPhotoLibrary sharedPhotoLibrary] registerChangeObserver:self];
+        
+        PHAuthorizationStatus authorizationStatus = [PHPhotoLibrary authorizationStatus];
+        if (authorizationStatus == PHAuthorizationStatusAuthorized) {
+            _registeredChangeObserver = true;
+            [[PHPhotoLibrary sharedPhotoLibrary] registerChangeObserver:self];
+        }
     }
     return self;
 }
 
 - (void)dealloc
 {
-    [[PHPhotoLibrary sharedPhotoLibrary] unregisterChangeObserver:self];
+    if (_registeredChangeObserver) {
+        [[PHPhotoLibrary sharedPhotoLibrary] unregisterChangeObserver:self];
+    }
 }
 
 - (SSignal *)assetGroups
