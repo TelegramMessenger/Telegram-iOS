@@ -278,7 +278,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             self.updateThumbnailContainerNodeAlpha(transition)
         }
         
-        self.footerNode.updateLayout(layout, footerContentNode: self.presentationState.footerContentNode, overlayContentNode: self.presentationState.overlayContentNode, thumbnailPanelHeight: thumbnailPanelHeight, isHidden: self.areControlsHidden, transition: transition)
+        self.footerNode.updateLayout(layout, navigationBarHeight: navigationBarHeight, footerContentNode: self.presentationState.footerContentNode, overlayContentNode: self.presentationState.overlayContentNode, thumbnailPanelHeight: thumbnailPanelHeight, isHidden: self.areControlsHidden, transition: transition)
     
         let previousContentHeight = self.scrollView.contentSize.height
         let previousVerticalOffset = self.scrollView.contentOffset.y

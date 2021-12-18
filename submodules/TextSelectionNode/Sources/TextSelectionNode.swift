@@ -188,6 +188,7 @@ public enum TextSelectionAction {
     case share
     case lookup
     case speak
+    case translate
 }
 
 public final class TextSelectionNode: ASDisplayNode {
@@ -501,6 +502,12 @@ public final class TextSelectionNode: ASDisplayNode {
             self?.performAction(attributedText, .lookup)
             self?.dismissSelection()
         }))
+//        if #available(iOS 15.0, *) {
+//            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuTranslate, accessibilityLabel: self.strings.Conversation_ContextMenuTranslate), action: { [weak self] in
+//                self?.performAction(attributedText, .translate)
+//                self?.dismissSelection()
+//            }))
+//        }
         if isSpeakSelectionEnabled() {
             actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
                 self?.performAction(attributedText, .speak)

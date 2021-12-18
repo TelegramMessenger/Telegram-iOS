@@ -21,6 +21,7 @@ import UndoUI
 import TelegramUIPreferences
 import OpenInExternalAppUI
 import AVKit
+import TextFormat
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message)
@@ -39,6 +40,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let indexData: GalleryItemIndexData?
     let contentInfo: UniversalVideoGalleryItemContentInfo?
     let caption: NSAttributedString
+    let description: NSAttributedString?
     let credit: NSAttributedString?
     let displayInfoOnTop: Bool
     let hideControls: Bool
@@ -54,7 +56,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     let storeMediaPlaybackState: (MessageId, Double?, Double) -> Void
     let present: (ViewController, Any?) -> Void
 
-    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, credit: NSAttributedString? = nil, displayInfoOnTop: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: @escaping () -> Double?, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    public init(context: AccountContext, presentationData: PresentationData, content: UniversalVideoContent, originData: GalleryItemOriginData?, indexData: GalleryItemIndexData?, contentInfo: UniversalVideoGalleryItemContentInfo?, caption: NSAttributedString, description: NSAttributedString? = nil, credit: NSAttributedString? = nil, displayInfoOnTop: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, isSecret: Bool = false, landscape: Bool = false, timecode: Double? = nil, playbackRate: @escaping () -> Double?, configuration: GalleryConfiguration? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, storeMediaPlaybackState: @escaping (MessageId, Double?, Double) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.content = content
@@ -62,6 +64,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
         self.indexData = indexData
         self.contentInfo = contentInfo
         self.caption = caption
+        self.description = description
         self.credit = credit
         self.displayInfoOnTop = displayInfoOnTop
         self.hideControls = hideControls
@@ -182,7 +185,7 @@ private let minimizeImage = generateTintedImage(image: UIImage(bundleImageName: 
 private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentNode {
     private let wrapperNode: ASDisplayNode
     private let fullscreenNode: HighlightableButtonNode
-    private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, LayoutMetrics, UIEdgeInsets)?
     
     var action: ((Bool) -> Void)?
     
@@ -203,15 +206,15 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.fullscreenNode.addTarget(self, action: #selector(self.toggleFullscreenPressed), forControlEvents: .touchUpInside)
     }
     
-    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, metrics, leftInset, rightInset, bottomInset)
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, metrics, insets)
         
         let isLandscape = size.width > size.height
         self.fullscreenNode.isSelected = isLandscape
         
         let iconSize: CGFloat = 42.0
         let inset: CGFloat = 4.0
-        let buttonFrame = CGRect(origin: CGPoint(x: size.width - iconSize - inset - rightInset, y: size.height - iconSize - inset - bottomInset), size: CGSize(width: iconSize, height: iconSize))
+        let buttonFrame = CGRect(origin: CGPoint(x: size.width - iconSize - inset - insets.right, y: size.height - iconSize - inset - insets.bottom), size: CGSize(width: iconSize, height: iconSize))
         transition.updateFrame(node: self.wrapperNode, frame: buttonFrame)
         transition.updateFrame(node: self.fullscreenNode, frame: CGRect(origin: CGPoint(), size: buttonFrame.size))
     }
@@ -235,13 +238,13 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.wrapperNode.alpha = self.visibilityAlpha
         
         if let validLayout = self.validLayout {
-            self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, isHidden: false, transition: .animated(duration: 0.3, curve: .easeInOut))
+            self.updateLayout(size: validLayout.0, metrics: validLayout.1, insets: validLayout.2, isHidden: false, transition: .animated(duration: 0.3, curve: .easeInOut))
         }
     }
     
     @objc func toggleFullscreenPressed() {
         var toLandscape = false
-        if let (size, _, _, _ ,_) = self.validLayout, size.width < size.height {
+        if let (size, _, _) = self.validLayout, size.width < size.height {
             toLandscape = true
         }
         if toLandscape {
@@ -707,7 +710,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     fileprivate let _rightBarButtonItems = Promise<[UIBarButtonItem]?>()
     
     fileprivate var titleContentView: GalleryTitleView?
-    private let scrubberView: ChatVideoGalleryItemScrubberView
+    private var scrubberView: ChatVideoGalleryItemScrubberView?
     private let footerContentNode: ChatItemGalleryFooterContentNode
     private let overlayContentNode: UniversalVideoGalleryItemOverlayNode
 
@@ -762,7 +765,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let isInteractingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let controlsVisiblePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
     private let isShowingContextMenuPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
-    private let hasExpandedCaptionPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let hasExpandedCaptionPromise = Promise<Bool>()
     private var hideControlsDisposable: Disposable?
     
     var playbackCompleted: (() -> Void)?
@@ -774,10 +777,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
-        self.scrubberView = ChatVideoGalleryItemScrubberView()
+
         
         self.footerContentNode = ChatItemGalleryFooterContentNode(context: context, presentationData: presentationData, present: present)
-        self.footerContentNode.scrubberView = self.scrubberView
+        self.hasExpandedCaptionPromise.set(self.footerContentNode.hasExpandedCaption)
+        
         self.footerContentNode.performAction = performAction
         self.footerContentNode.openActionOptions = openActionOptions
         
@@ -804,34 +808,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.overlayContentNode.action = { [weak self] toLandscape in
             self?.updateControlsVisibility(!toLandscape)
             self?.updateOrientation(toLandscape ? .landscapeRight : .portrait)
-        }
-        
-        self.scrubberView.seek = { [weak self] timecode in
-            self?.videoNode?.seek(timecode)
-        }
-        
-        self.scrubberView.updateScrubbing = { [weak self] timecode in
-            guard let strongSelf = self else {
-                return
-            }
-            
-            strongSelf.isInteractingPromise.set(timecode != nil)
-            
-            if let videoFramePreview = strongSelf.videoFramePreview {        
-                if let timecode = timecode {
-                    if !strongSelf.scrubbingFrames {
-                        strongSelf.scrubbingFrames = true
-                        strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
-                        |> map(Optional.init))
-                    }
-                    videoFramePreview.generateFrame(at: timecode)
-                } else {
-                    strongSelf.isInteractingPromise.set(false)
-                    strongSelf.scrubbingFrame.set(.single(nil))
-                    videoFramePreview.cancelPendingFrames()
-                    strongSelf.scrubbingFrames = false
-                }
-            }
         }
         
         self.statusButtonNode.addSubnode(self.statusNode)
@@ -1013,6 +989,68 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     func setupItem(_ item: UniversalVideoGalleryItem) {
         if self.item?.content.id != item.content.id {
+            func parseChapters(_ string: NSAttributedString) -> [MediaPlayerScrubbingChapter] {
+                var timecodeRanges: [(NSRange, TelegramTimecode)] = []
+                var lineRanges: [NSRange] = []
+                string.enumerateAttributes(in: NSMakeRange(0, string.length), options: [], using: { attributes, range, _ in
+                    if let timecode = attributes[NSAttributedString.Key(TelegramTextAttributes.Timecode)] as? TelegramTimecode {
+                        timecodeRanges.append((range, timecode))
+                    }
+                })
+                (string.string as NSString).enumerateSubstrings(in: NSMakeRange(0, string.length), options: .byLines, using: { _, range, _, _ in
+                    lineRanges.append(range)
+                })
+                
+                var chapters: [MediaPlayerScrubbingChapter] = []
+                for (timecodeRange, timecode) in timecodeRanges {
+                    inner: for lineRange in lineRanges {
+                        if lineRange.contains(timecodeRange.location) {
+                            if lineRange.length > timecodeRange.length {
+                                var title = ((string.string as NSString).substring(with: lineRange) as NSString).replacingCharacters(in: NSMakeRange(timecodeRange.location - lineRange.location, timecodeRange.length), with: "")
+                                title = title.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters)
+                                chapters.append(MediaPlayerScrubbingChapter(title: title, start: timecode.time))
+                            }
+                            break inner
+                        }
+                    }
+                }
+                return chapters
+            }
+            
+            var chapters = parseChapters(item.caption)
+            if chapters.isEmpty, let description = item.description {
+                chapters = parseChapters(description)
+            }
+            let scrubberView = ChatVideoGalleryItemScrubberView(chapters: chapters)
+            self.scrubberView = scrubberView
+            scrubberView.seek = { [weak self] timecode in
+                self?.videoNode?.seek(timecode)
+            }
+            scrubberView.updateScrubbing = { [weak self] timecode in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                strongSelf.isInteractingPromise.set(timecode != nil)
+                
+                if let videoFramePreview = strongSelf.videoFramePreview {
+                    if let timecode = timecode {
+                        if !strongSelf.scrubbingFrames {
+                            strongSelf.scrubbingFrames = true
+                            strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
+                            |> map(Optional.init))
+                        }
+                        videoFramePreview.generateFrame(at: timecode)
+                    } else {
+                        strongSelf.isInteractingPromise.set(false)
+                        strongSelf.scrubbingFrame.set(.single(nil))
+                        videoFramePreview.cancelPendingFrames()
+                        strongSelf.scrubbingFrames = false
+                    }
+                }
+            }
+            self.footerContentNode.scrubberView = scrubberView
+            
             self.isPlayingPromise.set(false)
             
             if item.hideControls {
@@ -1114,7 +1152,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.updateDisplayPlaceholder(!videoNode.ownsContentNode)
             }
             
-            self.scrubberView.setStatusSignal(videoNode.status |> map { value -> MediaPlayerStatus in
+            scrubberView.setStatusSignal(videoNode.status |> map { value -> MediaPlayerStatus in
                 if let value = value, !value.duration.isZero {
                     return value
                 } else {
@@ -1122,7 +1160,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             })
             
-            self.scrubberView.setBufferingStatusSignal(videoNode.bufferingStatus)
+            scrubberView.setBufferingStatusSignal(videoNode.bufferingStatus)
             
             self.requiresDownload = true
             var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
@@ -1174,7 +1212,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                     let status = messageMediaFileStatus(context: item.context, messageId: message.id, file: file)
                     if !isWebpage {
-                        self.scrubberView.setFetchStatusSignal(status, strings: self.presentationData.strings, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator, fileSize: file.size)
+                        scrubberView.setFetchStatusSignal(status, strings: self.presentationData.strings, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator, fileSize: file.size)
                     }
                     
                     self.requiresDownload = !isMediaStreamable(message: message, media: file)
@@ -1578,7 +1616,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         switch action {
             case let .timecode(timecode):
-                self.scrubberView.animateTo(timecode)
+                self.scrubberView?.animateTo(timecode)
                 videoNode.seek(timecode)
         }
     }
@@ -2359,7 +2397,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
 
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.moreBarButton.referenceNode)), items: items |> map { ContextController.Items(items: $0) }, gesture: gesture)
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: self.moreBarButton.referenceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
         self.isShowingContextMenuPromise.set(true)
         controller.presentInGlobalOverlay(contextController)
 
@@ -2414,7 +2452,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     return
                 }
 
-                c.setItems(strongSelf.contextMenuSpeedItems() |> map { ContextController.Items(items: $0) }, minHeight: nil)
+                c.setItems(strongSelf.contextMenuSpeedItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
             })))
             
             if let (message, _, _) = strongSelf.contentInfo() {
@@ -2532,7 +2570,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     c.dismiss(completion: nil)
                     return
                 }
-                c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(items: $0) }, minHeight: nil)
+                c.setItems(strongSelf.contextMenuMainItems() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
             })))
 
             return items
@@ -2586,7 +2624,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     override func adjustForPreviewing() {
         super.adjustForPreviewing()
         
-        self.scrubberView.isHidden = true
+        self.scrubberView?.isHidden = true
     }
     
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {

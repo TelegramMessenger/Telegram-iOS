@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 
-public final class ContextControllerSourceNode: ASDisplayNode {
+open class ContextControllerSourceNode: ASDisplayNode {
     private var contextGesture: ContextGesture?
     
     public var isGestureEnabled: Bool = true {
@@ -14,6 +14,7 @@ public final class ContextControllerSourceNode: ASDisplayNode {
     public var activated: ((ContextGesture, CGPoint) -> Void)?
     public var shouldBegin: ((CGPoint) -> Bool)?
     public var customActivationProgress: ((CGFloat, ContextGestureTransition) -> Void)?
+    public weak var additionalActivationProgressLayer: CALayer?
     public var targetNodeForActivationProgress: ASDisplayNode?
     public var targetNodeForActivationProgressContentRect: CGRect?
     
@@ -23,7 +24,7 @@ public final class ContextControllerSourceNode: ASDisplayNode {
         self.contextGesture?.isEnabled = self.isGestureEnabled
     }
     
-    override public func didLoad() {
+    override open func didLoad() {
         super.didLoad()
         
         let contextGesture = ContextGesture(target: self, action: nil)
@@ -75,15 +76,27 @@ public final class ContextControllerSourceNode: ASDisplayNode {
                 case .update:
                     let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
                     targetNode.layer.sublayerTransform = sublayerTransform
+                    if let additionalActivationProgressLayer = strongSelf.additionalActivationProgressLayer {
+                        additionalActivationProgressLayer.transform = sublayerTransform
+                    }
                 case .begin:
                     let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
                     targetNode.layer.sublayerTransform = sublayerTransform
+                    if let additionalActivationProgressLayer = strongSelf.additionalActivationProgressLayer {
+                        additionalActivationProgressLayer.transform = sublayerTransform
+                    }
                 case .ended:
                     let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
                     let previousTransform = targetNode.layer.sublayerTransform
                     targetNode.layer.sublayerTransform = sublayerTransform
                     
                     targetNode.layer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: sublayerTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
+                    
+                    if let additionalActivationProgressLayer = strongSelf.additionalActivationProgressLayer {
+                        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: {
+                            additionalActivationProgressLayer.transform = sublayerTransform
+                        })
+                    }
                 }
             }
         }

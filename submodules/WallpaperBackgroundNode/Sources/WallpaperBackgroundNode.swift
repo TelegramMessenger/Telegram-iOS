@@ -56,6 +56,8 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
     func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners)
     func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool
     func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode?
+    
+    func makeDimmedNode() -> ASDisplayNode?
 }
 
 final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode {
@@ -431,6 +433,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         return self._isReady.get()
     }
     
+    private var newYearNode: WallpaperNewYearNode?
+    
     init(context: AccountContext, useSharedAnimationPhase: Bool) {
         self.context = context
         self.useSharedAnimationPhase = useSharedAnimationPhase
@@ -450,7 +454,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         self.contentNode.frame = self.bounds
         self.addSubnode(self.contentNode)
         self.addSubnode(self.patternImageNode)
-
+        
         //self.view.addSubview(self.bakedBackgroundView)
     }
 
@@ -793,10 +797,19 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         }
 
         self.loadPatternForSizeIfNeeded(size: size, transition: transition)
-        
+                
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
+            
+            if self.context.sharedContext.immediateExperimentalUISettings.snow, self.newYearNode == nil {
+                let newYearNode = WallpaperNewYearNode()
+                self.addSubnode(newYearNode)
+                self.newYearNode = newYearNode
+            }
         }
+        
+        self.newYearNode?.frame = CGRect(origin: CGPoint(), size: size)
+        self.newYearNode?.updateLayout(size: size)
     }
 
     func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
@@ -885,6 +898,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node
+    }
+    
+    func makeDimmedNode() -> ASDisplayNode? {
+        if let gradientBackgroundNode = self.gradientBackgroundNode {
+            return GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode)
+        } else {
+            return nil
+        }
     }
 }
 
@@ -1684,6 +1705,10 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
         node.updateContents()
         return node
     }
+
+    func makeDimmedNode() -> ASDisplayNode? {
+        return nil
+    }
 }
 
 private let sharedStorage = WallpaperBackgroundNodeMergedImpl.SharedStorage()
@@ -1694,4 +1719,48 @@ public func createWallpaperBackgroundNode(context: AccountContext, forChatDispla
     }
 
     return WallpaperBackgroundNodeImpl(context: context, useSharedAnimationPhase: useSharedAnimationPhase)
+}
+
+private class WallpaperNewYearNode: ASDisplayNode {
+    private var emitterLayer: CAEmitterLayer?
+    
+    func updateLayout(size: CGSize) {
+        if self.emitterLayer == nil {
+            let particlesLayer = CAEmitterLayer()
+            self.emitterLayer = particlesLayer
+
+            self.layer.addSublayer(particlesLayer)
+            self.layer.masksToBounds = true
+            
+            particlesLayer.backgroundColor = UIColor.clear.cgColor
+            particlesLayer.emitterShape = .circle
+            particlesLayer.emitterMode = .surface
+            particlesLayer.renderMode = .oldestLast
+
+            let cell1 = CAEmitterCell()
+            cell1.contents = UIImage(bundleImageName: "Components/Snowflake")?.cgImage
+            cell1.name = "snow"
+            cell1.birthRate = 352.0
+            cell1.lifetime = 20.0
+            cell1.velocity = 39.0
+            cell1.velocityRange = -15.0
+            cell1.xAcceleration = 5.0
+            cell1.yAcceleration = 25.0
+            cell1.emissionRange = .pi
+            cell1.spin = -28.6 * (.pi / 180.0)
+            cell1.spinRange = 57.2 * (.pi / 180.0)
+            cell1.scale = 0.04
+            cell1.scaleRange = 0.15
+            cell1.color = UIColor.white.withAlphaComponent(0.88).cgColor
+//            cell1.alphaRange = -0.2
+            
+            particlesLayer.emitterCells = [cell1]
+        }
+        
+        if let emitterLayer = self.emitterLayer {
+            emitterLayer.emitterPosition = CGPoint(x: size.width / 2.0, y: -size.height / 2.0)
+            emitterLayer.emitterSize = CGSize(width: size.width * 2.5, height: size.height)
+            emitterLayer.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height)
+        }
+    }
 }

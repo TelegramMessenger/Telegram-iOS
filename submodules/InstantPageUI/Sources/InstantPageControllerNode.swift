@@ -357,7 +357,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let scrollInsetTop = maxBarHeight
         
-        let resetOffset = self.scrollNode.bounds.size.width.isZero || self.setupScrollOffsetOnLayout
+        let resetOffset = self.scrollNode.bounds.size.width.isZero || self.setupScrollOffsetOnLayout || !(self.initialAnchor ?? "").isEmpty
         let widthUpdated = !self.scrollNode.bounds.size.width.isEqual(to: layout.size.width)
         
         var shouldUpdateVisibleItems = false
@@ -379,6 +379,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 contentOffset = CGPoint(x: 0.0, y: CGFloat(state.contentOffset))
             }
             else if let anchor = self.initialAnchor, !anchor.isEmpty {
+                self.initialAnchor = nil
                 if let items = self.currentLayout?.items {
                     didSetScrollOffset = true
                     if let (item, lineOffset, _, _) = self.findAnchorItem(anchor, items: items) {

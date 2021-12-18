@@ -813,7 +813,7 @@ public final class AccountViewTracker {
     }
     
     public func updateReactionsForMessageIds(messageIds: Set<MessageId>) {
-        /*self.queue.async {
+        self.queue.async {
             var addedMessageIds: [MessageId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
@@ -856,13 +856,16 @@ public final class AccountViewTracker {
                                             switch update {
                                             case let .updateMessageReactions(peer, msgId, reactions):
                                                 transaction.updateMessage(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), update: { currentMessage in
-                                                    
-                                                    let updatedReactions = ReactionsMessageAttribute(apiReactions: reactions)
+                                                    var updatedReactions = ReactionsMessageAttribute(apiReactions: reactions)
                                                     
                                                     let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                                    var added = false
                                                     var attributes = currentMessage.attributes
                                                     loop: for j in 0 ..< attributes.count {
                                                         if let attribute = attributes[j] as? ReactionsMessageAttribute {
+                                                            added = true
+                                                            updatedReactions = attribute.withUpdatedResults(reactions)
+                                                            
                                                             if updatedReactions.reactions == attribute.reactions {
                                                                 return .skip
                                                             }
@@ -870,7 +873,10 @@ public final class AccountViewTracker {
                                                             break loop
                                                         }
                                                     }
-                                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                                    if !added {
+                                                        attributes.append(updatedReactions)
+                                                    }
+                                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                                 })
                                             default:
                                                 break
@@ -892,7 +898,7 @@ public final class AccountViewTracker {
                     }
                 }
             }
-        }*/
+        }
     }
     
     public func updateSeenLiveLocationForMessageIds(messageIds: Set<MessageId>) {

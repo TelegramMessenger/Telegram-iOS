@@ -38,6 +38,8 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
                 string.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: range)
             case .Underline:
                 string.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: range)
+            case .Spoiler:
+                string.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: range)
             default:
                 break
         }
@@ -223,6 +225,8 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     nsString = text as NSString
                 }
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard), value: nsString!.substring(with: range), range: range)
+            case .Spoiler:
+                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true as NSNumber, range: range)
             case let .Custom(type):
                 if type == ApplicationSpecificEntityType.Timecode {
                     string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)

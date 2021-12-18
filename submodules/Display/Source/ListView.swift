@@ -1575,11 +1575,27 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private func async(_ f: @escaping () -> Void) {
-        DispatchQueue.global().async(execute: f)
+        DispatchQueue.main.async(execute: f)
     }
     
-    private func nodeForItem(synchronous: Bool, synchronousLoads: Bool, item: ListViewItem, previousNode: QueueLocalObject<ListViewItemNode>?, index: Int, previousItem: ListViewItem?, nextItem: ListViewItem?, params: ListViewItemLayoutParams, updateAnimation: ListViewItemUpdateAnimation, completion: @escaping (QueueLocalObject<ListViewItemNode>, ListViewItemNodeLayout, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    private func nodeForItem(synchronous: Bool, synchronousLoads: Bool, item: ListViewItem, previousNode: QueueLocalObject<ListViewItemNode>?, index: Int, previousItem: ListViewItem?, nextItem: ListViewItem?, params: ListViewItemLayoutParams, updateAnimationIsAnimated: Bool, updateAnimationIsCrossfade: Bool, completion: @escaping (QueueLocalObject<ListViewItemNode>, ListViewItemNodeLayout, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         if let previousNode = previousNode {
+            var controlledTransition: ControlledTransition?
+            let updateAnimation: ListViewItemUpdateAnimation
+            if updateAnimationIsCrossfade {
+                updateAnimation = .Crossfade
+            } else if updateAnimationIsAnimated {
+                let transition = ControlledTransition(duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: .spring, interactive: true)
+                controlledTransition = transition
+                updateAnimation = .System(duration: insertionAnimationDuration * UIView.animationDurationFactor(), transition: transition)
+            } else {
+                updateAnimation = .None
+            }
+            
+            if let controlledTransition = controlledTransition {
+                previousNode.syncWith({ $0 }).addPendingControlledTransition(transition: controlledTransition)
+            }
+            
             item.updateNode(async: { f in
                 if synchronous {
                     f()
@@ -2017,8 +2033,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         if updateAdjacentItemsIndices.isEmpty {
             completion(state, operations)
         } else {
-            let updateAnimation: ListViewItemUpdateAnimation = animated ? .System(duration: insertionAnimationDuration) : .None
-            
             var updatedUpdateAdjacentItemsIndices = updateAdjacentItemsIndices
             
             let nodeIndex = updateAdjacentItemsIndices.first!
@@ -2031,6 +2045,20 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if case let .Node(index, _, referenceNode) = node , index == nodeIndex {
                     if let referenceNode = referenceNode {
                         continueWithoutNode = false
+                        var controlledTransition: ControlledTransition?
+                        let updateAnimation: ListViewItemUpdateAnimation
+                        if animated {
+                            let transition = ControlledTransition(duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: .spring, interactive: true)
+                            controlledTransition = transition
+                            updateAnimation = .System(duration: insertionAnimationDuration * UIView.animationDurationFactor(), transition: transition)
+                        } else {
+                            updateAnimation = .None
+                        }
+                        
+                        if let controlledTransition = controlledTransition {
+                            referenceNode.syncWith({ $0 }).addPendingControlledTransition(transition: controlledTransition)
+                        }
+                        
                         self.items[index].updateNode(async: { f in
                             if synchronous {
                                 f()
@@ -2086,7 +2114,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         let previousNodes = inputPreviousNodes
         var operations = inputOperations
         let completion = inputCompletion
-        let updateAnimation: ListViewItemUpdateAnimation = animated ? .System(duration: insertionAnimationDuration) : .None
         
         if state.nodes.count > 1000 {
             print("state.nodes.count > 1000")
@@ -2115,8 +2142,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     let index = insertionItemIndexAndDirection.0
                     let threadId = pthread_self()
                     var tailRecurse = false
-                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: self.items[index], previousNode: previousNodes[index], index: index, previousItem: index == 0 ? nil : self.items[index - 1], nextItem: self.items.count == index + 1 ? nil : self.items[index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimation: updateAnimation, completion: { (node, layout, apply) in
-                        
+                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: self.items[index], previousNode: previousNodes[index], index: index, previousItem: index == 0 ? nil : self.items[index - 1], nextItem: self.items.count == index + 1 ? nil : self.items[index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimationIsAnimated: animated, updateAnimationIsCrossfade: false, completion: { (node, layout, apply) in
                         if pthread_equal(pthread_self(), threadId) != 0 && !tailRecurse {
                             tailRecurse = true
                             state.insertNode(index, node: node, layout: layout, apply: apply, offsetDirection: insertionItemIndexAndDirection.1, animated: animated && animatedInsertIndices.contains(index), operations: &operations, itemCount: self.items.count)
@@ -2151,16 +2177,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             } else {
                 let updateItem = updateIndicesAndItems[0]
                 if let previousNode = previousNodes[updateItem.index] {
-                    let updateAnimation: ListViewItemUpdateAnimation
-                    if crossfade {
-                        updateAnimation = .Crossfade
-                    } else if animated {
-                        updateAnimation = .System(duration: insertionAnimationDuration)
-                    } else {
-                        updateAnimation = .None
-                    }
-                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: updateItem.item, previousNode: previousNode, index: updateItem.index, previousItem: updateItem.index == 0 ? nil : self.items[updateItem.index - 1], nextItem: updateItem.index == (self.items.count - 1) ? nil : self.items[updateItem.index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimation: updateAnimation, completion: { _, layout, apply in
-                        state.updateNodeAtItemIndex(updateItem.index, layout: layout, direction: updateItem.directionHint, animation: animated ? .System(duration: insertionAnimationDuration) : .None, apply: apply, operations: &operations)
+                    self.nodeForItem(synchronous: synchronous, synchronousLoads: synchronousLoads, item: updateItem.item, previousNode: previousNode, index: updateItem.index, previousItem: updateItem.index == 0 ? nil : self.items[updateItem.index - 1], nextItem: updateItem.index == (self.items.count - 1) ? nil : self.items[updateItem.index + 1], params: ListViewItemLayoutParams(width: state.visibleSize.width, leftInset: state.insets.left, rightInset: state.insets.right, availableHeight: state.visibleSize.height - state.insets.top - state.insets.bottom), updateAnimationIsAnimated: animated, updateAnimationIsCrossfade: crossfade, completion: { _, layout, apply in
+                        state.updateNodeAtItemIndex(updateItem.index, layout: layout, direction: updateItem.directionHint, isAnimated: animated, apply: apply, operations: &operations)
                         
                         updateIndicesAndItems.remove(at: 0)
                         self.updateNodes(synchronous: synchronous, synchronousLoads: synchronousLoads, crossfade: crossfade, animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: state, previousNodes: previousNodes, inputOperations: operations, completion: completion)
@@ -2647,6 +2665,12 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         if !abs(updatedApparentHeight - previousApparentHeight).isZero {
                             let currentAnimation = node.animationForKey("apparentHeight")
                             if let currentAnimation = currentAnimation, let toFloat = currentAnimation.to as? CGFloat, toFloat.isEqual(to: updatedApparentHeight) {
+                                /*node.addApparentHeightAnimation(updatedApparentHeight, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
+                                    if let node = node {
+                                        node.animateFrameTransition(progress, currentValue)
+                                    }
+                                })
+                                node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)*/
                             } else {
                                 node.apparentHeight = previousApparentHeight
                                 node.animateFrameTransition(0.0, previousApparentHeight)
@@ -2656,10 +2680,16 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                     }
                                 })
                                 
-                                if node.rotated && currentAnimation == nil {
-                                    let insetPart: CGFloat = previousInsets.bottom - layout.insets.bottom
-                                    node.transitionOffset += previousApparentHeight - layout.size.height - insetPart
-                                    node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
+                                if node.rotated {
+                                    if currentAnimation == nil {
+                                        let insetPart: CGFloat = previousInsets.bottom - layout.insets.bottom
+                                        node.transitionOffset += previousApparentHeight - layout.size.height - insetPart
+                                        node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
+                                    } else {
+                                        let insetPart: CGFloat = previousInsets.bottom - layout.insets.bottom
+                                        node.transitionOffset = previousApparentHeight - layout.size.height - insetPart
+                                        node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
+                                    }
                                 }
                             }
                         } else {
@@ -2706,6 +2736,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if self.debugInfo {
                 //print("operation \(self.itemNodes.map({"\($0.index) \(unsafeAddressOf($0))"}))")
             }
+        }
+        
+        for itemNode in self.itemNodes {
+            itemNode.beginPendingControlledTransitions(beginAt: timestamp, forceRestart: false)
         }
         
         if hadInserts, let reorderNode = self.reorderNode, reorderNode.supernode != nil {

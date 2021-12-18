@@ -301,5 +301,9 @@ public extension TelegramEngine {
                 }
             }
         }
+        
+        public func messageReactionList(message: EngineMessage, reaction: String?) -> EngineMessageReactionListContext {
+            return EngineMessageReactionListContext(account: self.account, message: message, reaction: reaction)
+        }
     }
 }

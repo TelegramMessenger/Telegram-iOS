@@ -543,10 +543,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.contentNode.updateTouchesAtPoint(point.flatMap { $0.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY) })
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        if !self.contentNode.statusNode.isHidden {
-            return self.contentNode.statusNode.reactionNode(value: value)
-        }
-        return nil
+    override func reactionTargetView(value: String) -> UIView? {
+        return self.contentNode.reactionTargetView(value: value)
     }
 }

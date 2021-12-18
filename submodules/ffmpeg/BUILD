@@ -120,6 +120,24 @@ filegroup(
     srcs = source_files,
 )
 
+vpx_headers = [
+    "vp8.h",
+    "vp8cx.h",
+    "vp8dx.h",
+    "vpx_codec.h",
+    "vpx_decoder.h",
+    "vpx_encoder.h",
+    "vpx_frame_buffer.h",
+    "vpx_image.h",
+    "vpx_integer.h",
+    "vpx_version.h",
+    "vpx_ext_ratectrl.h",
+]
+
+vpx_libs = [
+    "VPX",
+]
+
 opus_headers = [
     "opus.h",
     "opus_defines.h",
@@ -137,6 +155,10 @@ genrule(
     srcs = [
         ":FFMpegSources"
     ] + [
+        "//third-party/libvpx:Public/vpx/{}".format(x) for x in vpx_headers
+    ] + [
+        "//third-party/libvpx:Public/vpx/lib{}.a".format(x) for x in vpx_libs
+    ] + [
         "//third-party/opus:Public/opus/{}".format(x) for x in opus_headers
     ] + [
         "//third-party/opus:Public/opus/lib/lib{}.a".format(x) for x in opus_libs
@@ -153,6 +175,21 @@ genrule(
 
         cp -R "submodules/ffmpeg/Sources/FFMpeg" "$$SOURCE_PATH"
 
+        mkdir "$$SOURCE_PATH/libvpx"
+        mkdir -p "$$SOURCE_PATH/libvpx/include/vpx"
+        mkdir -p "$$SOURCE_PATH/libvpx/lib"
+    """ +
+        "\n" +
+        "\n".join([
+            "cp $(location //third-party/libvpx:Public/vpx/{}) $$SOURCE_PATH/libvpx/include/vpx/".format(x) for x in vpx_headers
+        ]) +
+        "\n" +
+        "\n".join([
+            "cp $(location //third-party/libvpx:Public/vpx/libVPX.a) $$SOURCE_PATH/libvpx/lib/".format(x) for x in vpx_libs
+        ]) +
+        "\n" +
+    """
+    
         mkdir "$$SOURCE_PATH/libopus"
         mkdir -p "$$SOURCE_PATH/libopus/include/opus"
         mkdir -p "$$SOURCE_PATH/libopus/lib"
@@ -231,6 +268,7 @@ objc_library(
     ],
     deps = [
         ":ffmpeg_lib",
+        "//third-party/libvpx:vpx",
         "//third-party/opus:opus",
     ],
     visibility = [

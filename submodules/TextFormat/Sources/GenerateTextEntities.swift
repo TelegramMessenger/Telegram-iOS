@@ -148,6 +148,8 @@ public func generateChatInputTextEntities(_ text: NSAttributedString) -> [Messag
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextMention(peerId: value.peerId)))
             } else if key == ChatTextInputAttributes.textUrl, let value = value as? ChatTextInputTextUrlAttribute {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextUrl(url: value.url)))
+            } else if key == ChatTextInputAttributes.spoiler {
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Spoiler))
             }
         }
     })
@@ -309,7 +311,7 @@ public func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEnt
         }
     }
     
-    if hasDigits {
+    if hasDigits || hasColons {
         if let phoneNumberDetector = phoneNumberDetector, detectPhoneNumbers {
             let utf16 = text.utf16
             phoneNumberDetector.enumerateMatches(in: text, options: [], range: NSMakeRange(0, utf16.count), using: { result, _, _ in

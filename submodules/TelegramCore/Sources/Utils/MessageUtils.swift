@@ -313,6 +313,25 @@ public extension Message {
         return nil
     }
 }
+public extension Message {
+    var reactionsAttribute: ReactionsMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? ReactionsMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+    
+    var textEntitiesAttribute: TextEntitiesMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+}
 
 public func _internal_parseMediaAttachment(data: Data) -> Media? {
     guard let object = Api.parse(Buffer(buffer: MemoryBuffer(data: data))) else {

@@ -894,6 +894,62 @@ public struct messages {
         }
     
     }
+    public enum AvailableReactions: TypeConstructorDescription {
+        case availableReactionsNotModified
+        case availableReactions(hash: Int32, reactions: [Api.AvailableReaction])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .availableReactionsNotModified:
+                    if boxed {
+                        buffer.appendInt32(-1626924713)
+                    }
+                    
+                    break
+                case .availableReactions(let hash, let reactions):
+                    if boxed {
+                        buffer.appendInt32(1989032621)
+                    }
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(reactions.count))
+                    for item in reactions {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .availableReactionsNotModified:
+                return ("availableReactionsNotModified", [])
+                case .availableReactions(let hash, let reactions):
+                return ("availableReactions", [("hash", hash), ("reactions", reactions)])
+    }
+    }
+    
+        public static func parse_availableReactionsNotModified(_ reader: BufferReader) -> AvailableReactions? {
+            return Api.messages.AvailableReactions.availableReactionsNotModified
+        }
+        public static func parse_availableReactions(_ reader: BufferReader) -> AvailableReactions? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.AvailableReaction]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.AvailableReaction.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.AvailableReactions.availableReactions(hash: _1!, reactions: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum MessageEditData: TypeConstructorDescription {
         case messageEditData(flags: Int32)
     
@@ -1155,6 +1211,68 @@ public struct messages {
             let _c8 = _8 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
                 return Api.messages.DiscussionMessage.discussionMessage(flags: _1!, messages: _2!, maxId: _3, readInboxMaxId: _4, readOutboxMaxId: _5, unreadCount: _6!, chats: _7!, users: _8!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum MessageReactionsList: TypeConstructorDescription {
+        case messageReactionsList(flags: Int32, count: Int32, reactions: [Api.MessageUserReaction], users: [Api.User], nextOffset: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageReactionsList(let flags, let count, let reactions, let users, let nextOffset):
+                    if boxed {
+                        buffer.appendInt32(-1553558980)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(reactions.count))
+                    for item in reactions {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageReactionsList(let flags, let count, let reactions, let users, let nextOffset):
+                return ("messageReactionsList", [("flags", flags), ("count", count), ("reactions", reactions), ("users", users), ("nextOffset", nextOffset)])
+    }
+    }
+    
+        public static func parse_messageReactionsList(_ reader: BufferReader) -> MessageReactionsList? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.MessageUserReaction]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageUserReaction.self)
+            }
+            var _4: [Api.User]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _5: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.MessageReactionsList.messageReactionsList(flags: _1!, count: _2!, reactions: _3!, users: _4!, nextOffset: _5)
             }
             else {
                 return nil

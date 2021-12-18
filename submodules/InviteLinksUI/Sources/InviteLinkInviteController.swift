@@ -20,6 +20,7 @@ import OverlayStatusController
 import PresentationDataUtils
 import DirectionalPanGesture
 import UndoUI
+import QrCodeUI
 
 class InviteLinkInviteInteraction {
     let context: AccountContext
@@ -371,7 +372,7 @@ public final class InviteLinkInviteController: ViewController {
                                 isGroup = true
                             }
                             let updatedPresentationData = (strongSelf.presentationData, strongSelf.presentationDataPromise.get())
-                            let controller = InviteLinkQRCodeController(context: context, updatedPresentationData: updatedPresentationData, invite: invite, isGroup: isGroup)
+                            let controller = QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup))
                             strongSelf.controller?.present(controller, in: .window(.root))
                         })
                     }
@@ -418,7 +419,7 @@ public final class InviteLinkInviteController: ViewController {
                     })
                 })))
 
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link

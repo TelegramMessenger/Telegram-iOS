@@ -1,19 +1,20 @@
 import Foundation
 import UIKit
-import SwiftSignalKit
-import TelegramPresentationData
-import AppBundle
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
+import TelegramCore
+import TelegramPresentationData
+import AppBundle
 import QrCode
 import AccountContext
 import SolidRoundedButtonNode
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
-import TelegramCore
+import PresentationDataUtils
 
-private func shareQrCode(context: AccountContext, link: String, view: UIView) {
-    let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Chat/Links/QrLogo")))
+private func shareQrCode(context: AccountContext, link: String, ecl: String, view: UIView) {
+    let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Chat/Links/QrLogo")), ecl: ecl)
     |> map { _, generator -> UIImage? in
         let imageSize = CGSize(width: 768.0, height: 768.0)
         let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), scale: 1.0))
@@ -33,7 +34,30 @@ private func shareQrCode(context: AccountContext, link: String, view: UIView) {
     })
 }
 
-public final class InviteLinkQRCodeController: ViewController {
+public final class QrCodeScreen: ViewController {
+    public enum Subject {
+        case peer(peer: EnginePeer)
+        case invite(invite: ExportedInvitation, isGroup: Bool)
+        
+        var link: String {
+            switch self {
+                case let .peer(peer):
+                    return "https://t.me/\(peer.addressName ?? "")"
+                case let .invite(invite, _):
+                    return invite.link
+            }
+        }
+        
+        var ecl: String {
+            switch self {
+                case .peer:
+                    return "Q"
+                case .invite:
+                    return "Q"
+            }
+        }
+    }
+    
     private var controllerNode: Node {
         return self.displayNode as! Node
     }
@@ -41,9 +65,8 @@ public final class InviteLinkQRCodeController: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
-    private let invite: ExportedInvitation
-    private let isGroup: Bool
-
+    private let subject: QrCodeScreen.Subject
+    
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
@@ -54,10 +77,9 @@ public final class InviteLinkQRCodeController: ViewController {
     
     private let idleTimerExtensionDisposable = MetaDisposable()
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, invite: ExportedInvitation, isGroup: Bool) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: QrCodeScreen.Subject) {
         self.context = context
-        self.invite = invite
-        self.isGroup = isGroup
+        self.subject = subject
         
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
@@ -96,7 +118,7 @@ public final class InviteLinkQRCodeController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, presentationData: self.presentationData, invite: self.invite, isGroup: self.isGroup)
+        self.displayNode = Node(context: self.context, presentationData: self.presentationData, subject: self.subject)
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
@@ -153,7 +175,7 @@ public final class InviteLinkQRCodeController: ViewController {
 
     class Node: ViewControllerTracingNode, UIScrollViewDelegate {
         private let context: AccountContext
-        private let invite: ExportedInvitation
+        private let subject: QrCodeScreen.Subject
         private var presentationData: PresentationData
     
         private let dimNode: ASDisplayNode
@@ -177,9 +199,9 @@ public final class InviteLinkQRCodeController: ViewController {
         var dismiss: (() -> Void)?
         var cancel: (() -> Void)?
         
-        init(context: AccountContext, presentationData: PresentationData, invite: ExportedInvitation, isGroup: Bool) {
+        init(context: AccountContext, presentationData: PresentationData, subject: QrCodeScreen.Subject) {
             self.context = context
-            self.invite = invite
+            self.subject = subject
             self.presentationData = presentationData
 
             self.wrappingScrollNode = ASScrollNode()
@@ -205,8 +227,31 @@ public final class InviteLinkQRCodeController: ViewController {
             self.contentBackgroundNode = ASDisplayNode()
             self.contentBackgroundNode.backgroundColor = backgroundColor
             
+            let title: String
+            let text: String
+            switch subject {
+                case let .peer(peer):
+                    title = self.presentationData.strings.PeerInfo_QRCode_Title
+                    if case let .user(user) = peer {
+                        if user.id == context.account.peerId {
+                            text = self.presentationData.strings.UserInfo_QRCode_InfoYou
+                        } else if user.botInfo != nil {
+                            text = self.presentationData.strings.UserInfo_QRCode_InfoBot
+                        } else {
+                            text = self.presentationData.strings.UserInfo_QRCode_InfoOther(peer.compactDisplayTitle).string
+                        }
+                    } else if case let .channel(channel) = peer, case .broadcast = channel.info {
+                        text = self.presentationData.strings.GroupInfo_QRCode_Info
+                    } else {
+                        text = self.presentationData.strings.ChannelInfo_QRCode_Info
+                    }
+                case let .invite(_, isGroup):
+                    title = self.presentationData.strings.InviteLink_QRCode_Title
+                    text = isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel
+            }
+            
             self.titleNode = ASTextNode()
-            self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InviteLink_QRCode_Title, font: Font.bold(17.0), textColor: textColor)
+            self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
             
             self.cancelButton = HighlightableButtonNode()
             self.cancelButton.setTitle(self.presentationData.strings.Common_Done, with: Font.bold(17.0), with: accentColor, for: .normal)
@@ -222,8 +267,7 @@ public final class InviteLinkQRCodeController: ViewController {
             self.qrImageNode.clipsToBounds = true
             self.qrImageNode.cornerRadius = 16.0
             
-            self.qrIconNode = AnimatedStickerNode()
-            
+            self.qrIconNode = AnimatedStickerNode()   
             self.qrIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogo"), width: 240, height: 240, mode: .direct(cachePathPrefix: nil))
             self.qrIconNode.visibility = true
             
@@ -251,17 +295,17 @@ public final class InviteLinkQRCodeController: ViewController {
             self.contentContainerNode.addSubnode(self.qrIconNode)
             self.contentContainerNode.addSubnode(self.qrButtonNode)
                         
-            self.textNode.attributedText = NSAttributedString(string: isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel, font: Font.regular(13.0), textColor: secondaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: secondaryTextColor)
             self.buttonNode.title = self.presentationData.strings.InviteLink_QRCode_Share
             
             self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
             self.buttonNode.pressed = { [weak self] in
                 if let strongSelf = self{
-                    shareQrCode(context: strongSelf.context, link: strongSelf.invite.link, view: strongSelf.view)
+                    shareQrCode(context: strongSelf.context, link: subject.link, ecl: subject.ecl, view: strongSelf.view)
                 }
             }
             
-            self.qrImageNode.setSignal(qrCode(string: self.invite.link, color: .black, backgroundColor: .white, icon: .cutout) |> beforeNext { [weak self] size, _ in
+            self.qrImageNode.setSignal(qrCode(string: subject.link, color: .black, backgroundColor: .white, icon: .cutout, ecl: subject.ecl) |> beforeNext { [weak self] size, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -289,7 +333,7 @@ public final class InviteLinkQRCodeController: ViewController {
         }
         
         @objc private func qrPressed() {
-            shareQrCode(context: self.context, link: self.invite.link, view: self.view)
+            self.buttonNode.pressed?()
         }
         
         func updatePresentationData(_ presentationData: PresentationData) {
@@ -389,7 +433,6 @@ public final class InviteLinkQRCodeController: ViewController {
             let imageSide: CGFloat = 240.0
             let imageSize = CGSize(width: imageSide, height: imageSide)
             let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))
-            
             let _ = imageApply()
             
             let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
@@ -406,7 +449,7 @@ public final class InviteLinkQRCodeController: ViewController {
             }
             
             let inset: CGFloat = 32.0
-            var textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            var textSize = self.textNode.updateLayout(CGSize(width: width - inset * 3.0, height: CGFloat.greatestFiniteMagnitude))
             let textFrame = CGRect(origin: CGPoint(x: floor((width - textSize.width) / 2.0), y: imageFrame.maxY + 20.0), size: textSize)
             transition.updateFrame(node: self.textNode, frame: textFrame)
             
@@ -449,7 +492,7 @@ public final class InviteLinkQRCodeController: ViewController {
             transition.updateFrame(node: self.titleNode, frame: titleFrame)
             
             let cancelSize = self.cancelButton.measure(CGSize(width: width, height: titleHeight))
-            let cancelFrame = CGRect(origin: CGPoint(x: width - cancelSize.width - 16.0, y: 18.0), size: cancelSize)
+            let cancelFrame = CGRect(origin: CGPoint(x: width - cancelSize.width - 16.0, y: 16.0), size: cancelSize)
             transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
             
             let buttonInset: CGFloat = 16.0

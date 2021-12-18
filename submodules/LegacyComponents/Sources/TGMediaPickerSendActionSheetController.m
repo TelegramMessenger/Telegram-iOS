@@ -83,6 +83,8 @@
 }
 
 - (void)buttonPressed {
+    _buttonView.enabled = false;
+    
     if (self.pressed != nil)
         self.pressed();
 }
@@ -310,6 +312,8 @@
 }
 
 - (void)sendPressed {
+    _sendButton.enabled = false;
+    
     [self animateOut:false];
     
     if (self.send != nil)

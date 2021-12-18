@@ -16,6 +16,7 @@ import PresentationDataUtils
 import ImageContentAnalysis
 import TextSelectionNode
 import Speak
+import Translate
 import ShareController
 import UndoUI
 
@@ -315,7 +316,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             strongSelf.statusNodeContainer.isHidden = true
                             
                             Queue.concurrentDefaultQueue().async {
-                                if let message = strongSelf.message, !message.isCopyProtected() {
+                                if let message = strongSelf.message, !message.isCopyProtected() && !imageReference.media.flags.contains(.hasStickers) {
                                     strongSelf.recognitionDisposable.set((recognizedContent(postbox: strongSelf.context.account.postbox, image: { return generate(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))?.generateImage() }, messageId: message.id)
                                     |> deliverOnMainQueue).start(next: { [weak self] results in
                                         if let strongSelf = self {
@@ -352,6 +353,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                         }
                                                     case .speak:
                                                         speakText(string)
+                                                    case .translate:
+                                                        translateText(context: strongSelf.context, text: string)
                                                     }
                                                 })
                                                 recognizedContentNode.barcodeAction = { [weak self] payload, rect in
@@ -764,6 +767,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             }
         }
     }
+    
+    override func adjustForPreviewing() {
+        super.adjustForPreviewing()
+        
+        self.recognitionOverlayContentNode.isHidden = true
+    }
 }
 
 /*private func tileRectForImage(_ mappedImage: CGImage, rect: CGRect) -> CGRect {
@@ -1175,7 +1184,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
     }
     
     private var interfaceIsHidden: Bool = false
-    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
         self.interfaceIsHidden = isHidden
         
         let buttonSize = CGSize(width: 32.0, height: 32.0)
@@ -1192,7 +1201,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
             }
         }
         
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - rightInset - buttonSize.width - 24.0, y: 41.0, width: buttonSize.width + 24.0, height: buttonSize.height + 24.0))
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - insets.right - buttonSize.width - 24.0, y: insets.top - 50.0, width: buttonSize.width + 24.0, height: buttonSize.height + 24.0))
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {

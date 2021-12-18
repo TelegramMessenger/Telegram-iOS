@@ -13,22 +13,6 @@ import DirectMediaImageCache
 import TelegramStringFormatting
 import TooltipUI
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
-private class SimpleLayer: CALayer {
-    override func action(forKey event: String) -> CAAction? {
-        return nullAction
-    }
-
-    func update(size: CGSize) {
-    }
-}
-
 private enum SelectionTransition {
     case begin
     case change
