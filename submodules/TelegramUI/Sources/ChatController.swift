@@ -1173,6 +1173,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     var removedReaction: String?
+                    var messageAlreadyHasThisReaction = false
                     
                     for attribute in message.attributes {
                         if let attribute = attribute as? ReactionsMessageAttribute {
@@ -1182,11 +1183,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     if listReaction.isSelected {
                                         updatedReaction = nil
                                         removedReaction = listReaction.value
+                                    } else if listReaction.value == updatedReaction {
+                                        messageAlreadyHasThisReaction = true
                                     }
                                 case let .reaction(value):
-                                    if listReaction.value == value && listReaction.isSelected {
-                                        updatedReaction = nil
-                                        removedReaction = value
+                                    if listReaction.value == value {
+                                        messageAlreadyHasThisReaction = true
+                                        
+                                        if listReaction.isSelected {
+                                            updatedReaction = nil
+                                            removedReaction = value
+                                        }
                                     }
                                 }
                             }
@@ -1213,7 +1220,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         switch allowedReactions {
                         case let .set(set):
-                            if !set.contains(updatedReaction) {
+                            if !messageAlreadyHasThisReaction && !set.contains(updatedReaction) {
                                 itemNode.openMessageContextMenu()
                                 return
                             }
@@ -14450,6 +14457,9 @@ extension Peer {
 }
 
 func canAddMessageReactions(message: Message) -> Bool {
+    if message.id.namespace != Namespaces.Message.Cloud {
+        return false
+    }
     if let peer = message.peers[message.id.peerId] {
         if let _ = peer as? TelegramSecretChat {
             return false

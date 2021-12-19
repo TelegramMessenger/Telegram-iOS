@@ -254,6 +254,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         rect.origin.x = max(sideInset, rect.origin.x)
         rect.origin.y = max(insets.top + sideInset, rect.origin.y)
         rect.origin.x = min(containerSize.width - contentSize.width - sideInset, rect.origin.x)
+        if rect.maxX > containerSize.width - sideInset {
+            rect.origin.x = containerSize.width - sideInset - rect.width
+        }
+        if rect.minX < sideInset {
+            rect.origin.x = sideInset
+        }
         
         let cloudSourcePoint: CGFloat
         if isLeftAligned {
@@ -309,11 +315,18 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         let completeContentWidth = CGFloat(self.items.count) * itemSize + (CGFloat(self.items.count) - 1.0) * itemSpacing + sideInset * 2.0
         let minVisibleItemCount: CGFloat = min(CGFloat(self.items.count), 6.5)
-        let visibleContentWidth = floor(minVisibleItemCount * itemSize + (minVisibleItemCount - 1.0) * itemSpacing + sideInset * 2.0)
+        var visibleContentWidth = floor(minVisibleItemCount * itemSize + (minVisibleItemCount - 1.0) * itemSpacing + sideInset * 2.0)
+        if visibleContentWidth > size.width - sideInset * 2.0 {
+            visibleContentWidth = size.width - sideInset * 2.0
+        }
         
         let contentHeight = verticalInset * 2.0 + rowHeight
         
-        let (backgroundFrame, isLeftAligned, cloudSourcePoint) = self.calculateBackgroundFrame(containerSize: size, insets: insets, anchorRect: anchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight))
+        var backgroundInsets = insets
+        backgroundInsets.left += sideInset
+        backgroundInsets.right += sideInset
+        
+        let (backgroundFrame, isLeftAligned, cloudSourcePoint) = self.calculateBackgroundFrame(containerSize: CGSize(width: size.width - sideInset * 2.0, height: size.height), insets: backgroundInsets, anchorRect: anchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight))
         self.isLeftAligned = isLeftAligned
         
         transition.updateFrame(node: self.contentContainer, frame: backgroundFrame)
@@ -369,7 +382,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             let springDamping: CGFloat = 104.0
             let springDelay: Double = 0.22
             
-            let sourceBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: insets, anchorRect: animateInFromAnchorRect, contentSize: CGSize(width: backgroundFrame.height, height: contentHeight)).0
+            let sourceBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateInFromAnchorRect, contentSize: CGSize(width: backgroundFrame.height, height: contentHeight)).0
             
             self.backgroundNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - backgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
             self.backgroundNode.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: sourceBackgroundFrame.size).insetBy(dx: -shadowBlur, dy: -shadowBlur)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: backgroundFrame.size).insetBy(dx: -shadowBlur, dy: -shadowBlur)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
@@ -380,7 +393,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             //self.contentContainerMask.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - backgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
             //self.contentContainerMask.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: backgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
         } else if let animateOutToAnchorRect = animateOutToAnchorRect {
-            let targetBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: insets, anchorRect: animateOutToAnchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight)).0
+            let targetBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateOutToAnchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight)).0
             
             let offset = CGPoint(x: -(targetBackgroundFrame.minX - backgroundFrame.minX), y: -(targetBackgroundFrame.minY - backgroundFrame.minY))
             self.position = CGPoint(x: self.position.x - offset.x, y: self.position.y - offset.y)
@@ -472,8 +485,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.9, removeOnCompletion: false)
         targetSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.8)
         targetSnapshotView.layer.animateScale(from: itemNode.bounds.width / targetSnapshotView.bounds.width, to: 1.0, duration: duration, removeOnCompletion: false, completion: { [weak self, weak targetSnapshotView] _ in
-            if let strongSelf = self {
-                strongSelf.hapticFeedback.tap()
+            if let _ = self {
+                //strongSelf.hapticFeedback.tap()
             }
             completedTarget = true
             intermediateCompletion()

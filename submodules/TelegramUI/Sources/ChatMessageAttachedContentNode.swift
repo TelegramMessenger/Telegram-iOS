@@ -939,11 +939,18 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             
                             strongSelf.textNode.frame = textFrame.offsetBy(dx: 0.0, dy: textVerticalOffset)
                             if let statusSizeAndApply = statusSizeAndApply {
+                                var statusFrame = CGRect(origin: CGPoint(x: strongSelf.textNode.frame.minX, y: strongSelf.textNode.frame.maxY), size: statusSizeAndApply.0)
+                                if let imageFrame = imageFrame {
+                                    statusFrame.origin.y = max(statusFrame.minY, imageFrame.maxY + 2.0)
+                                }
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)
+                                    strongSelf.statusNode.frame = statusFrame
+                                    statusSizeAndApply.1(.None)
+                                } else {
+                                    animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: statusFrame, completion: nil)
+                                    statusSizeAndApply.1(animation)
                                 }
-                                strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: strongSelf.textNode.frame.minX, y: strongSelf.textNode.frame.maxY), size: statusSizeAndApply.0)
-                                statusSizeAndApply.1(animation)
                             } else if strongSelf.statusNode.supernode != nil {
                                 strongSelf.statusNode.removeFromSupernode()
                             }

@@ -835,7 +835,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 for contentNode in strongSelf.contentNodes {
-                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY), gesture: .tap, isEstimating: true)
+                    let contentNodePoint = strongSelf.view.convert(point, to: contentNode.view)
+                    let tapAction = contentNode.tapActionAtPoint(contentNodePoint, gesture: .tap, isEstimating: true)
                     switch tapAction {
                         case .none:
                             if let _ = strongSelf.item?.controllerInteraction.tapMessage {
@@ -2696,14 +2697,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         if let mosaicStatusOrigin = mosaicStatusOrigin, let (size, apply) = mosaicStatusSizeAndApply {
-            let mosaicStatusNode = apply(animation)
+            var statusNodeAnimation = animation
+            if strongSelf.mosaicStatusNode == nil {
+                statusNodeAnimation = .None
+            }
+            let mosaicStatusNode = apply(statusNodeAnimation)
             if mosaicStatusNode !== strongSelf.mosaicStatusNode {
                 strongSelf.mosaicStatusNode?.removeFromSupernode()
                 strongSelf.mosaicStatusNode = mosaicStatusNode
                 strongSelf.clippingNode.addSubnode(mosaicStatusNode)
             }
             let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
-            mosaicStatusNode.frame = CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size)
+            statusNodeAnimation.animator.updateFrame(layer: mosaicStatusNode.layer, frame: CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size), completion: nil)
         } else if let mosaicStatusNode = strongSelf.mosaicStatusNode {
             strongSelf.mosaicStatusNode = nil
             mosaicStatusNode.removeFromSupernode()
@@ -3879,6 +3884,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if let result = contentNode.reactionTargetView(value: value) {
                 return result
             }
+        }
+        if let mosaicStatusNode = self.mosaicStatusNode, let result = mosaicStatusNode.reactionView(value: value) {
+            return result
         }
         return nil
     }

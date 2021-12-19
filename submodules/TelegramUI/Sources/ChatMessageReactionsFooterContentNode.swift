@@ -275,7 +275,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                     switch alignment {
                     case .left:
                         if reactionButtonPosition.x + item.size.width > boundingWidth {
-                            reactionButtonPosition.x = 0.0
+                            reactionButtonPosition.x = -1.0
                             reactionButtonPosition.y += item.size.height + 6.0
                         }
                     case .right:
@@ -462,7 +462,7 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
                 return
             }
             
-            item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
         }
     }
     

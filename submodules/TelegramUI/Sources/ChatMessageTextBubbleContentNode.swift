@@ -83,7 +83,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return
             }
             
-            item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
         }
     }
 
@@ -128,7 +128,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
+                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.topMessage)
                 
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
