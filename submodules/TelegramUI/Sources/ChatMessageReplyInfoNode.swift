@@ -250,8 +250,8 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.dustNode = dustNode
                         node.contentNode.insertSubnode(dustNode, aboveSubnode: textNode)
                     }
-                    dustNode.update(size: textFrame.size, color: titleColor, rects: textLayout.spoilers.map { $0.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                     dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+                    dustNode.update(size: dustNode.frame.size, color: titleColor, rects: textLayout.spoilers.map { $0.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                 } else if let dustNode = node.dustNode {
                     dustNode.removeFromSupernode()
                     node.dustNode = nil
