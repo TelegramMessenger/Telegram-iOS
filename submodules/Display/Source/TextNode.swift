@@ -1034,6 +1034,9 @@ public class TextNode: ASDisplayNode {
                         
                         coreTextLine = CTLineCreateTruncatedLine(originalLine, Double(lineConstrainedSize.width), truncationType, truncationToken) ?? truncationToken
                         brokenLineRange.length = CTLineGetGlyphCount(coreTextLine) - 1
+                        if brokenLineRange.location + brokenLineRange.length > attributedString.length {
+                            brokenLineRange.length = attributedString.length - brokenLineRange.location
+                        }
                         truncated = true
                     }
                     
