@@ -249,6 +249,11 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 result.append((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
                 needReactions = false
             } else if result.last?.1 == ChatMessageCommentFooterContentNode.self {
+                if result[result.count - 2].1 == ChatMessageWebpageBubbleContentNode.self ||
+                    result[result.count - 2].1 == ChatMessagePollBubbleContentNode.self ||
+                    result[result.count - 2].1 == ChatMessageContactBubbleContentNode.self {
+                    result.insert((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)), at: result.count - 1)
+                }
                 /*if result[result.count - 2].1 == ChatMessageTextBubbleContentNode.self {
                 } else {
                     result.insert((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)), at: result.count - 1)
